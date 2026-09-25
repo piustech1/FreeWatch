@@ -1,0 +1,87 @@
+name: Build & Release FreeWatch APK
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Verify Flutter & Java version
+        run: |
+          flutter --version
+          java -version
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze project
+        run: flutter analyze --no-fatal-infos
+
+      - name: Run unit & widget tests
+        run: flutter test
+
+      - name: Build Android Release APK
+        run: flutter build apk --release
+
+      - name: Prepare APK Release Artifact
+        run: |
+          mkdir -p release-artifacts
+          cp build/app/outputs/flutter-apk/app-release.apk release-artifacts/FreeWatch-release.apk
+          ls -la release-artifacts/
+
+      - name: Upload APK as Workflow Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FreeWatch-release-apk
+          path: release-artifacts/FreeWatch-release.apk
+          retention-days: 14
+
+      - name: Create GitHub Release on Tag or Dispatch
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+        with:
+          files: release-artifacts/FreeWatch-release.apk
+          tag_name: ${{ github.ref_name || 'v1.0.0' }}
+          name: Release ${{ github.ref_name || 'v1.0.0' }}
+          body: |
+            ## 🎬 FreeWatch Release
+            
+            Download the latest `FreeWatch-release.apk` below and install it directly on your Android device!
+            
+            ### What's included:
+            - 🏠 Modern dark streaming Home page with Hero Banner
+            - 🔍 Interactive Filters bottom sheet (Content, Genres, Sort, Year & Rating)
+            - 📱 Floating capsule navigation bar
+            - ⚡ Live TMDB integration + offline mock fallback
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
