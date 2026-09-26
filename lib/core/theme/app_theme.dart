@@ -13,7 +13,7 @@ class AppTheme {
           primary: AppColors.accent,
           surface: AppColors.surface,
           onSurface: AppColors.textPrimary,
-          secondary: AppColors.star,
+          secondary: AppColors.accentLight,
         ),
         appBarTheme: const AppBarTheme(
           backgroundColor: AppColors.background,
@@ -72,7 +72,7 @@ class AppTheme {
         ),
         bottomNavigationBarTheme: const BottomNavigationBarThemeData(
           backgroundColor: AppColors.bottomNav,
-          selectedItemColor: AppColors.textPrimary,
+          selectedItemColor: AppColors.accent,
           unselectedItemColor: AppColors.textHint,
           type: BottomNavigationBarType.fixed,
           showSelectedLabels: false,

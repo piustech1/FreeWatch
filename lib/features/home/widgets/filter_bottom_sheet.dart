@@ -70,7 +70,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
     return Container(
       height: MediaQuery.of(context).size.height * 0.88,
       decoration: const BoxDecoration(
-        color: Color(0xFF14161F),
+        color: Color(0xFF08090C),
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       child: Column(
@@ -366,7 +366,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                   min: 0,
                   max: 10,
                   divisions: 20,
-                  activeColor: AppColors.textPrimary,
+                  activeColor: AppColors.accent,
                   inactiveColor: AppColors.chipUnselected,
                   onChanged: (val) => setState(() => _minRating = val),
                 ),
@@ -386,8 +386,8 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                 height: 54,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.textPrimary,
-                    foregroundColor: AppColors.background,
+                    backgroundColor: AppColors.accent,
+                    foregroundColor: const Color(0xFF000000),
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(28),
@@ -401,7 +401,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                     '452 results',
                     style: TextStyle(
                       fontSize: 16,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
                 ),

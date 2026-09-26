@@ -2,7 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 
-/// Floating capsule pill navigation bar matching the design screenshot
+/// Floating capsule pill navigation bar matching the design with neon green active state
 class FloatingNavBar extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int> onItemSelected;
@@ -22,7 +22,7 @@ class FloatingNavBar extends StatelessWidget {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(36),
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+            filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
             child: Container(
               height: 64,
               decoration: BoxDecoration(
@@ -30,13 +30,18 @@ class FloatingNavBar extends StatelessWidget {
                 borderRadius: BorderRadius.circular(36),
                 border: Border.all(
                   color: AppColors.floatingNavBorder,
-                  width: 1,
+                  width: 1.2,
                 ),
-                boxShadow: const [
+                boxShadow: [
                   BoxShadow(
-                    color: Colors.black54,
-                    blurRadius: 20,
-                    offset: Offset(0, 10),
+                    color: Colors.black.withOpacity(0.8),
+                    blurRadius: 24,
+                    offset: const Offset(0, 10),
+                  ),
+                  BoxShadow(
+                    color: AppColors.accent.withOpacity(0.08),
+                    blurRadius: 16,
+                    spreadRadius: 1,
                   ),
                 ],
               ),
@@ -94,13 +99,13 @@ class _NavBarItem extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: isSelected
             ? BoxDecoration(
-                color: Colors.white.withOpacity(0.12),
+                color: AppColors.accent.withOpacity(0.18),
                 shape: BoxShape.circle,
               )
             : const BoxDecoration(),
         child: Icon(
           icon,
-          color: isSelected ? AppColors.textPrimary : AppColors.textHint,
+          color: isSelected ? AppColors.accent : AppColors.textHint,
           size: 24,
         ),
       ),
