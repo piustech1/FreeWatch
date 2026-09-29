@@ -5,7 +5,9 @@ class ApiConstants {
   ApiConstants._();
 
   // ── TMDB ──────────────────────────────────────────────────────────────────
-  static const String tmdbApiKey = 'YOUR_TMDB_API_KEY'; // 🔑 Replace this
+  static const String tmdbApiKey = '13b3f57eb9c4b90cb8a202f4c8f119c6';
+  static const String tmdbReadAccessToken =
+      'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIxM2IzZjU3ZWI5YzRiOTBjYjhhMjAyZjRjOGYxMTljNiIsIm5iZiI6MTc5MDcyMjAzMS41OTksInN1YiI6IjZhYmMzZmVmZDYyNmM3OWQxZmUxYzZhNiIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.TjEUCfK_-mp7ThnO5vwCL_vEH6Tx4_aUFxLZHcSi7fs';
   static const String tmdbBaseUrl = 'https://api.themoviedb.org/3';
   static const String tmdbImageBaseUrl = 'https://image.tmdb.org/t/p';
 

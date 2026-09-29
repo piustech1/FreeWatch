@@ -23,6 +23,7 @@ class ApiClient {
           'language': 'en-US',
         },
         headers: {
+          'Authorization': 'Bearer ${ApiConstants.tmdbReadAccessToken}',
           'Accept': 'application/json',
           'Content-Type': 'application/json',
         },
