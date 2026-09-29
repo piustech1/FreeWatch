@@ -49,22 +49,22 @@ class FloatingNavBar extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   _NavBarItem(
-                    icon: Icons.home_rounded,
+                    icon: Icons.home,
                     isSelected: selectedIndex == 0,
                     onTap: () => onItemSelected(0),
                   ),
                   _NavBarItem(
-                    icon: Icons.search_rounded,
+                    icon: Icons.search,
                     isSelected: selectedIndex == 1,
                     onTap: () => onItemSelected(1),
                   ),
                   _NavBarItem(
-                    icon: Icons.favorite_rounded,
+                    icon: Icons.favorite,
                     isSelected: selectedIndex == 2,
                     onTap: () => onItemSelected(2),
                   ),
                   _NavBarItem(
-                    icon: Icons.person_rounded,
+                    icon: Icons.person,
                     isSelected: selectedIndex == 3,
                     onTap: () => onItemSelected(3),
                   ),

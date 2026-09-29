@@ -8,6 +8,9 @@ import 'widgets/hero_banner.dart';
 import 'widgets/movie_section.dart';
 import 'widgets/floating_nav_bar.dart';
 import 'widgets/filter_bottom_sheet.dart';
+import 'widgets/vj_section.dart';
+import 'widgets/vj_movies_sheet.dart';
+import '../../data/mock/mock_movies.dart';
 
 /// Main Home Screen matching design screenshot
 class HomeScreen extends ConsumerStatefulWidget {
@@ -97,6 +100,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       isLoading: true,
                     ),
                     error: (_, __) => const SizedBox.shrink(),
+                  ),
+                ),
+
+                // ── "Translated by VJ" Section ─────────────────────────────
+                SliverToBoxAdapter(
+                  child: VjSection(
+                    vjs: MockData.vjs,
+                    onVjTap: (vj) {
+                      VjMoviesSheet.show(
+                        context,
+                        vj: vj,
+                        onMovieTap: (movie) {
+                          // Handle movie tap
+                        },
+                      );
+                    },
+                    onSeeAll: () {
+                      if (MockData.vjs.isNotEmpty) {
+                        VjMoviesSheet.show(
+                          context,
+                          vj: MockData.vjs.first,
+                        );
+                      }
+                    },
                   ),
                 ),
 
@@ -198,7 +225,7 @@ class _HomeAppBar extends StatelessWidget {
                 ),
               ),
               child: const Icon(
-                Icons.search_rounded,
+                Icons.search,
                 color: AppColors.textPrimary,
                 size: 20,
               ),
@@ -220,7 +247,7 @@ class _HomeAppBar extends StatelessWidget {
               ),
             ),
             child: const Icon(
-              Icons.notifications_none_rounded,
+              Icons.notifications,
               color: AppColors.textPrimary,
               size: 20,
             ),

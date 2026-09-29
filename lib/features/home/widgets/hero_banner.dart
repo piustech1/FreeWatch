@@ -33,7 +33,7 @@ class _HeroBannerState extends State<HeroBanner> {
   @override
   void initState() {
     super.initState();
-    _controller = PageController();
+    _controller = PageController(viewportFraction: 0.82);
     _startAutoScroll();
   }
 
@@ -45,8 +45,8 @@ class _HeroBannerState extends State<HeroBanner> {
         final next = (_currentPage + 1) % _bannerMovies.length;
         _controller.animateToPage(
           next,
-          duration: const Duration(milliseconds: 600),
-          curve: Curves.fastOutSlowIn,
+          duration: const Duration(milliseconds: 650),
+          curve: Curves.easeOutCubic,
         );
       });
     }
@@ -65,28 +65,59 @@ class _HeroBannerState extends State<HeroBanner> {
 
     return Column(
       children: [
-        // ── Banner Carousel ────────────────────────────────────────────────
+        // ── 3D Protruding Banner Carousel ───────────────────────────────────
         SizedBox(
-          height: 220,
+          height: 226,
           child: PageView.builder(
             controller: _controller,
             itemCount: _bannerMovies.length,
+            clipBehavior: Clip.none,
+            physics: const BouncingScrollPhysics(),
             onPageChanged: (i) => setState(() => _currentPage = i),
             itemBuilder: (context, index) {
               final movie = _bannerMovies[index];
-              return _HeroCardItem(
-                movie: movie,
-                onTap: () => widget.onTap?.call(movie),
+              return AnimatedBuilder(
+                animation: _controller,
+                builder: (context, child) {
+                  double page = _currentPage.toDouble();
+                  if (_controller.position.haveDimensions &&
+                      _controller.page != null) {
+                    page = _controller.page!;
+                  }
+                  final double diff = (index - page);
+                  final double absDiff = diff.abs().clamp(0.0, 1.0);
+
+                  // 3D Depth parameters: center is larger and protrudes forward
+                  final double scale = 1.0 - (absDiff * 0.12);
+                  final double opacity = 1.0 - (absDiff * 0.32);
+                  final double translateY = absDiff * 6.0;
+
+                  return Transform(
+                    alignment: Alignment.center,
+                    transform: Matrix4.identity()
+                      ..setEntry(3, 2, 0.001) // 3D perspective
+                      ..translate(0.0, translateY, 0.0)
+                      ..scale(scale, scale),
+                    child: Opacity(
+                      opacity: opacity.clamp(0.0, 1.0),
+                      child: _HeroCardItem(
+                        movie: movie,
+                        isActive: absDiff < 0.4,
+                        onTap: () => widget.onTap?.call(movie),
+                      ),
+                    ),
+                  );
+                },
               );
             },
           ),
         ),
 
-        const SizedBox(height: 12),
+        const SizedBox(height: 14),
 
         // ── Pagination Dots & "See all" Row ───────────────────────────────
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 22),
+          padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -96,8 +127,8 @@ class _HeroBannerState extends State<HeroBanner> {
                 effect: const ExpandingDotsEffect(
                   dotWidth: 6,
                   dotHeight: 6,
-                  activeDotColor: AppColors.textPrimary,
-                  dotColor: Color(0xFF323644),
+                  activeDotColor: AppColors.accent,
+                  dotColor: Color(0xFF262A34),
                   expansionFactor: 3.5,
                   spacing: 6,
                 ),
@@ -123,9 +154,14 @@ class _HeroBannerState extends State<HeroBanner> {
 
 class _HeroCardItem extends StatelessWidget {
   final Movie movie;
+  final bool isActive;
   final VoidCallback? onTap;
 
-  const _HeroCardItem({required this.movie, this.onTap});
+  const _HeroCardItem({
+    required this.movie,
+    this.isActive = true,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -141,11 +177,35 @@ class _HeroCardItem extends StatelessWidget {
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 18),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(22),
-          child: Container(
-            color: const Color(0xFF1E1F26),
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(
+              color: isActive
+                  ? AppColors.accent.withOpacity(0.35)
+                  : Colors.white.withOpacity(0.06),
+              width: 1.2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.75),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
+              if (isActive)
+                BoxShadow(
+                  color: AppColors.accent.withOpacity(0.18),
+                  blurRadius: 20,
+                  spreadRadius: 1,
+                  offset: const Offset(0, 4),
+                ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(21),
+            child: Container(
+              color: const Color(0xFF1E1F26),
             child: Stack(
               fit: StackFit.expand,
               children: [
@@ -238,8 +298,9 @@ class _HeroCardItem extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 class _FallbackHeroVisual extends StatelessWidget {

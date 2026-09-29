@@ -1,5 +1,6 @@
 import '../models/movie.dart';
 import '../models/genre.dart';
+import '../models/vj.dart';
 
 class MockData {
   MockData._();
@@ -154,4 +155,82 @@ class MockData {
       genreIds: [878, 12],
     ),
   ];
+
+  static const List<Vj> vjs = [
+    Vj(
+      id: 'vj-junior',
+      name: 'VJ JUNIOR',
+      nickname: 'The King of Voiceover',
+      specialty: 'Action & Explosive Thrillers',
+      imageUrl: 'https://image.tmdb.org/t/p/w780/4woSOUD0equAYzvwhWBHIJDCM88.jpg',
+      movieCount: 142,
+      translatedMovieIds: [1011985, 533535, 558449, 1084199],
+    ),
+    Vj(
+      id: 'vj-jingo',
+      name: 'VJ JINGO',
+      nickname: 'The Grandmaster',
+      specialty: 'Martial Arts, Drama & Crime',
+      imageUrl: 'https://image.tmdb.org/t/p/w780/euYIwmqkmz95mnXvufEmbL6ovhZ.jpg',
+      movieCount: 98,
+      translatedMovieIds: [558449, 1125510, 1011985],
+    ),
+    Vj(
+      id: 'vj-ice-p',
+      name: 'VJ ICE P',
+      nickname: 'Sci-Fi Wizard',
+      specialty: 'Sci-Fi, Cyberpunk & Blockbusters',
+      imageUrl: 'https://image.tmdb.org/t/p/w780/xOMo8BRK7PfcJv9JCnx7s520DRq.jpg',
+      movieCount: 86,
+      translatedMovieIds: [693134, 974950, 533535],
+    ),
+    Vj(
+      id: 'vj-emmy',
+      name: 'VJ EMMY',
+      nickname: 'Speed Narrator',
+      specialty: 'Asian Action, Comedy & Series',
+      imageUrl: 'https://image.tmdb.org/t/p/w780/yDHYTfA3R0jFYba16jBB1ef8oIt.jpg',
+      movieCount: 74,
+      translatedMovieIds: [533535, 1084199, 1241982],
+    ),
+    Vj(
+      id: 'vj-mark',
+      name: 'VJ MARK',
+      nickname: 'Thriller Specialist',
+      specialty: 'Dark Thrillers & Mystery',
+      imageUrl: 'https://image.tmdb.org/t/p/w780/v9acaWVxToYxIjIKT3Wffy8tP2F.jpg',
+      movieCount: 62,
+      translatedMovieIds: [1011985, 693134, 974950],
+    ),
+    Vj(
+      id: 'vj-moon',
+      name: 'VJ MOON',
+      nickname: 'The Smooth Voice',
+      specialty: 'Family, Fantasy & Adventure',
+      imageUrl: 'https://image.tmdb.org/t/p/w780/aLVkiINNOgr1lYzZCrjWBsEV9um.jpg',
+      movieCount: 55,
+      translatedMovieIds: [1241982, 1084199, 1125510],
+    ),
+  ];
+
+  static List<Movie> getAllMovies() {
+    final seen = <int>{};
+    final all = <Movie>[];
+    for (final m in [...trendingMovies, ...newMovies, ...popularMovies]) {
+      if (seen.add(m.id)) {
+        all.add(m);
+      }
+    }
+    return all;
+  }
+
+  static List<Movie> getMoviesByVj(String vjId) {
+    final vj = vjs.firstWhere((v) => v.id == vjId, orElse: () => vjs.first);
+    final all = getAllMovies();
+    final matched = all.where((m) => vj.translatedMovieIds.contains(m.id)).toList();
+    if (matched.isEmpty) {
+      return all.take(3).toList();
+    }
+    return matched;
+  }
 }
