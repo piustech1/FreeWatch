@@ -3,7 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 
-/// Animated Splash Screen with neon green ambient glow and FreeWatch branding
+/// Modern Mobile Splash Screen matching user design specifications:
+/// - Pure OLED black background
+/// - Centered full-text logo (assets/images/logo_full.png)
+/// - Sleek neon green progressive loading bar
+/// - Faint blue tag below the splash screen
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -14,8 +18,9 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
-  late final Animation<double> _scaleAnimation;
   late final Animation<double> _fadeAnimation;
+  late final Animation<double> _scaleAnimation;
+  late final Animation<double> _progressAnimation;
   Timer? _navigationTimer;
 
   @override
@@ -23,23 +28,28 @@ class _SplashScreenState extends State<SplashScreen>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1400),
-    );
-
-    _scaleAnimation = CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOutBack,
+      duration: const Duration(milliseconds: 2200),
     );
 
     _fadeAnimation = CurvedAnimation(
       parent: _controller,
-      curve: const Interval(0.0, 0.8, curve: Curves.easeIn),
+      curve: const Interval(0.0, 0.45, curve: Curves.easeIn),
+    );
+
+    _scaleAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0.0, 0.55, curve: Curves.easeOutCubic),
+    );
+
+    _progressAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0.2, 0.95, curve: Curves.easeInOut),
     );
 
     _controller.forward();
 
-    // Navigate to onboarding after 2.5 seconds
-    _navigationTimer = Timer(const Duration(milliseconds: 2500), () {
+    // Auto-navigate to onboarding after animations complete
+    _navigationTimer = Timer(const Duration(milliseconds: 2600), () {
       if (mounted) {
         context.go('/onboarding');
       }
@@ -60,122 +70,105 @@ class _SplashScreenState extends State<SplashScreen>
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // ── Ambient Neon Green Center Glow ────────────────────────────────
-          Center(
-            child: Container(
-              width: 320,
-              height: 320,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    Color(0x3300E676),
-                    Color(0x1500E676),
-                    Colors.transparent,
-                  ],
-                  stops: [0.0, 0.45, 1.0],
-                ),
-              ),
-            ),
-          ),
-
-          // ── Animated Brand & Logo ─────────────────────────────────────────
+          // ── Centered Full Text Logo & Progressive Bar ───────────────────
           Center(
             child: FadeTransition(
               opacity: _fadeAnimation,
               child: ScaleTransition(
-                scale: _scaleAnimation,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Glowing Icon Emblem
-                    Container(
-                      width: 88,
-                      height: 88,
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(28),
-                        border: Border.all(
-                          color: AppColors.accent.withOpacity(0.4),
-                          width: 1.5,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.accent.withOpacity(0.25),
-                            blurRadius: 30,
-                            spreadRadius: 2,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
+                scale: Tween<double>(begin: 0.92, end: 1.0).animate(_scaleAnimation),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 40),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Full text logo
+                      Image.asset(
+                        'assets/images/logo_full.png',
+                        width: 260,
+                        fit: BoxFit.contain,
                       ),
-                      child: const Center(
-                        child: Icon(
-                          Icons.play_arrow_rounded,
-                          color: AppColors.accent,
-                          size: 52,
-                        ),
-                      ),
-                    ),
 
-                    const SizedBox(height: 24),
+                      const SizedBox(height: 36),
 
-                    // Logo Text
-                    RichText(
-                      text: const TextSpan(
-                        children: [
-                          TextSpan(
-                            text: 'Free',
-                            style: TextStyle(
-                              color: AppColors.textPrimary,
-                              fontSize: 34,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: -0.5,
+                      // Sleek progressive loading bar
+                      AnimatedBuilder(
+                        animation: _progressAnimation,
+                        builder: (context, _) {
+                          return Container(
+                            width: 140,
+                            height: 3,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF14161C),
+                              borderRadius: BorderRadius.circular(2),
                             ),
-                          ),
-                          TextSpan(
-                            text: 'Watch',
-                            style: TextStyle(
-                              color: AppColors.accent,
-                              fontSize: 34,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: -0.5,
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: Container(
+                                width: 140 * _progressAnimation.value,
+                                height: 3,
+                                decoration: BoxDecoration(
+                                  color: AppColors.accent,
+                                  borderRadius: BorderRadius.circular(2),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppColors.accent.withOpacity(0.5),
+                                      blurRadius: 8,
+                                      spreadRadius: 1,
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
-                          ),
-                        ],
+                          );
+                        },
                       ),
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    // Tagline
-                    Text(
-                      'STREAM WITHOUT LIMITS',
-                      style: TextStyle(
-                        color: AppColors.textSecondary.withOpacity(0.8),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 3.0,
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
 
-          // ── Bottom Loading Spinner ────────────────────────────────────────
+          // ── Faint Blue Tag Below ──────────────────────────────────────────
           Positioned(
             left: 0,
             right: 0,
-            bottom: 48,
+            bottom: 44,
             child: Center(
-              child: SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.2,
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    AppColors.accent.withOpacity(0.8),
+              child: FadeTransition(
+                opacity: _fadeAnimation,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: const Color(0x1438BDF8),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: const Color(0x2838BDF8),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 5,
+                        height: 5,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Color(0x8038BDF8),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'FREEWATCH STREAMING • v1.0.0',
+                        style: TextStyle(
+                          color: Color(0x997DD3FC),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 1.5,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),

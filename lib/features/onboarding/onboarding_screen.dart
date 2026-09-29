@@ -1,9 +1,12 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import '../../core/constants/app_colors.dart';
 
-/// 3-page interactive Onboarding screen matching the deep pitch black and neon green theme
+/// 4-page Onboarding experience matching user reference designs:
+/// - Page 1: Disney+ style vertical 3-strip poster layout with FW initial logo
+/// - Pages 2-4: Staggered movie poster grid with Skip & Next/Get Started buttons
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
 
@@ -15,35 +18,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _controller = PageController();
   int _currentIndex = 0;
 
-  final List<_OnboardingItem> _pages = const [
-    _OnboardingItem(
-      badgeText: '4K HDR • 100% FREE',
-      icon: Icons.movie_filter_rounded,
-      title: 'Unlimited Free\nStreaming',
-      description:
-          'Dive into an endless collection of blockbuster movies, trending series, and classic hits — completely free with zero subscription fees.',
-    ),
-    _OnboardingItem(
-      badgeText: 'ZERO BUFFERING • 60 FPS',
-      icon: Icons.bolt_rounded,
-      title: 'Lightning Fast\nPlayback',
-      description:
-          'Experience high-speed, lag-free streaming with instant startup and studio-quality audio engineered for mobile.',
-    ),
-    _OnboardingItem(
-      badgeText: 'SMART DISCOVERY',
-      icon: Icons.auto_awesome_rounded,
-      title: 'Curated For\nYour Taste',
-      description:
-          'Create your personal watchlist, filter by genres, and discover your next favorite movie every single day.',
-    ),
-  ];
-
-  void _onNext() {
-    if (_currentIndex < _pages.length - 1) {
+  void _nextPage() {
+    if (_currentIndex < 3) {
       _controller.nextPage(
         duration: const Duration(milliseconds: 400),
-        curve: Curves.easeInOut,
+        curve: Curves.easeInOutCubic,
       );
     } else {
       _finishOnboarding();
@@ -62,196 +41,51 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isLastPage = _currentIndex == _pages.length - 1;
-
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: Stack(
+      body: PageView(
+        controller: _controller,
+        onPageChanged: (i) => setState(() => _currentIndex = i),
         children: [
-          // ── Ambient Background Glow ──────────────────────────────────────
-          Positioned(
-            top: -60,
-            right: -60,
-            child: Container(
-              width: 280,
-              height: 280,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    Color(0x2800E676),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: 120,
-            left: -80,
-            child: Container(
-              width: 300,
-              height: 300,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    Color(0x1F00E676),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-            ),
+          // ── Page 1: Disney+ Style ─────────────────────────────────────────
+          _DisneyStylePage(
+            onGetStarted: _nextPage,
           ),
 
-          // ── Main Content SafeArea ─────────────────────────────────────────
-          SafeArea(
-            child: Column(
-              children: [
-                // ── Top Navigation Bar: Brand + Skip ────────────────────────
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // FreeWatch logo
-                      RichText(
-                        text: const TextSpan(
-                          children: [
-                            TextSpan(
-                              text: 'Free',
-                              style: TextStyle(
-                                color: AppColors.textPrimary,
-                                fontSize: 22,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: -0.5,
-                              ),
-                            ),
-                            TextSpan(
-                              text: 'Watch',
-                              style: TextStyle(
-                                color: AppColors.accent,
-                                fontSize: 22,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: -0.5,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+          // ── Page 2: "Where stories come alive on screen" ─────────────────
+          _GridOnboardingPage(
+            title: 'Where stories come\nalive on screen',
+            subtitle:
+                'Watch your favorite movies, series, and exclusive content anytime, all in one app.',
+            controller: _controller,
+            isLast: false,
+            onSkip: _finishOnboarding,
+            onNext: _nextPage,
+            offsetIndex: 0,
+          ),
 
-                      // Skip Button
-                      if (!isLastPage)
-                        GestureDetector(
-                          onTap: _finishOnboarding,
-                          behavior: HitTestBehavior.opaque,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.surface,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: Colors.white.withOpacity(0.08),
-                                width: 1,
-                              ),
-                            ),
-                            child: const Text(
-                              'Skip',
-                              style: TextStyle(
-                                color: AppColors.textSecondary,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        )
-                      else
-                        const SizedBox(width: 48),
-                    ],
-                  ),
-                ),
+          // ── Page 3: "Stream the magic of every story" ────────────────────
+          _GridOnboardingPage(
+            title: 'Stream the magic of\nevery story',
+            subtitle:
+                'Enjoy a huge library of movies, series, and exclusive content—all in one convenient place.',
+            controller: _controller,
+            isLast: false,
+            onSkip: _finishOnboarding,
+            onNext: _nextPage,
+            offsetIndex: 1,
+          ),
 
-                // ── PageView ────────────────────────────────────────────────
-                Expanded(
-                  child: PageView.builder(
-                    controller: _controller,
-                    itemCount: _pages.length,
-                    onPageChanged: (index) {
-                      setState(() => _currentIndex = index);
-                    },
-                    itemBuilder: (context, index) {
-                      final item = _pages[index];
-                      return _OnboardingPageView(item: item);
-                    },
-                  ),
-                ),
-
-                // ── Bottom Section: Indicator & Buttons ─────────────────────
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
-                  child: Column(
-                    children: [
-                      // Dots Indicator
-                      SmoothPageIndicator(
-                        controller: _controller,
-                        count: _pages.length,
-                        effect: const ExpandingDotsEffect(
-                          dotWidth: 8,
-                          dotHeight: 8,
-                          expansionFactor: 3.2,
-                          spacing: 6,
-                          activeDotColor: AppColors.accent,
-                          dotColor: Color(0xFF222630),
-                        ),
-                      ),
-
-                      const SizedBox(height: 32),
-
-                      // Action Button (Next or Get Started)
-                      SizedBox(
-                        width: double.infinity,
-                        height: 56,
-                        child: ElevatedButton(
-                          onPressed: _onNext,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.accent,
-                            foregroundColor: const Color(0xFF000000),
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(28),
-                            ),
-                            shadowColor: AppColors.accentGlow,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                isLastPage ? 'Get Started' : 'Next',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 0.2,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Icon(
-                                isLastPage
-                                    ? Icons.rocket_launch_rounded
-                                    : Icons.arrow_forward_rounded,
-                                size: 20,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+          // ── Page 4: "Your favorite stories, always within reach" ──────────
+          _GridOnboardingPage(
+            title: 'Your favorite stories,\nalways within reach',
+            subtitle:
+                'Discover endless movies, series, and exclusive content—all at your fingertips.',
+            controller: _controller,
+            isLast: true,
+            onSkip: _finishOnboarding,
+            onNext: _finishOnboarding,
+            offsetIndex: 2,
           ),
         ],
       ),
@@ -259,113 +93,478 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 }
 
-class _OnboardingItem {
-  final String badgeText;
-  final IconData icon;
-  final String title;
-  final String description;
+// ─────────────────────────────────────────────────────────────────────────────
+// PAGE 1: DISNEY+ STYLE VERTICAL 3-STRIP LAYOUT
+// ─────────────────────────────────────────────────────────────────────────────
 
-  const _OnboardingItem({
-    required this.badgeText,
-    required this.icon,
-    required this.title,
-    required this.description,
-  });
-}
+class _DisneyStylePage extends StatelessWidget {
+  final VoidCallback onGetStarted;
 
-class _OnboardingPageView extends StatelessWidget {
-  final _OnboardingItem item;
+  const _DisneyStylePage({required this.onGetStarted});
 
-  const _OnboardingPageView({required this.item});
+  // Posters for the 3 vertical strips
+  static const _col1 = [
+    'https://image.tmdb.org/t/p/w500/A7EByudX0eOzlkQ2FIbogzyazm2.jpg',
+    'https://image.tmdb.org/t/p/w500/m20yt7Ul7hJBLv0S8j7Hn6Zk2iV.jpg',
+  ];
+  static const _col2 = [
+    'https://image.tmdb.org/t/p/w500/1pdfLvkbY9ohJlCjQH2CZjjYVvJ.jpg',
+    'https://image.tmdb.org/t/p/w500/kSpsYjG80eL4qQ3R3n9k6rLqC9p.jpg',
+  ];
+  static const _col3 = [
+    'https://image.tmdb.org/t/p/w500/8cdWjvZQUExUUTzyp4t6EDMubfO.jpg',
+    'https://image.tmdb.org/t/p/w500/2cxhvwyEwRlysAmRH4iodkvo0z5.jpg',
+  ];
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 28),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // ── Illustration / Center Emblem ─────────────────────────────────
-          Container(
-            width: 170,
-            height: 170,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.surface,
-              border: Border.all(
-                color: AppColors.accent.withOpacity(0.35),
-                width: 2,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.accent.withOpacity(0.2),
-                  blurRadius: 40,
-                  spreadRadius: 6,
-                ),
+    final height = MediaQuery.of(context).size.height;
+
+    return Stack(
+      children: [
+        // ── Top 3 Vertical Strips ──────────────────────────────────────────
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          height: height * 0.65,
+          child: const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
+              children: [
+                Expanded(child: _PosterStrip(urls: _col1, topOffset: 0)),
+                SizedBox(width: 8),
+                Expanded(child: _PosterStrip(urls: _col2, topOffset: -24)),
+                SizedBox(width: 8),
+                Expanded(child: _PosterStrip(urls: _col3, topOffset: 12)),
               ],
             ),
-            child: Center(
-              child: Icon(
-                item.icon,
-                color: AppColors.accent,
-                size: 80,
+          ),
+        ),
+
+        // ── Smooth Pitch-Black Gradient Fade ───────────────────────────────
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: height * 0.58,
+          child: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.transparent,
+                  Color(0xD9000000),
+                  AppColors.background,
+                  AppColors.background,
+                ],
+                stops: [0.0, 0.35, 0.7, 1.0],
               ),
             ),
           ),
+        ),
 
-          const SizedBox(height: 36),
+        // ── Brand, Tagline & Bottom "Get Started" Button ───────────────────
+        Positioned(
+          left: 24,
+          right: 24,
+          bottom: 40,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // FW Initial Logo
+              Image.asset(
+                'assets/images/logo_initials.png',
+                height: 56,
+                fit: BoxFit.contain,
+              ),
 
-          // ── Feature Badge ────────────────────────────────────────────────
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-            decoration: BoxDecoration(
-              color: AppColors.accent.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: AppColors.accent.withOpacity(0.4),
-                width: 1,
+              const SizedBox(height: 16),
+
+              // Disney-style Headline Tagline
+              const Text(
+                'The greatest stories,\nall in one place.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.4,
+                  height: 1.25,
+                ),
+              ),
+
+              const SizedBox(height: 10),
+
+              Text(
+                'Unlimited streaming for movies, series & exclusive hits.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: AppColors.textSecondary.withOpacity(0.85),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+
+              const SizedBox(height: 28),
+
+              // Full-width Get Started Button
+              SizedBox(
+                width: double.infinity,
+                height: 54,
+                child: ElevatedButton(
+                  onPressed: onGetStarted,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.accent,
+                    foregroundColor: const Color(0xFF000000),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(27),
+                    ),
+                    shadowColor: AppColors.accentGlow,
+                  ),
+                  child: const Text(
+                    'Get Started',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PosterStrip extends StatelessWidget {
+  final List<String> urls;
+  final double topOffset;
+
+  const _PosterStrip({required this.urls, required this.topOffset});
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRect(
+      child: OverflowBox(
+        alignment: Alignment.topCenter,
+        minHeight: 0,
+        maxHeight: double.infinity,
+        child: Transform.translate(
+          offset: Offset(0, topOffset),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: urls.map((url) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: AspectRatio(
+                    aspectRatio: 0.65,
+                    child: CachedNetworkImage(
+                      imageUrl: url,
+                      fit: BoxFit.cover,
+                      placeholder: (_, __) => Container(color: AppColors.surfaceLight),
+                      errorWidget: (_, __, ___) =>
+                          Container(color: AppColors.surfaceLight),
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PAGES 2, 3, 4: STAGGERED MOVIE POSTER GRID LAYOUT
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _GridOnboardingPage extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final PageController controller;
+  final bool isLast;
+  final VoidCallback onSkip;
+  final VoidCallback onNext;
+  final int offsetIndex;
+
+  const _GridOnboardingPage({
+    required this.title,
+    required this.subtitle,
+    required this.controller,
+    required this.isLast,
+    required this.onSkip,
+    required this.onNext,
+    required this.offsetIndex,
+  });
+
+  static const _postersPool = [
+    [
+      'https://image.tmdb.org/t/p/w500/1pdfLvkbY9ohJlCjQH2CZjjYVvJ.jpg',
+      'https://image.tmdb.org/t/p/w500/8cdWjvZQUExUUTzyp4t6EDMubfO.jpg',
+      'https://image.tmdb.org/t/p/w500/A7EByudX0eOzlkQ2FIbogzyazm2.jpg',
+    ],
+    [
+      'https://image.tmdb.org/t/p/w500/2cxhvwyEwRlysAmRH4iodkvo0z5.jpg',
+      'https://image.tmdb.org/t/p/w500/m20yt7Ul7hJBLv0S8j7Hn6Zk2iV.jpg',
+      'https://image.tmdb.org/t/p/w500/kSpsYjG80eL4qQ3R3n9k6rLqC9p.jpg',
+    ],
+    [
+      'https://image.tmdb.org/t/p/w500/aLVkiINNOgr1lYzZCrjWBsEV9um.jpg',
+      'https://image.tmdb.org/t/p/w500/lrkudNqmG39w62M4t4o6kQ7gV0r.jpg',
+      'https://image.tmdb.org/t/p/w500/A7EByudX0eOzlkQ2FIbogzyazm2.jpg',
+    ],
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final height = MediaQuery.of(context).size.height;
+    final posters = _postersPool[offsetIndex % _postersPool.length];
+
+    return Stack(
+      children: [
+        // ── Upper Staggered Poster Cards Grid ──────────────────────────────
+        Positioned(
+          top: 24,
+          left: 16,
+          right: 16,
+          height: height * 0.52,
+          child: Row(
+            children: [
+              Expanded(
+                child: _GridColumn(
+                  url1: posters[0],
+                  url2: posters[1],
+                  translateY: -16,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _GridColumn(
+                  url1: posters[1],
+                  url2: posters[2],
+                  translateY: 18,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _GridColumn(
+                  url1: posters[2],
+                  url2: posters[0],
+                  translateY: -10,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // ── Bottom Pitch Black Gradient Overlay ─────────────────────────────
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: height * 0.55,
+          child: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.transparent,
+                  Color(0xE6000000),
+                  AppColors.background,
+                  AppColors.background,
+                ],
+                stops: [0.0, 0.35, 0.65, 1.0],
               ),
             ),
-            child: Text(
-              item.badgeText,
-              style: const TextStyle(
-                color: AppColors.accent,
-                fontSize: 11,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 1.2,
+          ),
+        ),
+
+        // ── Text, 4-Dot Indicator, and Action Buttons ──────────────────────
+        Positioned(
+          left: 24,
+          right: 24,
+          bottom: 36,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Title
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.4,
+                  height: 1.25,
+                ),
               ),
-            ),
+
+              const SizedBox(height: 12),
+
+              // Subtitle
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Text(
+                  subtitle,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w400,
+                    height: 1.45,
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 28),
+
+              // 4-Dot Page Indicator
+              SmoothPageIndicator(
+                controller: controller,
+                count: 4,
+                effect: const ExpandingDotsEffect(
+                  dotWidth: 7,
+                  dotHeight: 7,
+                  expansionFactor: 3.5,
+                  spacing: 6,
+                  activeDotColor: AppColors.accent,
+                  dotColor: Color(0xFF232733),
+                ),
+              ),
+
+              const SizedBox(height: 28),
+
+              // Two Buttons Row: Skip & Next / Get Started
+              Row(
+                children: [
+                  // Skip button
+                  Expanded(
+                    child: SizedBox(
+                      height: 52,
+                      child: OutlinedButton(
+                        onPressed: onSkip,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.textPrimary,
+                          side: BorderSide(
+                            color: Colors.white.withOpacity(0.14),
+                            width: 1.2,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(26),
+                          ),
+                        ),
+                        child: const Text(
+                          'Skip',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(width: 14),
+
+                  // Next / Get Started button
+                  Expanded(
+                    child: SizedBox(
+                      height: 52,
+                      child: ElevatedButton(
+                        onPressed: onNext,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.accent,
+                          foregroundColor: const Color(0xFF000000),
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(26),
+                          ),
+                          shadowColor: AppColors.accentGlow,
+                        ),
+                        child: Text(
+                          isLast ? 'Get Started' : 'Next',
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
+        ),
+      ],
+    );
+  }
+}
 
-          const SizedBox(height: 20),
+class _GridColumn extends StatelessWidget {
+  final String url1;
+  final String url2;
+  final double translateY;
 
-          // ── Title ────────────────────────────────────────────────────────
-          Text(
-            item.title,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 28,
-              fontWeight: FontWeight.w900,
-              letterSpacing: -0.6,
-              height: 1.2,
-            ),
+  const _GridColumn({
+    required this.url1,
+    required this.url2,
+    required this.translateY,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRect(
+      child: OverflowBox(
+        alignment: Alignment.topCenter,
+        minHeight: 0,
+        maxHeight: double.infinity,
+        child: Transform.translate(
+          offset: Offset(0, translateY),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _PosterTile(url: url1),
+              const SizedBox(height: 10),
+              _PosterTile(url: url2),
+            ],
           ),
+        ),
+      ),
+    );
+  }
+}
 
-          const SizedBox(height: 14),
+class _PosterTile extends StatelessWidget {
+  final String url;
 
-          // ── Description ──────────────────────────────────────────────────
-          Text(
-            item.description,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 14,
-              fontWeight: FontWeight.w400,
-              height: 1.55,
-            ),
-          ),
-        ],
+  const _PosterTile({required this.url});
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: AspectRatio(
+        aspectRatio: 0.7,
+        child: CachedNetworkImage(
+          imageUrl: url,
+          fit: BoxFit.cover,
+          placeholder: (_, __) => Container(color: AppColors.surfaceLight),
+          errorWidget: (_, __, ___) => Container(color: AppColors.surfaceLight),
+        ),
       ),
     );
   }

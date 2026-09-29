@@ -175,29 +175,10 @@ class _HomeAppBar extends StatelessWidget {
       child: Row(
         children: [
           // Logo
-          RichText(
-            text: const TextSpan(
-              children: [
-                TextSpan(
-                  text: 'Free',
-                  style: TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 24,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                TextSpan(
-                  text: 'Watch',
-                  style: TextStyle(
-                    color: AppColors.accent,
-                    fontSize: 24,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-              ],
-            ),
+          Image.asset(
+            'assets/images/logo_full.png',
+            height: 26,
+            fit: BoxFit.contain,
           ),
 
           const Spacer(),
