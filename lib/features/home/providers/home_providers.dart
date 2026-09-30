@@ -35,3 +35,61 @@ final topRatedMoviesProvider = FutureProvider<List<Movie>>((ref) async {
 final nowPlayingMoviesProvider = FutureProvider<List<Movie>>((ref) async {
   return ref.watch(movieRepositoryProvider).getNowPlaying();
 });
+
+// ── Movie Logo provider ───────────────────────────────────────────────────
+
+final movieLogoProvider = FutureProvider.family<String?, int>((ref, movieId) async {
+  return ref.watch(movieRepositoryProvider).getMovieLogo(movieId);
+});
+
+// ── Specific named sections as requested by user ──────────────────────────
+
+/// "Latest to Rewatch" section
+final latestToRewatchProvider = FutureProvider<List<Movie>>((ref) async {
+  return ref.watch(movieRepositoryProvider).getNowPlaying();
+});
+
+/// "Latest Uploads" section
+final latestUploadsProvider = FutureProvider<List<Movie>>((ref) async {
+  return ref.watch(movieRepositoryProvider).getPopular();
+});
+
+/// "Series" section
+final seriesProvider = FutureProvider<List<Movie>>((ref) async {
+  return ref.watch(movieRepositoryProvider).getSeries();
+});
+
+/// "Action" section (Genre ID 28)
+final actionMoviesProvider = FutureProvider<List<Movie>>((ref) async {
+  return ref.watch(movieRepositoryProvider).getMoviesByGenre(28);
+});
+
+/// "Sci-Fi" section (Genre ID 878)
+final sciFiMoviesProvider = FutureProvider<List<Movie>>((ref) async {
+  return ref.watch(movieRepositoryProvider).getMoviesByGenre(878);
+});
+
+/// "Romance" section (Genre ID 10749)
+final romanceMoviesProvider = FutureProvider<List<Movie>>((ref) async {
+  return ref.watch(movieRepositoryProvider).getMoviesByGenre(10749);
+});
+
+/// "Horror" section (Genre ID 27)
+final horrorMoviesProvider = FutureProvider<List<Movie>>((ref) async {
+  return ref.watch(movieRepositoryProvider).getMoviesByGenre(27);
+});
+
+/// "Drama" section (Genre ID 18)
+final dramaMoviesProvider = FutureProvider<List<Movie>>((ref) async {
+  return ref.watch(movieRepositoryProvider).getMoviesByGenre(18);
+});
+
+/// "Animation" section (Genre ID 16)
+final animationMoviesProvider = FutureProvider<List<Movie>>((ref) async {
+  return ref.watch(movieRepositoryProvider).getMoviesByGenre(16);
+});
+
+/// "Family" section (Genre ID 10751)
+final familyMoviesProvider = FutureProvider<List<Movie>>((ref) async {
+  return ref.watch(movieRepositoryProvider).getMoviesByGenre(10751);
+});

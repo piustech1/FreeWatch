@@ -70,12 +70,28 @@ class VjMoviesSheet extends StatelessWidget {
                     width: 60,
                     height: 60,
                     color: AppColors.surface,
-                    child: CachedNetworkImage(
-                      imageUrl: vj.imageUrl,
-                      fit: BoxFit.cover,
-                      errorWidget: (_, __, ___) => const Center(
-                        child: Icon(Icons.person, color: AppColors.accent, size: 28),
-                      ),
+                    child: ColorFiltered(
+                      colorFilter: const ColorFilter.matrix(<double>[
+                        0.2126, 0.7152, 0.0722, 0, 0,
+                        0.2126, 0.7152, 0.0722, 0, 0,
+                        0.2126, 0.7152, 0.0722, 0, 0,
+                        0,      0,      0,      1, 0,
+                      ]),
+                      child: vj.imageUrl.startsWith('http')
+                          ? CachedNetworkImage(
+                              imageUrl: vj.imageUrl,
+                              fit: BoxFit.cover,
+                              errorWidget: (_, __, ___) => const Center(
+                                child: Icon(Icons.person, color: AppColors.accent, size: 28),
+                              ),
+                            )
+                          : Image.asset(
+                              vj.imageUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const Center(
+                                child: Icon(Icons.person, color: AppColors.accent, size: 28),
+                              ),
+                            ),
                     ),
                   ),
                 ),

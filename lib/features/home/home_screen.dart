@@ -11,6 +11,7 @@ import 'widgets/filter_bottom_sheet.dart';
 import 'widgets/vj_section.dart';
 import 'widgets/vj_movies_sheet.dart';
 import '../../data/mock/mock_movies.dart';
+import '../../data/models/movie.dart';
 
 /// Main Home Screen matching design screenshot
 class HomeScreen extends ConsumerStatefulWidget {
@@ -26,9 +27,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final trendingAsync = ref.watch(trendingMoviesProvider);
-    final popularAsync = ref.watch(popularMoviesProvider);
-    final topRatedAsync = ref.watch(topRatedMoviesProvider);
-    final nowPlayingAsync = ref.watch(nowPlayingMoviesProvider);
+    final latestToRewatchAsync = ref.watch(latestToRewatchProvider);
+    final latestUploadsAsync = ref.watch(latestUploadsProvider);
+    final seriesAsync = ref.watch(seriesProvider);
+    final actionAsync = ref.watch(actionMoviesProvider);
+    final sciFiAsync = ref.watch(sciFiMoviesProvider);
+    final romanceAsync = ref.watch(romanceMoviesProvider);
+    final horrorAsync = ref.watch(horrorMoviesProvider);
+    final dramaAsync = ref.watch(dramaMoviesProvider);
+    final animationAsync = ref.watch(animationMoviesProvider);
+    final familyAsync = ref.watch(familyMoviesProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -90,58 +98,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                 ),
 
-                // ── "New" Section (After Available Vj's) ───────────────────
-                SliverToBoxAdapter(
-                  child: nowPlayingAsync.when(
-                    data: (movies) => MovieSection(
-                      title: 'New',
-                      movies: movies,
-                      onMovieTap: (movie) {
-                        // Navigate to detail
-                      },
-                      onSeeAll: () {},
-                    ),
-                    loading: () => const MovieSection(
-                      title: 'New',
-                      isLoading: true,
-                    ),
-                    error: (_, __) => const SizedBox.shrink(),
-                  ),
-                ),
+                // ── "Latest to Rewatch" Section ───────────────────────────
+                _buildMovieSection(context, 'Latest to Rewatch', latestToRewatchAsync),
 
-                // ── "Movies" Section ───────────────────────────────────────
-                SliverToBoxAdapter(
-                  child: popularAsync.when(
-                    data: (movies) => MovieSection(
-                      title: 'Movies',
-                      movies: movies,
-                      onMovieTap: (movie) {},
-                      onSeeAll: () {},
-                    ),
-                    loading: () => const MovieSection(
-                      title: 'Movies',
-                      isLoading: true,
-                    ),
-                    error: (_, __) => const SizedBox.shrink(),
-                  ),
-                ),
+                // ── "Latest Uploads" Section ──────────────────────────────
+                _buildMovieSection(context, 'Latest Uploads', latestUploadsAsync),
 
-                // ── "Top Rated" Section ────────────────────────────────────
-                SliverToBoxAdapter(
-                  child: topRatedAsync.when(
-                    data: (movies) => MovieSection(
-                      title: 'Top Rated',
-                      movies: movies,
-                      onMovieTap: (movie) {},
-                      onSeeAll: () {},
-                    ),
-                    loading: () => const MovieSection(
-                      title: 'Top Rated',
-                      isLoading: true,
-                    ),
-                    error: (_, __) => const SizedBox.shrink(),
-                  ),
-                ),
+                // ── "Series" Section ──────────────────────────────────────
+                _buildMovieSection(context, 'Series', seriesAsync),
+
+                // ── Category Sections ─────────────────────────────────────
+                _buildMovieSection(context, 'Action', actionAsync),
+                _buildMovieSection(context, 'Sci-Fi', sciFiAsync),
+                _buildMovieSection(context, 'Romance', romanceAsync),
+                _buildMovieSection(context, 'Horror', horrorAsync),
+                _buildMovieSection(context, 'Drama', dramaAsync),
+                _buildMovieSection(context, 'Animation', animationAsync),
+                _buildMovieSection(context, 'Family', familyAsync),
 
                 // ── Space for Floating Nav Bar ────────────────────────────
                 const SliverToBoxAdapter(child: SizedBox(height: 100)),
@@ -168,6 +141,31 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ),
     );
   }
+
+  Widget _buildMovieSection(
+    BuildContext context,
+    String title,
+    AsyncValue<List<Movie>> asyncValue,
+  ) {
+    return SliverToBoxAdapter(
+      child: asyncValue.when(
+        data: (movies) {
+          if (movies.isEmpty) return const SizedBox.shrink();
+          return MovieSection(
+            title: title,
+            movies: movies,
+            onMovieTap: (movie) {},
+            onSeeAll: () {},
+          );
+        },
+        loading: () => MovieSection(
+          title: title,
+          isLoading: true,
+        ),
+        error: (_, __) => const SizedBox.shrink(),
+      ),
+    );
+  }
 }
 
 // ── App Bar ──────────────────────────────────────────────────────────────────
@@ -186,7 +184,7 @@ class _HomeAppBar extends StatelessWidget {
           // Logo - enlarged for prominence and clear visibility
           Image.asset(
             'assets/images/logo_full.png',
-            height: 38,
+            height: 48,
             fit: BoxFit.contain,
           ),
 

@@ -64,4 +64,50 @@ class TmdbDatasource {
     final res = await _dio.get(ApiConstants.genres);
     return Genre.fromJsonList(res.data as Map<String, dynamic>);
   }
+
+  // ── Movie Logos ───────────────────────────────────────────────────────────
+
+  Future<String?> getMovieLogo(int movieId) async {
+    try {
+      final res = await _dio.get('/movie/$movieId/images');
+      final data = res.data as Map<String, dynamic>;
+      final logos = data['logos'] as List<dynamic>?;
+      if (logos != null && logos.isNotEmpty) {
+        final enLogos = logos.where((l) => l['iso_639_1'] == 'en').toList();
+        final target = enLogos.isNotEmpty ? enLogos.first : logos.first;
+        final filePath = target['file_path'] as String?;
+        if (filePath != null) {
+          return '${ApiConstants.logoW500}$filePath';
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  // ── Discover by Genre ─────────────────────────────────────────────────────
+
+  Future<List<Movie>> getMoviesByGenre(int genreId, {int page = 1}) async {
+    final res = await _dio.get(
+      ApiConstants.discoverMovie,
+      queryParameters: {
+        'with_genres': genreId,
+        'page': page,
+        'sort_by': 'popularity.desc',
+      },
+    );
+    return Movie.fromJsonList(res.data as Map<String, dynamic>);
+  }
+
+  // ── TV Series ─────────────────────────────────────────────────────────────
+
+  Future<List<Movie>> getDiscoverTv({int page = 1}) async {
+    final res = await _dio.get(
+      ApiConstants.discoverTv,
+      queryParameters: {
+        'page': page,
+        'sort_by': 'popularity.desc',
+      },
+    );
+    return Movie.fromJsonList(res.data as Map<String, dynamic>);
+  }
 }

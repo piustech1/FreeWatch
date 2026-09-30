@@ -1,11 +1,14 @@
 import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iconly/iconly.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../data/models/movie.dart';
+import '../../../data/mock/mock_movies.dart';
+import '../providers/home_providers.dart';
 
 /// Compact hero banner carousel matching the reference design layout:
 /// reduced height, zero outlines, Watch Now / Download / VJ buttons, and 3D depth.
@@ -35,7 +38,7 @@ class _HeroBannerState extends State<HeroBanner> {
   @override
   void initState() {
     super.initState();
-    _controller = PageController(viewportFraction: 0.85);
+    _controller = PageController(viewportFraction: 0.78);
     _startAutoScroll();
   }
 
@@ -69,7 +72,7 @@ class _HeroBannerState extends State<HeroBanner> {
       children: [
         // ── Compact Hero Carousel with 3D Depth & Zero Outlines ────────────
         SizedBox(
-          height: 198,
+          height: 206,
           child: PageView.builder(
             controller: _controller,
             itemCount: _bannerMovies.length,
@@ -89,9 +92,9 @@ class _HeroBannerState extends State<HeroBanner> {
                   final double diff = (index - page);
                   final double absDiff = diff.abs().clamp(0.0, 1.0);
 
-                  final double scale = 1.0 - (absDiff * 0.10);
-                  final double opacity = 1.0 - (absDiff * 0.30);
-                  final double translateY = absDiff * 4.0;
+                  final double scale = 1.0 - (absDiff * 0.12);
+                  final double opacity = 1.0 - (absDiff * 0.35);
+                  final double translateY = absDiff * 6.0;
 
                   return Transform(
                     alignment: Alignment.center,
@@ -135,7 +138,7 @@ class _HeroBannerState extends State<HeroBanner> {
   }
 }
 
-class _HeroCardItem extends StatelessWidget {
+class _HeroCardItem extends ConsumerWidget {
   final Movie movie;
   final VoidCallback? onTap;
 
@@ -145,18 +148,21 @@ class _HeroCardItem extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final backdropUrl = movie.backdropPath != null
         ? (movie.backdropPath!.startsWith('http')
             ? movie.backdropPath!
             : '${ApiConstants.backdropW780}${movie.backdropPath}')
         : null;
 
+    final logoAsync = ref.watch(movieLogoProvider(movie.id));
+    final vj = MockData.vjs[movie.id.abs() % MockData.vjs.length];
+
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 5),
+        padding: const EdgeInsets.symmetric(horizontal: 9),
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
@@ -203,7 +209,7 @@ class _HeroCardItem extends StatelessWidget {
                     ),
                   ),
 
-                  // ── Hero Content (Title, Meta & Action Buttons) ───────────
+                  // ── Hero Content (Logo/Title, Meta & Action Buttons) ───────
                   Positioned(
                     left: 14,
                     right: 14,
@@ -212,23 +218,27 @@ class _HeroCardItem extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Title
-                        Text(
-                          movie.title.toUpperCase(),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 0.8,
-                            shadows: [
-                              Shadow(
-                                color: Colors.black,
-                                blurRadius: 10,
-                                offset: Offset(0, 2),
-                              ),
-                            ],
+                        // TMDB Official Movie Logo with Fallback to Styled Title
+                        SizedBox(
+                          height: 36,
+                          child: logoAsync.when(
+                            data: (logoUrl) {
+                              if (logoUrl != null && logoUrl.isNotEmpty) {
+                                return Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: CachedNetworkImage(
+                                    imageUrl: logoUrl,
+                                    height: 36,
+                                    fit: BoxFit.contain,
+                                    placeholder: (_, __) => _buildStyledTitle(movie.title),
+                                    errorWidget: (_, __, ___) => _buildStyledTitle(movie.title),
+                                  ),
+                                );
+                              }
+                              return _buildStyledTitle(movie.title);
+                            },
+                            loading: () => _buildStyledTitle(movie.title),
+                            error: (_, __) => _buildStyledTitle(movie.title),
                           ),
                         ),
 
@@ -311,7 +321,7 @@ class _HeroCardItem extends StatelessWidget {
 
                         const SizedBox(height: 10),
 
-                        // Action Buttons Row: WATCH NOW, DOWNLOAD, VJ
+                        // Action Buttons Row: WATCH NOW & Assigned VJ Name Pill
                         Row(
                           children: [
                             // 1. WATCH NOW (Primary electric green gradient)
@@ -360,66 +370,40 @@ class _HeroCardItem extends StatelessWidget {
 
                             const SizedBox(width: 8),
 
-                            // 2. DOWNLOAD (Solid dark translucent fill, NO outline)
+                            // 2. Assigned VJ Pill (replaces download button with actual assigned VJ)
                             Expanded(
-                              flex: 5,
+                              flex: 6,
                               child: Container(
                                 height: 34,
+                                padding: const EdgeInsets.symmetric(horizontal: 10),
                                 decoration: BoxDecoration(
-                                  color: const Color(0x33FFFFFF),
+                                  color: const Color(0x2E00E676),
                                   borderRadius: BorderRadius.circular(17),
                                 ),
-                                child: const Row(
+                                child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Icon(
-                                      IconlyBold.download,
-                                      color: Colors.white,
+                                    const Icon(
+                                      Icons.headset_mic_rounded,
+                                      color: AppColors.accent,
                                       size: 15,
                                     ),
-                                    SizedBox(width: 4),
-                                    Text(
-                                      'DOWNLOAD',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 10.5,
-                                        fontWeight: FontWeight.w800,
-                                        letterSpacing: 0.2,
+                                    const SizedBox(width: 5),
+                                    Flexible(
+                                      child: Text(
+                                        vj.name,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          color: AppColors.accent,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w900,
+                                          letterSpacing: 0.3,
+                                        ),
                                       ),
                                     ),
                                   ],
                                 ),
-                              ),
-                            ),
-
-                            const SizedBox(width: 8),
-
-                            // 3. VJ Button (Solid dark translucent pill, NO outline)
-                            Container(
-                              height: 34,
-                              padding: const EdgeInsets.symmetric(horizontal: 10),
-                              decoration: BoxDecoration(
-                                color: const Color(0x2E00E676),
-                                borderRadius: BorderRadius.circular(17),
-                              ),
-                              child: const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.headset_mic_rounded,
-                                    color: AppColors.accent,
-                                    size: 14,
-                                  ),
-                                  SizedBox(width: 4),
-                                  Text(
-                                    'VJ',
-                                    style: TextStyle(
-                                      color: AppColors.accent,
-                                      fontSize: 10.5,
-                                      fontWeight: FontWeight.w900,
-                                    ),
-                                  ),
-                                ],
                               ),
                             ),
                           ],
@@ -431,6 +415,30 @@ class _HeroCardItem extends StatelessWidget {
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStyledTitle(String title) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Text(
+        title.toUpperCase(),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
+          color: AppColors.textPrimary,
+          fontSize: 17,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 0.8,
+          shadows: [
+            Shadow(
+              color: Colors.black,
+              blurRadius: 10,
+              offset: Offset(0, 2),
+            ),
+          ],
         ),
       ),
     );

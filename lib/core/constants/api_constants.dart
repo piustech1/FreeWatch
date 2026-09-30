@@ -15,6 +15,7 @@ class ApiConstants {
   static const String posterW200 = '$tmdbImageBaseUrl/w200';
   static const String posterW342 = '$tmdbImageBaseUrl/w342';
   static const String posterW500 = '$tmdbImageBaseUrl/w500';
+  static const String logoW500 = '$tmdbImageBaseUrl/w500';
   static const String backdropW780 = '$tmdbImageBaseUrl/w780';
   static const String backdropOriginal = '$tmdbImageBaseUrl/original';
 
@@ -29,4 +30,6 @@ class ApiConstants {
   static const String similarMovies = '/movie/{id}/similar';
   static const String searchMovies = '/search/movie';
   static const String genres = '/genre/movie/list';
+  static const String discoverMovie = '/discover/movie';
+  static const String discoverTv = '/discover/tv';
 }

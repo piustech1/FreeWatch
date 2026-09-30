@@ -42,34 +42,8 @@ class VjCard extends StatelessWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              // ── 1. Full Background Image ──────────────────────────────────
-              CachedNetworkImage(
-                imageUrl: vj.imageUrl,
-                fit: BoxFit.cover,
-                placeholder: (_, __) => Container(
-                  color: const Color(0xFF14161E),
-                  child: const Center(
-                    child: SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(AppColors.accent),
-                      ),
-                    ),
-                  ),
-                ),
-                errorWidget: (_, __, ___) => Container(
-                  color: const Color(0xFF14161E),
-                  child: const Center(
-                    child: Icon(
-                      Icons.movie_creation_rounded,
-                      color: AppColors.textHint,
-                      size: 28,
-                    ),
-                  ),
-                ),
-              ),
+              // ── 1. Full Background Image (Black & White Filtered) ────────
+              _buildVjImage(),
 
               // ── 2. Subtle Overall Ambient Dark Vignette ───────────────────
               Container(
@@ -80,7 +54,7 @@ class VjCard extends StatelessWidget {
                     colors: [
                       Colors.black.withOpacity(0.35),
                       Colors.transparent,
-                      Colors.black.withOpacity(0.3),
+                      Colors.black.withOpacity(0.35),
                     ],
                   ),
                 ),
@@ -129,7 +103,7 @@ class VjCard extends StatelessWidget {
                 ),
               ),
 
-              // ── 5. Bottom-Right Triangular Content (VJ Name & Count) ──────
+              // ── 5. Bottom-Right Triangular Content (Outstanding VJ Name) ───
               Positioned(
                 right: 10,
                 bottom: 8,
@@ -137,21 +111,31 @@ class VjCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // VJ Name
-                    Text(
-                      vj.name,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0.5,
-                        shadows: [
-                          Shadow(
-                            color: Colors.black,
-                            blurRadius: 8,
-                            offset: Offset(0, 2),
-                          ),
+                    // Outstanding Stylized VJ Name
+                    ShaderMask(
+                      shaderCallback: (bounds) => const LinearGradient(
+                        colors: [
+                          Color(0xFFFFFFFF),
+                          Color(0xFF00E676),
                         ],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                      ).createShader(bounds),
+                      child: Text(
+                        vj.name.toUpperCase(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.9,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black,
+                              blurRadius: 10,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -181,6 +165,58 @@ class VjCard extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVjImage() {
+    final bool isNetwork = vj.imageUrl.startsWith('http');
+    final Widget rawImage = isNetwork
+        ? CachedNetworkImage(
+            imageUrl: vj.imageUrl,
+            fit: BoxFit.cover,
+            placeholder: (_, __) => Container(
+              color: const Color(0xFF14161E),
+              child: const Center(
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.accent),
+                  ),
+                ),
+              ),
+            ),
+            errorWidget: (_, __, ___) => _fallbackPlaceholder(),
+          )
+        : Image.asset(
+            vj.imageUrl,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => _fallbackPlaceholder(),
+          );
+
+    // Apply high-contrast black & white grayscale matrix as requested by user
+    return ColorFiltered(
+      colorFilter: const ColorFilter.matrix(<double>[
+        0.2126, 0.7152, 0.0722, 0, 0,
+        0.2126, 0.7152, 0.0722, 0, 0,
+        0.2126, 0.7152, 0.0722, 0, 0,
+        0,      0,      0,      1, 0,
+      ]),
+      child: rawImage,
+    );
+  }
+
+  Widget _fallbackPlaceholder() {
+    return Container(
+      color: const Color(0xFF14161E),
+      child: const Center(
+        child: Icon(
+          Icons.movie_creation_rounded,
+          color: AppColors.textHint,
+          size: 28,
         ),
       ),
     );

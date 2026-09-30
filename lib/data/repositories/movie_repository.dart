@@ -87,4 +87,43 @@ class MovieRepository {
       return MockData.genres;
     }
   }
+
+  Future<String?> getMovieLogo(int movieId) async {
+    if (!_hasCustomApiKey) return null;
+    try {
+      return await _datasource.getMovieLogo(movieId);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<List<Movie>> getMoviesByGenre(int genreId, {int page = 1}) async {
+    if (!_hasCustomApiKey) {
+      return MockData.getAllMovies()
+          .where((m) => m.genreIds.contains(genreId))
+          .toList();
+    }
+    try {
+      final list = await _datasource.getMoviesByGenre(genreId, page: page);
+      return list.isNotEmpty
+          ? list
+          : MockData.getAllMovies()
+              .where((m) => m.genreIds.contains(genreId))
+              .toList();
+    } catch (_) {
+      return MockData.getAllMovies()
+          .where((m) => m.genreIds.contains(genreId))
+          .toList();
+    }
+  }
+
+  Future<List<Movie>> getSeries({int page = 1}) async {
+    if (!_hasCustomApiKey) return MockData.popularMovies;
+    try {
+      final list = await _datasource.getDiscoverTv(page: page);
+      return list.isNotEmpty ? list : MockData.popularMovies;
+    } catch (_) {
+      return MockData.popularMovies;
+    }
+  }
 }
