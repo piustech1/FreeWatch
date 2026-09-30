@@ -12,6 +12,7 @@ import 'widgets/vj_section.dart';
 import 'widgets/vj_movies_sheet.dart';
 import '../../data/mock/mock_movies.dart';
 import '../../data/models/movie.dart';
+import '../auth/presentation/screens/choose_avatar_screen.dart';
 
 /// Main Home Screen matching design screenshot
 class HomeScreen extends ConsumerStatefulWidget {
@@ -130,6 +131,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             child: FloatingNavBar(
               selectedIndex: _selectedNavIndex,
               onItemSelected: (index) {
+                if (index == 3) {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const ChooseAvatarScreen(),
+                    ),
+                  );
+                  return;
+                }
                 setState(() => _selectedNavIndex = index);
                 if (index == 1) {
                   FilterBottomSheet.show(context);

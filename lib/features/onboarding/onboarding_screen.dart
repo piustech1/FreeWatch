@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'dart:ui';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +7,8 @@ import 'package:iconly/iconly.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/constants/app_colors.dart';
+import '../auth/presentation/providers/user_avatar_provider.dart';
+import '../auth/presentation/screens/choose_avatar_screen.dart';
 import '../home/providers/home_providers.dart';
 
 /// 2-Page Onboarding Experience:
@@ -105,29 +106,24 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
             ),
           ),
 
-          // ── 2. Subtle Glassmorphism Frosted Blur Panel (Lower Height) ─────
+          // ── 2. Clean Dark Gradient Bottom Overlay (Zero Blur) ────────────
           Positioned(
             left: 0,
             right: 0,
             bottom: 0,
             height: blurHeight,
-            child: ClipRect(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 7, sigmaY: 7),
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.black.withOpacity(0.0),
-                        Colors.black.withOpacity(0.50),
-                        Colors.black.withOpacity(0.82),
-                        Colors.black.withOpacity(0.96),
-                      ],
-                      stops: const [0.0, 0.18, 0.58, 1.0],
-                    ),
-                  ),
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.0),
+                    Colors.black.withOpacity(0.55),
+                    Colors.black.withOpacity(0.85),
+                    Colors.black.withOpacity(0.98),
+                  ],
+                  stops: const [0.0, 0.20, 0.60, 1.0],
                 ),
               ),
             ),
@@ -310,29 +306,105 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   }
 
   Widget _buildSignUpContent() {
+    final currentAvatar = ref.watch(userAvatarProvider);
+
     return Column(
       key: const ValueKey('signUpContent'),
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Header
-        const Text(
-          'Create Account',
-          style: TextStyle(
-            color: AppColors.textPrimary,
-            fontSize: 22,
-            fontWeight: FontWeight.w900,
-            letterSpacing: -0.3,
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          'Sign up to stream unlimited movies & series',
-          style: TextStyle(
-            color: Colors.white.withOpacity(0.70),
-            fontSize: 11.5,
-            fontWeight: FontWeight.w400,
-          ),
+        // Header with Disney Avatar Picker
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Create Account',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Sign up to stream unlimited movies & series',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.70),
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            // Avatar Circle with Edit Badge
+            GestureDetector(
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const ChooseAvatarScreen(),
+                  ),
+                );
+              },
+              child: Stack(
+                children: [
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.white,
+                        width: 2.2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.white.withOpacity(0.3),
+                          blurRadius: 10,
+                        ),
+                      ],
+                    ),
+                    child: ClipOval(
+                      child: Container(
+                        color: const Color(0xFF1E2130),
+                        child: Image.asset(
+                          currentAvatar.assetPath,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => const Icon(
+                            Icons.person_rounded,
+                            color: Colors.white,
+                            size: 28,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    right: 0,
+                    bottom: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(3.5),
+                      decoration: const BoxDecoration(
+                        color: AppColors.accent,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.edit_rounded,
+                        color: Colors.black,
+                        size: 11,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
 
         const SizedBox(height: 14),
