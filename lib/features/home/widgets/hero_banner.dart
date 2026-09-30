@@ -38,7 +38,7 @@ class _HeroBannerState extends State<HeroBanner> {
   @override
   void initState() {
     super.initState();
-    _controller = PageController(viewportFraction: 0.78);
+    _controller = PageController(viewportFraction: 0.88);
     _startAutoScroll();
   }
 
@@ -92,9 +92,9 @@ class _HeroBannerState extends State<HeroBanner> {
                   final double diff = (index - page);
                   final double absDiff = diff.abs().clamp(0.0, 1.0);
 
-                  final double scale = 1.0 - (absDiff * 0.12);
-                  final double opacity = 1.0 - (absDiff * 0.35);
-                  final double translateY = absDiff * 6.0;
+                  final double scale = 1.0 - (absDiff * 0.08);
+                  final double opacity = 1.0 - (absDiff * 0.25);
+                  final double translateY = absDiff * 4.0;
 
                   return Transform(
                     alignment: Alignment.center,
@@ -162,7 +162,7 @@ class _HeroCardItem extends ConsumerWidget {
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 9),
+        padding: const EdgeInsets.symmetric(horizontal: 5),
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),

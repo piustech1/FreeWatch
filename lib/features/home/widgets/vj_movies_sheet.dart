@@ -81,6 +81,7 @@ class VjMoviesSheet extends StatelessWidget {
                           ? CachedNetworkImage(
                               imageUrl: vj.imageUrl,
                               fit: BoxFit.cover,
+                              alignment: Alignment.topCenter,
                               errorWidget: (_, __, ___) => const Center(
                                 child: Icon(Icons.person, color: AppColors.accent, size: 28),
                               ),
@@ -88,6 +89,7 @@ class VjMoviesSheet extends StatelessWidget {
                           : Image.asset(
                               vj.imageUrl,
                               fit: BoxFit.cover,
+                              alignment: Alignment.topCenter,
                               errorBuilder: (_, __, ___) => const Center(
                                 child: Icon(Icons.person, color: AppColors.accent, size: 28),
                               ),

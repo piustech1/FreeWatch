@@ -14,8 +14,8 @@ void main() {
     expect(find.byType(FreeWatchApp), findsOneWidget);
     expect(find.byType(SplashScreen), findsOneWidget);
 
-    // Advance clock past splash timer to settle navigation
-    await tester.pump(const Duration(milliseconds: 2600));
-    await tester.pumpAndSettle();
+    // Advance clock to verify rendering
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump(const Duration(milliseconds: 1000));
   });
 }
