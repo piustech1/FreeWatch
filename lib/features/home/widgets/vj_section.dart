@@ -25,7 +25,7 @@ class VjSection extends StatelessWidget {
       children: [
         // ── Section Header ──────────────────────────────────────────────────
         Padding(
-          padding: const EdgeInsets.fromLTRB(18, 22, 18, 14),
+          padding: const EdgeInsets.fromLTRB(18, 16, 18, 12),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -33,24 +33,20 @@ class VjSection extends StatelessWidget {
               Row(
                 children: [
                   const Text(
-                    'Translated by VJ',
+                    'Available Vj\'s',
                     style: TextStyle(
                       color: AppColors.textPrimary,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
+                      fontSize: 19,
+                      fontWeight: FontWeight.w800,
                       letterSpacing: -0.3,
                     ),
                   ),
                   const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                     decoration: BoxDecoration(
-                      color: AppColors.accent.withOpacity(0.14),
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(
-                        color: AppColors.accent.withOpacity(0.3),
-                        width: 0.8,
-                      ),
+                      color: AppColors.accent.withOpacity(0.18),
+                      borderRadius: BorderRadius.circular(6),
                     ),
                     child: const Text(
                       'VOICEOVER',

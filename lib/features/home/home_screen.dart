@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:iconly/iconly.dart';
 import '../../core/constants/app_colors.dart';
-import '../../data/models/genre.dart';
 import '../../shared/widgets/shimmer_loading.dart';
 import 'providers/home_providers.dart';
 import 'widgets/hero_banner.dart';
@@ -25,8 +25,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final genresAsync = ref.watch(genresProvider);
-    final selectedGenreId = ref.watch(selectedGenreProvider);
     final trendingAsync = ref.watch(trendingMoviesProvider);
     final popularAsync = ref.watch(popularMoviesProvider);
     final topRatedAsync = ref.watch(topRatedMoviesProvider);
@@ -49,23 +47,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                 ),
 
-                const SliverToBoxAdapter(child: SizedBox(height: 12)),
-
-                // ── Genre Filter Chips ─────────────────────────────────────
-                SliverToBoxAdapter(
-                  child: genresAsync.when(
-                    data: (genres) => _GenreFilterBar(
-                      genres: genres,
-                      selectedId: selectedGenreId,
-                      onSelect: (id) =>
-                          ref.read(selectedGenreProvider.notifier).state = id,
-                    ),
-                    loading: () => const SizedBox(height: 40),
-                    error: (_, __) => const SizedBox.shrink(),
-                  ),
-                ),
-
-                const SliverToBoxAdapter(child: SizedBox(height: 16)),
+                const SliverToBoxAdapter(child: SizedBox(height: 8)),
 
                 // ── Hero Banner Carousel ───────────────────────────────────
                 SliverToBoxAdapter(
@@ -84,26 +66,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                 ),
 
-                // ── "New" Section ──────────────────────────────────────────
-                SliverToBoxAdapter(
-                  child: nowPlayingAsync.when(
-                    data: (movies) => MovieSection(
-                      title: 'New',
-                      movies: movies,
-                      onMovieTap: (movie) {
-                        // Navigate to detail
-                      },
-                      onSeeAll: () {},
-                    ),
-                    loading: () => const MovieSection(
-                      title: 'New',
-                      isLoading: true,
-                    ),
-                    error: (_, __) => const SizedBox.shrink(),
-                  ),
-                ),
-
-                // ── "Translated by VJ" Section ─────────────────────────────
+                // ── "Available Vj's" Section (Directly Below Hero) ──────────
                 SliverToBoxAdapter(
                   child: VjSection(
                     vjs: MockData.vjs,
@@ -124,6 +87,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         );
                       }
                     },
+                  ),
+                ),
+
+                // ── "New" Section (After Available Vj's) ───────────────────
+                SliverToBoxAdapter(
+                  child: nowPlayingAsync.when(
+                    data: (movies) => MovieSection(
+                      title: 'New',
+                      movies: movies,
+                      onMovieTap: (movie) {
+                        // Navigate to detail
+                      },
+                      onSeeAll: () {},
+                    ),
+                    loading: () => const MovieSection(
+                      title: 'New',
+                      isLoading: true,
+                    ),
+                    error: (_, __) => const SizedBox.shrink(),
                   ),
                 ),
 
@@ -198,119 +180,58 @@ class _HomeAppBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+      padding: const EdgeInsets.fromLTRB(18, 10, 14, 4),
       child: Row(
         children: [
-          // Logo
+          // Logo - enlarged for prominence and clear visibility
           Image.asset(
             'assets/images/logo_full.png',
-            height: 26,
+            height: 38,
             fit: BoxFit.contain,
           ),
 
           const Spacer(),
 
-          // Search / Filter Button
-          GestureDetector(
-            onTap: onSearchTap,
-            child: Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.06),
-                  width: 1,
-                ),
-              ),
-              child: const Icon(
-                Icons.search,
-                color: AppColors.textPrimary,
-                size: 20,
-              ),
+          // Search Button (solid glyph IconlyBold.search)
+          IconButton(
+            onPressed: onSearchTap,
+            padding: const EdgeInsets.all(6),
+            constraints: const BoxConstraints(),
+            icon: const Icon(
+              IconlyBold.search,
+              color: AppColors.textPrimary,
+              size: 24,
             ),
           ),
 
-          const SizedBox(width: 10),
+          const SizedBox(width: 14),
 
-          // Notification Button
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: Colors.white.withOpacity(0.06),
-                width: 1,
-              ),
-            ),
-            child: const Icon(
-              Icons.notifications,
+          // Notification Button (solid glyph IconlyBold.notification)
+          IconButton(
+            onPressed: () {},
+            padding: const EdgeInsets.all(6),
+            constraints: const BoxConstraints(),
+            icon: const Icon(
+              IconlyBold.notification,
               color: AppColors.textPrimary,
-              size: 20,
+              size: 24,
+            ),
+          ),
+
+          const SizedBox(width: 14),
+
+          // Cast Button (clean, borderless)
+          IconButton(
+            onPressed: () {},
+            padding: const EdgeInsets.all(6),
+            constraints: const BoxConstraints(),
+            icon: const Icon(
+              Icons.cast_rounded,
+              color: AppColors.textPrimary,
+              size: 23,
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// ── Genre Filter Bar ─────────────────────────────────────────────────────────
-
-class _GenreFilterBar extends StatelessWidget {
-  final List<Genre> genres;
-  final int? selectedId;
-  final void Function(int? id) onSelect;
-
-  const _GenreFilterBar({
-    required this.genres,
-    required this.selectedId,
-    required this.onSelect,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 38,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 18),
-        physics: const BouncingScrollPhysics(),
-        itemCount: genres.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (context, index) {
-          final genre = genres[index];
-          final isSelected = genre.id == selectedId;
-
-          return GestureDetector(
-            onTap: () => onSelect(isSelected ? null : genre.id),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? AppColors.chipSelected
-                    : AppColors.chipUnselected,
-                borderRadius: BorderRadius.circular(22),
-              ),
-              child: Center(
-                child: Text(
-                  genre.name,
-                  style: TextStyle(
-                    color: isSelected
-                        ? AppColors.chipTextSelected
-                        : AppColors.chipTextUnselected,
-                    fontSize: 13,
-                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                  ),
-                ),
-              ),
-            ),
-          );
-        },
       ),
     );
   }

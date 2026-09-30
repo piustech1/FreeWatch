@@ -1,8 +1,10 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:iconly/iconly.dart';
 import '../../../core/constants/app_colors.dart';
 
-/// Floating capsule pill navigation bar matching the design with neon green active state
+/// Docked bottom navigation bar matching the modern reference layout:
+/// pure black background, subtle hairline top divider, zero container outlines,
+/// and IconlyBold solid glyph icons with text labels.
 class FloatingNavBar extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int> onItemSelected;
@@ -15,62 +17,48 @@ class FloatingNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(36, 0, 36, 16),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(36),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-            child: Container(
-              height: 64,
-              decoration: BoxDecoration(
-                color: AppColors.floatingNav,
-                borderRadius: BorderRadius.circular(36),
-                border: Border.all(
-                  color: AppColors.floatingNavBorder,
-                  width: 1.2,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.8),
-                    blurRadius: 24,
-                    offset: const Offset(0, 10),
-                  ),
-                  BoxShadow(
-                    color: AppColors.accent.withOpacity(0.08),
-                    blurRadius: 16,
-                    spreadRadius: 1,
-                  ),
-                ],
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xFF000000),
+        border: Border(
+          top: BorderSide(
+            color: Color(0x1AFFFFFF),
+            width: 0.5,
+          ),
+        ),
+      ),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 60,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _NavBarItem(
+                icon: IconlyBold.home,
+                label: 'Home',
+                isSelected: selectedIndex == 0,
+                onTap: () => onItemSelected(0),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _NavBarItem(
-                    icon: Icons.home,
-                    isSelected: selectedIndex == 0,
-                    onTap: () => onItemSelected(0),
-                  ),
-                  _NavBarItem(
-                    icon: Icons.search,
-                    isSelected: selectedIndex == 1,
-                    onTap: () => onItemSelected(1),
-                  ),
-                  _NavBarItem(
-                    icon: Icons.favorite,
-                    isSelected: selectedIndex == 2,
-                    onTap: () => onItemSelected(2),
-                  ),
-                  _NavBarItem(
-                    icon: Icons.person,
-                    isSelected: selectedIndex == 3,
-                    onTap: () => onItemSelected(3),
-                  ),
-                ],
+              _NavBarItem(
+                icon: IconlyBold.search,
+                label: 'Search',
+                isSelected: selectedIndex == 1,
+                onTap: () => onItemSelected(1),
               ),
-            ),
+              _NavBarItem(
+                icon: IconlyBold.heart,
+                label: 'Favorites',
+                isSelected: selectedIndex == 2,
+                onTap: () => onItemSelected(2),
+              ),
+              _NavBarItem(
+                icon: IconlyBold.profile,
+                label: 'Profile',
+                isSelected: selectedIndex == 3,
+                onTap: () => onItemSelected(3),
+              ),
+            ],
           ),
         ),
       ),
@@ -80,35 +68,50 @@ class FloatingNavBar extends StatelessWidget {
 
 class _NavBarItem extends StatelessWidget {
   final IconData icon;
+  final String label;
   final bool isSelected;
   final VoidCallback onTap;
 
   const _NavBarItem({
     required this.icon,
+    required this.label,
     required this.isSelected,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: isSelected
-            ? BoxDecoration(
-                color: AppColors.accent.withOpacity(0.18),
-                shape: BoxShape.circle,
-              )
-            : const BoxDecoration(),
-        child: Icon(
-          icon,
-          color: isSelected ? AppColors.accent : AppColors.textHint,
-          size: 24,
+    const activeColor = AppColors.accent;
+    const inactiveIconColor = Color(0xFF8E8E93);
+    const inactiveTextColor = Color(0xFF757575);
+
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? activeColor : inactiveIconColor,
+              size: 23,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? activeColor : inactiveTextColor,
+                fontSize: 10.5,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                letterSpacing: -0.2,
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
+

@@ -43,12 +43,6 @@ class VjMoviesSheet extends StatelessWidget {
       decoration: const BoxDecoration(
         color: AppColors.background,
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        border: Border(
-          top: BorderSide(
-            color: Color(0x3300E676),
-            width: 1.2,
-          ),
-        ),
       ),
       child: Column(
         children: [
@@ -114,10 +108,6 @@ class VjMoviesSheet extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: AppColors.accent.withOpacity(0.16),
                               borderRadius: BorderRadius.circular(4),
-                              border: Border.all(
-                                color: AppColors.accent.withOpacity(0.4),
-                                width: 0.8,
-                              ),
                             ),
                             child: const Text(
                               'VERIFIED',
@@ -158,13 +148,9 @@ class VjMoviesSheet extends StatelessWidget {
                   child: Container(
                     width: 36,
                     height: 36,
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       color: AppColors.surface,
                       shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.08),
-                        width: 1,
-                      ),
                     ),
                     child: const Icon(
                       Icons.close,
@@ -187,10 +173,6 @@ class VjMoviesSheet extends StatelessWidget {
               decoration: BoxDecoration(
                 color: const Color(0xFF0C0E14),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.06),
-                  width: 1,
-                ),
               ),
               child: Row(
                 children: [
@@ -278,10 +260,6 @@ class _VjMovieTile extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: Colors.white.withOpacity(0.06),
-            width: 1,
-          ),
         ),
         child: Row(
           children: [

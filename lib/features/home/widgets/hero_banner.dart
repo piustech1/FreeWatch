@@ -1,12 +1,14 @@
 import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:iconly/iconly.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../data/models/movie.dart';
 
-/// Auto-scrolling hero banner matching the design screenshot
+/// Compact hero banner carousel matching the reference design layout:
+/// reduced height, zero outlines, Watch Now / Download / VJ buttons, and 3D depth.
 class HeroBanner extends StatefulWidget {
   final List<Movie> movies;
   final void Function(Movie movie)? onTap;
@@ -28,12 +30,12 @@ class _HeroBannerState extends State<HeroBanner> {
   Timer? _timer;
   int _currentPage = 0;
 
-  List<Movie> get _bannerMovies => widget.movies.take(5).toList();
+  List<Movie> get _bannerMovies => widget.movies.take(6).toList();
 
   @override
   void initState() {
     super.initState();
-    _controller = PageController(viewportFraction: 0.82);
+    _controller = PageController(viewportFraction: 0.85);
     _startAutoScroll();
   }
 
@@ -65,9 +67,9 @@ class _HeroBannerState extends State<HeroBanner> {
 
     return Column(
       children: [
-        // ── 3D Protruding Banner Carousel ───────────────────────────────────
+        // ── Compact Hero Carousel with 3D Depth & Zero Outlines ────────────
         SizedBox(
-          height: 226,
+          height: 198,
           child: PageView.builder(
             controller: _controller,
             itemCount: _bannerMovies.length,
@@ -87,22 +89,20 @@ class _HeroBannerState extends State<HeroBanner> {
                   final double diff = (index - page);
                   final double absDiff = diff.abs().clamp(0.0, 1.0);
 
-                  // 3D Depth parameters: center is larger and protrudes forward
-                  final double scale = 1.0 - (absDiff * 0.12);
-                  final double opacity = 1.0 - (absDiff * 0.32);
-                  final double translateY = absDiff * 6.0;
+                  final double scale = 1.0 - (absDiff * 0.10);
+                  final double opacity = 1.0 - (absDiff * 0.30);
+                  final double translateY = absDiff * 4.0;
 
                   return Transform(
                     alignment: Alignment.center,
                     transform: Matrix4.identity()
-                      ..setEntry(3, 2, 0.001) // 3D perspective
+                      ..setEntry(3, 2, 0.001)
                       ..translate(0.0, translateY, 0.0)
                       ..scale(scale, scale),
                     child: Opacity(
                       opacity: opacity.clamp(0.0, 1.0),
                       child: _HeroCardItem(
                         movie: movie,
-                        isActive: absDiff < 0.4,
                         onTap: () => widget.onTap?.call(movie),
                       ),
                     ),
@@ -113,38 +113,21 @@ class _HeroBannerState extends State<HeroBanner> {
           ),
         ),
 
-        const SizedBox(height: 14),
+        const SizedBox(height: 10),
 
-        // ── Pagination Dots & "See all" Row ───────────────────────────────
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              SmoothPageIndicator(
-                controller: _controller,
-                count: _bannerMovies.length,
-                effect: const ExpandingDotsEffect(
-                  dotWidth: 6,
-                  dotHeight: 6,
-                  activeDotColor: AppColors.accent,
-                  dotColor: Color(0xFF262A34),
-                  expansionFactor: 3.5,
-                  spacing: 6,
-                ),
-              ),
-              GestureDetector(
-                onTap: widget.onSeeAll,
-                child: const Text(
-                  'See all',
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ],
+        // ── Elongated Pill Pagination Indicator ─────────────────────────────
+        Center(
+          child: SmoothPageIndicator(
+            controller: _controller,
+            count: _bannerMovies.length,
+            effect: const ExpandingDotsEffect(
+              dotWidth: 6,
+              dotHeight: 6,
+              activeDotColor: AppColors.accent,
+              dotColor: Color(0xFF2C303B),
+              expansionFactor: 3.8,
+              spacing: 6,
+            ),
           ),
         ),
       ],
@@ -154,12 +137,10 @@ class _HeroBannerState extends State<HeroBanner> {
 
 class _HeroCardItem extends StatelessWidget {
   final Movie movie;
-  final bool isActive;
   final VoidCallback? onTap;
 
   const _HeroCardItem({
     required this.movie,
-    this.isActive = true,
     this.onTap,
   });
 
@@ -171,136 +152,289 @@ class _HeroCardItem extends StatelessWidget {
             : '${ApiConstants.backdropW780}${movie.backdropPath}')
         : null;
 
-    final isBeekeeper = movie.title.toLowerCase().contains('beekeeper');
-
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 5),
         child: Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(
-              color: isActive
-                  ? AppColors.accent.withOpacity(0.35)
-                  : Colors.white.withOpacity(0.06),
-              width: 1.2,
-            ),
+            borderRadius: BorderRadius.circular(20),
+            // STRICT NO OUTLINE MANDATE: zero border
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.75),
-                blurRadius: 18,
-                offset: const Offset(0, 8),
+                color: Colors.black.withOpacity(0.65),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
               ),
-              if (isActive)
-                BoxShadow(
-                  color: AppColors.accent.withOpacity(0.18),
-                  blurRadius: 20,
-                  spreadRadius: 1,
-                  offset: const Offset(0, 4),
-                ),
             ],
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(21),
+            borderRadius: BorderRadius.circular(20),
             child: Container(
-              color: const Color(0xFF1E1F26),
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                // ── Backdrop image ─────────────────────────────────────────
-                if (backdropUrl != null)
-                  CachedNetworkImage(
-                    imageUrl: backdropUrl,
-                    fit: BoxFit.cover,
-                    placeholder: (_, __) => Container(color: AppColors.surface),
-                    errorWidget: (_, __, ___) => _FallbackHeroVisual(movie: movie),
-                  )
-                else
-                  _FallbackHeroVisual(movie: movie),
+              color: const Color(0xFF14161F),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  // ── Backdrop image ───────────────────────────────────────
+                  if (backdropUrl != null)
+                    CachedNetworkImage(
+                      imageUrl: backdropUrl,
+                      fit: BoxFit.cover,
+                      placeholder: (_, __) => Container(color: AppColors.surface),
+                      errorWidget: (_, __, ___) => _FallbackHeroVisual(movie: movie),
+                    )
+                  else
+                    _FallbackHeroVisual(movie: movie),
 
-                // ── Vignette / Gradient overlays ───────────────────────────
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.black.withOpacity(0.1),
-                        Colors.transparent,
-                        Colors.black.withOpacity(0.85),
-                      ],
-                      stops: const [0.0, 0.4, 1.0],
+                  // ── Vignette overlays ─────────────────────────────────────
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withOpacity(0.15),
+                          Colors.transparent,
+                          Colors.black.withOpacity(0.92),
+                        ],
+                        stops: const [0.0, 0.35, 1.0],
+                      ),
                     ),
                   ),
-                ),
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                      colors: [
-                        Colors.black.withOpacity(0.5),
-                        Colors.transparent,
-                        Colors.black.withOpacity(0.6),
-                      ],
-                    ),
-                  ),
-                ),
 
-                // ── Hero Title Overlay ──────────────────────────────────────
-                Positioned(
-                  left: 20,
-                  right: 20,
-                  bottom: 20,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        movie.title.toUpperCase(),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: isBeekeeper
-                              ? const Color(0xFFFFC72C)
-                              : AppColors.textPrimary,
-                          fontSize: 24,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.2,
-                          shadows: const [
-                            Shadow(
-                              color: Colors.black,
-                              blurRadius: 10,
-                              offset: Offset(0, 2),
+                  // ── Hero Content (Title, Meta & Action Buttons) ───────────
+                  Positioned(
+                    left: 14,
+                    right: 14,
+                    bottom: 12,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Title
+                        Text(
+                          movie.title.toUpperCase(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.8,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black,
+                                blurRadius: 10,
+                                offset: Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 5),
+
+                        // Metadata Row: Rating, Year, Duration, ULTRA HD badge
+                        Row(
+                          children: [
+                            const Icon(
+                              IconlyBold.star,
+                              color: Color(0xFFFFB800),
+                              size: 14,
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              movie.ratingDisplay,
+                              style: const TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            const Text(
+                              '•',
+                              style: TextStyle(
+                                color: Color(0xFF6B7280),
+                                fontSize: 11,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              movie.year.isNotEmpty ? movie.year : '2024',
+                              style: const TextStyle(
+                                color: Color(0xFFD1D5DB),
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            const Text(
+                              '•',
+                              style: TextStyle(
+                                color: Color(0xFF6B7280),
+                                fontSize: 11,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            const Text(
+                              '2h 10m',
+                              style: TextStyle(
+                                color: Color(0xFFD1D5DB),
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            // Solid filled ULTRA HD badge with NO outline
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.18),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const Text(
+                                'ULTRA HD',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 8.5,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.4,
+                                ),
+                              ),
                             ),
                           ],
                         ),
-                      ),
-                      if (movie.overview != null && movie.overview!.isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          movie.overview!,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.8),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w400,
-                          ),
+
+                        const SizedBox(height: 10),
+
+                        // Action Buttons Row: WATCH NOW, DOWNLOAD, VJ
+                        Row(
+                          children: [
+                            // 1. WATCH NOW (Primary electric green gradient)
+                            Expanded(
+                              flex: 5,
+                              child: Container(
+                                height: 34,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(17),
+                                  gradient: const LinearGradient(
+                                    colors: [
+                                      Color(0xFF00E676),
+                                      Color(0xFF00B0FF),
+                                    ],
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFF00E676).withOpacity(0.3),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 3),
+                                    ),
+                                  ],
+                                ),
+                                child: const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      IconlyBold.play,
+                                      color: Color(0xFF000000),
+                                      size: 16,
+                                    ),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      'WATCH NOW',
+                                      style: TextStyle(
+                                        color: Color(0xFF000000),
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: 0.2,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+
+                            const SizedBox(width: 8),
+
+                            // 2. DOWNLOAD (Solid dark translucent fill, NO outline)
+                            Expanded(
+                              flex: 5,
+                              child: Container(
+                                height: 34,
+                                decoration: BoxDecoration(
+                                  color: const Color(0x33FFFFFF),
+                                  borderRadius: BorderRadius.circular(17),
+                                ),
+                                child: const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      IconlyBold.download,
+                                      color: Colors.white,
+                                      size: 15,
+                                    ),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      'DOWNLOAD',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: 0.2,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+
+                            const SizedBox(width: 8),
+
+                            // 3. VJ Button (Solid dark translucent pill, NO outline)
+                            Container(
+                              height: 34,
+                              padding: const EdgeInsets.symmetric(horizontal: 10),
+                              decoration: BoxDecoration(
+                                color: const Color(0x2E00E676),
+                                borderRadius: BorderRadius.circular(17),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.headset_mic_rounded,
+                                    color: AppColors.accent,
+                                    size: 14,
+                                  ),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    'VJ',
+                                    style: TextStyle(
+                                      color: AppColors.accent,
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ],
-                    ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 }
 
 class _FallbackHeroVisual extends StatelessWidget {
@@ -316,17 +450,17 @@ class _FallbackHeroVisual extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Color(0xFFE5A00D),
-            Color(0xFF5A3906),
-            Color(0xFF1B1405),
+            Color(0xFF1E202B),
+            Color(0xFF10121A),
+            Color(0xFF08090E),
           ],
         ),
       ),
       child: Center(
         child: Icon(
           Icons.movie_creation_rounded,
-          color: Colors.white.withOpacity(0.25),
-          size: 72,
+          color: Colors.white.withOpacity(0.2),
+          size: 60,
         ),
       ),
     );

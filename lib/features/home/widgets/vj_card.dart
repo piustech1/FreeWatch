@@ -29,14 +29,10 @@ class VjCard extends StatelessWidget {
         height: height,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: Colors.white.withOpacity(0.08),
-            width: 1,
-          ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.6),
-              blurRadius: 12,
+              color: Colors.black.withOpacity(0.65),
+              blurRadius: 14,
               offset: const Offset(0, 5),
             ),
           ],
@@ -106,10 +102,6 @@ class VjCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: Colors.black.withOpacity(0.75),
                     borderRadius: BorderRadius.circular(6),
-                    border: Border.all(
-                      color: AppColors.accent.withOpacity(0.6),
-                      width: 0.8,
-                    ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -195,29 +187,29 @@ class VjCard extends StatelessWidget {
   }
 }
 
-/// Custom painter that draws a triangular bottom-corner gradient section
-/// with an electric green divider line, creating the dual-triangle split look.
+/// Custom painter that draws a seamless triangular bottom-corner gradient section
+/// without any harsh outline or border, allowing the VJ name to be crisply legible.
 class _TriangularGradientPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     // ── Triangular Path for bottom-right corner ──
     final path = Path();
-    path.moveTo(size.width * 0.18, size.height); // Start on bottom edge
+    path.moveTo(size.width * 0.15, size.height); // Start on bottom edge
     path.lineTo(size.width, size.height); // Bottom-right corner
-    path.lineTo(size.width, size.height * 0.05); // Near top-right corner
+    path.lineTo(size.width, 0); // Top-right corner
     path.close();
 
-    // Gradient fill inside the triangle
+    // Soft feathered gradient fill inside the triangle with zero border
     const gradient = LinearGradient(
       begin: Alignment.bottomRight,
       end: Alignment.topLeft,
       colors: [
         Color(0xFF000000),
-        Color(0xF5040608),
-        Color(0xD90A0D12),
-        Color(0x9910141D),
+        Color(0xFA000000),
+        Color(0xD9000000),
+        Color(0x00000000),
       ],
-      stops: [0.0, 0.45, 0.8, 1.0],
+      stops: [0.0, 0.45, 0.75, 1.0],
     );
 
     final paint = Paint()
@@ -226,18 +218,6 @@ class _TriangularGradientPainter extends CustomPainter {
       );
 
     canvas.drawPath(path, paint);
-
-    // Diagonal electric green glowing divider line
-    final linePaint = Paint()
-      ..color = AppColors.accent.withOpacity(0.55)
-      ..strokeWidth = 1.4
-      ..style = PaintingStyle.stroke;
-
-    canvas.drawLine(
-      Offset(size.width * 0.18, size.height),
-      Offset(size.width, size.height * 0.05),
-      linePaint,
-    );
   }
 
   @override

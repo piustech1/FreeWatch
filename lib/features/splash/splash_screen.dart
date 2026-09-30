@@ -140,12 +140,8 @@ class _SplashScreenState extends State<SplashScreen>
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
                   decoration: BoxDecoration(
-                    color: const Color(0x1438BDF8),
+                    color: const Color(0x1F38BDF8),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: const Color(0x2838BDF8),
-                      width: 1,
-                    ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
