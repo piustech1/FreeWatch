@@ -178,13 +178,13 @@ class _HomeAppBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 10, 14, 4),
+      padding: const EdgeInsets.fromLTRB(16, 6, 12, 4),
       child: Row(
         children: [
-          // Logo - enlarged length and height for prominence and clear visibility
+          // Logo - enlarged length and height for bold prominence and clear visibility
           Image.asset(
             'assets/images/logo_full.png',
-            height: 52,
+            height: 60,
             fit: BoxFit.contain,
           ),
 

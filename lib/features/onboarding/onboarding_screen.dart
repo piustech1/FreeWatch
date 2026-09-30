@@ -11,8 +11,8 @@ import '../../core/constants/app_colors.dart';
 import '../home/providers/home_providers.dart';
 
 /// 2-Page Onboarding Experience:
-/// - Screen 1: Infinite 3-row tilted sliding poster wall with brand tagline & "Get Started"
-/// - Screen 2: Dynamic iOS-inspired glassmorphic Sign Up & Log In bottom form over sliding posters
+/// - Screen 1: Infinite 4-row tilted sliding poster wall with brand tagline & "Get Started"
+/// - Screen 2: Dynamic iOS-inspired glassmorphic Sign Up & Log In bottom form with smooth animation
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
 
@@ -29,9 +29,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   // Screen 2 Auth form states
   bool _isSignUp = true;
   bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
+
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
 
   @override
   void initState() {
@@ -62,6 +65,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -85,7 +89,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     final screenHeight = MediaQuery.of(context).size.height;
     final blurHeight = _currentPage == 0
         ? screenHeight * 0.40
-        : screenHeight * 0.46;
+        : screenHeight * 0.50;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -93,9 +97,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // ── 1. Infinite Gapless 3-Row Tilted Moving Poster Wall ────────────
+          // ── 1. Infinite Gapless 4-Row Tilted Moving Poster Wall ────────────
           Positioned.fill(
-            child: _Infinite3RowPosterWall(
+            child: _Infinite4RowPosterWall(
               animation: _wallController,
               posters: allPosters,
             ),
@@ -121,7 +125,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                         Colors.black.withOpacity(0.82),
                         Colors.black.withOpacity(0.96),
                       ],
-                      stops: const [0.0, 0.20, 0.60, 1.0],
+                      stops: const [0.0, 0.18, 0.58, 1.0],
                     ),
                   ),
                 ),
@@ -256,12 +260,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // PAGE 2: DYNAMIC IOS-INSPIRED SIGN UP / LOG IN FORM
+  // PAGE 2: DYNAMIC IOS-INSPIRED SIGN UP / LOG IN FORM (ANIMATED TRANSITION)
   // ─────────────────────────────────────────────────────────────────────────
   Widget _buildPage2(BuildContext context) {
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.end,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -280,175 +284,23 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                   ),
                 ],
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Form Header & Switch Row
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _isSignUp ? 'Create Account' : 'Welcome Back',
-                            style: const TextStyle(
-                              color: AppColors.textPrimary,
-                              fontSize: 21,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: -0.3,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            _isSignUp
-                                ? 'Sign up to stream unlimited movies'
-                                : 'Log in to continue streaming',
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.70),
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                        ],
-                      ),
-                      // Small Segmented Pill
-                      Container(
-                        padding: const EdgeInsets.all(3),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.4),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Row(
-                          children: [
-                            _buildPillTab('Sign Up', _isSignUp, () {
-                              setState(() => _isSignUp = true);
-                            }),
-                            _buildPillTab('Log In', !_isSignUp, () {
-                              setState(() => _isSignUp = false);
-                            }),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 14),
-
-                  // Full Name Field (Sign Up only)
-                  if (_isSignUp) ...[
-                    _buildGlassTextField(
-                      controller: _nameController,
-                      hint: 'Full Name',
-                      icon: IconlyBold.profile,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 320),
+                switchInCurve: Curves.easeOutCubic,
+                switchOutCurve: Curves.easeInCubic,
+                transitionBuilder: (child, animation) {
+                  return FadeTransition(
+                    opacity: animation,
+                    child: SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0.0, 0.06),
+                        end: Offset.zero,
+                      ).animate(animation),
+                      child: child,
                     ),
-                    const SizedBox(height: 10),
-                  ],
-
-                  // Email Address Field
-                  _buildGlassTextField(
-                    controller: _emailController,
-                    hint: 'Email address',
-                    icon: IconlyBold.message,
-                    keyboardType: TextInputType.emailAddress,
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  // Password Field
-                  _buildGlassTextField(
-                    controller: _passwordController,
-                    hint: 'Password',
-                    icon: IconlyBold.lock,
-                    obscureText: _obscurePassword,
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                        color: Colors.white.withOpacity(0.6),
-                        size: 18,
-                      ),
-                      onPressed: () {
-                        setState(() => _obscurePassword = !_obscurePassword);
-                      },
-                    ),
-                  ),
-
-                  const SizedBox(height: 14),
-
-                  // Primary Submit Button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: ElevatedButton(
-                      onPressed: _finishAuth,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.accent,
-                        foregroundColor: Colors.black,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(24),
-                        ),
-                        shadowColor: AppColors.accentGlow,
-                      ),
-                      child: Text(
-                        _isSignUp ? 'Sign Up' : 'Log In',
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 0.3,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  // Bottom Switch & Guest Links
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // Toggle Link
-                      GestureDetector(
-                        onTap: () => setState(() => _isSignUp = !_isSignUp),
-                        child: Text.rich(
-                          TextSpan(
-                            text: _isSignUp
-                                ? 'Already have an account? '
-                                : "Don't have an account? ",
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.7),
-                              fontSize: 11.5,
-                            ),
-                            children: [
-                              TextSpan(
-                                text: _isSignUp ? 'Log In' : 'Sign Up',
-                                style: const TextStyle(
-                                  color: AppColors.accent,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                      // Continue as Guest link
-                      GestureDetector(
-                        onTap: _finishAuth,
-                        child: Text(
-                          'Skip >',
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.6),
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                  );
+                },
+                child: _isSignUp ? _buildSignUpContent() : _buildLogInContent(),
               ),
             ),
           ],
@@ -457,25 +309,290 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     );
   }
 
-  Widget _buildPillTab(String title, bool active, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: active ? AppColors.accent : Colors.transparent,
-          borderRadius: BorderRadius.circular(13),
-        ),
-        child: Text(
-          title,
+  Widget _buildSignUpContent() {
+    return Column(
+      key: const ValueKey('signUpContent'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Header
+        const Text(
+          'Create Account',
           style: TextStyle(
-            color: active ? Colors.black : Colors.white.withOpacity(0.7),
-            fontSize: 10.5,
-            fontWeight: FontWeight.w800,
+            color: AppColors.textPrimary,
+            fontSize: 22,
+            fontWeight: FontWeight.w900,
+            letterSpacing: -0.3,
           ),
         ),
-      ),
+        const SizedBox(height: 2),
+        Text(
+          'Sign up to stream unlimited movies & series',
+          style: TextStyle(
+            color: Colors.white.withOpacity(0.70),
+            fontSize: 11.5,
+            fontWeight: FontWeight.w400,
+          ),
+        ),
+
+        const SizedBox(height: 14),
+
+        // 1. Full Name Field
+        _buildGlassTextField(
+          controller: _nameController,
+          hint: 'Full Name',
+          icon: IconlyBold.profile,
+        ),
+        const SizedBox(height: 9),
+
+        // 2. Email Address Field
+        _buildGlassTextField(
+          controller: _emailController,
+          hint: 'Email address',
+          icon: IconlyBold.message,
+          keyboardType: TextInputType.emailAddress,
+        ),
+        const SizedBox(height: 9),
+
+        // 3. Password Field
+        _buildGlassTextField(
+          controller: _passwordController,
+          hint: 'Password',
+          icon: IconlyBold.lock,
+          obscureText: _obscurePassword,
+          suffixIcon: IconButton(
+            icon: Icon(
+              _obscurePassword ? Icons.visibility_off : Icons.visibility,
+              color: Colors.white.withOpacity(0.6),
+              size: 18,
+            ),
+            onPressed: () {
+              setState(() => _obscurePassword = !_obscurePassword);
+            },
+          ),
+        ),
+        const SizedBox(height: 9),
+
+        // 4. Confirm Password Field
+        _buildGlassTextField(
+          controller: _confirmPasswordController,
+          hint: 'Confirm Password',
+          icon: IconlyBold.lock,
+          obscureText: _obscureConfirmPassword,
+          suffixIcon: IconButton(
+            icon: Icon(
+              _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
+              color: Colors.white.withOpacity(0.6),
+              size: 18,
+            ),
+            onPressed: () {
+              setState(() => _obscureConfirmPassword = !_obscureConfirmPassword);
+            },
+          ),
+        ),
+
+        const SizedBox(height: 14),
+
+        // Primary Submit Button
+        SizedBox(
+          width: double.infinity,
+          height: 48,
+          child: ElevatedButton(
+            onPressed: _finishAuth,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.accent,
+              foregroundColor: Colors.black,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
+              shadowColor: AppColors.accentGlow,
+            ),
+            child: const Text(
+              'Sign Up',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.3,
+              ),
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 11),
+
+        // Single Switch Button (with guest skip option)
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // Single Switch Button to Log In
+            GestureDetector(
+              onTap: () => setState(() => _isSignUp = false),
+              child: Text.rich(
+                TextSpan(
+                  text: 'Already have an account? ',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.7),
+                    fontSize: 11.5,
+                  ),
+                  children: const [
+                    TextSpan(
+                      text: 'Log In',
+                      style: TextStyle(
+                        color: AppColors.accent,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // Continue as Guest link
+            GestureDetector(
+              onTap: _finishAuth,
+              child: Text(
+                'Skip >',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.6),
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLogInContent() {
+    return Column(
+      key: const ValueKey('logInContent'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Header
+        const Text(
+          'Welcome Back',
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 22,
+            fontWeight: FontWeight.w900,
+            letterSpacing: -0.3,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          'Log in to continue streaming',
+          style: TextStyle(
+            color: Colors.white.withOpacity(0.70),
+            fontSize: 11.5,
+            fontWeight: FontWeight.w400,
+          ),
+        ),
+
+        const SizedBox(height: 14),
+
+        // 1. Email Address Field
+        _buildGlassTextField(
+          controller: _emailController,
+          hint: 'Email address',
+          icon: IconlyBold.message,
+          keyboardType: TextInputType.emailAddress,
+        ),
+        const SizedBox(height: 10),
+
+        // 2. Password Field
+        _buildGlassTextField(
+          controller: _passwordController,
+          hint: 'Password',
+          icon: IconlyBold.lock,
+          obscureText: _obscurePassword,
+          suffixIcon: IconButton(
+            icon: Icon(
+              _obscurePassword ? Icons.visibility_off : Icons.visibility,
+              color: Colors.white.withOpacity(0.6),
+              size: 18,
+            ),
+            onPressed: () {
+              setState(() => _obscurePassword = !_obscurePassword);
+            },
+          ),
+        ),
+
+        const SizedBox(height: 14),
+
+        // Primary Submit Button
+        SizedBox(
+          width: double.infinity,
+          height: 48,
+          child: ElevatedButton(
+            onPressed: _finishAuth,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.accent,
+              foregroundColor: Colors.black,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
+              shadowColor: AppColors.accentGlow,
+            ),
+            child: const Text(
+              'Log In',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.3,
+              ),
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 11),
+
+        // Single Switch Button (with guest skip option)
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // Single Switch Button to Sign Up
+            GestureDetector(
+              onTap: () => setState(() => _isSignUp = true),
+              child: Text.rich(
+                TextSpan(
+                  text: "Don't have an account? ",
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.7),
+                    fontSize: 11.5,
+                  ),
+                  children: const [
+                    TextSpan(
+                      text: 'Sign Up',
+                      style: TextStyle(
+                        color: AppColors.accent,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // Continue as Guest link
+            GestureDetector(
+              onTap: _finishAuth,
+              child: Text(
+                'Skip >',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.6),
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -488,7 +605,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     Widget? suffixIcon,
   }) {
     return Container(
-      height: 46,
+      height: 45,
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.08),
         borderRadius: BorderRadius.circular(14),
@@ -506,7 +623,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
         decoration: InputDecoration(
           border: InputBorder.none,
           isDense: true,
-          contentPadding: const EdgeInsets.symmetric(vertical: 14),
+          contentPadding: const EdgeInsets.symmetric(vertical: 13.5),
           prefixIcon: Icon(
             icon,
             color: AppColors.accent.withOpacity(0.9),
@@ -545,28 +662,29 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// INFINITE GAPLESS 3-ROW TILTED MOVING POSTER MARQUEE
+// INFINITE GAPLESS 4-ROW TILTED MOVING POSTER MARQUEE
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _Infinite3RowPosterWall extends StatelessWidget {
+class _Infinite4RowPosterWall extends StatelessWidget {
   final Animation<double> animation;
   final List<String> posters;
 
-  const _Infinite3RowPosterWall({
+  const _Infinite4RowPosterWall({
     required this.animation,
     required this.posters,
   });
 
   @override
   Widget build(BuildContext context) {
-    // Partition posters evenly across 3 distinct sets
+    // Partition posters evenly across 4 distinct sets
     final int count = posters.length;
+    final rowTop = [for (int i = 0; i < count; i++) posters[(i + 2) % count]];
     final row0 = [for (int i = 0; i < count; i++) posters[i % count]];
-    final row1 = [for (int i = 0; i < count; i++) posters[(i + 4) % count]];
-    final row2 = [for (int i = 0; i < count; i++) posters[(i + 8) % count]];
+    final row1 = [for (int i = 0; i < count; i++) posters[(i + 5) % count]];
+    final row2 = [for (int i = 0; i < count; i++) posters[(i + 9) % count]];
 
     return Transform.scale(
-      scale: 1.45,
+      scale: 1.55, // Scale up to completely cover all corners including top-left when tilted
       child: Transform.rotate(
         angle: -11 * (math.pi / 180),
         child: AnimatedBuilder(
@@ -577,6 +695,15 @@ class _Infinite3RowPosterWall extends StatelessWidget {
             return Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                // Row 0: Top row that completely covers the top-left corner gap
+                _InfinitePosterMarquee(
+                  posters: rowTop,
+                  progress: progress,
+                  direction: 1, // Moves RIGHT
+                  phaseOffset: 0.15,
+                ),
+                const SizedBox(height: 12),
+
                 // Row 1: Moves LEFT continuously
                 _InfinitePosterMarquee(
                   posters: row0,
