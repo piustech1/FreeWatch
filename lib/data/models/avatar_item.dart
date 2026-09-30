@@ -91,6 +91,12 @@ class AvatarItem {
       category: categoryDisney,
       assetPath: 'assets/avatars/avatar_anna.png',
     ),
+    AvatarItem(
+      id: 'mickey',
+      name: 'Mickey Mouse',
+      category: categoryDisney,
+      assetPath: 'assets/avatars/avatar_mickey.png',
+    ),
   ];
 
   static List<AvatarItem> get allAvatars => [
