@@ -123,6 +123,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
+        top: false,
         bottom: false,
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 280),
@@ -151,75 +152,100 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   // SCREEN 1: CATEGORIES LANDING (Reference Image 1, Left Screen)
   // ═══════════════════════════════════════════════════════════════════════════
   Widget _buildCategoriesLandingPage() {
-    return ListView(
-      key: const ValueKey('CategoriesLandingPage'),
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
+    return Stack(
       children: [
-        // ── Top Search Input Bar ────────────────────────────────────────────
-        GestureDetector(
-          onTap: () {
-            setState(() {
-              _searchStep = 2;
-              _searchController.clear();
-              _searchQuery = '';
-            });
-          },
-          child: Container(
-            height: 48,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(
-              color: const Color(0xFF141720),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: Colors.white.withOpacity(0.08),
-                width: 1,
+        // Subtle ambient fiery glow at the top matching Image 1
+        Positioned(
+          top: -30,
+          left: 0,
+          right: 0,
+          child: Center(
+            child: Container(
+              width: 180,
+              height: 120,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    const Color(0xFFFF5722).withOpacity(0.28),
+                    const Color(0xFFFF9800).withOpacity(0.12),
+                    Colors.transparent,
+                  ],
+                ),
               ),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Search',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.45),
-                    fontSize: 14.5,
-                    fontWeight: FontWeight.w400,
+          ),
+        ),
+
+        ListView(
+          key: const ValueKey('CategoriesLandingPage'),
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(20, 10, 20, 100),
+          children: [
+            // ── Top Search Input Bar ────────────────────────────────────────────
+            GestureDetector(
+              onTap: () {
+                setState(() {
+                  _searchStep = 2;
+                  _searchController.clear();
+                  _searchQuery = '';
+                });
+              },
+              child: Container(
+                height: 48,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF141720),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.10),
+                    width: 1,
                   ),
                 ),
-                Icon(
-                  Icons.search_rounded,
-                  color: Colors.white.withOpacity(0.65),
-                  size: 22,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Search',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.45),
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                    Icon(
+                      Icons.search_rounded,
+                      color: Colors.white.withOpacity(0.65),
+                      size: 22,
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
-        ),
 
-        const SizedBox(height: 22),
+            const SizedBox(height: 20),
 
-        // ── Categories Header & Subtitle ────────────────────────────────────
-        const Text(
-          'Categories',
-          style: TextStyle(
-            color: AppColors.textPrimary,
-            fontSize: 22,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -0.3,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'Watch Unlimited Movies, Music Video,\nTV shows, Gaming and More.',
-          style: TextStyle(
-            color: Colors.white.withOpacity(0.55),
-            fontSize: 13,
-            height: 1.4,
-          ),
-        ),
+            // ── Categories Header & Subtitle ────────────────────────────────────
+            const Text(
+              'Categories',
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 23,
+                fontWeight: FontWeight.bold,
+                letterSpacing: -0.3,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Watch Unlimited Movies, Music Video,\nTV shows, Gaming and More.',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.55),
+                fontSize: 13,
+                height: 1.4,
+              ),
+            ),
 
-        const SizedBox(height: 20),
+            const SizedBox(height: 18),
 
         // ── 2-Column Grid of Custom Folder-Tab Cards ────────────────────────
         GridView.builder(
@@ -242,8 +268,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           },
         ),
       ],
-    );
-  }
+    ),
+  ],
+);
+}
 
   /// Custom folder card with tab outline matching Image 1
   Widget _buildFolderCard({

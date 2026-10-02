@@ -52,6 +52,7 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
+        top: false,
         bottom: false,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

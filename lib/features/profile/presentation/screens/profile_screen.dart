@@ -30,6 +30,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
+        top: false,
         bottom: false,
         child: ListView(
           physics: const BouncingScrollPhysics(),
