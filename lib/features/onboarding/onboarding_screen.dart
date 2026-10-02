@@ -259,48 +259,177 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   // PAGE 2: DYNAMIC IOS-INSPIRED SIGN UP / LOG IN FORM (ANIMATED TRANSITION)
   // ─────────────────────────────────────────────────────────────────────────
   Widget _buildPage2(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
     return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.end,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Glassmorphic Card Container
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.4),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 320),
-                switchInCurve: Curves.easeOutCubic,
-                switchOutCurve: Curves.easeInCubic,
-                transitionBuilder: (child, animation) {
-                  return FadeTransition(
-                    opacity: animation,
-                    child: SlideTransition(
-                      position: Tween<Offset>(
-                        begin: const Offset(0.0, 0.06),
-                        end: Offset.zero,
-                      ).animate(animation),
-                      child: child,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AnimatedPadding(
+            padding: EdgeInsets.only(
+              left: 18,
+              right: 18,
+              bottom: bottomInset > 0 ? bottomInset + 10 : 14,
+            ),
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOutCubic,
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.4),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
                     ),
-                  );
-                },
-                child: _isSignUp ? _buildSignUpContent() : _buildLogInContent(),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Modern Branded Sliding Segmented Switcher Pill
+                    _buildBrandedAuthSwitcher(),
+
+                    const SizedBox(height: 14),
+
+                    // Dynamic Form Content (Sign Up vs Log In)
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      switchInCurve: Curves.easeOutCubic,
+                      switchOutCurve: Curves.easeInCubic,
+                      transitionBuilder: (child, animation) {
+                        return FadeTransition(
+                          opacity: animation,
+                          child: SlideTransition(
+                            position: Tween<Offset>(
+                              begin: const Offset(0.0, 0.05),
+                              end: Offset.zero,
+                            ).animate(animation),
+                            child: child,
+                          ),
+                        );
+                      },
+                      child: _isSignUp
+                          ? _buildSignUpContent()
+                          : _buildLogInContent(),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Modern Branded Segmented Control Toggle
+  Widget _buildBrandedAuthSwitcher() {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.55),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.08),
+          width: 1,
         ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: GestureDetector(
+              onTap: () => setState(() => _isSignUp = true),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 240),
+                curve: Curves.easeOutCubic,
+                padding: const EdgeInsets.symmetric(vertical: 8.5),
+                decoration: BoxDecoration(
+                  color: _isSignUp ? AppColors.accent : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: _isSignUp
+                      ? [
+                          BoxShadow(
+                            color: AppColors.accent.withOpacity(0.35),
+                            blurRadius: 10,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.stars_rounded,
+                      size: 15,
+                      color: _isSignUp ? Colors.black : Colors.white70,
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      'Join FreeWatch',
+                      style: TextStyle(
+                        color: _isSignUp ? Colors.black : Colors.white70,
+                        fontSize: 12.5,
+                        fontWeight:
+                            _isSignUp ? FontWeight.w900 : FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: GestureDetector(
+              onTap: () => setState(() => _isSignUp = false),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 240),
+                curve: Curves.easeOutCubic,
+                padding: const EdgeInsets.symmetric(vertical: 8.5),
+                decoration: BoxDecoration(
+                  color: !_isSignUp ? AppColors.accent : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: !_isSignUp
+                      ? [
+                          BoxShadow(
+                            color: AppColors.accent.withOpacity(0.35),
+                            blurRadius: 10,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.bolt_rounded,
+                      size: 15,
+                      color: !_isSignUp ? Colors.black : Colors.white70,
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      'Direct Access',
+                      style: TextStyle(
+                        color: !_isSignUp ? Colors.black : Colors.white70,
+                        fontSize: 12.5,
+                        fontWeight:
+                            !_isSignUp ? FontWeight.w900 : FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -313,7 +442,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Header with Disney Avatar Picker
+        // Branded Header with Disney Avatar Picker
         Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
@@ -322,17 +451,17 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Create Account',
+                    'Unlock FreeWatch VIP',
                     style: TextStyle(
                       color: AppColors.textPrimary,
-                      fontSize: 22,
+                      fontSize: 20,
                       fontWeight: FontWeight.w900,
                       letterSpacing: -0.3,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'Sign up to stream unlimited movies & series',
+                    'Stream 10,000+ films translated by top Ugandan VJs',
                     style: TextStyle(
                       color: Colors.white.withOpacity(0.70),
                       fontSize: 11.5,
@@ -355,8 +484,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
               child: Stack(
                 children: [
                   Container(
-                    width: 52,
-                    height: 52,
+                    width: 50,
+                    height: 50,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
@@ -379,7 +508,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                           errorBuilder: (_, __, ___) => const Icon(
                             Icons.person_rounded,
                             color: Colors.white,
-                            size: 28,
+                            size: 26,
                           ),
                         ),
                       ),
@@ -481,9 +610,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
               shadowColor: AppColors.accentGlow,
             ),
             child: const Text(
-              'Sign Up',
+              'Start Streaming Now • Free',
               style: TextStyle(
-                fontSize: 15,
+                fontSize: 14.5,
                 fontWeight: FontWeight.w900,
                 letterSpacing: 0.3,
               ),
@@ -491,48 +620,21 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
           ),
         ),
 
-        const SizedBox(height: 11),
+        const SizedBox(height: 10),
 
-        // Single Switch Button (with guest skip option)
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            // Single Switch Button to Log In
-            GestureDetector(
-              onTap: () => setState(() => _isSignUp = false),
-              child: Text.rich(
-                TextSpan(
-                  text: 'Already have an account? ',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.7),
-                    fontSize: 11.5,
-                  ),
-                  children: const [
-                    TextSpan(
-                      text: 'Log In',
-                      style: TextStyle(
-                        color: AppColors.accent,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
-                ),
+        // Guest Skip Option
+        Center(
+          child: GestureDetector(
+            onTap: _finishAuth,
+            child: Text(
+              'Explore as Guest >',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.6),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
               ),
             ),
-
-            // Continue as Guest link
-            GestureDetector(
-              onTap: _finishAuth,
-              child: Text(
-                'Skip >',
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.6),
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
       ],
     );
@@ -544,19 +646,19 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Header
+        // Branded Header
         const Text(
-          'Welcome Back',
+          'Welcome Back, Cinema Lover',
           style: TextStyle(
             color: AppColors.textPrimary,
-            fontSize: 22,
+            fontSize: 20,
             fontWeight: FontWeight.w900,
             letterSpacing: -0.3,
           ),
         ),
         const SizedBox(height: 2),
         Text(
-          'Log in to continue streaming',
+          'Pick up your streaming right where you left off',
           style: TextStyle(
             color: Colors.white.withOpacity(0.70),
             fontSize: 11.5,
@@ -611,9 +713,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
               shadowColor: AppColors.accentGlow,
             ),
             child: const Text(
-              'Log In',
+              'Enter Cinema World',
               style: TextStyle(
-                fontSize: 15,
+                fontSize: 14.5,
                 fontWeight: FontWeight.w900,
                 letterSpacing: 0.3,
               ),
@@ -621,48 +723,21 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
           ),
         ),
 
-        const SizedBox(height: 11),
+        const SizedBox(height: 10),
 
-        // Single Switch Button (with guest skip option)
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            // Single Switch Button to Sign Up
-            GestureDetector(
-              onTap: () => setState(() => _isSignUp = true),
-              child: Text.rich(
-                TextSpan(
-                  text: "Don't have an account? ",
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.7),
-                    fontSize: 11.5,
-                  ),
-                  children: const [
-                    TextSpan(
-                      text: 'Sign Up',
-                      style: TextStyle(
-                        color: AppColors.accent,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
-                ),
+        // Guest Skip Option
+        Center(
+          child: GestureDetector(
+            onTap: _finishAuth,
+            child: Text(
+              'Explore as Guest >',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.6),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
               ),
             ),
-
-            // Continue as Guest link
-            GestureDetector(
-              onTap: _finishAuth,
-              child: Text(
-                'Skip >',
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.6),
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
       ],
     );

@@ -7,14 +7,17 @@ import 'providers/home_providers.dart';
 import 'widgets/hero_banner.dart';
 import 'widgets/movie_section.dart';
 import 'widgets/floating_nav_bar.dart';
-import 'widgets/filter_bottom_sheet.dart';
 import 'widgets/vj_section.dart';
 import 'widgets/vj_movies_sheet.dart';
 import '../../data/mock/mock_movies.dart';
 import '../../data/models/movie.dart';
-import '../auth/presentation/screens/choose_avatar_screen.dart';
+import '../movie_detail/presentation/screens/movie_detail_screen.dart';
+import '../search/presentation/screens/search_screen.dart';
+import '../favorites/presentation/screens/favorites_screen.dart';
+import '../profile/presentation/screens/profile_screen.dart';
+import '../notifications/presentation/screens/notifications_screen.dart';
 
-/// Main Home Screen matching design screenshot
+/// Main Application Shell & Home Screen with persistent 4-tab IndexedStack
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
@@ -25,8 +28,67 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _selectedNavIndex = 0;
 
+  void _openMovieDetail(Movie movie) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => MovieDetailScreen(movie: movie),
+      ),
+    );
+  }
+
+  void _openNotifications() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const NotificationsScreen(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: Stack(
+        children: [
+          // ── Persistent Tab View ──────────────────────────────────────────
+          IndexedStack(
+            index: _selectedNavIndex,
+            children: [
+              // Tab 0: Home Feed
+              _buildHomeFeed(context),
+
+              // Tab 1: Dedicated Search Screen
+              const SearchScreen(),
+
+              // Tab 2: Dedicated Favorites / Watchlist Screen
+              FavoritesScreen(
+                onExploreTap: () => setState(() => _selectedNavIndex = 0),
+              ),
+
+              // Tab 3: Dedicated Profile Screen
+              const ProfileScreen(),
+            ],
+          ),
+
+          // ── Floating Bottom Navigation Pill ──────────────────────────────
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: FloatingNavBar(
+              selectedIndex: _selectedNavIndex,
+              onItemSelected: (index) {
+                setState(() => _selectedNavIndex = index);
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Tab 0: Home Feed ───────────────────────────────────────────────────────
+  Widget _buildHomeFeed(BuildContext context) {
     final trendingAsync = ref.watch(trendingMoviesProvider);
     final latestToRewatchAsync = ref.watch(latestToRewatchProvider);
     final latestUploadsAsync = ref.watch(latestUploadsProvider);
@@ -39,136 +101,156 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final animationAsync = ref.watch(animationMoviesProvider);
     final familyAsync = ref.watch(familyMoviesProvider);
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: Stack(
-        children: [
-          // ── Scrollable Content ───────────────────────────────────────────
-          SafeArea(
-            bottom: false,
-            child: CustomScrollView(
-              physics: const BouncingScrollPhysics(),
-              slivers: [
-                // ── Top Header / App Bar ─────────────────────────────────
-                SliverToBoxAdapter(
-                  child: _HomeAppBar(
-                    onSearchTap: () => FilterBottomSheet.show(context),
-                  ),
-                ),
-
-                const SliverToBoxAdapter(child: SizedBox(height: 8)),
-
-                // ── Hero Banner Carousel ───────────────────────────────────
-                SliverToBoxAdapter(
-                  child: trendingAsync.when(
-                    data: (movies) => HeroBanner(
-                      movies: movies,
-                      onTap: (movie) {
-                        // Movie detail tap
-                      },
-                      onSeeAll: () {
-                        // See all trending
-                      },
-                    ),
-                    loading: () => const HeroBannerShimmer(),
-                    error: (_, __) => const SizedBox.shrink(),
-                  ),
-                ),
-
-                // ── "Available Vj's" Section (Directly Below Hero) ──────────
-                SliverToBoxAdapter(
-                  child: VjSection(
-                    vjs: MockData.vjs,
-                    onVjTap: (vj) {
-                      VjMoviesSheet.show(
-                        context,
-                        vj: vj,
-                        onMovieTap: (movie) {
-                          // Handle movie tap
-                        },
-                      );
-                    },
-                    onSeeAll: () {
-                      if (MockData.vjs.isNotEmpty) {
-                        VjMoviesSheet.show(
-                          context,
-                          vj: MockData.vjs.first,
-                        );
-                      }
-                    },
-                  ),
-                ),
-
-                // ── "Latest to Rewatch" Section ───────────────────────────
-                _buildMovieSection(context, 'Latest to Rewatch', latestToRewatchAsync),
-
-                // ── "Latest Uploads" Section ──────────────────────────────
-                _buildMovieSection(context, 'Latest Uploads', latestUploadsAsync),
-
-                // ── "Series" Section ──────────────────────────────────────
-                _buildMovieSection(context, 'Series', seriesAsync),
-
-                // ── Category Sections ─────────────────────────────────────
-                _buildMovieSection(context, 'Action', actionAsync),
-                _buildMovieSection(context, 'Sci-Fi', sciFiAsync),
-                _buildMovieSection(context, 'Romance', romanceAsync),
-                _buildMovieSection(context, 'Horror', horrorAsync),
-                _buildMovieSection(context, 'Drama', dramaAsync),
-                _buildMovieSection(context, 'Animation', animationAsync),
-                _buildMovieSection(context, 'Family', familyAsync),
-
-                // ── Space for Floating Nav Bar ────────────────────────────
-                const SliverToBoxAdapter(child: SizedBox(height: 100)),
-              ],
+    return SafeArea(
+      bottom: false,
+      child: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          // ── Top Header / App Bar ─────────────────────────────────
+          SliverToBoxAdapter(
+            child: _HomeAppBar(
+              onSearchTap: () => setState(() => _selectedNavIndex = 1),
+              onNotificationTap: _openNotifications,
             ),
           ),
 
-          // ── Floating Bottom Navigation Pill ──────────────────────────────
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: FloatingNavBar(
-              selectedIndex: _selectedNavIndex,
-              onItemSelected: (index) {
-                if (index == 3) {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const ChooseAvatarScreen(),
-                    ),
+          const SliverToBoxAdapter(child: SizedBox(height: 8)),
+
+          // ── Hero Banner Carousel ───────────────────────────────────
+          SliverToBoxAdapter(
+            child: trendingAsync.when(
+              data: (movies) => HeroBanner(
+                movies: movies,
+                onTap: _openMovieDetail,
+                onSeeAll: () => setState(() => _selectedNavIndex = 1),
+              ),
+              loading: () => const HeroBannerShimmer(),
+              error: (_, __) => const SizedBox.shrink(),
+            ),
+          ),
+
+          // ── "Available Vj's" Section (Directly Below Hero) ──────────
+          SliverToBoxAdapter(
+            child: VjSection(
+              vjs: MockData.vjs,
+              onVjTap: (vj) {
+                VjMoviesSheet.show(
+                  context,
+                  vj: vj,
+                  onMovieTap: _openMovieDetail,
+                );
+              },
+              onSeeAll: () {
+                if (MockData.vjs.isNotEmpty) {
+                  VjMoviesSheet.show(
+                    context,
+                    vj: MockData.vjs.first,
+                    onMovieTap: _openMovieDetail,
                   );
-                  return;
-                }
-                setState(() => _selectedNavIndex = index);
-                if (index == 1) {
-                  FilterBottomSheet.show(context);
                 }
               },
             ),
           ),
+
+          // ── Branded Section Titles with Taglines ─────────────────
+          _buildMovieSection(
+            context,
+            title: 'Rewind & Relive',
+            subtitle: 'Timeless fan favorites you can watch over and over',
+            asyncValue: latestToRewatchAsync,
+          ),
+
+          _buildMovieSection(
+            context,
+            title: 'Fresh Drops',
+            subtitle: 'Brand new releases hot off the studio reel',
+            asyncValue: latestUploadsAsync,
+          ),
+
+          _buildMovieSection(
+            context,
+            title: 'Binge Central',
+            subtitle: 'Full seasons & episodes ready to stream',
+            asyncValue: seriesAsync,
+          ),
+
+          _buildMovieSection(
+            context,
+            title: 'High Octane',
+            subtitle: 'Adrenaline-pumping blockbusters & combat sagas',
+            asyncValue: actionAsync,
+          ),
+
+          _buildMovieSection(
+            context,
+            title: 'Beyond Reality',
+            subtitle: 'Mind-bending futuristic thrillers & cosmic voyages',
+            asyncValue: sciFiAsync,
+          ),
+
+          _buildMovieSection(
+            context,
+            title: 'Love Stories',
+            subtitle: 'Touching romances & heartfelt emotional tales',
+            asyncValue: romanceAsync,
+          ),
+
+          _buildMovieSection(
+            context,
+            title: 'Night Terrors',
+            subtitle: 'Spine-chilling scares & supernatural suspense',
+            asyncValue: horrorAsync,
+          ),
+
+          _buildMovieSection(
+            context,
+            title: 'Masterpiece Cinema',
+            subtitle: 'Award-winning stories and profound human drama',
+            asyncValue: dramaAsync,
+          ),
+
+          _buildMovieSection(
+            context,
+            title: 'Animated Realms',
+            subtitle: 'Vibrant Disney & animated hits for everyone',
+            asyncValue: animationAsync,
+          ),
+
+          _buildMovieSection(
+            context,
+            title: 'Family Magic',
+            subtitle: 'Wholesome adventures crafted for all ages',
+            asyncValue: familyAsync,
+          ),
+
+          // ── Space for Floating Nav Bar ────────────────────────────
+          const SliverToBoxAdapter(child: SizedBox(height: 100)),
         ],
       ),
     );
   }
 
   Widget _buildMovieSection(
-    BuildContext context,
-    String title,
-    AsyncValue<List<Movie>> asyncValue,
-  ) {
+    BuildContext context, {
+    required String title,
+    required String subtitle,
+    required AsyncValue<List<Movie>> asyncValue,
+  }) {
     return SliverToBoxAdapter(
       child: asyncValue.when(
         data: (movies) {
           if (movies.isEmpty) return const SizedBox.shrink();
           return MovieSection(
             title: title,
+            subtitle: subtitle,
             movies: movies,
-            onMovieTap: (movie) {},
-            onSeeAll: () {},
+            onMovieTap: _openMovieDetail,
+            onSeeAll: () => setState(() => _selectedNavIndex = 1),
           );
         },
         loading: () => MovieSection(
           title: title,
+          subtitle: subtitle,
           isLoading: true,
         ),
         error: (_, __) => const SizedBox.shrink(),
@@ -181,8 +263,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
 class _HomeAppBar extends StatelessWidget {
   final VoidCallback onSearchTap;
+  final VoidCallback onNotificationTap;
 
-  const _HomeAppBar({required this.onSearchTap});
+  const _HomeAppBar({
+    required this.onSearchTap,
+    required this.onNotificationTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -199,7 +285,7 @@ class _HomeAppBar extends StatelessWidget {
 
           const Spacer(),
 
-          // Search Button (solid glyph IconlyBold.search)
+          // Search Button (switches to Search tab)
           IconButton(
             onPressed: onSearchTap,
             padding: const EdgeInsets.all(6),
@@ -213,23 +299,50 @@ class _HomeAppBar extends StatelessWidget {
 
           const SizedBox(width: 14),
 
-          // Notification Button (solid glyph IconlyBold.notification)
-          IconButton(
-            onPressed: () {},
-            padding: const EdgeInsets.all(6),
-            constraints: const BoxConstraints(),
-            icon: const Icon(
-              IconlyBold.notification,
-              color: AppColors.textPrimary,
-              size: 24,
-            ),
+          // Notification Button with Unread Indicator Badge
+          Stack(
+            alignment: Alignment.topRight,
+            children: [
+              IconButton(
+                onPressed: onNotificationTap,
+                padding: const EdgeInsets.all(6),
+                constraints: const BoxConstraints(),
+                icon: const Icon(
+                  IconlyBold.notification,
+                  color: AppColors.textPrimary,
+                  size: 24,
+                ),
+              ),
+              Positioned(
+                top: 5,
+                right: 5,
+                child: Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: AppColors.accent,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.black, width: 1.5),
+                  ),
+                ),
+              ),
+            ],
           ),
 
           const SizedBox(width: 14),
 
-          // Cast Button (clean, borderless)
+          // Cast Button
           IconButton(
-            onPressed: () {},
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  duration: Duration(milliseconds: 1000),
+                  backgroundColor: Color(0xFF161922),
+                  content: Text('Searching for Google Cast & AirPlay devices...',
+                      style: TextStyle(color: Colors.white)),
+                ),
+              );
+            },
             padding: const EdgeInsets.all(6),
             constraints: const BoxConstraints(),
             icon: const Icon(
