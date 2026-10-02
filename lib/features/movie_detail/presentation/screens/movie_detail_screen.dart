@@ -1,16 +1,21 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:iconly/iconly.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../data/mock/mock_movies.dart';
 import '../../../../data/models/movie.dart';
 import '../../../../data/models/vj.dart';
 import '../../../favorites/presentation/providers/favorites_provider.dart';
-import '../../../home/widgets/movie_card.dart';
 
-/// Dedicated cinematic Movie Details screen
+/// Redesigned Movie Details Screen matching Reference Image 2:
+/// - Top video/backdrop banner with rounded bottom corners (32px), back circle button, 3-dots circle button, center play button
+/// - Release date above bold movie title ("April 4, 2025" / "Minecraft Movie")
+/// - Metadata pill tags: [ 1h 41min ] [ Fantasy ] [ Movie ] [ 6+ / PG-13 ]
+/// - Ratings & social stats row: ★ 6.2/10 (60K votes) | 👍 15 950 | ❤️ 156
+/// - Ugandan VJ Translation badge with interactive Luganda / English audio switch
+/// - Cast section with "See all" and large rounded squircle actor cards
+/// - Synopsis section
 class MovieDetailScreen extends ConsumerStatefulWidget {
   final Movie movie;
 
@@ -24,17 +29,16 @@ class MovieDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
-  bool _isOverviewExpanded = false;
   bool _isLugandaAudio = true;
-  bool _isDownloading = false;
-  double _downloadProgress = 0.0;
+  bool _isLiked = false;
+  int _likeCount = 15950;
 
   @override
   Widget build(BuildContext context) {
     final movie = widget.movie;
     final isFav = ref.watch(favoritesProvider.notifier).isFavorite(movie.id);
 
-    // Backdrop URL with fallback to poster
+    // Backdrop URL with fallback
     final backdropUrl = movie.backdropPath != null && movie.backdropPath!.isNotEmpty
         ? (movie.backdropPath!.startsWith('http')
             ? movie.backdropPath!
@@ -45,17 +49,15 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                 : '${ApiConstants.posterW500}${movie.posterPath}')
             : null);
 
-    // Find assigned VJ or assign top featured VJ
+    // Assigned VJ
     final Vj assignedVj = MockData.vjs.firstWhere(
       (v) => v.translatedMovieIds.contains(movie.id),
-      orElse: () => MockData.vjs.first, // VJ Junior
+      orElse: () => MockData.vjs.first,
     );
 
-    // Find related movies
-    final relatedMovies = MockData.getAllMovies()
-        .where((m) => m.id != movie.id)
-        .take(8)
-        .toList();
+    final releaseDateFormatted = _formatReleaseDate(movie);
+    final runtimeDisplay = _getRuntimeDisplay(movie);
+    final primaryGenre = _getPrimaryGenre(movie);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -65,188 +67,328 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
           CustomScrollView(
             physics: const BouncingScrollPhysics(),
             slivers: [
-              // ── 1. Cinematic Hero Backdrop with Play Overlay ──────────────
+              // ── 1. Video/Backdrop Banner with Rounded Bottom (Image 2) ───
               SliverToBoxAdapter(
-                child: Stack(
-                  children: [
-                    // Backdrop Image
-                    SizedBox(
-                      height: 340,
-                      width: double.infinity,
-                      child: backdropUrl != null
-                          ? CachedNetworkImage(
-                              imageUrl: backdropUrl,
-                              fit: BoxFit.cover,
-                              placeholder: (_, __) => Container(
-                                color: const Color(0xFF14171E),
-                              ),
-                              errorWidget: (_, __, ___) => Container(
-                                color: const Color(0xFF14171E),
-                                child: const Center(
-                                  child: Icon(Icons.movie_rounded,
-                                      size: 50, color: Colors.white24),
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.vertical(bottom: Radius.circular(32)),
+                  child: Stack(
+                    children: [
+                      // Video Backdrop
+                      SizedBox(
+                        height: 310,
+                        width: double.infinity,
+                        child: backdropUrl != null
+                            ? CachedNetworkImage(
+                                imageUrl: backdropUrl,
+                                fit: BoxFit.cover,
+                                placeholder: (_, __) => Container(color: const Color(0xFF141720)),
+                                errorWidget: (_, __, ___) => Container(
+                                  color: const Color(0xFF141720),
+                                  child: const Icon(Icons.movie_rounded, size: 50, color: Colors.white24),
                                 ),
+                              )
+                            : Container(
+                                color: const Color(0xFF141720),
+                                child: const Icon(Icons.movie_rounded, size: 50, color: Colors.white24),
                               ),
-                            )
-                          : Container(
-                              color: const Color(0xFF14171E),
-                              child: const Center(
-                                child: Icon(Icons.movie_rounded,
-                                    size: 50, color: Colors.white24),
-                              ),
-                            ),
-                    ),
-
-                    // Multi-stop Gradient Fade into OLED Black
-                    Positioned.fill(
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.black.withOpacity(0.4),
-                              Colors.transparent,
-                              Colors.black.withOpacity(0.65),
-                              AppColors.background,
-                            ],
-                            stops: const [0.0, 0.35, 0.75, 1.0],
-                          ),
-                        ),
                       ),
-                    ),
 
-                    // Center Play Trailer Button
-                    Positioned.fill(
-                      child: Center(
-                        child: GestureDetector(
-                          onTap: () => _playTrailer(context),
-                          child: Container(
-                            width: 64,
-                            height: 64,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.black.withOpacity(0.55),
-                              border: Border.all(
-                                color: AppColors.accent.withOpacity(0.8),
-                                width: 2,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppColors.accent.withOpacity(0.35),
-                                  blurRadius: 20,
-                                  spreadRadius: 2,
-                                ),
+                      // Gradient Shadow
+                      Positioned.fill(
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.black.withOpacity(0.55),
+                                Colors.transparent,
+                                Colors.black.withOpacity(0.55),
                               ],
-                            ),
-                            child: const Icon(
-                              Icons.play_arrow_rounded,
-                              color: AppColors.accent,
-                              size: 38,
+                              stops: const [0.0, 0.4, 1.0],
                             ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
+
+                      // Center Circular Play Button (▶)
+                      Positioned.fill(
+                        child: Center(
+                          child: GestureDetector(
+                            onTap: () => _playTrailer(context),
+                            child: Container(
+                              width: 60,
+                              height: 60,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.black.withOpacity(0.60),
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.3),
+                                  width: 1.5,
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.play_arrow_rounded,
+                                color: Colors.white,
+                                size: 36,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      // Top Circle Buttons (Back Arrow & 3-dots Menu)
+                      SafeArea(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              _buildTopCircleButton(
+                                icon: Icons.arrow_back_ios_new_rounded,
+                                onTap: () => Navigator.pop(context),
+                              ),
+                              _buildTopCircleButton(
+                                icon: Icons.more_horiz_rounded,
+                                onTap: () => _showMoreOptions(context),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
 
-              // ── 2. Movie Header Info ───────────────────────────────────────
+              // ── 2. Movie Info & Meta ───────────────────────────────────────
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Release Date (Muted Subtitle)
+                      Text(
+                        releaseDateFormatted,
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.5),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+
+                      const SizedBox(height: 4),
+
                       // Movie Title
                       Text(
                         movie.title,
                         style: const TextStyle(
                           color: AppColors.textPrimary,
-                          fontSize: 26,
+                          fontSize: 24,
                           fontWeight: FontWeight.w900,
-                          letterSpacing: -0.5,
-                          height: 1.2,
+                          letterSpacing: -0.4,
                         ),
                       ),
 
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 14),
 
-                      // Metadata Row: Year • Age Rating • 4K UHD • 5.1 • Rating
+                      // Metadata Pill Tags Row [ 1h 41min ] [ Fantasy ] [ Movie ] [ 6+ ]
                       Wrap(
-                        crossAxisAlignment: WrapCrossAlignment.center,
                         spacing: 8,
                         runSpacing: 6,
                         children: [
-                          if (movie.year.isNotEmpty)
-                            Text(
-                              movie.year,
-                              style: const TextStyle(
-                                color: AppColors.textSecondary,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          _buildDot(),
-                          _buildBadge('PG-13'),
-                          _buildBadge('4K UHD', isHighlight: true),
-                          _buildBadge('5.1 Audio'),
-                          _buildDot(),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.star_rounded,
-                                color: Color(0xFFFFB800),
-                                size: 16,
-                              ),
-                              const SizedBox(width: 3),
-                              Text(
-                                movie.ratingDisplay,
-                                style: const TextStyle(
-                                  color: AppColors.textPrimary,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                              if (movie.voteCount != null) ...[
-                                const SizedBox(width: 2),
-                                Text(
-                                  ' (${movie.voteCount})',
-                                  style: const TextStyle(
-                                    color: AppColors.textHint,
-                                    fontSize: 11,
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
+                          _buildMetadataPill(runtimeDisplay),
+                          _buildMetadataPill(primaryGenre),
+                          _buildMetadataPill('Movie'),
+                          _buildMetadataPill('6+'),
+                          _buildMetadataPill('4K Ultra HD', isAccent: true),
                         ],
                       ),
 
                       const SizedBox(height: 16),
 
-                      // ── 3. Ugandan VJ Translation Showcase Card ────────────
+                      // Ratings & Social Stats Row
+                      Row(
+                        children: [
+                          // Star Rating (★ 6.2/10 60K votes)
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.star_rounded,
+                                color: Color(0xFFFFB800),
+                                size: 18,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${movie.voteAverage > 0 ? movie.voteAverage.toStringAsFixed(1) : "6.2"}/10',
+                                style: const TextStyle(
+                                  color: AppColors.textPrimary,
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                movie.voteCount != null
+                                    ? '${movie.voteCount} votes'
+                                    : '60K votes',
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.45),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          const Spacer(),
+
+                          // Thumbs Up / Like Counter
+                          GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _isLiked = !_isLiked;
+                                _likeCount += _isLiked ? 1 : -1;
+                              });
+                            },
+                            child: Row(
+                              children: [
+                                Icon(
+                                  _isLiked ? Icons.thumb_up_rounded : Icons.thumb_up_alt_outlined,
+                                  color: _isLiked ? AppColors.accent : Colors.white70,
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 5),
+                                Text(
+                                  '$_likeCount',
+                                  style: TextStyle(
+                                    color: _isLiked ? AppColors.accent : Colors.white70,
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(width: 18),
+
+                          // Heart / Watchlist Counter
+                          GestureDetector(
+                            onTap: () {
+                              ref.read(favoritesProvider.notifier).toggleFavorite(movie);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  duration: const Duration(milliseconds: 900),
+                                  backgroundColor: const Color(0xFF1E2130),
+                                  content: Text(
+                                    isFav ? 'Removed from Watchlist' : 'Saved to Watchlist',
+                                    style: const TextStyle(color: Colors.white),
+                                  ),
+                                ),
+                              );
+                            },
+                            child: Row(
+                              children: [
+                                Icon(
+                                  isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                                  color: isFav ? const Color(0xFFFF5252) : Colors.white70,
+                                  size: 17,
+                                ),
+                                const SizedBox(width: 5),
+                                Text(
+                                  isFav ? '157' : '156',
+                                  style: TextStyle(
+                                    color: isFav ? const Color(0xFFFF5252) : Colors.white70,
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // ── Ugandan VJ Translation Badge Card ─────────────────
                       _buildVjTranslationCard(assignedVj),
 
-                      const SizedBox(height: 18),
+                      const SizedBox(height: 24),
 
-                      // ── 4. Primary "Stream Movie" Action Button ─────────────
+                      // ── 3. Cast Section (Image 2) ─────────────────────────
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Cast',
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.3,
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () {},
+                            child: Text(
+                              'See all',
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.5),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      _buildSquircleCastList(),
+
+                      const SizedBox(height: 24),
+
+                      // ── 4. Synopsis Section (Image 2) ─────────────────────
+                      const Text(
+                        'Synopsis',
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      Text(
+                        (movie.overview != null && movie.overview!.isNotEmpty)
+                            ? movie.overview!
+                            : 'Four misfits are suddenly pulled through a mysterious portal into a bizarre cubic world where survival depends on courage, creativity, and unlikely teamwork.',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.65),
+                          fontSize: 13.5,
+                          height: 1.55,
+                        ),
+                      ),
+
+                      const SizedBox(height: 28),
+
+                      // ── 5. Full Width Primary "Stream Movie" Action ───────
                       SizedBox(
                         width: double.infinity,
                         height: 52,
                         child: ElevatedButton.icon(
                           onPressed: () => _streamMovie(context),
-                          icon: const Icon(Icons.play_arrow_rounded,
-                              color: Colors.black, size: 28),
-                          label: const Text(
-                            'Stream Movie',
-                            style: TextStyle(
+                          icon: const Icon(Icons.play_arrow_rounded, color: Colors.black, size: 28),
+                          label: Text(
+                            'Stream Movie (${_isLugandaAudio ? "Luganda" : "English"})',
+                            style: const TextStyle(
                               color: Colors.black,
-                              fontSize: 16,
+                              fontSize: 15.5,
                               fontWeight: FontWeight.w900,
-                              letterSpacing: 0.3,
                             ),
                           ),
                           style: ElevatedButton.styleFrom(
@@ -260,218 +402,109 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                         ),
                       ),
 
-                      const SizedBox(height: 12),
-
-                      // ── 5. Secondary Action Bar (Download, Watchlist, Cast) ──
-                      Row(
-                        children: [
-                          // Watchlist Toggle Button
-                          Expanded(
-                            child: _buildSecondaryActionButton(
-                              icon: isFav
-                                  ? IconlyBold.heart
-                                  : IconlyLight.heart,
-                              iconColor: isFav ? AppColors.accent : Colors.white,
-                              label: isFav ? 'In Watchlist' : 'Watchlist',
-                              onTap: () {
-                                ref
-                                    .read(favoritesProvider.notifier)
-                                    .toggleFavorite(movie);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    duration: const Duration(seconds: 1),
-                                    backgroundColor: const Color(0xFF1E2130),
-                                    content: Text(
-                                      isFav
-                                          ? 'Removed from Watchlist'
-                                          : 'Saved to Watchlist',
-                                      style: const TextStyle(
-                                          color: Colors.white),
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-
-                          // Download Button
-                          Expanded(
-                            child: _buildSecondaryActionButton(
-                              icon: _isDownloading
-                                  ? Icons.downloading_rounded
-                                  : Icons.file_download_outlined,
-                              iconColor: _isDownloading
-                                  ? AppColors.accent
-                                  : Colors.white,
-                              label: _isDownloading
-                                  ? '${(_downloadProgress * 100).toInt()}%'
-                                  : 'Download',
-                              onTap: () => _triggerDownload(context),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-
-                          // Cast Button
-                          Expanded(
-                            child: _buildSecondaryActionButton(
-                              icon: Icons.cast_rounded,
-                              iconColor: Colors.white,
-                              label: 'Cast to TV',
-                              onTap: () => _showCastSheet(context),
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 22),
-
-                      // ── 6. Storyline / Synopsis ────────────────────────────
-                      const Text(
-                        'Storyline',
-                        style: TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.2,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-
-                      Text(
-                        (movie.overview != null && movie.overview!.isNotEmpty)
-                            ? movie.overview!
-                            : 'No synopsis available for this title.',
-                        maxLines: _isOverviewExpanded ? null : 3,
-                        overflow: _isOverviewExpanded
-                            ? TextOverflow.visible
-                            : TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.80),
-                          fontSize: 13.5,
-                          height: 1.5,
-                        ),
-                      ),
-                      if (movie.overview != null &&
-                          movie.overview!.length > 120) ...[
-                        const SizedBox(height: 4),
-                        GestureDetector(
-                          onTap: () => setState(
-                              () => _isOverviewExpanded = !_isOverviewExpanded),
-                          child: Text(
-                            _isOverviewExpanded ? 'Read Less' : 'Read More',
-                            style: const TextStyle(
-                              color: AppColors.accent,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ],
-
-                      const SizedBox(height: 24),
-
-                      // ── 7. Top Cast ────────────────────────────────────────
-                      const Text(
-                        'Top Cast',
-                        style: TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.2,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      _buildCastRow(),
-
-                      const SizedBox(height: 28),
-
-                      // ── 8. More Like This ──────────────────────────────────
-                      const Text(
-                        'More Like This',
-                        style: TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.2,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 40),
                     ],
                   ),
                 ),
               ),
-
-              // Horizontal More Like This Carousel
-              SliverToBoxAdapter(
-                child: SizedBox(
-                  height: 240,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    physics: const BouncingScrollPhysics(),
-                    itemCount: relatedMovies.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 14),
-                    itemBuilder: (context, index) {
-                      final item = relatedMovies[index];
-                      return MovieCard(
-                        movie: item,
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => MovieDetailScreen(movie: item),
-                            ),
-                          );
-                        },
-                      );
-                    },
-                  ),
-                ),
-              ),
-
-              const SliverToBoxAdapter(child: SizedBox(height: 60)),
             ],
           ),
-
-          // ── Top Floating Navigation Buttons (Safe Area) ───────────────────
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Glassmorphic Back Button
-                  _buildGlassCircleButton(
-                    icon: Icons.arrow_back_ios_new_rounded,
-                    onTap: () => Navigator.of(context).pop(),
-                  ),
-
-                  Row(
-                    children: [
-                      // Favorite Toggle
-                      _buildGlassCircleButton(
-                        icon: isFav ? IconlyBold.heart : IconlyLight.heart,
-                        iconColor: isFav ? AppColors.accent : Colors.white,
-                        onTap: () {
-                          ref
-                              .read(favoritesProvider.notifier)
-                              .toggleFavorite(movie);
-                        },
-                      ),
-                      const SizedBox(width: 10),
-
-                      // Share Button
-                      _buildGlassCircleButton(
-                        icon: IconlyBold.send,
-                        onTap: () => _shareMovie(context),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
         ],
+      ),
+    );
+  }
+
+  // ── Rounded Squircle Cast Cards matching Image 2 ──────────────────────────
+  Widget _buildSquircleCastList() {
+    final castData = [
+      {
+        'name': 'Jason Momoa',
+        'image': 'https://image.tmdb.org/t/p/w200/6AUNvdc3RAq7fq9eT01O9450p9C.jpg',
+        'initials': 'JM',
+      },
+      {
+        'name': 'Jack Black',
+        'image': 'https://image.tmdb.org/t/p/w200/rtCx0fiYxJVG4Uj0qrPDMu49Vmm.jpg',
+        'initials': 'JB',
+      },
+      {
+        'name': 'Sebastian Eugene',
+        'image': 'https://image.tmdb.org/t/p/w200/kSpsYjG80eL4qQ3R3n9k6rLqC9p.jpg',
+        'initials': 'SE',
+      },
+      {
+        'name': 'Emma Myers',
+        'image': 'https://image.tmdb.org/t/p/w200/4woSOUD0equAYzvwhWBHIJDCM88.jpg',
+        'initials': 'EM',
+      },
+    ];
+
+    return SizedBox(
+      height: 120,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        itemCount: castData.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 14),
+        itemBuilder: (context, i) {
+          final c = castData[i];
+          return Column(
+            children: [
+              // Squircle Photo Container
+              Container(
+                width: 86,
+                height: 86,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  color: const Color(0xFF1E2130),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.1),
+                    width: 1,
+                  ),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(19),
+                  child: CachedNetworkImage(
+                    imageUrl: c['image']!,
+                    fit: BoxFit.cover,
+                    placeholder: (_, __) => Container(color: const Color(0xFF1C202C)),
+                    errorWidget: (_, __, ___) => Container(
+                      color: const Color(0xFF1C202C),
+                      child: Center(
+                        child: Text(
+                          c['initials']!,
+                          style: const TextStyle(
+                            color: AppColors.accent,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 6),
+
+              // Actor Name
+              SizedBox(
+                width: 86,
+                child: Text(
+                  c['name']!,
+                  maxLines: 1,
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.85),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -494,8 +527,8 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
             children: [
               // Grayscale VJ Portrait
               Container(
-                width: 46,
-                height: 46,
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
@@ -540,7 +573,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                             fontWeight: FontWeight.w800,
                           ),
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 5),
                         const Icon(
                           Icons.verified_rounded,
                           color: AppColors.accent,
@@ -550,9 +583,9 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Official Luganda Studio Dubbing • High Clarity Audio',
+                      'Luganda Studio Dubbing • Clear Master Audio',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.65),
+                        color: Colors.white.withOpacity(0.6),
                         fontSize: 11,
                       ),
                     ),
@@ -568,7 +601,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
           Container(
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.6),
+              color: Colors.black.withOpacity(0.55),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
@@ -577,11 +610,9 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                   child: GestureDetector(
                     onTap: () => setState(() => _isLugandaAudio = true),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      padding: const EdgeInsets.symmetric(vertical: 6.5),
                       decoration: BoxDecoration(
-                        color: _isLugandaAudio
-                            ? AppColors.accent
-                            : Colors.transparent,
+                        color: _isLugandaAudio ? AppColors.accent : Colors.transparent,
                         borderRadius: BorderRadius.circular(9),
                       ),
                       child: Row(
@@ -590,21 +621,15 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                           Icon(
                             Icons.record_voice_over_rounded,
                             size: 14,
-                            color: _isLugandaAudio
-                                ? Colors.black
-                                : Colors.white70,
+                            color: _isLugandaAudio ? Colors.black : Colors.white70,
                           ),
                           const SizedBox(width: 5),
                           Text(
                             'Luganda (${vj.name})',
                             style: TextStyle(
-                              color: _isLugandaAudio
-                                  ? Colors.black
-                                  : Colors.white70,
+                              color: _isLugandaAudio ? Colors.black : Colors.white70,
                               fontSize: 11.5,
-                              fontWeight: _isLugandaAudio
-                                  ? FontWeight.w800
-                                  : FontWeight.w500,
+                              fontWeight: _isLugandaAudio ? FontWeight.w800 : FontWeight.w500,
                             ),
                           ),
                         ],
@@ -616,11 +641,9 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                   child: GestureDetector(
                     onTap: () => setState(() => _isLugandaAudio = false),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      padding: const EdgeInsets.symmetric(vertical: 6.5),
                       decoration: BoxDecoration(
-                        color: !_isLugandaAudio
-                            ? AppColors.accent
-                            : Colors.transparent,
+                        color: !_isLugandaAudio ? AppColors.accent : Colors.transparent,
                         borderRadius: BorderRadius.circular(9),
                       ),
                       child: Row(
@@ -629,21 +652,15 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                           Icon(
                             Icons.language_rounded,
                             size: 14,
-                            color: !_isLugandaAudio
-                                ? Colors.black
-                                : Colors.white70,
+                            color: !_isLugandaAudio ? Colors.black : Colors.white70,
                           ),
                           const SizedBox(width: 5),
                           Text(
                             'Original English',
                             style: TextStyle(
-                              color: !_isLugandaAudio
-                                  ? Colors.black
-                                  : Colors.white70,
+                              color: !_isLugandaAudio ? Colors.black : Colors.white70,
                               fontSize: 11.5,
-                              fontWeight: !_isLugandaAudio
-                                  ? FontWeight.w800
-                                  : FontWeight.w500,
+                              fontWeight: !_isLugandaAudio ? FontWeight.w800 : FontWeight.w500,
                             ),
                           ),
                         ],
@@ -659,172 +676,70 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
     );
   }
 
-  // ── Cast Row ──────────────────────────────────────────────────────────────
-  Widget _buildCastRow() {
-    final mockCast = [
-      {'name': 'Ryan Reynolds', 'role': 'Wade Wilson', 'initials': 'RR'},
-      {'name': 'Hugh Jackman', 'role': 'Logan / Wolverine', 'initials': 'HJ'},
-      {'name': 'Emma Corrin', 'role': 'Cassandra Nova', 'initials': 'EC'},
-      {'name': 'Matthew Macfadyen', 'role': 'Mr. Paradox', 'initials': 'MM'},
-      {'name': 'Dafne Keen', 'role': 'Laura / X-23', 'initials': 'DK'},
-    ];
-
-    return SizedBox(
-      height: 72,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        itemCount: mockCast.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 14),
-        itemBuilder: (context, i) {
-          final c = mockCast[i];
-          return Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0xFF1E2130),
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.15),
-                    width: 1,
-                  ),
-                ),
-                child: Center(
-                  child: Text(
-                    c['initials']!,
-                    style: const TextStyle(
-                      color: AppColors.accent,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 9),
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    c['name']!,
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  Text(
-                    c['role']!,
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.55),
-                      fontSize: 11,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildSecondaryActionButton({
+  Widget _buildTopCircleButton({
     required IconData icon,
-    required Color iconColor,
-    required String label,
     required VoidCallback onTap,
   }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10),
+        width: 40,
+        height: 40,
         decoration: BoxDecoration(
-          color: const Color(0xFF151821),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: Colors.white.withOpacity(0.08),
-            width: 1,
-          ),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: iconColor, size: 20),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildGlassCircleButton({
-    required IconData icon,
-    Color iconColor = Colors.white,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 42,
-        height: 42,
-        decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.55),
+          color: Colors.black.withOpacity(0.5),
           shape: BoxShape.circle,
           border: Border.all(
             color: Colors.white.withOpacity(0.2),
             width: 0.8,
           ),
         ),
-        child: Icon(icon, color: iconColor, size: 19),
+        child: Icon(icon, color: Colors.white, size: 18),
       ),
     );
   }
 
-  Widget _buildBadge(String text, {bool isHighlight = false}) {
+  Widget _buildMetadataPill(String text, {bool isAccent = false}) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: isHighlight
-            ? AppColors.accent.withOpacity(0.18)
-            : const Color(0xFF1E2130),
-        borderRadius: BorderRadius.circular(6),
+        color: isAccent ? AppColors.accent.withOpacity(0.18) : const Color(0xFF1E2130),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isHighlight
-              ? AppColors.accent.withOpacity(0.6)
-              : Colors.white.withOpacity(0.12),
+          color: isAccent ? AppColors.accent.withOpacity(0.6) : Colors.white.withOpacity(0.08),
           width: 0.8,
         ),
       ),
       child: Text(
         text,
         style: TextStyle(
-          color: isHighlight ? AppColors.accent : Colors.white70,
-          fontSize: 10.5,
-          fontWeight: FontWeight.w700,
+          color: isAccent ? AppColors.accent : Colors.white.withOpacity(0.8),
+          fontSize: 11.5,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );
   }
 
-  Widget _buildDot() {
-    return Container(
-      width: 3.5,
-      height: 3.5,
-      decoration: const BoxDecoration(
-        color: AppColors.textHint,
-        shape: BoxShape.circle,
-      ),
-    );
+  String _formatReleaseDate(Movie movie) {
+    if (movie.releaseDate != null && movie.releaseDate!.length >= 10) {
+      return 'Released: ${movie.releaseDate}';
+    }
+    return 'April 4, 2025';
+  }
+
+  String _getRuntimeDisplay(Movie movie) {
+    if (movie.id == 693134) return '2h 46min';
+    if (movie.id == 533535) return '2h 08min';
+    if (movie.id == 1011985) return '1h 45min';
+    return '1h 41min';
+  }
+
+  String _getPrimaryGenre(Movie movie) {
+    if (movie.genreIds.contains(878)) return 'Sci-Fi';
+    if (movie.genreIds.contains(28)) return 'Action';
+    if (movie.genreIds.contains(12)) return 'Fantasy';
+    if (movie.genreIds.contains(16)) return 'Animation';
+    return 'Adventure';
   }
 
   void _streamMovie(BuildContext context) {
@@ -837,7 +752,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                'Starting player: ${widget.movie.title} (${_isLugandaAudio ? "Luganda Dubbed" : "Original English"})',
+                'Starting stream: ${widget.movie.title} (${_isLugandaAudio ? "Luganda" : "English"})',
                 style: const TextStyle(color: Colors.white),
               ),
             ),
@@ -857,7 +772,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                'Loading official trailer for ${widget.movie.title}...',
+                'Buffering trailer for ${widget.movie.title}...',
                 style: const TextStyle(color: Colors.white),
               ),
             ),
@@ -867,126 +782,49 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
     );
   }
 
-  void _triggerDownload(BuildContext context) {
-    if (_isDownloading) return;
-    setState(() {
-      _isDownloading = true;
-      _downloadProgress = 0.25;
-    });
-
-    Future.delayed(const Duration(milliseconds: 600), () {
-      if (mounted) setState(() => _downloadProgress = 0.65);
-    });
-
-    Future.delayed(const Duration(milliseconds: 1400), () {
-      if (mounted && context.mounted) {
-        setState(() {
-          _isDownloading = false;
-          _downloadProgress = 1.0;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: const Color(0xFF161922),
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle_rounded, color: AppColors.accent),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Downloaded ${widget.movie.title} for offline streaming (1080p)',
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      }
-    });
-  }
-
-  void _showCastSheet(BuildContext context) {
+  void _showMoreOptions(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF0F1218),
+      backgroundColor: const Color(0xFF11141B),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (_) {
         return Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 30),
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Center(
-                child: Container(
-                  width: 38,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.white24,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
+              ListTile(
+                leading: const Icon(Icons.share_rounded, color: Colors.white70),
+                title: const Text('Share Movie', style: TextStyle(color: Colors.white)),
+                onTap: () {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      backgroundColor: const Color(0xFF161922),
+                      content: Text('Share link copied for ${widget.movie.title}'),
+                    ),
+                  );
+                },
               ),
-              const SizedBox(height: 16),
-              const Text(
-                'Cast to Device',
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 14),
-              _buildCastDeviceTile(
-                icon: Icons.tv_rounded,
-                title: 'Living Room Android TV',
-                subtitle: 'Ready to cast in 4K',
-              ),
-              _buildCastDeviceTile(
-                icon: Icons.cast_connected_rounded,
-                title: 'Bedroom Chromecast Ultra',
-                subtitle: 'Connected',
+              ListTile(
+                leading: const Icon(Icons.download_rounded, color: Colors.white70),
+                title: const Text('Download 1080p', style: TextStyle(color: Colors.white)),
+                onTap: () {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      backgroundColor: const Color(0xFF161922),
+                      content: Text('Downloading ${widget.movie.title} (1080p Full HD)'),
+                    ),
+                  );
+                },
               ),
             ],
           ),
         );
       },
-    );
-  }
-
-  Widget _buildCastDeviceTile({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-  }) {
-    return ListTile(
-      leading: Icon(icon, color: AppColors.accent),
-      title: Text(title,
-          style: const TextStyle(
-              color: Colors.white, fontWeight: FontWeight.w600)),
-      subtitle: Text(subtitle,
-          style: TextStyle(color: Colors.white.withOpacity(0.5))),
-      trailing: const Icon(Icons.chevron_right, color: Colors.white38),
-      onTap: () {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: const Color(0xFF161922),
-            content: Text('Connected to $title'),
-          ),
-        );
-      },
-    );
-  }
-
-  void _shareMovie(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: const Color(0xFF161922),
-        content: Text('Share link copied: freewatch.stream/m/${widget.movie.id}'),
-      ),
     );
   }
 }

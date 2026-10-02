@@ -20,50 +20,55 @@ class MovieCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final posterUrl = movie.posterPath != null
-        ? (movie.posterPath!.startsWith('http')
-            ? movie.posterPath!
-            : '${ApiConstants.posterW500}${movie.posterPath}')
-        : null;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cardWidth = (width.isFinite && width > 0)
+            ? width
+            : (constraints.maxWidth.isFinite ? constraints.maxWidth : 135.0);
+        final posterHeight = cardWidth * 1.48;
 
-    final posterHeight = width * 1.48;
+        final posterUrl = movie.posterPath != null
+            ? (movie.posterPath!.startsWith('http')
+                ? movie.posterPath!
+                : '${ApiConstants.posterW500}${movie.posterPath}')
+            : null;
 
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: SizedBox(
-        width: width,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // ── Poster ──────────────────────────────────────────────────────
-            ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: SizedBox(
-                width: width,
-                height: posterHeight,
-                child: posterUrl != null
-                    ? CachedNetworkImage(
-                        imageUrl: posterUrl,
-                        fit: BoxFit.cover,
-                        placeholder: (_, __) => MovieCardShimmer(
-                          width: width,
-                          height: posterHeight,
-                        ),
-                        errorWidget: (_, __, ___) => _PlaceholderPoster(
-                          width: width,
-                          height: posterHeight,
-                          title: movie.title,
-                        ),
-                      )
-                    : _PlaceholderPoster(
-                        width: width,
-                        height: posterHeight,
-                        title: movie.title,
-                      ),
-              ),
-            ),
+        return GestureDetector(
+          onTap: onTap,
+          behavior: HitTestBehavior.opaque,
+          child: SizedBox(
+            width: cardWidth,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // ── Poster ──────────────────────────────────────────────────
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: SizedBox(
+                    width: cardWidth,
+                    height: posterHeight,
+                    child: posterUrl != null
+                        ? CachedNetworkImage(
+                            imageUrl: posterUrl,
+                            fit: BoxFit.cover,
+                            placeholder: (_, __) => MovieCardShimmer(
+                              width: cardWidth,
+                              height: posterHeight,
+                            ),
+                            errorWidget: (_, __, ___) => _PlaceholderPoster(
+                              width: cardWidth,
+                              height: posterHeight,
+                              title: movie.title,
+                            ),
+                          )
+                        : _PlaceholderPoster(
+                            width: cardWidth,
+                            height: posterHeight,
+                            title: movie.title,
+                          ),
+                  ),
+                ),
 
             const SizedBox(height: 8),
 
@@ -123,6 +128,8 @@ class MovieCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+      },
     );
   }
 }

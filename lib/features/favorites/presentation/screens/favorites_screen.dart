@@ -274,7 +274,6 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
           children: [
             MovieCard(
               movie: movie,
-              width: double.infinity,
               onTap: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(
