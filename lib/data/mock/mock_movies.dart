@@ -435,9 +435,14 @@ class MockData {
     final vj = vjs.firstWhere((v) => v.id == vjId, orElse: () => vjs.first);
     final all = getAllMovies();
     final matched = all.where((m) => vj.translatedMovieIds.contains(m.id)).toList();
-    if (matched.isEmpty) {
-      return all.take(3).toList();
+    final result = <Movie>[...matched];
+    final seen = matched.map((m) => m.id).toSet();
+    for (final m in all) {
+      if (result.length >= 15) break;
+      if (seen.add(m.id)) {
+        result.add(m);
+      }
     }
-    return matched;
+    return result;
   }
 }

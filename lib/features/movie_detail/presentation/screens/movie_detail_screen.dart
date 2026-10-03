@@ -14,7 +14,7 @@ import '../../../../shared/widgets/free_watch_top_app_bar.dart';
 import '../../../../shared/widgets/shimmer_loading.dart';
 import '../../../favorites/presentation/providers/favorites_provider.dart';
 import '../../../home/providers/home_providers.dart';
-import '../../../home/widgets/vj_movies_sheet.dart';
+import '../../../movie_grid/presentation/screens/movie_grid_screen.dart';
 import '../../../notifications/presentation/screens/notifications_screen.dart';
 import '../providers/movie_detail_providers.dart';
 
@@ -42,7 +42,6 @@ class MovieDetailScreen extends ConsumerStatefulWidget {
 
 class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
   bool _isSynopsisExpanded = false;
-  int _selectedNavIndex = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -135,10 +134,9 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
               right: 0,
               bottom: 0,
               child: FloatingNavBar(
-                selectedIndex: _selectedNavIndex,
+                selectedIndex: ref.watch(bottomNavIndexProvider),
                 onItemSelected: (index) {
-                  setState(() => _selectedNavIndex = index);
-                  Navigator.pop(context);
+                  navigateToBottomNavTab(context, ref, index);
                 },
               ),
             ),
@@ -416,16 +414,8 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
   Widget _buildCompactVjBadge(Vj assignedVj) {
     return GestureDetector(
       onTap: () {
-        VjMoviesSheet.show(
-          context,
-          vj: assignedVj,
-          onMovieTap: (m) {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => MovieDetailScreen(movie: m),
-              ),
-            );
-          },
+        Navigator.of(context).push(
+          MovieGridScreen.routeForVj(vj: assignedVj),
         );
       },
       child: ClipRRect(

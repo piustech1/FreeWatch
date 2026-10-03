@@ -1,7 +1,21 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/models/movie.dart';
 import '../../../data/models/genre.dart';
 import '../../../data/repositories/movie_repository.dart';
+
+// ── Global Bottom Navigation Provider & Helper ─────────────────────────────
+
+/// Active tab index on HomeScreen (0: Home, 1: Search, 2: Favorites, 3: Profile)
+final bottomNavIndexProvider = StateProvider<int>((ref) => 0);
+
+/// Navigates to a root bottom nav tab from any screen depth in a single atomic step
+void navigateToBottomNavTab(BuildContext context, WidgetRef ref, int index) {
+  ref.read(bottomNavIndexProvider.notifier).state = index;
+  if (Navigator.of(context).canPop()) {
+    Navigator.of(context).popUntil((route) => route.isFirst);
+  }
+}
 
 // ── Repository provider ────────────────────────────────────────────────────
 

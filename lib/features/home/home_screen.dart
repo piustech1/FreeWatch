@@ -8,10 +8,10 @@ import 'widgets/hero_banner.dart';
 import 'widgets/movie_section.dart';
 import 'widgets/floating_nav_bar.dart';
 import 'widgets/vj_section.dart';
-import 'widgets/vj_movies_sheet.dart';
 import '../../data/mock/mock_movies.dart';
 import '../../data/models/movie.dart';
 import '../movie_detail/presentation/screens/movie_detail_screen.dart';
+import '../movie_grid/presentation/screens/movie_grid_screen.dart';
 import '../search/presentation/screens/search_screen.dart';
 import '../favorites/presentation/screens/favorites_screen.dart';
 import '../profile/presentation/screens/profile_screen.dart';
@@ -26,8 +26,6 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-  int _selectedNavIndex = 0;
-
   void _openMovieDetail(Movie movie) {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -46,6 +44,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final selectedNavIndex = ref.watch(bottomNavIndexProvider);
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -56,14 +56,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               children: [
                 // ── Top Header / App Bar (Consistently visible across ALL pages) ─
                 FreeWatchTopAppBar(
-                  onSearchTap: () => setState(() => _selectedNavIndex = 1),
+                  onSearchTap: () => navigateToBottomNavTab(context, ref, 1),
                   onNotificationTap: _openNotifications,
                 ),
 
                 // ── Tab View ──────────────────────────────────────────
                 Expanded(
                   child: IndexedStack(
-                    index: _selectedNavIndex,
+                    index: selectedNavIndex,
                     children: [
                       // Tab 0: Home Feed
                       _buildHomeFeed(context),
@@ -73,7 +73,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
                       // Tab 2: Dedicated Favorites / Watchlist Screen
                       FavoritesScreen(
-                        onExploreTap: () => setState(() => _selectedNavIndex = 0),
+                        onExploreTap: () => navigateToBottomNavTab(context, ref, 0),
                       ),
 
                       // Tab 3: Dedicated Profile Screen
@@ -90,9 +90,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               right: 0,
               bottom: 0,
               child: FloatingNavBar(
-                selectedIndex: _selectedNavIndex,
+                selectedIndex: selectedNavIndex,
                 onItemSelected: (index) {
-                  setState(() => _selectedNavIndex = index);
+                  navigateToBottomNavTab(context, ref, index);
                 },
               ),
             ),
@@ -127,7 +127,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             data: (movies) => HeroBanner(
               movies: movies,
               onTap: _openMovieDetail,
-              onSeeAll: () => setState(() => _selectedNavIndex = 1),
+              onSeeAll: () {
+                Navigator.of(context).push(
+                  MovieGridScreen.routeForCategory(
+                    title: 'Trending',
+                    movies: movies,
+                  ),
+                );
+              },
             ),
             loading: () => const HeroBannerShimmer(),
             error: (_, __) => const SizedBox.shrink(),
@@ -141,25 +148,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           child: VjSection(
             vjs: MockData.vjs,
             onVjTap: (vj) {
-              VjMoviesSheet.show(
-                context,
-                vj: vj,
-                onMovieTap: _openMovieDetail,
+              Navigator.of(context).push(
+                MovieGridScreen.routeForVj(vj: vj),
               );
             },
             onSeeAll: () {
-              if (MockData.vjs.isNotEmpty) {
-                VjMoviesSheet.show(
-                  context,
-                  vj: MockData.vjs.first,
-                  onMovieTap: _openMovieDetail,
-                );
-              }
+              Navigator.of(context).push(
+                MovieGridScreen.routeForCategory(
+                  title: 'All VJ Movies',
+                  movies: MockData.getAllMovies(),
+                ),
+              );
             },
           ),
         ),
 
-        // ── Branded Section Titles with Taglines ─────────────────
+        // ── Branded Section Titles with Taglines & View All ──────────
         _buildMovieSection(
           context,
           title: 'Rewind & Relive',
@@ -251,7 +255,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             subtitle: subtitle,
             movies: movies,
             onMovieTap: _openMovieDetail,
-            onSeeAll: () => setState(() => _selectedNavIndex = 1),
+            onSeeAll: () {
+              Navigator.of(context).push(
+                MovieGridScreen.routeForCategory(
+                  title: title,
+                  movies: movies,
+                ),
+              );
+            },
           );
         },
         loading: () => MovieSection(
@@ -264,4 +275,3 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 }
-

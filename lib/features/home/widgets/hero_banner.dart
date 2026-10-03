@@ -10,8 +10,8 @@ import '../../../data/mock/mock_movies.dart';
 import '../../../data/models/movie.dart';
 import '../../../data/models/vj.dart';
 import '../../favorites/presentation/providers/favorites_provider.dart';
+import '../../movie_grid/presentation/screens/movie_grid_screen.dart';
 import '../providers/home_providers.dart';
-import 'vj_movies_sheet.dart';
 
 /// Refined Hero Section matching user markup image:
 /// - Compact poster dimensions (height: 242px, width: 162px) matching the yellow cut line
@@ -256,10 +256,8 @@ class _HeroBannerState extends ConsumerState<HeroBanner>
               // Right: Circular VJ Translator Profile Avatar (dots removed completely)
               GestureDetector(
                 onTap: () {
-                  VjMoviesSheet.show(
-                    context,
-                    vj: assignedVj,
-                    onMovieTap: (m) => widget.onTap?.call(m),
+                  Navigator.of(context).push(
+                    MovieGridScreen.routeForVj(vj: assignedVj),
                   );
                 },
                 child: Container(
