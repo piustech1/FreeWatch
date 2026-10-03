@@ -6,18 +6,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iconly/iconly.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../data/mock/mock_movies.dart';
 import '../../../data/models/movie.dart';
+import '../../../data/models/vj.dart';
 import '../../favorites/presentation/providers/favorites_provider.dart';
+import '../providers/home_providers.dart';
+import 'vj_movies_sheet.dart';
 
-/// Asymmetric Stacked Hero Banner Carousel built with exact math and layout
-/// from the user's HTML/CSS specification:
-/// - Active card aligned on the left at translateX(0px), scale(1.0), zIndex: 40
-/// - First stack card on the right at translateX(85px), scale(0.88), overlay: 0.40, zIndex: 30
-/// - Second stack card further right at translateX(155px), scale(0.76), overlay: 0.60, zIndex: 20
-/// - Exiting card slides smoothly left to translateX(-150px), scale(0.90), fading to opacity 0, zIndex: 50
-/// - Hidden queue cards wait at translateX(220px), scale(0.60), opacity: 0
-/// - Autoplays every 3.5 seconds with cubic ease curve Cubic(0.19, 1.0, 0.22, 1.0)
-/// - Left-aligned movie title + genre/duration and elongated white pill pagination dots
+/// Refined Hero Section matching user markup image:
+/// - Compact poster dimensions (height: 242px, width: 162px) matching the yellow cut line
+/// - 4-Poster Stacked Deck (Active + Stack 1 + Stack 2 + Stack 3 / purple outline)
+/// - Clean poster card: title overlay removed from the poster artwork
+/// - Authentic TMDB Movie Logo displayed below the hero cards
+/// - Circular VJ Translator profile avatar beside the movie logo
+/// - Smooth 3.5s autoplay and interactive drag gestures
 class HeroBanner extends ConsumerStatefulWidget {
   final List<Movie> movies;
   final void Function(Movie movie)? onTap;
@@ -93,8 +95,7 @@ class _HeroBannerState extends ConsumerState<HeroBanner>
 
     _animController.forward(from: 0.0);
 
-    // Sync Text Details with Fade effect matching HTML setTimeout 300ms
-    Future.delayed(const Duration(milliseconds: 300), () {
+    Future.delayed(const Duration(milliseconds: 280), () {
       if (mounted) {
         setState(() => _textOpacity = 1.0);
       }
@@ -113,7 +114,7 @@ class _HeroBannerState extends ConsumerState<HeroBanner>
 
     _animController.forward(from: 0.0);
 
-    Future.delayed(const Duration(milliseconds: 300), () {
+    Future.delayed(const Duration(milliseconds: 280), () {
       if (mounted) {
         setState(() => _textOpacity = 1.0);
       }
@@ -130,7 +131,7 @@ class _HeroBannerState extends ConsumerState<HeroBanner>
       _textOpacity = 0.0;
     });
     _animController.forward(from: 0.0);
-    Future.delayed(const Duration(milliseconds: 300), () {
+    Future.delayed(const Duration(milliseconds: 280), () {
       if (mounted) {
         setState(() => _textOpacity = 1.0);
       }
@@ -150,71 +151,71 @@ class _HeroBannerState extends ConsumerState<HeroBanner>
 
     final currentMovie = _movies[_currentIndex.clamp(0, _movies.length - 1)];
 
+    // Assigned VJ translator for current movie
+    final Vj assignedVj = MockData.vjs.firstWhere(
+      (v) => v.translatedMovieIds.contains(currentMovie.id),
+      orElse: () => MockData.vjs.first,
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ── Stacked Card Deck Container (HTML #slider-container) ───────────
+        // ── 4-Poster Stacked Deck Container ─────────────────────────────────
         GestureDetector(
           onHorizontalDragEnd: (details) {
             final velocity = details.primaryVelocity ?? 0.0;
-            if (velocity < -200) {
+            if (velocity < -180) {
               _nextSlide();
               _resetAutoplay();
-            } else if (velocity > 200) {
+            } else if (velocity > 180) {
               _prevSlide();
               _resetAutoplay();
             }
           },
           child: Container(
-            height: 395,
+            height: 248,
             width: double.infinity,
-            padding: const EdgeInsets.only(left: 28),
+            padding: const EdgeInsets.only(left: 20),
             clipBehavior: Clip.none,
             child: AnimatedBuilder(
               animation: _animController,
-              builder: (context, _) => _buildStackedCards(),
+              builder: (context, _) => _build4PosterStack(),
             ),
           ),
         ),
 
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
 
-        // ── Bottom Information Row (HTML text-wrapper & pagination-dots) ─────
+        // ── Below Posters Info Row (Movie Logo, Subtitle, VJ Profile & Dots) ──
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 28),
+          padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
+            crossAxisAlignment: CrossAxisAlignment.center,
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Title and Genre • Duration
+              // Left: Movie Logo (or styled title) + Subtitle
               Expanded(
                 child: AnimatedOpacity(
                   opacity: _textOpacity,
-                  duration: const Duration(milliseconds: 300),
+                  duration: const Duration(milliseconds: 280),
                   curve: Curves.easeInOut,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        currentMovie.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: -0.4,
-                          height: 1.15,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
+                      // Movie Logo
+                      _MovieLogoWidget(movie: currentMovie),
+
+                      const SizedBox(height: 3),
+
+                      // Genre • Year
                       Text(
                         _getMovieSubtitle(currentMovie),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           color: Color(0xFF7A7C85),
-                          fontSize: 13.5,
+                          fontSize: 12.5,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -223,28 +224,86 @@ class _HeroBannerState extends ConsumerState<HeroBanner>
                 ),
               ),
 
-              const SizedBox(width: 16),
+              const SizedBox(width: 12),
 
-              // Pagination Dots (HTML #pagination-dots)
+              // Right: VJ Profile Circle + Pagination Dots
               Row(
                 mainAxisSize: MainAxisSize.min,
-                children: List.generate(_movies.length, (i) {
-                  final isActive = i == _currentIndex;
-                  return GestureDetector(
-                    onTap: () => _jumpToSlide(i),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 500),
-                      curve: Curves.easeOutCubic,
-                      margin: const EdgeInsets.only(left: 6),
-                      height: 6,
-                      width: isActive ? 24 : 6,
+                children: [
+                  // Circular VJ Translator Profile Avatar
+                  GestureDetector(
+                    onTap: () {
+                      VjMoviesSheet.show(
+                        context,
+                        vj: assignedVj,
+                        onMovieTap: (m) => widget.onTap?.call(m),
+                      );
+                    },
+                    child: Container(
+                      width: 38,
+                      height: 38,
                       decoration: BoxDecoration(
-                        color: isActive ? Colors.white : const Color(0xFF4B4D56),
-                        borderRadius: BorderRadius.circular(3),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: AppColors.accent,
+                          width: 1.8,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.accent.withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: ClipOval(
+                        child: ColorFiltered(
+                          colorFilter: const ColorFilter.matrix(<double>[
+                            0.2126, 0.7152, 0.0722, 0, 0,
+                            0.2126, 0.7152, 0.0722, 0, 0,
+                            0.2126, 0.7152, 0.0722, 0, 0,
+                            0,      0,      0,      1, 0,
+                          ]),
+                          child: Image.asset(
+                            assignedVj.imageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(
+                              color: const Color(0xFF1E2130),
+                              child: const Icon(Icons.mic_rounded,
+                                  color: Colors.white, size: 18),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
-                  );
-                }),
+                  ),
+
+                  const SizedBox(width: 10),
+
+                  // Pagination Dots
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: List.generate(_movies.length, (i) {
+                      final isActive = i == _currentIndex;
+                      return GestureDetector(
+                        onTap: () => _jumpToSlide(i),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 400),
+                          curve: Curves.easeOutCubic,
+                          margin: const EdgeInsets.only(left: 4.5),
+                          height: 5,
+                          width: isActive ? 18 : 5,
+                          decoration: BoxDecoration(
+                            color: isActive
+                                ? Colors.white
+                                : const Color(0xFF4B4D56),
+                            borderRadius: BorderRadius.circular(2.5),
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
+                ],
               ),
             ],
           ),
@@ -253,38 +312,34 @@ class _HeroBannerState extends ConsumerState<HeroBanner>
     );
   }
 
-  /// Builds cards in exact z-index order matching HTML animation model
-  Widget _buildStackedCards() {
+  /// Builds cards in exact z-index order showing 4 posters in the deck
+  Widget _build4PosterStack() {
     final total = _movies.length;
     final t = const Cubic(0.19, 1.0, 0.22, 1.0)
         .transform(_animController.value);
 
-    // List of card indices to render ordered by z-index (lowest to highest)
-    // In Flutter Stack, later children render on top.
-    // HTML zIndex order:
-    // 10: Hidden cards
-    // 20: Offset 2 card
-    // 30: Offset 1 card
-    // 40: Active front card (Offset 0)
-    // 50: Exiting card (slides over front card)
     final List<int> renderOrder = [];
 
-    // Find indices for each offset
-    int? activeIdx = _currentIndex;
-    int? stack1Idx = (_currentIndex + 1) % total;
-    int? stack2Idx = (_currentIndex + 2) % total;
+    int activeIdx = _currentIndex;
+    int stack1Idx = (_currentIndex + 1) % total;
+    int stack2Idx = (_currentIndex + 2) % total;
+    int stack3Idx = (_currentIndex + 3) % total; // 4th poster (purple outline in markup)
     int? exitingIdx = _exitingIndex;
 
-    // Add other hidden background cards first
+    // Background hidden cards
     for (int i = 0; i < total; i++) {
       if (i != activeIdx &&
           i != stack1Idx &&
           i != stack2Idx &&
+          i != stack3Idx &&
           i != exitingIdx) {
         renderOrder.add(i);
       }
     }
 
+    if (!renderOrder.contains(stack3Idx)) {
+      renderOrder.add(stack3Idx);
+    }
     if (!renderOrder.contains(stack2Idx)) {
       renderOrder.add(stack2Idx);
     }
@@ -316,10 +371,11 @@ class _HeroBannerState extends ConsumerState<HeroBanner>
             child: Transform.scale(
               scale: state.scale,
               alignment: Alignment.centerLeft,
-              child: _HtmlStyledMovieCard(
+              child: _CompactHeroPosterCard(
                 movie: movie,
                 isFront: index == _currentIndex && _exitingIndex == null,
-                overlayColor: Colors.black.withOpacity(state.overlayOpacity.clamp(0.0, 1.0)),
+                overlayColor: Colors.black
+                    .withOpacity(state.overlayOpacity.clamp(0.0, 1.0)),
                 playBtnOpacity: state.playBtnOpacity.clamp(0.0, 1.0),
                 onTap: () {
                   if (index != _currentIndex) {
@@ -336,25 +392,23 @@ class _HeroBannerState extends ConsumerState<HeroBanner>
     );
   }
 
-  /// Calculates interpolation state based on HTML offsets
+  /// Calculates interpolation state for 4-card stack layout
   _CardAnimationState _calculateCardState(int index, int total, double t) {
     final bool isAnimating = _animController.isAnimating;
 
     // ── 1. EXITING CARD: slides smoothly off to the left ───────────────────
     if (isAnimating && index == _exitingIndex) {
       if (_isReversing) {
-        // Exiting when going backwards: slides from 0 to 85px
         return _CardAnimationState(
-          x: lerpDouble(0.0, 85.0, t)!,
-          scale: lerpDouble(1.0, 0.88, t)!,
+          x: lerpDouble(0.0, 52.0, t)!,
+          scale: lerpDouble(1.0, 0.90, t)!,
           opacity: 1.0,
-          overlayOpacity: lerpDouble(0.0, 0.40, t)!,
+          overlayOpacity: lerpDouble(0.0, 0.35, t)!,
           playBtnOpacity: lerpDouble(1.0, 0.0, t)!,
         );
       } else {
-        // Standard forward exit: slides from 0 to -150px, fades to 0
         return _CardAnimationState(
-          x: lerpDouble(0.0, -150.0, t)!,
+          x: lerpDouble(0.0, -120.0, t)!,
           scale: lerpDouble(1.0, 0.90, t)!,
           opacity: lerpDouble(1.0, 0.0, t)!,
           overlayOpacity: 0.0,
@@ -363,80 +417,95 @@ class _HeroBannerState extends ConsumerState<HeroBanner>
       }
     }
 
-    // Offset relative to current active index in circular array
     final int offset = (index - _currentIndex + total) % total;
 
-    // ── 2. ANIMATING TRANSITION FOR INCOMING/SHIFTING CARDS ────────────────
+    // ── 2. ANIMATING TRANSITIONS FOR 4 VISIBLE POSTERS ──────────────────────
     if (isAnimating) {
       if (!_isReversing) {
-        // Forward: index at offset 0 was at offset 1 (85px -> 0px)
+        // Forward: offset 0 was at offset 1 (52px -> 0px)
         if (offset == 0) {
           return _CardAnimationState(
-            x: lerpDouble(85.0, 0.0, t)!,
-            scale: lerpDouble(0.88, 1.0, t)!,
+            x: lerpDouble(52.0, 0.0, t)!,
+            scale: lerpDouble(0.90, 1.0, t)!,
             opacity: 1.0,
-            overlayOpacity: lerpDouble(0.40, 0.0, t)!,
+            overlayOpacity: lerpDouble(0.35, 0.0, t)!,
             playBtnOpacity: lerpDouble(0.0, 1.0, t)!,
           );
         }
-        // Forward: index at offset 1 was at offset 2 (155px -> 85px)
+        // Forward: offset 1 was at offset 2 (100px -> 52px)
         if (offset == 1) {
           return _CardAnimationState(
-            x: lerpDouble(155.0, 85.0, t)!,
-            scale: lerpDouble(0.76, 0.88, t)!,
+            x: lerpDouble(100.0, 52.0, t)!,
+            scale: lerpDouble(0.80, 0.90, t)!,
             opacity: 1.0,
-            overlayOpacity: lerpDouble(0.60, 0.40, t)!,
+            overlayOpacity: lerpDouble(0.55, 0.35, t)!,
             playBtnOpacity: 0.0,
           );
         }
-        // Forward: index at offset 2 was in hidden queue (220px -> 155px)
+        // Forward: offset 2 was at offset 3 (144px -> 100px)
         if (offset == 2) {
           return _CardAnimationState(
-            x: lerpDouble(220.0, 155.0, t)!,
-            scale: lerpDouble(0.60, 0.76, t)!,
+            x: lerpDouble(144.0, 100.0, t)!,
+            scale: lerpDouble(0.70, 0.80, t)!,
+            opacity: 1.0,
+            overlayOpacity: lerpDouble(0.70, 0.55, t)!,
+            playBtnOpacity: 0.0,
+          );
+        }
+        // Forward: offset 3 was in hidden queue (190px -> 144px)
+        if (offset == 3) {
+          return _CardAnimationState(
+            x: lerpDouble(190.0, 144.0, t)!,
+            scale: lerpDouble(0.55, 0.70, t)!,
             opacity: lerpDouble(0.0, 1.0, t)!,
-            overlayOpacity: lerpDouble(0.80, 0.60, t)!,
+            overlayOpacity: lerpDouble(0.85, 0.70, t)!,
             playBtnOpacity: 0.0,
           );
         }
       } else {
-        // Reverse: index at offset 0 was exiting left (-150px -> 0px)
+        // Reverse transitions
         if (offset == 0) {
           return _CardAnimationState(
-            x: lerpDouble(-150.0, 0.0, t)!,
+            x: lerpDouble(-120.0, 0.0, t)!,
             scale: lerpDouble(0.90, 1.0, t)!,
             opacity: lerpDouble(0.0, 1.0, t)!,
             overlayOpacity: 0.0,
             playBtnOpacity: lerpDouble(0.0, 1.0, t)!,
           );
         }
-        // Reverse: index at offset 1 was at offset 0 (0px -> 85px)
         if (offset == 1) {
           return _CardAnimationState(
-            x: lerpDouble(0.0, 85.0, t)!,
-            scale: lerpDouble(1.0, 0.88, t)!,
+            x: lerpDouble(0.0, 52.0, t)!,
+            scale: lerpDouble(1.0, 0.90, t)!,
             opacity: 1.0,
-            overlayOpacity: lerpDouble(0.0, 0.40, t)!,
+            overlayOpacity: lerpDouble(0.0, 0.35, t)!,
             playBtnOpacity: lerpDouble(1.0, 0.0, t)!,
           );
         }
-        // Reverse: index at offset 2 was at offset 1 (85px -> 155px)
         if (offset == 2) {
           return _CardAnimationState(
-            x: lerpDouble(85.0, 155.0, t)!,
-            scale: lerpDouble(0.88, 0.76, t)!,
+            x: lerpDouble(52.0, 100.0, t)!,
+            scale: lerpDouble(0.90, 0.80, t)!,
             opacity: 1.0,
-            overlayOpacity: lerpDouble(0.40, 0.60, t)!,
+            overlayOpacity: lerpDouble(0.35, 0.55, t)!,
+            playBtnOpacity: 0.0,
+          );
+        }
+        if (offset == 3) {
+          return _CardAnimationState(
+            x: lerpDouble(100.0, 144.0, t)!,
+            scale: lerpDouble(0.80, 0.70, t)!,
+            opacity: 1.0,
+            overlayOpacity: lerpDouble(0.55, 0.70, t)!,
             playBtnOpacity: 0.0,
           );
         }
       }
     }
 
-    // ── 3. STATIC / IDLE STATES FROM USER'S HTML CODE ───────────────────────
+    // ── 3. STATIC / IDLE STATES FOR 4 POSTERS ───────────────────────────────
     if (offset == 0) {
       // 1. ACTIVE FRONT CARD
-      // card.style.transform = 'translateX(0px) scale(1)'; opacity = 1
       return const _CardAnimationState(
         x: 0.0,
         scale: 1.0,
@@ -445,33 +514,39 @@ class _HeroBannerState extends ConsumerState<HeroBanner>
         playBtnOpacity: 1.0,
       );
     } else if (offset == 1) {
-      // 2. FIRST CARD IN STACK (Right)
-      // card.style.transform = 'translateX(85px) scale(0.88)'; opacity = 1, overlay 0.4
+      // 2. FIRST CARD IN STACK
       return const _CardAnimationState(
-        x: 85.0,
-        scale: 0.88,
+        x: 52.0,
+        scale: 0.90,
         opacity: 1.0,
-        overlayOpacity: 0.40,
+        overlayOpacity: 0.35,
         playBtnOpacity: 0.0,
       );
     } else if (offset == 2) {
-      // 3. SECOND CARD IN STACK (Further Right)
-      // card.style.transform = 'translateX(155px) scale(0.76)'; opacity = 1, overlay 0.6
+      // 3. SECOND CARD IN STACK
       return const _CardAnimationState(
-        x: 155.0,
-        scale: 0.76,
+        x: 100.0,
+        scale: 0.80,
         opacity: 1.0,
-        overlayOpacity: 0.60,
+        overlayOpacity: 0.55,
+        playBtnOpacity: 0.0,
+      );
+    } else if (offset == 3) {
+      // 4. THIRD CARD IN STACK (Purple outline in user markup)
+      return const _CardAnimationState(
+        x: 144.0,
+        scale: 0.70,
+        opacity: 1.0,
+        overlayOpacity: 0.70,
         playBtnOpacity: 0.0,
       );
     } else {
       // 5. HIDDEN CARDS
-      // card.style.transform = 'translateX(220px) scale(0.6)'; opacity = 0
       return const _CardAnimationState(
-        x: 220.0,
-        scale: 0.60,
+        x: 190.0,
+        scale: 0.55,
         opacity: 0.0,
-        overlayOpacity: 0.80,
+        overlayOpacity: 0.85,
         playBtnOpacity: 0.0,
       );
     }
@@ -493,7 +568,7 @@ class _HeroBannerState extends ConsumerState<HeroBanner>
     if (movie.id == 533535 || movie.title.toLowerCase().contains('deadpool')) {
       return 'Action • 128 mins';
     }
-    final year = movie.year.isNotEmpty ? movie.year : '2024';
+    final year = movie.year.isNotEmpty ? movie.year : '2026';
     return 'Action, Drama • $year';
   }
 }
@@ -514,16 +589,16 @@ class _CardAnimationState {
   });
 }
 
-/// Exact Card HTML & CSS representation:
-/// w-[260px] h-[390px] rounded-[28px] overflow-hidden bg-gray-900 card-shadow
-class _HtmlStyledMovieCard extends ConsumerWidget {
+/// Compact Hero Poster Card matching the yellow line height reduction (~242px)
+/// and removing artificial text overlay on the poster artwork
+class _CompactHeroPosterCard extends ConsumerWidget {
   final Movie movie;
   final bool isFront;
   final Color overlayColor;
   final double playBtnOpacity;
   final VoidCallback onTap;
 
-  const _HtmlStyledMovieCard({
+  const _CompactHeroPosterCard({
     required this.movie,
     required this.isFront,
     required this.overlayColor,
@@ -543,38 +618,37 @@ class _HtmlStyledMovieCard extends ConsumerWidget {
 
     final ratingDisplay = movie.voteAverage > 0
         ? movie.voteAverage.toStringAsFixed(1)
-        : '9.2';
+        : '7.5';
 
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Container(
-        width: 260,
-        height: 390,
+        width: 162,
+        height: 242,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(28),
-          color: const Color(0xFF111827), // bg-gray-900
+          borderRadius: BorderRadius.circular(20),
+          color: const Color(0xFF111827),
           boxShadow: [
-            // Deep shadow from CSS: -15px 0 35px -10px rgba(0,0,0,0.8), 0 12px 24px rgba(0,0,0,0.6)
             BoxShadow(
-              color: Colors.black.withOpacity(0.8),
-              blurRadius: 35,
-              spreadRadius: -10,
-              offset: const Offset(-15, 0),
+              color: Colors.black.withOpacity(0.75),
+              blurRadius: 22,
+              spreadRadius: -6,
+              offset: const Offset(-8, 0),
             ),
             BoxShadow(
-              color: Colors.black.withOpacity(0.6),
-              blurRadius: 24,
-              offset: const Offset(0, 12),
+              color: Colors.black.withOpacity(0.5),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(28),
+          borderRadius: BorderRadius.circular(20),
           child: Stack(
             fit: StackFit.expand,
             children: [
-              // ── 1. Poster Image (background-image: url('${movie.image}')) ──
+              // ── 1. Clean Poster Image without text overlay ─────────────────
               posterUrl != null
                   ? CachedNetworkImage(
                       imageUrl: posterUrl,
@@ -585,13 +659,13 @@ class _HtmlStyledMovieCard extends ConsumerWidget {
                       errorWidget: (_, __, ___) => Container(
                         color: const Color(0xFF111827),
                         child: const Icon(Icons.movie_rounded,
-                            color: Colors.white24, size: 48),
+                            color: Colors.white24, size: 36),
                       ),
                     )
                   : Container(
                       color: const Color(0xFF111827),
                       child: const Icon(Icons.movie_rounded,
-                          color: Colors.white24, size: 48),
+                          color: Colors.white24, size: 36),
                     ),
 
               // ── 2. Dynamic Dimming Overlay based on Depth ─────────────────
@@ -601,11 +675,10 @@ class _HtmlStyledMovieCard extends ConsumerWidget {
                 color: overlayColor,
               ),
 
-              // ── 3. Bookmark Icon (Top Left HTML) ──────────────────────────
-              // w-9 h-9 bg-white/20 backdrop-blur-md rounded-xl border border-white/10
+              // ── 3. Bookmark Button (Top Left) ─────────────────────────────
               Positioned(
-                top: 16,
-                left: 16,
+                top: 10,
+                left: 10,
                 child: GestureDetector(
                   onTap: () {
                     ref.read(favoritesProvider.notifier).toggleFavorite(movie);
@@ -623,30 +696,24 @@ class _HtmlStyledMovieCard extends ConsumerWidget {
                     );
                   },
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(8),
                     child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                      filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
                       child: Container(
-                        width: 36,
-                        height: 36,
+                        width: 28,
+                        height: 28,
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.20),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(8),
                           border: Border.all(
                             color: Colors.white.withOpacity(0.12),
-                            width: 1,
+                            width: 0.8,
                           ),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Colors.black26,
-                              blurRadius: 4,
-                            ),
-                          ],
                         ),
                         child: Icon(
                           isFav ? IconlyBold.bookmark : IconlyLight.bookmark,
                           color: isFav ? const Color(0xFF34D399) : Colors.white,
-                          size: 17,
+                          size: 14,
                         ),
                       ),
                     ),
@@ -654,22 +721,20 @@ class _HtmlStyledMovieCard extends ConsumerWidget {
                 ),
               ),
 
-              // ── 4. Rating Badge (Top Right HTML) ──────────────────────────
-              // bg-emerald-400 text-gray-900 px-2.5 py-1.5 rounded-lg text-[13px] font-bold shadow-lg
+              // ── 4. Rating Badge (Top Right) ───────────────────────────────
               Positioned(
-                top: 16,
-                right: 16,
+                top: 10,
+                right: 10,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 5.5),
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF34D399), // Tailwind bg-emerald-400
-                    borderRadius: BorderRadius.circular(9),
+                    color: const Color(0xFF34D399),
+                    borderRadius: BorderRadius.circular(7),
                     boxShadow: [
                       BoxShadow(
                         color: const Color(0xFF34D399).withOpacity(0.35),
-                        blurRadius: 10,
-                        offset: const Offset(0, 3),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
                       ),
                     ],
                   ),
@@ -678,15 +743,15 @@ class _HtmlStyledMovieCard extends ConsumerWidget {
                     children: [
                       const Icon(
                         Icons.star_rounded,
-                        color: Color(0xFF111827), // text-gray-900
-                        size: 15,
+                        color: Color(0xFF111827),
+                        size: 11.5,
                       ),
-                      const SizedBox(width: 3.5),
+                      const SizedBox(width: 2),
                       Text(
                         ratingDisplay,
                         style: const TextStyle(
                           color: Color(0xFF111827),
-                          fontSize: 13,
+                          fontSize: 10.5,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -695,41 +760,40 @@ class _HtmlStyledMovieCard extends ConsumerWidget {
                 ),
               ),
 
-              // ── 5. Play Button (Center HTML) ──────────────────────────────
-              // w-16 h-16 bg-white/25 backdrop-blur-md rounded-full border border-white/30 shadow-xl
+              // ── 5. Circular Play Button (Center) ──────────────────────────
               if (playBtnOpacity > 0.01)
                 Positioned.fill(
                   child: Center(
                     child: Opacity(
                       opacity: playBtnOpacity,
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(32),
+                        borderRadius: BorderRadius.circular(24),
                         child: BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                           child: Container(
-                            width: 64,
-                            height: 64,
+                            width: 46,
+                            height: 46,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: Colors.white.withOpacity(0.25),
                               border: Border.all(
                                 color: Colors.white.withOpacity(0.30),
-                                width: 1.5,
+                                width: 1.2,
                               ),
                               boxShadow: const [
                                 BoxShadow(
                                   color: Colors.black45,
-                                  blurRadius: 20,
+                                  blurRadius: 14,
                                 ),
                               ],
                             ),
                             child: const Center(
                               child: Padding(
-                                padding: EdgeInsets.only(left: 3),
+                                padding: EdgeInsets.only(left: 2),
                                 child: Icon(
                                   Icons.play_arrow_rounded,
                                   color: Colors.white,
-                                  size: 34,
+                                  size: 26,
                                 ),
                               ),
                             ),
@@ -739,35 +803,55 @@ class _HtmlStyledMovieCard extends ConsumerWidget {
                     ),
                   ),
                 ),
-
-              // ── 6. Superimposed Title at bottom of card ───────────────────
-              Positioned(
-                left: 16,
-                right: 16,
-                bottom: 16,
-                child: Text(
-                  movie.title.toUpperCase(),
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1.2,
-                    shadows: [
-                      Shadow(
-                        color: Colors.black,
-                        blurRadius: 8,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Movie Logo widget: loads official transparent PNG logo from TMDB images endpoint
+/// or falls back to bold stylized typography
+class _MovieLogoWidget extends ConsumerWidget {
+  final Movie movie;
+
+  const _MovieLogoWidget({required this.movie});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final logoAsync = ref.watch(movieLogoProvider(movie.id));
+
+    return logoAsync.when(
+      data: (logoUrl) {
+        if (logoUrl != null && logoUrl.isNotEmpty) {
+          return SizedBox(
+            height: 34,
+            child: CachedNetworkImage(
+              imageUrl: logoUrl,
+              fit: BoxFit.contain,
+              alignment: Alignment.centerLeft,
+              errorWidget: (_, __, ___) => _buildTextTitle(),
+            ),
+          );
+        }
+        return _buildTextTitle();
+      },
+      loading: () => _buildTextTitle(),
+      error: (_, __) => _buildTextTitle(),
+    );
+  }
+
+  Widget _buildTextTitle() {
+    return Text(
+      movie.title,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: const TextStyle(
+        color: AppColors.textPrimary,
+        fontSize: 19,
+        fontWeight: FontWeight.w900,
+        letterSpacing: -0.3,
       ),
     );
   }

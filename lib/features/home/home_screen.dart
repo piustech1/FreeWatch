@@ -26,7 +26,6 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   int _selectedNavIndex = 0;
 
   void _openMovieDetail(Movie movie) {
@@ -48,30 +47,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      key: _scaffoldKey,
       backgroundColor: AppColors.background,
-      // ── Sleek Navigation Drawer (opened via top bar navigation menu icon) ─
-      drawer: _FreeWatchDrawer(
-        selectedIndex: _selectedNavIndex,
-        onSelectTab: (index) {
-          Navigator.pop(context);
-          setState(() => _selectedNavIndex = index);
-        },
-        onNotificationsTap: () {
-          Navigator.pop(context);
-          _openNotifications();
-        },
-        onVjsTap: () {
-          Navigator.pop(context);
-          if (MockData.vjs.isNotEmpty) {
-            VjMoviesSheet.show(
-              context,
-              vj: MockData.vjs.first,
-              onMovieTap: _openMovieDetail,
-            );
-          }
-        },
-      ),
       body: SafeArea(
         bottom: false,
         child: Stack(
@@ -80,7 +56,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               children: [
                 // ── Top Header / App Bar (Consistently visible across ALL pages) ─
                 _FreeWatchTopAppBar(
-                  onMenuTap: () => _scaffoldKey.currentState?.openDrawer(),
                   onSearchTap: () => setState(() => _selectedNavIndex = 1),
                   onNotificationTap: _openNotifications,
                 ),
@@ -293,12 +268,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 // ── Persistent Top App Bar ───────────────────────────────────────────────────
 
 class _FreeWatchTopAppBar extends StatelessWidget {
-  final VoidCallback onMenuTap;
   final VoidCallback onSearchTap;
   final VoidCallback onNotificationTap;
 
   const _FreeWatchTopAppBar({
-    required this.onMenuTap,
     required this.onSearchTap,
     required this.onNotificationTap,
   });
@@ -306,23 +279,9 @@ class _FreeWatchTopAppBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 6, 12, 6),
+      padding: const EdgeInsets.fromLTRB(18, 6, 12, 6),
       child: Row(
         children: [
-          // ── Navigation Menu Hamburger Button ──────────────────────────────
-          IconButton(
-            onPressed: onMenuTap,
-            padding: const EdgeInsets.all(6),
-            constraints: const BoxConstraints(),
-            icon: const Icon(
-              Icons.menu_rounded,
-              color: AppColors.textPrimary,
-              size: 26,
-            ),
-          ),
-
-          const SizedBox(width: 8),
-
           // ── Brand Logo ────────────────────────────────────────────────────
           Image.asset(
             'assets/images/logo_full.png',
@@ -400,161 +359,6 @@ class _FreeWatchTopAppBar extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-// ── Navigation Drawer ────────────────────────────────────────────────────────
-
-class _FreeWatchDrawer extends StatelessWidget {
-  final int selectedIndex;
-  final ValueChanged<int> onSelectTab;
-  final VoidCallback onNotificationsTap;
-  final VoidCallback onVjsTap;
-
-  const _FreeWatchDrawer({
-    required this.selectedIndex,
-    required this.onSelectTab,
-    required this.onNotificationsTap,
-    required this.onVjsTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Drawer(
-      backgroundColor: const Color(0xFF0D0F16),
-      child: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Drawer Header
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Image.asset(
-                    'assets/images/logo_full.png',
-                    height: 52,
-                    fit: BoxFit.contain,
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.accent.withOpacity(0.18),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: AppColors.accent.withOpacity(0.4),
-                        width: 1,
-                      ),
-                    ),
-                    child: const Text(
-                      'FreeWatch VIP • Free Everywhere',
-                      style: TextStyle(
-                        color: AppColors.accent,
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const Divider(color: Colors.white12, height: 1),
-
-            // Navigation Links
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                children: [
-                  _buildDrawerItem(
-                    icon: Icons.home_rounded,
-                    label: 'Home Feed',
-                    isSelected: selectedIndex == 0,
-                    onTap: () => onSelectTab(0),
-                  ),
-                  _buildDrawerItem(
-                    icon: Icons.search_rounded,
-                    label: 'Explore Categories',
-                    isSelected: selectedIndex == 1,
-                    onTap: () => onSelectTab(1),
-                  ),
-                  _buildDrawerItem(
-                    icon: Icons.favorite_rounded,
-                    label: 'My Watchlist',
-                    isSelected: selectedIndex == 2,
-                    onTap: () => onSelectTab(2),
-                  ),
-                  _buildDrawerItem(
-                    icon: Icons.person_rounded,
-                    label: 'My Profile & Account',
-                    isSelected: selectedIndex == 3,
-                    onTap: () => onSelectTab(3),
-                  ),
-                  const Divider(color: Colors.white10, height: 24),
-                  _buildDrawerItem(
-                    icon: Icons.record_voice_over_rounded,
-                    label: 'Available VJs (Ugandan Dubs)',
-                    isSelected: false,
-                    onTap: onVjsTap,
-                  ),
-                  _buildDrawerItem(
-                    icon: Icons.notifications_rounded,
-                    label: 'Notifications & Drops',
-                    isSelected: false,
-                    onTap: onNotificationsTap,
-                  ),
-                ],
-              ),
-            ),
-
-            // Footer
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Text(
-                'FreeWatch v1.0.13\nFree entertainment, free everywhere.',
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.35),
-                  fontSize: 11.5,
-                  height: 1.4,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDrawerItem({
-    required IconData icon,
-    required String label,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    return ListTile(
-      leading: Icon(
-        icon,
-        color: isSelected ? AppColors.accent : Colors.white70,
-        size: 22,
-      ),
-      title: Text(
-        label,
-        style: TextStyle(
-          color: isSelected ? Colors.white : Colors.white70,
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-          fontSize: 14,
-        ),
-      ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
-      tileColor: isSelected ? Colors.white.withOpacity(0.06) : Colors.transparent,
-      onTap: onTap,
     );
   }
 }
