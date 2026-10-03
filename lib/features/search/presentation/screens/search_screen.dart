@@ -7,8 +7,8 @@ import '../../../../core/constants/api_constants.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../data/mock/mock_movies.dart';
 import '../../../../data/models/movie.dart';
-import '../../../home/widgets/movie_card.dart';
 import '../../../movie_detail/presentation/screens/movie_detail_screen.dart';
+import '../providers/search_providers.dart';
 
 /// 3-Page Series Search Flow matching Reference Image 1:
 /// - Screen 1: Categories Landing with folder-tab cards
@@ -99,6 +99,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     'Adventure',
     'Animation',
     'Horror',
+    'Romance',
+    'Fantasy',
+    'Crime',
+    'Thriller',
+    'Family',
   ];
 
   @override
@@ -428,98 +433,127 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // SCREEN 2: SEARCH RESULTS & CATEGORY (Reference Image 1, Middle Screen)
+  // SCREEN 2: SEARCH RESULTS & CATEGORY (Reference Image 2 Match)
   // ═══════════════════════════════════════════════════════════════════════════
+  String get _formattedCategoryTitle {
+    final cat = _selectedCategory.trim();
+    if (_searchQuery.isNotEmpty &&
+        _searchQuery.toLowerCase() != cat.toLowerCase()) {
+      return 'Results for "$_searchQuery"';
+    }
+    final lower = cat.toLowerCase();
+    if (lower == 'movies' || lower == 'popular') return 'Popular movies';
+    if (lower.contains('show') || lower.contains('tv')) return 'TV shows';
+    if (lower.contains('video') || lower.contains('music')) return 'Music videos';
+    if (lower.endsWith('movies')) return cat;
+    return '$cat movies';
+  }
+
   Widget _buildSearchResultsPage() {
-    final allMovies = MockData.getAllMovies();
-
-    // Filter by query and category
-    final results = allMovies.where((m) {
-      if (_searchQuery.isNotEmpty &&
-          _searchQuery.toLowerCase() != _selectedCategory.toLowerCase()) {
-        final matches = m.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-            (m.overview != null &&
-                m.overview!.toLowerCase().contains(_searchQuery.toLowerCase()));
-        if (!matches) return false;
-      }
-
-      if (_selectedCategory == 'Movies') return true;
-      if (_selectedCategory == 'TV shows') {
-        return m.id == 1125510 || m.title.contains('House');
-      }
-      if (_selectedCategory == 'Action') return m.genreIds.contains(28);
-      if (_selectedCategory == 'Sci-Fi') return m.genreIds.contains(878);
-      if (_selectedCategory == 'Animation') return m.genreIds.contains(16);
-      if (_selectedCategory == 'Horror') return m.genreIds.contains(27);
-      if (_selectedCategory == 'Comedy') return m.genreIds.contains(35);
-      if (_selectedCategory == 'Adventure') {
-        return m.genreIds.contains(12) || m.genreIds.contains(28);
-      }
-
-      return true;
-    }).toList();
+    final searchParam = SearchCategoryParam(
+      category: _selectedCategory,
+      query: _searchQuery,
+    );
+    final moviesAsync = ref.watch(categoryOrSearchMoviesProvider(searchParam));
 
     return Column(
       key: const ValueKey('SearchResultsPage'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ── Top Search Input Header with Back & Search Icon ────────────────
+        // ── Top Glassmorphic Search Bar with Back Button ───────────────────
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
           child: Row(
             children: [
-              IconButton(
-                onPressed: () => setState(() => _searchStep = 1),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                icon: const Icon(
-                  Icons.arrow_back_ios_new_rounded,
-                  color: Colors.white,
-                  size: 18,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
+              // Back Button returning to Step 1 (Categories)
+              GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _searchStep = 1;
+                  });
+                },
+                behavior: HitTestBehavior.opaque,
                 child: Container(
-                  height: 48,
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  width: 38,
+                  height: 38,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF141720),
-                    borderRadius: BorderRadius.circular(16),
+                    color: Colors.white.withOpacity(0.08),
+                    shape: BoxShape.circle,
                     border: Border.all(
-                      color: Colors.white.withOpacity(0.1),
-                      width: 1,
+                      color: Colors.white.withOpacity(0.12),
+                      width: 0.8,
                     ),
                   ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _searchController,
-                          onChanged: (val) => setState(() => _searchQuery = val.trim()),
-                          style: const TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 14.5,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          cursorColor: AppColors.accent,
-                          decoration: InputDecoration(
-                            hintText: 'Search $_selectedCategory...',
-                            hintStyle: TextStyle(
-                              color: Colors.white.withOpacity(0.4),
-                              fontSize: 14,
-                            ),
-                            border: InputBorder.none,
-                            contentPadding: EdgeInsets.zero,
-                          ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.arrow_back_ios_new_rounded,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+
+              // iOS Frosted Glass Search Capsule
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                    child: Container(
+                      height: 48,
+                      padding: const EdgeInsets.symmetric(horizontal: 18),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1E222D).withOpacity(0.65),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.12),
+                          width: 1,
                         ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.25),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
                       ),
-                      Icon(
-                        Icons.search_rounded,
-                        color: Colors.white.withOpacity(0.65),
-                        size: 20,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _searchController,
+                              onChanged: (val) {
+                                setState(() {
+                                  _searchQuery = val.trim();
+                                });
+                              },
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              cursorColor: AppColors.accent,
+                              decoration: InputDecoration(
+                                hintText: 'Search $_selectedCategory...',
+                                hintStyle: TextStyle(
+                                  color: Colors.white.withOpacity(0.40),
+                                  fontSize: 14.5,
+                                ),
+                                border: InputBorder.none,
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                            ),
+                          ),
+                          Icon(
+                            Icons.search_rounded,
+                            color: Colors.white.withOpacity(0.65),
+                            size: 22,
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
@@ -527,9 +561,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           ),
         ),
 
-        // ── Horizontal Pill Filter Tags Row ─────────────────────────────────
+        // ── Horizontal Category / Genre Filter Pills Row ────────────────────
         SizedBox(
-          height: 36,
+          height: 38,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -538,7 +572,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             separatorBuilder: (_, __) => const SizedBox(width: 8),
             itemBuilder: (context, i) {
               final genre = _quickPillGenres[i];
-              final isSelected = _selectedCategory.toLowerCase() == genre.toLowerCase();
+              final isSelected =
+                  _selectedCategory.toLowerCase() == genre.toLowerCase();
               return GestureDetector(
                 onTap: () {
                   setState(() {
@@ -547,24 +582,39 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     _searchQuery = genre;
                   });
                 },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                  decoration: BoxDecoration(
-                    color: isSelected ? const Color(0xFF2C303E) : const Color(0xFF141720),
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(
-                      color: isSelected
-                          ? AppColors.accent.withOpacity(0.8)
-                          : Colors.white.withOpacity(0.08),
-                      width: 1,
-                    ),
-                  ),
-                  child: Text(
-                    genre,
-                    style: TextStyle(
-                      color: isSelected ? AppColors.accent : Colors.white70,
-                      fontSize: 12,
-                      fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+                behavior: HitTestBehavior.opaque,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? const Color(0xFF2E3344)
+                            : const Color(0xFF161922).withOpacity(0.65),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: isSelected
+                              ? Colors.white.withOpacity(0.30)
+                              : Colors.white.withOpacity(0.08),
+                          width: 1,
+                        ),
+                      ),
+                      child: Center(
+                        child: Text(
+                          genre,
+                          style: TextStyle(
+                            color: isSelected ? Colors.white : Colors.white60,
+                            fontSize: 13,
+                            fontWeight: isSelected
+                                ? FontWeight.w700
+                                : FontWeight.w500,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -573,47 +623,49 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           ),
         ),
 
-        const SizedBox(height: 14),
+        const SizedBox(height: 16),
 
-        // ── Section Header with Sliders Filter & Grid Toggle ───────────────
+        // ── Section Header with Sliders Filter & Arrangement Toggle ────────
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 18),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '$_selectedCategory movies',
+                _formattedCategoryTitle,
                 style: const TextStyle(
                   color: AppColors.textPrimary,
-                  fontSize: 17,
+                  fontSize: 18,
                   fontWeight: FontWeight.w800,
                   letterSpacing: -0.2,
                 ),
               ),
               Row(
                 children: [
-                  // Sliders Filter Icon (Navigates to Screen 3: Filters)
+                  // Sliders Filter Icon (Opens Screen 3: Filters)
                   IconButton(
                     onPressed: () => setState(() => _searchStep = 3),
                     padding: const EdgeInsets.all(6),
                     constraints: const BoxConstraints(),
                     icon: const Icon(
                       Icons.tune_rounded,
-                      color: AppColors.textPrimary,
-                      size: 20,
+                      color: Colors.white,
+                      size: 21,
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 12),
 
-                  // Grid / List View Toggle Icon
+                  // Arrangement Button (4-Squares Grid / List View Toggle)
                   IconButton(
                     onPressed: () => setState(() => _isGridView = !_isGridView),
                     padding: const EdgeInsets.all(6),
                     constraints: const BoxConstraints(),
                     icon: Icon(
-                      _isGridView ? Icons.view_list_rounded : Icons.grid_view_rounded,
-                      color: AppColors.textPrimary,
-                      size: 20,
+                      _isGridView
+                          ? Icons.view_list_rounded
+                          : Icons.grid_view_rounded,
+                      color: Colors.white,
+                      size: 21,
                     ),
                   ),
                 ],
@@ -622,32 +674,42 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           ),
         ),
 
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
 
-        // ── Results Content: Horizontal Movie Tiles or Grid ────────────────
+        // ── Results Content: Clean Backdrop List View or 3-Column Grid ─────
         Expanded(
-          child: results.isEmpty
-              ? _buildEmptyResults()
-              : _isGridView
+          child: moviesAsync.when(
+            data: (results) {
+              if (results.isEmpty) {
+                return _buildEmptyResults();
+              }
+              return _isGridView
                   ? _buildGridView(results)
-                  : _buildListView(results),
+                  : _buildListView(results);
+            },
+            loading: () => _isGridView
+                ? _buildGridLoadingSkeleton()
+                : _buildListLoadingSkeleton(),
+            error: (_, __) => _buildEmptyResults(),
+          ),
         ),
       ],
     );
   }
 
-  /// Horizontal wide movie cards matching Image 1 Screen 2
+  /// Clean Landscape Backdrop Movie List matching Reference Image 2
   Widget _buildListView(List<Movie> results) {
     return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
+      padding: const EdgeInsets.fromLTRB(18, 4, 18, 100),
       physics: const BouncingScrollPhysics(),
       itemCount: results.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      separatorBuilder: (_, __) => const SizedBox(height: 14),
       itemBuilder: (context, i) {
         final movie = results[i];
-        final posterUrl = movie.backdropPath != null && movie.backdropPath!.isNotEmpty
+        final backdropUrl = movie.backdropPath != null &&
+                movie.backdropPath!.isNotEmpty
             ? '${ApiConstants.backdropW780}${movie.backdropPath}'
-            : (movie.posterPath != null
+            : (movie.posterPath != null && movie.posterPath!.isNotEmpty
                 ? '${ApiConstants.posterW500}${movie.posterPath}'
                 : null);
 
@@ -655,131 +717,370 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             ? movie.voteAverage.toStringAsFixed(1)
             : '6.2';
 
+        final releaseYear = movie.year.isNotEmpty ? movie.year : '2023';
+
         return GestureDetector(
           onTap: () => _openMovieDetails(movie),
           behavior: HitTestBehavior.opaque,
-          child: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: const Color(0xFF10131A),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: Colors.white.withOpacity(0.06),
-                width: 1,
+          child: Row(
+            children: [
+              // Rounded Backdrop Thumbnail (128x76)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: SizedBox(
+                  width: 128,
+                  height: 76,
+                  child: backdropUrl != null
+                      ? CachedNetworkImage(
+                          imageUrl: backdropUrl,
+                          fit: BoxFit.cover,
+                          placeholder: (_, __) => Shimmer.fromColors(
+                            baseColor: const Color(0xFF161922),
+                            highlightColor: const Color(0xFF262C3A),
+                            child: Container(color: const Color(0xFF161922)),
+                          ),
+                          errorWidget: (_, __, ___) => Container(
+                            color: const Color(0xFF161922),
+                            child: const Icon(
+                              Icons.movie_rounded,
+                              color: Colors.white24,
+                              size: 28,
+                            ),
+                          ),
+                        )
+                      : Container(
+                          color: const Color(0xFF161922),
+                          child: const Icon(
+                            Icons.movie_rounded,
+                            color: Colors.white24,
+                            size: 28,
+                          ),
+                        ),
+                ),
               ),
-            ),
-            child: Row(
-              children: [
-                // Rounded Poster Thumbnail (88x58)
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: SizedBox(
-                    width: 88,
-                    height: 58,
-                    child: posterUrl != null
-                        ? CachedNetworkImage(
-                            imageUrl: posterUrl,
-                            fit: BoxFit.cover,
-                            placeholder: (_, __) => Container(color: const Color(0xFF1C202C)),
-                            errorWidget: (_, __, ___) => Container(
-                              color: const Color(0xFF1C202C),
-                              child: const Icon(Icons.movie_rounded, color: Colors.white24),
-                            ),
-                          )
-                        : Container(
-                            color: const Color(0xFF1C202C),
-                            child: const Icon(Icons.movie_rounded, color: Colors.white24),
-                          ),
-                  ),
-                ),
 
-                const SizedBox(width: 12),
+              const SizedBox(width: 14),
 
-                // Info: Year, Title, Star Rating
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        movie.year.isNotEmpty ? movie.year : '2023',
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.5),
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w500,
+              // Info: Year, Title, Star Rating
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      releaseYear,
+                      style: const TextStyle(
+                        color: Color(0xFF8E929E),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      movie.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 15.5,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.star_rounded,
+                          color: Color(0xFFFFB800),
+                          size: 15,
                         ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        movie.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
+                        const SizedBox(width: 3),
+                        Text(
+                          rating,
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.9),
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 3),
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.star_rounded,
-                            color: Color(0xFFFFB800),
-                            size: 14,
-                          ),
-                          const SizedBox(width: 3),
-                          Text(
-                            rating,
-                            style: const TextStyle(
-                              color: AppColors.textPrimary,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
+                  ],
                 ),
+              ),
 
-                // 3-dots Menu Button
-                IconButton(
-                  onPressed: () => _openMovieDetails(movie),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  icon: const Icon(
-                    Icons.more_vert_rounded,
-                    color: Colors.white38,
-                    size: 18,
-                  ),
+              // 3-dots Menu Button
+              IconButton(
+                onPressed: () => _openMovieDetails(movie),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                icon: const Icon(
+                  Icons.more_vert_rounded,
+                  color: Colors.white38,
+                  size: 20,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         );
       },
     );
   }
 
-  /// Grid view representation
+  /// 3-Column Movie Grid matching MovieGridScreen (Arrangement Mode)
   Widget _buildGridView(List<Movie> results) {
     return GridView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 120),
       physics: const BouncingScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 3,
-        childAspectRatio: 0.58,
+        childAspectRatio: 0.52,
         crossAxisSpacing: 10,
-        mainAxisSpacing: 12,
+        mainAxisSpacing: 16,
       ),
       itemCount: results.length,
-      itemBuilder: (context, i) {
-        final movie = results[i];
-        return MovieCard(
-          movie: movie,
+      itemBuilder: (context, index) {
+        final movie = results[index];
+        final vjName = _resolveVjNameForMovie(movie, index);
+        final posterUrl = movie.posterPath != null && movie.posterPath!.isNotEmpty
+            ? (movie.posterPath!.startsWith('http')
+                ? movie.posterPath!
+                : '${ApiConstants.posterW342}${movie.posterPath}')
+            : null;
+
+        final ratingDisplay =
+            movie.voteAverage > 0 ? movie.voteAverage.toStringAsFixed(1) : '7.5';
+        final releaseYear = movie.year.isNotEmpty ? movie.year : '2024';
+
+        return GestureDetector(
           onTap: () => _openMovieDetails(movie),
+          behavior: HitTestBehavior.opaque,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Movie Poster with rounded corners & top VJ pill
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    color: const Color(0xFF161922),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.38),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        posterUrl != null
+                            ? CachedNetworkImage(
+                                imageUrl: posterUrl,
+                                fit: BoxFit.cover,
+                                placeholder: (_, __) => Shimmer.fromColors(
+                                  baseColor: const Color(0xFF141722),
+                                  highlightColor: const Color(0xFF222838),
+                                  child: Container(color: const Color(0xFF141722)),
+                                ),
+                                errorWidget: (_, __, ___) => Container(
+                                  color: const Color(0xFF161922),
+                                  child: const Icon(Icons.movie_rounded,
+                                      color: Colors.white24, size: 28),
+                                ),
+                              )
+                            : Container(
+                                color: const Color(0xFF161922),
+                                child: const Icon(Icons.movie_rounded,
+                                    color: Colors.white24, size: 28),
+                              ),
+
+                        // Top VJ pill badge
+                        Positioned(
+                          top: 7,
+                          left: 6,
+                          right: 6,
+                          child: Align(
+                            alignment: Alignment.topCenter,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 7, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.60),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.14),
+                                  width: 0.6,
+                                ),
+                              ),
+                              child: Text(
+                                vjName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 6),
+
+              // Rating + Release Year row
+              Row(
+                children: [
+                  const Icon(
+                    Icons.star_rounded,
+                    color: Color(0xFFFFB800),
+                    size: 15,
+                  ),
+                  const SizedBox(width: 3),
+                  Text(
+                    ratingDisplay,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    releaseYear,
+                    style: const TextStyle(
+                      color: Color(0xFF8E929E),
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         );
       },
+    );
+  }
+
+  String _resolveVjNameForMovie(Movie movie, int index) {
+    try {
+      final found = MockData.vjs.firstWhere(
+        (v) => v.translatedMovieIds.contains(movie.id),
+      );
+      return found.name;
+    } catch (_) {
+      const fallbackVjs = MockData.vjs;
+      if (fallbackVjs.isNotEmpty) {
+        return fallbackVjs[index % fallbackVjs.length].name;
+      }
+      return 'VJ Junior';
+    }
+  }
+
+  Widget _buildListLoadingSkeleton() {
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(18, 4, 18, 100),
+      itemCount: 6,
+      separatorBuilder: (_, __) => const SizedBox(height: 14),
+      itemBuilder: (_, __) => Shimmer.fromColors(
+        baseColor: const Color(0xFF141722),
+        highlightColor: const Color(0xFF222838),
+        child: Row(
+          children: [
+            Container(
+              width: 128,
+              height: 76,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 44,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    width: 140,
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    width: 50,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGridLoadingSkeleton() {
+    return GridView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 120),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        childAspectRatio: 0.52,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 16,
+      ),
+      itemCount: 6,
+      itemBuilder: (_, __) => Shimmer.fromColors(
+        baseColor: const Color(0xFF141722),
+        highlightColor: const Color(0xFF222838),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Container(
+              width: 60,
+              height: 12,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -788,16 +1089,19 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.search_off_rounded, color: Colors.white.withOpacity(0.4), size: 48),
+          Icon(Icons.search_off_rounded,
+              color: Colors.white.withOpacity(0.4), size: 48),
           const SizedBox(height: 12),
           const Text(
             'No movies found',
-            style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700),
+            style: TextStyle(
+                color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 6),
           Text(
             'Try searching for another genre or title',
-            style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12),
+            style: TextStyle(
+                color: Colors.white.withOpacity(0.5), fontSize: 12),
           ),
         ],
       ),

@@ -54,11 +54,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           children: [
             Column(
               children: [
-                // ── Top Header / App Bar (Consistently visible across ALL pages) ─
-                FreeWatchTopAppBar(
-                  onSearchTap: () => navigateToBottomNavTab(context, ref, 1),
-                  onNotificationTap: _openNotifications,
-                ),
+                // ── Top Header / App Bar (Visible on Home Feed tab) ────────────────
+                if (selectedNavIndex == 0)
+                  FreeWatchTopAppBar(
+                    onSearchTap: () => navigateToBottomNavTab(context, ref, 1),
+                    onNotificationTap: _openNotifications,
+                  ),
 
                 // ── Tab View ──────────────────────────────────────────
                 Expanded(
