@@ -2,6 +2,7 @@ import '../../core/constants/api_constants.dart';
 import '../datasources/tmdb_datasource.dart';
 import '../models/movie.dart';
 import '../models/genre.dart';
+import '../models/movie_details_data.dart';
 import '../mock/mock_movies.dart';
 
 /// Repository that abstracts data access from the features layer
@@ -95,6 +96,38 @@ class MovieRepository {
     } catch (_) {
       return null;
     }
+  }
+
+  Future<MovieDetailsData> getMovieDetails(int movieId) async {
+    if (_hasCustomApiKey) {
+      try {
+        return await _datasource.getMovieDetails(movieId);
+      } catch (_) {}
+    }
+    // Fallback: construct MovieDetailsData from mock data
+    final mockMovie = MockData.getAllMovies().firstWhere(
+      (m) => m.id == movieId,
+      orElse: () => MockData.trendingMovies.first,
+    );
+
+    return MovieDetailsData(
+      id: mockMovie.id,
+      title: mockMovie.title,
+      overview: mockMovie.overview ?? '',
+      runtime: 110,
+      releaseDate: mockMovie.releaseDate ?? '2024-03-01',
+      voteAverage: mockMovie.voteAverage,
+      voteCount: mockMovie.voteCount ?? 4200,
+      genres: ['Action', 'Adventure'],
+      certification: 'PG-13',
+      cast: const [
+        CastMember(id: 1, name: 'Jason Momoa', character: 'Garrett', profilePath: '/6AUNvdc3RAq7fq9eT01O9450p9C.jpg'),
+        CastMember(id: 2, name: 'Jack Black', character: 'Steve', profilePath: '/rtCx0fiYxJVG4Uj0qrPDMu49Vmm.jpg'),
+        CastMember(id: 3, name: 'Emma Myers', character: 'Natalie', profilePath: '/4woSOUD0equAYzvwhWBHIJDCM88.jpg'),
+        CastMember(id: 4, name: 'Danielle Brooks', character: 'Dawn', profilePath: '/kSpsYjG80eL4qQ3R3n9k6rLqC9p.jpg'),
+      ],
+      relatedMovies: MockData.trendingMovies.where((m) => m.id != movieId).toList(),
+    );
   }
 
   Future<List<Movie>> getMoviesByGenre(int genreId, {int page = 1}) async {

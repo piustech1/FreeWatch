@@ -3,6 +3,7 @@ import '../../core/network/api_client.dart';
 import '../../core/constants/api_constants.dart';
 import '../models/movie.dart';
 import '../models/genre.dart';
+import '../models/movie_details_data.dart';
 
 /// Remote datasource — all TMDB API calls live here
 class TmdbDatasource {
@@ -82,6 +83,17 @@ class TmdbDatasource {
       }
     } catch (_) {}
     return null;
+  }
+
+  // ── Movie Details with Credits & Similar ──────────────────────────────
+  Future<MovieDetailsData> getMovieDetails(int movieId) async {
+    final res = await _dio.get(
+      '/movie/$movieId',
+      queryParameters: {
+        'append_to_response': 'credits,release_dates,similar',
+      },
+    );
+    return MovieDetailsData.fromJson(res.data as Map<String, dynamic>);
   }
 
   // ── Discover by Genre ─────────────────────────────────────────────────────
