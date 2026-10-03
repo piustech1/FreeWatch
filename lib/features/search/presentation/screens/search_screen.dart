@@ -1,6 +1,8 @@
+import 'dart:ui';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shimmer/shimmer.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../data/mock/mock_movies.dart';
@@ -48,39 +50,43 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   final List<Map<String, dynamic>> _folderCategories = [
     {
       'title': 'Movies',
-      'poster': 'https://image.tmdb.org/t/p/w500/A7EByudX0eOzlkQ2FIbogzyazm2.jpg',
-      'fallback': 'assets/images/logo_initials.png',
+      'poster': 'https://image.tmdb.org/t/p/w500/wjOHjWCUE0YzDiEzKv8AfqHj3ir.jpg', // Babylon
       'query': 'Movies',
     },
     {
       'title': 'TV shows',
-      'poster': 'https://image.tmdb.org/t/p/w500/kSpsYjG80eL4qQ3R3n9k6rLqC9p.jpg',
-      'fallback': 'assets/images/logo_initials.png',
+      'poster': 'https://image.tmdb.org/t/p/w500/lxWSGo8D6MbFbQmM9tqhbaG80TP.jpg', // Lockwood & Co
       'query': 'TV shows',
     },
     {
-      'title': 'Music videos',
-      'poster': 'https://image.tmdb.org/t/p/w500/m20yt7Ul7hJBLv0S8j7Hn6Zk2iV.jpg',
-      'fallback': 'assets/images/logo_initials.png',
-      'query': 'Music videos',
+      'title': 'Music Video',
+      'poster': 'https://image.tmdb.org/t/p/w500/ccRSixnjEcYM9FiQXACecJkQ6kL.jpg', // Tate McRae
+      'query': 'Music Video',
     },
     {
       'title': 'Gaming',
-      'poster': 'https://image.tmdb.org/t/p/w500/lrkudNqmG39w62M4t4o6kQ7gV0r.jpg',
-      'fallback': 'assets/images/logo_initials.png',
+      'poster': 'https://image.tmdb.org/t/p/w500/3O2UgEszp1CVbL8p9XnKkFDkbk3.jpg', // Assassin's Creed
       'query': 'Gaming',
     },
     {
-      'title': 'Adventure',
-      'poster': 'https://image.tmdb.org/t/p/w500/1pdfLvkbY9ohJlCjQH2CZjjYVvJ.jpg',
-      'fallback': 'assets/images/logo_initials.png',
-      'query': 'Adventure',
+      'title': 'Anime',
+      'poster': 'https://image.tmdb.org/t/p/w500/vIeu8WysZrQgmE2OMtE9q6W5n3D.jpg', // Suzume
+      'query': 'Anime',
     },
     {
       'title': 'Action',
-      'poster': 'https://image.tmdb.org/t/p/w500/8cdWjvZQUExUUTzyp4t6EDMubfO.jpg',
-      'fallback': 'assets/images/logo_initials.png',
+      'poster': 'https://image.tmdb.org/t/p/w500/bjiS5ipwxb9JFy3XRRN4OAilSeX.jpg', // Top Gun: Maverick
       'query': 'Action',
+    },
+    {
+      'title': 'Sci-Fi',
+      'poster': 'https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg', // Interstellar
+      'query': 'Sci-Fi',
+    },
+    {
+      'title': 'Comedy',
+      'poster': 'https://image.tmdb.org/t/p/w500/iuFNMS8U5cb6xfzi51Dbkovj7vM.jpg', // Barbie
+      'query': 'Comedy',
     },
   ];
 
@@ -154,23 +160,25 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   Widget _buildCategoriesLandingPage() {
     return Stack(
       children: [
-        // Subtle ambient fiery glow at the top matching Image 1
+        // Warm fiery/amber ambient glow illuminating the search bar and top header
         Positioned(
-          top: -30,
+          top: -40,
           left: 0,
           right: 0,
           child: Center(
             child: Container(
-              width: 180,
-              height: 120,
+              width: 260,
+              height: 180,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    const Color(0xFFFF5722).withOpacity(0.28),
-                    const Color(0xFFFF9800).withOpacity(0.12),
+                    const Color(0xFFFF6F00).withOpacity(0.35),
+                    const Color(0xFFFF8F00).withOpacity(0.18),
+                    const Color(0xFFFFB300).withOpacity(0.06),
                     Colors.transparent,
                   ],
+                  stops: const [0.0, 0.4, 0.75, 1.0],
                 ),
               ),
             ),
@@ -182,7 +190,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(20, 10, 20, 100),
           children: [
-            // ── Top Search Input Bar ────────────────────────────────────────────
+            // ── Top Glassmorphic Search Bar ─────────────────────────────────
             GestureDetector(
               onTap: () {
                 setState(() {
@@ -191,89 +199,104 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                   _searchQuery = '';
                 });
               },
-              child: Container(
-                height: 48,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF141720),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.10),
-                    width: 1,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                  child: Container(
+                    height: 50,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1E222D).withOpacity(0.65),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.12),
+                        width: 1,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.3),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Search',
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.45),
+                            fontSize: 15,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                        Icon(
+                          Icons.search_rounded,
+                          color: Colors.white.withOpacity(0.65),
+                          size: 22,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Search',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.45),
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                    Icon(
-                      Icons.search_rounded,
-                      color: Colors.white.withOpacity(0.65),
-                      size: 22,
-                    ),
-                  ],
-                ),
               ),
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 28),
 
-            // ── Categories Header & Subtitle ────────────────────────────────────
+            // ── Categories Header & Subtitle (Centered) ─────────────────────
             const Text(
               'Categories',
+              textAlign: TextAlign.center,
               style: TextStyle(
                 color: AppColors.textPrimary,
-                fontSize: 23,
+                fontSize: 25,
                 fontWeight: FontWeight.bold,
-                letterSpacing: -0.3,
+                letterSpacing: -0.4,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 8),
             Text(
               'Watch Unlimited Movies, Music Video,\nTV shows, Gaming and More.',
+              textAlign: TextAlign.center,
               style: TextStyle(
                 color: Colors.white.withOpacity(0.55),
                 fontSize: 13,
-                height: 1.4,
+                height: 1.45,
               ),
             ),
 
-            const SizedBox(height: 18),
+            const SizedBox(height: 24),
 
-        // ── 2-Column Grid of Custom Folder-Tab Cards ────────────────────────
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 18,
-            childAspectRatio: 0.88,
-          ),
-          itemCount: _folderCategories.length,
-          itemBuilder: (context, i) {
-            final cat = _folderCategories[i];
-            return _buildFolderCard(
-              title: cat['title'] as String,
-              posterUrl: cat['poster'] as String,
-              onTap: () => _openCategory(cat['query'] as String),
-            );
-          },
+            // ── 2-Column Grid of Custom Folder-Tab Cards ────────────────────
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 22,
+                childAspectRatio: 0.68,
+              ),
+              itemCount: _folderCategories.length,
+              itemBuilder: (context, i) {
+                final cat = _folderCategories[i];
+                return _buildFolderCard(
+                  title: cat['title'] as String,
+                  posterUrl: cat['poster'] as String,
+                  onTap: () => _openCategory(cat['query'] as String),
+                );
+              },
+            ),
+          ],
         ),
       ],
-    ),
-  ],
-);
-}
+    );
+  }
 
-  /// Custom folder card with tab outline matching Image 1
+  /// Custom folder card with realistic physical folder tabs matching reference
   Widget _buildFolderCard({
     required String title,
     required String posterUrl,
@@ -281,79 +304,125 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }) {
     return GestureDetector(
       onTap: onTap,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Folder Tab Container
-          Expanded(
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                // Top Tab Header
-                Positioned(
-                  top: -6,
-                  left: 14,
-                  child: Container(
-                    width: 60,
-                    height: 10,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF232733),
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.1),
-                        width: 0.8,
+      behavior: HitTestBehavior.opaque,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final cardWidth = constraints.maxWidth;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    // Back tab tier 2 (top-most ridge, slightly narrower)
+                    Positioned(
+                      top: 0,
+                      left: cardWidth * 0.16,
+                      right: cardWidth * 0.16,
+                      height: 14,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1D212C),
+                          borderRadius: const BorderRadius.vertical(top: Radius.circular(7)),
+                          border: Border(
+                            top: BorderSide(
+                              color: Colors.white.withOpacity(0.08),
+                              width: 0.8,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
+
+                    // Back tab tier 1 (main folder back tab)
+                    Positioned(
+                      top: 5,
+                      left: 10,
+                      right: 10,
+                      height: 16,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF282C38),
+                          borderRadius: const BorderRadius.vertical(top: Radius.circular(9)),
+                          border: Border(
+                            top: BorderSide(
+                              color: Colors.white.withOpacity(0.16),
+                              width: 0.9,
+                            ),
+                            left: BorderSide(
+                              color: Colors.white.withOpacity(0.08),
+                              width: 0.8,
+                            ),
+                            right: BorderSide(
+                              color: Colors.white.withOpacity(0.08),
+                              width: 0.8,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // Front Poster Card
+                    Positioned.fill(
+                      top: 13,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.55),
+                              blurRadius: 14,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: CachedNetworkImage(
+                            imageUrl: posterUrl,
+                            fit: BoxFit.cover,
+                            placeholder: (_, __) => Shimmer.fromColors(
+                              baseColor: const Color(0xFF181B24),
+                              highlightColor: const Color(0xFF262C3A),
+                              child: Container(color: const Color(0xFF181B24)),
+                            ),
+                            errorWidget: (_, __, ___) => Container(
+                              color: const Color(0xFF181B24),
+                              child: const Icon(
+                                Icons.movie_rounded,
+                                color: Colors.white24,
+                                size: 36,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 9),
+
+              // Category Label (Left-aligned under card matching reference)
+              Padding(
+                padding: const EdgeInsets.only(left: 2),
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: -0.1,
                   ),
                 ),
-
-                // Main Folder Body
-                Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF161922),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.12),
-                      width: 1,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.4),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(15),
-                    child: CachedNetworkImage(
-                      imageUrl: posterUrl,
-                      fit: BoxFit.cover,
-                      placeholder: (_, __) => Container(color: const Color(0xFF1E2130)),
-                      errorWidget: (_, __, ___) => Container(
-                        color: const Color(0xFF1E2130),
-                        child: const Icon(Icons.movie_rounded, color: Colors.white24),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 8),
-
-          // Category Label
-          Text(
-            title,
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 13.5,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
+              ),
+            ],
+          );
+        },
       ),
     );
   }
