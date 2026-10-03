@@ -7,7 +7,6 @@ import 'movie_card.dart';
 /// A labelled horizontal scrollable row of movies with "See all" action
 class MovieSection extends StatelessWidget {
   final String title;
-  final String? subtitle;
   final List<Movie>? movies;
   final bool isLoading;
   final VoidCallback? onSeeAll;
@@ -16,7 +15,6 @@ class MovieSection extends StatelessWidget {
   const MovieSection({
     super.key,
     required this.title,
-    this.subtitle,
     this.movies,
     this.isLoading = false,
     this.onSeeAll,
@@ -36,30 +34,14 @@ class MovieSection extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.3,
-                      ),
-                    ),
-                    if (subtitle != null) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        subtitle!,
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.55),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                    ],
-                  ],
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.3,
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -80,7 +62,7 @@ class MovieSection extends StatelessWidget {
 
         // ── Movie list ─────────────────────────────────────────────────────
         SizedBox(
-          height: 248,
+          height: 204,
           child: isLoading
               ? const MovieRowShimmer()
               : (movies == null || movies!.isEmpty)

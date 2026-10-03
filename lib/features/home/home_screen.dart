@@ -164,74 +164,64 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
         ),
 
-        // ── Branded Section Titles with Taglines & View All ──────────
+        // ── Standard Section Titles (No Subtitles) ──────────────────
         _buildMovieSection(
           context,
-          title: 'Rewind & Relive',
-          subtitle: 'Timeless fan favorites you can watch over and over',
+          title: 'Latest to Rewatch',
           asyncValue: latestToRewatchAsync,
         ),
 
         _buildMovieSection(
           context,
-          title: 'Fresh Drops',
-          subtitle: 'Brand new releases hot off the studio reel',
+          title: 'Latest Uploads',
           asyncValue: latestUploadsAsync,
         ),
 
         _buildMovieSection(
           context,
-          title: 'Binge Central',
-          subtitle: 'Full seasons & episodes ready to stream',
+          title: 'Series',
           asyncValue: seriesAsync,
         ),
 
         _buildMovieSection(
           context,
-          title: 'High Octane',
-          subtitle: 'Adrenaline-pumping blockbusters & combat sagas',
+          title: 'Action',
           asyncValue: actionAsync,
         ),
 
         _buildMovieSection(
           context,
-          title: 'Beyond Reality',
-          subtitle: 'Mind-bending futuristic thrillers & cosmic voyages',
+          title: 'Sci-Fi',
           asyncValue: sciFiAsync,
         ),
 
         _buildMovieSection(
           context,
-          title: 'Love Stories',
-          subtitle: 'Touching romances & heartfelt emotional tales',
+          title: 'Romance',
           asyncValue: romanceAsync,
         ),
 
         _buildMovieSection(
           context,
-          title: 'Night Terrors',
-          subtitle: 'Spine-chilling scares & supernatural suspense',
+          title: 'Horror',
           asyncValue: horrorAsync,
         ),
 
         _buildMovieSection(
           context,
-          title: 'Masterpiece Cinema',
-          subtitle: 'Award-winning stories and profound human drama',
+          title: 'Drama',
           asyncValue: dramaAsync,
         ),
 
         _buildMovieSection(
           context,
-          title: 'Animated Realms',
-          subtitle: 'Vibrant Disney & animated hits for everyone',
+          title: 'Animation',
           asyncValue: animationAsync,
         ),
 
         _buildMovieSection(
           context,
-          title: 'Family Magic',
-          subtitle: 'Wholesome adventures crafted for all ages',
+          title: 'Family',
           asyncValue: familyAsync,
         ),
 
@@ -244,7 +234,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget _buildMovieSection(
     BuildContext context, {
     required String title,
-    required String subtitle,
     required AsyncValue<List<Movie>> asyncValue,
   }) {
     return SliverToBoxAdapter(
@@ -253,7 +242,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           if (movies.isEmpty) return const SizedBox.shrink();
           return MovieSection(
             title: title,
-            subtitle: subtitle,
             movies: movies,
             onMovieTap: _openMovieDetail,
             onSeeAll: () {
@@ -268,7 +256,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         },
         loading: () => MovieSection(
           title: title,
-          subtitle: subtitle,
           isLoading: true,
         ),
         error: (_, __) => const SizedBox.shrink(),

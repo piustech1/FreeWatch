@@ -175,10 +175,10 @@ class _HeroBannerState extends ConsumerState<HeroBanner>
 
     final currentMovie = _movies[_currentIndex.clamp(0, _movies.length - 1)];
 
-    // Assigned VJ translator for current movie
+    // Assigned VJ translator for current movie (distinct per slide)
     final Vj assignedVj = MockData.vjs.firstWhere(
       (v) => v.translatedMovieIds.contains(currentMovie.id),
-      orElse: () => MockData.vjs.first,
+      orElse: () => MockData.vjs[(_currentIndex.abs()) % MockData.vjs.length],
     );
 
     final screenWidth = MediaQuery.of(context).size.width;
@@ -214,7 +214,7 @@ class _HeroBannerState extends ConsumerState<HeroBanner>
 
         const SizedBox(height: 12),
 
-        // ── Below Posters Info Row (Movie Logo, Subtitle, & VJ Profile Avatar) ──
+        // ── Below Posters Info Row (Movie Logo, Subtitle, & VJ Capsule Badge) ──
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Row(
@@ -251,49 +251,80 @@ class _HeroBannerState extends ConsumerState<HeroBanner>
                 ),
               ),
 
-              const SizedBox(width: 16),
+              const SizedBox(width: 12),
 
-              // Right: Circular VJ Translator Profile Avatar (dots removed completely)
-              GestureDetector(
-                onTap: () {
-                  Navigator.of(context).push(
-                    MovieGridScreen.routeForVj(vj: assignedVj),
-                  );
-                },
-                child: Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: AppColors.accent,
-                      width: 1.8,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.accent.withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
+              // Right: Purple capsule with VJ name first, followed by circular VJ avatar
+              AnimatedOpacity(
+                opacity: _textOpacity,
+                duration: const Duration(milliseconds: 280),
+                curve: Curves.easeInOut,
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MovieGridScreen.routeForVj(vj: assignedVj),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(10, 4, 4, 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF7C3AED).withOpacity(0.35),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: const Color(0xFFA78BFA).withOpacity(0.55),
+                        width: 1.0,
                       ),
-                    ],
-                  ),
-                  child: ClipOval(
-                    child: ColorFiltered(
-                      colorFilter: const ColorFilter.matrix(<double>[
-                        0.2126, 0.7152, 0.0722, 0, 0,
-                        0.2126, 0.7152, 0.0722, 0, 0,
-                        0.2126, 0.7152, 0.0722, 0, 0,
-                        0,      0,      0,      1, 0,
-                      ]),
-                      child: Image.asset(
-                        assignedVj.imageUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          color: const Color(0xFF1E2130),
-                          child: const Icon(Icons.mic_rounded,
-                              color: Colors.white, size: 18),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF7C3AED).withOpacity(0.2),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
                         ),
-                      ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          assignedVj.name,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                        const SizedBox(width: 7),
+                        Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: const Color(0xFFA78BFA),
+                              width: 1.2,
+                            ),
+                          ),
+                          child: ClipOval(
+                            child: ColorFiltered(
+                              colorFilter: const ColorFilter.matrix(<double>[
+                                0.2126, 0.7152, 0.0722, 0, 0,
+                                0.2126, 0.7152, 0.0722, 0, 0,
+                                0.2126, 0.7152, 0.0722, 0, 0,
+                                0,      0,      0,      1, 0,
+                              ]),
+                              child: Image.asset(
+                                assignedVj.imageUrl,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Container(
+                                  color: const Color(0xFF1E2130),
+                                  child: const Icon(Icons.mic_rounded,
+                                      color: Colors.white, size: 14),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),

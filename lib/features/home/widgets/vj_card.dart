@@ -68,57 +68,64 @@ class VjCard extends StatelessWidget {
                 ),
               ),
 
-              // ── 3. Bottom Content (Pure White VJ Name & Count) ────────────
+              // ── 3. Bottom Inline Purple Translucent Card (Name • Count) ───
               Positioned(
-                left: 12,
-                right: 12,
+                left: 8,
+                right: 8,
                 bottom: 8,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Pure White VJ Name (No Gradient Shader)
-                    Text(
-                      vj.name.toUpperCase(),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0.8,
-                        shadows: [
-                          Shadow(
-                            color: Colors.black,
-                            blurRadius: 10,
-                            offset: Offset(0, 2),
-                          ),
-                        ],
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF7C3AED).withOpacity(0.55),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: const Color(0xFFA78BFA).withOpacity(0.40),
+                      width: 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.4),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
                       ),
-                    ),
-                    const SizedBox(height: 2),
-
-                    // Specialty / Movie Count Tag
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.headset_mic_rounded,
-                          color: AppColors.accent,
-                          size: 11,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${vj.movieCount} Movies',
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.85),
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          vj.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.2,
                           ),
                         ),
-                      ],
-                    ),
-                  ],
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '•',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.7),
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${vj.movieCount} movies',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.95),
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],

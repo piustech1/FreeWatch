@@ -301,35 +301,76 @@ class MovieGridScreen extends ConsumerWidget {
                                 color: Colors.white24, size: 28),
                           ),
 
-                    // Top VJ pill badge (matching reference screenshot)
+                    // Top-Right Purple VJ Badge Card
                     Positioned(
-                      top: 7,
-                      left: 6,
+                      top: 6,
                       right: 6,
-                      child: Align(
-                        alignment: Alignment.topCenter,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 7, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.60),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: Colors.white.withOpacity(0.14),
-                              width: 0.6,
+                      child: Builder(
+                        builder: (context) {
+                          final resolvedVj = MockData.vjs.firstWhere(
+                            (v) => v.translatedMovieIds.contains(movie.id),
+                            orElse: () => MockData.vjs[(movie.id.abs()) % MockData.vjs.length],
+                          );
+                          return Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2.5),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF7C3AED).withOpacity(0.75),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: const Color(0xFFA78BFA).withOpacity(0.50),
+                                width: 0.8,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.35),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 1.5),
+                                ),
+                              ],
                             ),
-                          ),
-                          child: Text(
-                            vjName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 13,
+                                  height: 13,
+                                  decoration: const BoxDecoration(
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: ClipOval(
+                                    child: ColorFiltered(
+                                      colorFilter: const ColorFilter.matrix(<double>[
+                                        0.2126, 0.7152, 0.0722, 0, 0,
+                                        0.2126, 0.7152, 0.0722, 0, 0,
+                                        0.2126, 0.7152, 0.0722, 0, 0,
+                                        0,      0,      0,      1, 0,
+                                      ]),
+                                      child: Image.asset(
+                                        resolvedVj.imageUrl,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, __, ___) => const Icon(
+                                          Icons.mic,
+                                          size: 9,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 3),
+                                Text(
+                                  resolvedVj.name,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.2,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                        ),
+                          );
+                        },
                       ),
                     ),
                   ],

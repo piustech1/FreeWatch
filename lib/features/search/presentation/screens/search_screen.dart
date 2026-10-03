@@ -841,7 +841,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       itemCount: results.length,
       itemBuilder: (context, index) {
         final movie = results[index];
-        final vjName = _resolveVjNameForMovie(movie, index);
         final posterUrl = movie.posterPath != null && movie.posterPath!.isNotEmpty
             ? (movie.posterPath!.startsWith('http')
                 ? movie.posterPath!
@@ -898,35 +897,76 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                                     color: Colors.white24, size: 28),
                               ),
 
-                        // Top VJ pill badge
+                        // Top-Right Purple VJ Badge Card
                         Positioned(
-                          top: 7,
-                          left: 6,
+                          top: 6,
                           right: 6,
-                          child: Align(
-                            alignment: Alignment.topCenter,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 7, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: Colors.black.withOpacity(0.60),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                  color: Colors.white.withOpacity(0.14),
-                                  width: 0.6,
+                          child: Builder(
+                            builder: (context) {
+                              final vj = MockData.vjs.firstWhere(
+                                (v) => v.translatedMovieIds.contains(movie.id),
+                                orElse: () => MockData.vjs[(movie.id.abs()) % MockData.vjs.length],
+                              );
+                              return Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2.5),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF7C3AED).withOpacity(0.75),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: const Color(0xFFA78BFA).withOpacity(0.50),
+                                    width: 0.8,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.35),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 1.5),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                              child: Text(
-                                vjName,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 13,
+                                      height: 13,
+                                      decoration: const BoxDecoration(
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: ClipOval(
+                                        child: ColorFiltered(
+                                          colorFilter: const ColorFilter.matrix(<double>[
+                                            0.2126, 0.7152, 0.0722, 0, 0,
+                                            0.2126, 0.7152, 0.0722, 0, 0,
+                                            0.2126, 0.7152, 0.0722, 0, 0,
+                                            0,      0,      0,      1, 0,
+                                          ]),
+                                          child: Image.asset(
+                                            vj.imageUrl,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (_, __, ___) => const Icon(
+                                              Icons.mic,
+                                              size: 9,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      vj.name,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: 0.2,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                            ),
+                              );
+                            },
                           ),
                         ),
                       ],
@@ -970,21 +1010,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         );
       },
     );
-  }
-
-  String _resolveVjNameForMovie(Movie movie, int index) {
-    try {
-      final found = MockData.vjs.firstWhere(
-        (v) => v.translatedMovieIds.contains(movie.id),
-      );
-      return found.name;
-    } catch (_) {
-      const fallbackVjs = MockData.vjs;
-      if (fallbackVjs.isNotEmpty) {
-        return fallbackVjs[index % fallbackVjs.length].name;
-      }
-      return 'VJ Junior';
-    }
   }
 
   Widget _buildListLoadingSkeleton() {
@@ -1111,46 +1136,61 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   // ═══════════════════════════════════════════════════════════════════════════
   // SCREEN 3: FILTERS SCREEN (Reference Image 1, Right Screen)
   // ═══════════════════════════════════════════════════════════════════════════
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SCREEN 3: FILTERS SCREEN (Reference media_1791064801369.png 1:1 Match)
+  // ═══════════════════════════════════════════════════════════════════════════
   Widget _buildFiltersPage() {
     return Column(
       key: const ValueKey('FiltersPage'),
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ── Top Header: Close 'X' and 'Filters' Title ──────────────────────
+        // ── Top Left Small Close '✕' Icon ─────────────────────────────────
         Padding(
-          padding: const EdgeInsets.fromLTRB(18, 14, 18, 12),
-          child: Row(
-            children: [
-              IconButton(
-                onPressed: () => setState(() => _searchStep = 2),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                icon: const Icon(
-                  Icons.close_rounded,
-                  color: Colors.white,
-                  size: 22,
+          padding: const EdgeInsets.fromLTRB(18, 12, 18, 4),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: GestureDetector(
+              onTap: () => setState(() => _searchStep = 2),
+              behavior: HitTestBehavior.opaque,
+              child: Container(
+                width: 32,
+                height: 32,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                ),
+                child: const Center(
+                  child: Icon(
+                    Icons.close_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
                 ),
               ),
-              const SizedBox(width: 14),
-              const Text(
-                'Filters',
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.3,
-                ),
-              ),
-            ],
+            ),
           ),
         ),
 
-        // ── Expandable Filter Accordion List ────────────────────────────────
+        // ── Bold 'Filters' Title on its own row ───────────────────────────
+        const Padding(
+          padding: EdgeInsets.fromLTRB(20, 8, 20, 16),
+          child: Text(
+            'Filters',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 28,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.4,
+            ),
+          ),
+        ),
+
+        // ── Expandable Filter Accordion Cards ──────────────────────────────
         Expanded(
           child: ListView(
             physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 120),
+            padding: const EdgeInsets.symmetric(horizontal: 18),
             children: [
-              // 1. Type Section (Expanded Radio Options)
+              // 1. Type Section (Expanded Radio Options in 2x2 grid)
               _buildAccordionCard(
                 title: 'Type',
                 isExpanded: _typeExpanded,
@@ -1163,7 +1203,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                         Expanded(child: _buildRadioOption('Music videos')),
                       ],
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 14),
                     Row(
                       children: [
                         Expanded(child: _buildRadioOption('TV shows')),
@@ -1174,9 +1214,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 ),
               ),
 
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
 
-              // 2. Genre Section
+              // 2. Genre / Gener Section (Real TMDB Genres)
               _buildAccordionCard(
                 title: 'Genre',
                 isExpanded: _genreExpanded,
@@ -1189,17 +1229,17 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     return GestureDetector(
                       onTap: () => setState(() => _selectedGenre = g),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                         decoration: BoxDecoration(
-                          color: isSel ? AppColors.accent : const Color(0xFF1E2130),
-                          borderRadius: BorderRadius.circular(14),
+                          color: isSel ? const Color(0xFF8B5CF6) : const Color(0xFF2B2D36),
+                          borderRadius: BorderRadius.circular(16),
                         ),
                         child: Text(
                           g,
                           style: TextStyle(
-                            color: isSel ? Colors.black : Colors.white70,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
+                            color: isSel ? Colors.white : Colors.white70,
+                            fontSize: 12.5,
+                            fontWeight: isSel ? FontWeight.w700 : FontWeight.w500,
                           ),
                         ),
                       ),
@@ -1208,7 +1248,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 ),
               ),
 
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
 
               // 3. Year Section
               _buildAccordionCard(
@@ -1223,17 +1263,17 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     return GestureDetector(
                       onTap: () => setState(() => _selectedYear = y),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                         decoration: BoxDecoration(
-                          color: isSel ? AppColors.accent : const Color(0xFF1E2130),
-                          borderRadius: BorderRadius.circular(14),
+                          color: isSel ? const Color(0xFF8B5CF6) : const Color(0xFF2B2D36),
+                          borderRadius: BorderRadius.circular(16),
                         ),
                         child: Text(
                           y,
                           style: TextStyle(
-                            color: isSel ? Colors.black : Colors.white70,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
+                            color: isSel ? Colors.white : Colors.white70,
+                            fontSize: 12.5,
+                            fontWeight: isSel ? FontWeight.w700 : FontWeight.w500,
                           ),
                         ),
                       ),
@@ -1242,20 +1282,37 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 ),
               ),
 
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
 
               // 4. Country Section
               _buildAccordionCard(
                 title: 'Country',
                 isExpanded: _countryExpanded,
                 onToggle: () => setState(() => _countryExpanded = !_countryExpanded),
-                content: const Text(
-                  'United States • Uganda • United Kingdom • South Korea',
-                  style: TextStyle(color: Colors.white70, fontSize: 13),
+                content: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: ['United States', 'Uganda', 'United Kingdom', 'South Korea', 'All'].map((c) {
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2B2D36),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Text(
+                        c,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    );
+                  }).toList(),
                 ),
               ),
 
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
 
               // 5. Rating Section
               _buildAccordionCard(
@@ -1270,17 +1327,17 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     return GestureDetector(
                       onTap: () => setState(() => _selectedRating = r),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                         decoration: BoxDecoration(
-                          color: isSel ? AppColors.accent : const Color(0xFF1E2130),
-                          borderRadius: BorderRadius.circular(14),
+                          color: isSel ? const Color(0xFF8B5CF6) : const Color(0xFF2B2D36),
+                          borderRadius: BorderRadius.circular(16),
                         ),
                         child: Text(
                           r,
                           style: TextStyle(
-                            color: isSel ? Colors.black : Colors.white70,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
+                            color: isSel ? Colors.white : Colors.white70,
+                            fontSize: 12.5,
+                            fontWeight: isSel ? FontWeight.w700 : FontWeight.w500,
                           ),
                         ),
                       ),
@@ -1289,7 +1346,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 ),
               ),
 
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
 
               // 6. Quality Section
               _buildAccordionCard(
@@ -1304,17 +1361,17 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     return GestureDetector(
                       onTap: () => setState(() => _selectedQuality = q),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                         decoration: BoxDecoration(
-                          color: isSel ? AppColors.accent : const Color(0xFF1E2130),
-                          borderRadius: BorderRadius.circular(14),
+                          color: isSel ? const Color(0xFF8B5CF6) : const Color(0xFF2B2D36),
+                          borderRadius: BorderRadius.circular(16),
                         ),
                         child: Text(
                           q,
                           style: TextStyle(
-                            color: isSel ? Colors.black : Colors.white70,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
+                            color: isSel ? Colors.white : Colors.white70,
+                            fontSize: 12.5,
+                            fontWeight: isSel ? FontWeight.w700 : FontWeight.w500,
                           ),
                         ),
                       ),
@@ -1323,7 +1380,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 ),
               ),
 
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
 
               // 7. Most Relevance Section
               _buildAccordionCard(
@@ -1338,17 +1395,17 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     return GestureDetector(
                       onTap: () => setState(() => _selectedSort = s),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                         decoration: BoxDecoration(
-                          color: isSel ? AppColors.accent : const Color(0xFF1E2130),
-                          borderRadius: BorderRadius.circular(14),
+                          color: isSel ? const Color(0xFF8B5CF6) : const Color(0xFF2B2D36),
+                          borderRadius: BorderRadius.circular(16),
                         ),
                         child: Text(
                           s,
                           style: TextStyle(
-                            color: isSel ? Colors.black : Colors.white70,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
+                            color: isSel ? Colors.white : Colors.white70,
+                            fontSize: 12.5,
+                            fontWeight: isSel ? FontWeight.w700 : FontWeight.w500,
                           ),
                         ),
                       ),
@@ -1356,38 +1413,45 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                   }).toList(),
                 ),
               ),
+
+              const SizedBox(height: 20),
             ],
           ),
         ),
 
-        // ── Bottom Pill Button: "Done" ─────────────────────────────────────
+        // ── Floating White Done Pill Button (Comfortably padded above nav bar) ─
         Padding(
-          padding: const EdgeInsets.fromLTRB(30, 8, 30, 24),
-          child: SizedBox(
-            width: 140,
-            height: 48,
-            child: ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  _selectedCategory = _selectedGenre;
-                  _searchController.text = _selectedGenre;
-                  _searchQuery = _selectedGenre;
-                  _searchStep = 2;
-                });
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: Colors.black,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24),
+          padding: const EdgeInsets.only(bottom: 96, top: 8),
+          child: Center(
+            child: SizedBox(
+              width: 144,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    _selectedCategory = _selectedGenre;
+                    _searchController.text = _selectedGenre;
+                    _searchQuery = _selectedGenre;
+                    _searchStep = 2;
+                  });
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: Colors.black,
+                  elevation: 8,
+                  shadowColor: Colors.black.withOpacity(0.55),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                  ),
                 ),
-              ),
-              child: const Text(
-                'Done',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
+                child: const Text(
+                  'Done',
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.2,
+                  ),
                 ),
               ),
             ),
@@ -1405,34 +1469,37 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF131620),
+        color: const Color(0xFF1E1F24),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.06),
-          width: 1,
-        ),
       ),
       child: Column(
         children: [
-          ListTile(
-            title: Text(
-              title,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 14.5,
-                fontWeight: FontWeight.w700,
+          Theme(
+            data: ThemeData(
+              splashColor: Colors.transparent,
+              highlightColor: Colors.transparent,
+            ),
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 0),
+              title: Text(
+                title,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
+              trailing: Icon(
+                isExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                color: Colors.white60,
+                size: 22,
+              ),
+              onTap: onToggle,
             ),
-            trailing: Icon(
-              isExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
-              color: Colors.white54,
-              size: 22,
-            ),
-            onTap: onToggle,
           ),
           if (isExpanded)
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              padding: const EdgeInsets.fromLTRB(18, 0, 18, 16),
               child: content,
             ),
         ],
@@ -1444,38 +1511,40 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     final isSelected = _selectedType == label;
     return GestureDetector(
       onTap: () => setState(() => _selectedType = label),
+      behavior: HitTestBehavior.opaque,
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 18,
-            height: 18,
+            width: 20,
+            height: 20,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
-                color: isSelected ? AppColors.accent : Colors.white38,
+                color: isSelected ? const Color(0xFF8B5CF6) : Colors.white30,
                 width: 2,
               ),
             ),
             child: isSelected
                 ? Center(
                     child: Container(
-                      width: 9,
-                      height: 9,
+                      width: 10,
+                      height: 10,
                       decoration: const BoxDecoration(
-                        color: AppColors.accent,
+                        color: Color(0xFF8B5CF6),
                         shape: BoxShape.circle,
                       ),
                     ),
                   )
                 : null,
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 10),
           Text(
             label,
-            style: TextStyle(
-              color: isSelected ? Colors.white : Colors.white70,
-              fontSize: 13,
-              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],
