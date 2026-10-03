@@ -134,7 +134,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
         ),
 
-        const SliverToBoxAdapter(child: SizedBox(height: 12)),
+        const SliverToBoxAdapter(child: SizedBox(height: 8)),
 
         // ── "Available Vj's" Section (Directly Below Hero) ──────────
         SliverToBoxAdapter(

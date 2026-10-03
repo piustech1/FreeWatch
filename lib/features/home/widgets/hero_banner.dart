@@ -46,7 +46,7 @@ class _HeroBannerState extends ConsumerState<HeroBanner>
   bool _isReversing = false;
   double _textOpacity = 1.0;
 
-  List<Movie> get _movies => widget.movies.take(6).toList();
+  List<Movie> get _movies => widget.movies.take(8).toList();
 
   @override
   void initState() {
@@ -65,7 +65,31 @@ class _HeroBannerState extends ConsumerState<HeroBanner>
       }
     });
 
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _prefetchLogos();
+    });
+
     _startAutoplay();
+  }
+
+  @override
+  void didUpdateWidget(HeroBanner oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.movies != widget.movies) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _prefetchLogos();
+      });
+    }
+  }
+
+  void _prefetchLogos() {
+    for (final movie in _movies) {
+      ref.read(movieLogoProvider(movie.id).future).then((logoUrl) {
+        if (logoUrl != null && mounted) {
+          precacheImage(CachedNetworkImageProvider(logoUrl), context);
+        }
+      }).catchError((_) {});
+    }
   }
 
   void _startAutoplay() {
@@ -157,10 +181,14 @@ class _HeroBannerState extends ConsumerState<HeroBanner>
       orElse: () => MockData.vjs.first,
     );
 
+    final screenWidth = MediaQuery.of(context).size.width;
+    // Dynamic horizontal step spreading 5 cards cleanly across screen to eliminate empty right space
+    final step = ((screenWidth - 20 - 45) / 4.0).clamp(74.0, 96.0);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ── 4-Poster Stacked Deck Container ─────────────────────────────────
+        // ── 5-Poster Stretched Stacked Deck Container ────────────────────────
         GestureDetector(
           onHorizontalDragEnd: (details) {
             final velocity = details.primaryVelocity ?? 0.0;
@@ -179,19 +207,18 @@ class _HeroBannerState extends ConsumerState<HeroBanner>
             clipBehavior: Clip.none,
             child: AnimatedBuilder(
               animation: _animController,
-              builder: (context, _) => _build4PosterStack(),
+              builder: (context, _) => _build5PosterStack(step),
             ),
           ),
         ),
 
         const SizedBox(height: 12),
 
-        // ── Below Posters Info Row (Movie Logo, Subtitle, VJ Profile & Dots) ──
+        // ── Below Posters Info Row (Movie Logo, Subtitle, & VJ Profile Avatar) ──
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               // Left: Movie Logo (or styled title) + Subtitle
               Expanded(
@@ -203,7 +230,7 @@ class _HeroBannerState extends ConsumerState<HeroBanner>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Movie Logo
+                      // Movie Logo (pre-cached, zero-flash, left-aligned)
                       _MovieLogoWidget(movie: currentMovie),
 
                       const SizedBox(height: 3),
@@ -224,86 +251,54 @@ class _HeroBannerState extends ConsumerState<HeroBanner>
                 ),
               ),
 
-              const SizedBox(width: 12),
+              const SizedBox(width: 16),
 
-              // Right: VJ Profile Circle + Pagination Dots
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Circular VJ Translator Profile Avatar
-                  GestureDetector(
-                    onTap: () {
-                      VjMoviesSheet.show(
-                        context,
-                        vj: assignedVj,
-                        onMovieTap: (m) => widget.onTap?.call(m),
-                      );
-                    },
-                    child: Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: AppColors.accent,
-                          width: 1.8,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.accent.withOpacity(0.3),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
+              // Right: Circular VJ Translator Profile Avatar (dots removed completely)
+              GestureDetector(
+                onTap: () {
+                  VjMoviesSheet.show(
+                    context,
+                    vj: assignedVj,
+                    onMovieTap: (m) => widget.onTap?.call(m),
+                  );
+                },
+                child: Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: AppColors.accent,
+                      width: 1.8,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.accent.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
                       ),
-                      child: ClipOval(
-                        child: ColorFiltered(
-                          colorFilter: const ColorFilter.matrix(<double>[
-                            0.2126, 0.7152, 0.0722, 0, 0,
-                            0.2126, 0.7152, 0.0722, 0, 0,
-                            0.2126, 0.7152, 0.0722, 0, 0,
-                            0,      0,      0,      1, 0,
-                          ]),
-                          child: Image.asset(
-                            assignedVj.imageUrl,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Container(
-                              color: const Color(0xFF1E2130),
-                              child: const Icon(Icons.mic_rounded,
-                                  color: Colors.white, size: 18),
-                            ),
-                          ),
+                    ],
+                  ),
+                  child: ClipOval(
+                    child: ColorFiltered(
+                      colorFilter: const ColorFilter.matrix(<double>[
+                        0.2126, 0.7152, 0.0722, 0, 0,
+                        0.2126, 0.7152, 0.0722, 0, 0,
+                        0.2126, 0.7152, 0.0722, 0, 0,
+                        0,      0,      0,      1, 0,
+                      ]),
+                      child: Image.asset(
+                        assignedVj.imageUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          color: const Color(0xFF1E2130),
+                          child: const Icon(Icons.mic_rounded,
+                              color: Colors.white, size: 18),
                         ),
                       ),
                     ),
                   ),
-
-                  const SizedBox(width: 10),
-
-                  // Pagination Dots
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: List.generate(_movies.length, (i) {
-                      final isActive = i == _currentIndex;
-                      return GestureDetector(
-                        onTap: () => _jumpToSlide(i),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 400),
-                          curve: Curves.easeOutCubic,
-                          margin: const EdgeInsets.only(left: 4.5),
-                          height: 5,
-                          width: isActive ? 18 : 5,
-                          decoration: BoxDecoration(
-                            color: isActive
-                                ? Colors.white
-                                : const Color(0xFF4B4D56),
-                            borderRadius: BorderRadius.circular(2.5),
-                          ),
-                        ),
-                      );
-                    }),
-                  ),
-                ],
+                ),
               ),
             ],
           ),
@@ -312,8 +307,8 @@ class _HeroBannerState extends ConsumerState<HeroBanner>
     );
   }
 
-  /// Builds cards in exact z-index order showing 4 posters in the deck
-  Widget _build4PosterStack() {
+  /// Builds cards in exact z-index order showing 5 stretched posters in the deck
+  Widget _build5PosterStack(double step) {
     final total = _movies.length;
     final t = const Cubic(0.19, 1.0, 0.22, 1.0)
         .transform(_animController.value);
@@ -323,7 +318,8 @@ class _HeroBannerState extends ConsumerState<HeroBanner>
     int activeIdx = _currentIndex;
     int stack1Idx = (_currentIndex + 1) % total;
     int stack2Idx = (_currentIndex + 2) % total;
-    int stack3Idx = (_currentIndex + 3) % total; // 4th poster (purple outline in markup)
+    int stack3Idx = (_currentIndex + 3) % total;
+    int stack4Idx = (_currentIndex + 4) % total; // 5th poster peeking on far right
     int? exitingIdx = _exitingIndex;
 
     // Background hidden cards
@@ -332,11 +328,15 @@ class _HeroBannerState extends ConsumerState<HeroBanner>
           i != stack1Idx &&
           i != stack2Idx &&
           i != stack3Idx &&
+          i != stack4Idx &&
           i != exitingIdx) {
         renderOrder.add(i);
       }
     }
 
+    if (!renderOrder.contains(stack4Idx)) {
+      renderOrder.add(stack4Idx);
+    }
     if (!renderOrder.contains(stack3Idx)) {
       renderOrder.add(stack3Idx);
     }
@@ -357,7 +357,7 @@ class _HeroBannerState extends ConsumerState<HeroBanner>
       clipBehavior: Clip.none,
       children: renderOrder.map((index) {
         final movie = _movies[index];
-        final state = _calculateCardState(index, total, t);
+        final state = _calculateCardState(index, total, t, step);
 
         if (state.opacity <= 0.01) {
           return const SizedBox.shrink();
@@ -392,24 +392,47 @@ class _HeroBannerState extends ConsumerState<HeroBanner>
     );
   }
 
-  /// Calculates interpolation state for 4-card stack layout
-  _CardAnimationState _calculateCardState(int index, int total, double t) {
+  /// Calculates interpolation state for 5-card stretched stack layout
+  _CardAnimationState _calculateCardState(
+      int index, int total, double t, double step) {
     final bool isAnimating = _animController.isAnimating;
+
+    const double x0 = 0.0;
+    final double x1 = step;
+    final double x2 = step * 2;
+    final double x3 = step * 3;
+    final double x4 = step * 4;
+    const double xExiting = -130.0;
+    final double xHidden = step * 5;
+
+    const double s0 = 1.0;
+    const double s1 = 0.92;
+    const double s2 = 0.85;
+    const double s3 = 0.78;
+    const double s4 = 0.71;
+    const double sHidden = 0.58;
+
+    const double o0 = 0.0;
+    const double o1 = 0.25;
+    const double o2 = 0.45;
+    const double o3 = 0.65;
+    const double o4 = 0.78;
+    const double oHidden = 0.88;
 
     // ── 1. EXITING CARD: slides smoothly off to the left ───────────────────
     if (isAnimating && index == _exitingIndex) {
       if (_isReversing) {
         return _CardAnimationState(
-          x: lerpDouble(0.0, 52.0, t)!,
-          scale: lerpDouble(1.0, 0.90, t)!,
+          x: lerpDouble(x0, x1, t)!,
+          scale: lerpDouble(s0, s1, t)!,
           opacity: 1.0,
-          overlayOpacity: lerpDouble(0.0, 0.35, t)!,
+          overlayOpacity: lerpDouble(o0, o1, t)!,
           playBtnOpacity: lerpDouble(1.0, 0.0, t)!,
         );
       } else {
         return _CardAnimationState(
-          x: lerpDouble(0.0, -120.0, t)!,
-          scale: lerpDouble(1.0, 0.90, t)!,
+          x: lerpDouble(x0, xExiting, t)!,
+          scale: lerpDouble(s0, 0.90, t)!,
           opacity: lerpDouble(1.0, 0.0, t)!,
           overlayOpacity: 0.0,
           playBtnOpacity: lerpDouble(1.0, 0.0, t)!,
@@ -419,46 +442,56 @@ class _HeroBannerState extends ConsumerState<HeroBanner>
 
     final int offset = (index - _currentIndex + total) % total;
 
-    // ── 2. ANIMATING TRANSITIONS FOR 4 VISIBLE POSTERS ──────────────────────
+    // ── 2. ANIMATING TRANSITIONS FOR 5 VISIBLE POSTERS ──────────────────────
     if (isAnimating) {
       if (!_isReversing) {
-        // Forward: offset 0 was at offset 1 (52px -> 0px)
+        // Forward: offset 0 was at offset 1 (x1 -> x0)
         if (offset == 0) {
           return _CardAnimationState(
-            x: lerpDouble(52.0, 0.0, t)!,
-            scale: lerpDouble(0.90, 1.0, t)!,
+            x: lerpDouble(x1, x0, t)!,
+            scale: lerpDouble(s1, s0, t)!,
             opacity: 1.0,
-            overlayOpacity: lerpDouble(0.35, 0.0, t)!,
+            overlayOpacity: lerpDouble(o1, o0, t)!,
             playBtnOpacity: lerpDouble(0.0, 1.0, t)!,
           );
         }
-        // Forward: offset 1 was at offset 2 (100px -> 52px)
+        // Forward: offset 1 was at offset 2 (x2 -> x1)
         if (offset == 1) {
           return _CardAnimationState(
-            x: lerpDouble(100.0, 52.0, t)!,
-            scale: lerpDouble(0.80, 0.90, t)!,
+            x: lerpDouble(x2, x1, t)!,
+            scale: lerpDouble(s2, s1, t)!,
             opacity: 1.0,
-            overlayOpacity: lerpDouble(0.55, 0.35, t)!,
+            overlayOpacity: lerpDouble(o2, o1, t)!,
             playBtnOpacity: 0.0,
           );
         }
-        // Forward: offset 2 was at offset 3 (144px -> 100px)
+        // Forward: offset 2 was at offset 3 (x3 -> x2)
         if (offset == 2) {
           return _CardAnimationState(
-            x: lerpDouble(144.0, 100.0, t)!,
-            scale: lerpDouble(0.70, 0.80, t)!,
+            x: lerpDouble(x3, x2, t)!,
+            scale: lerpDouble(s3, s2, t)!,
             opacity: 1.0,
-            overlayOpacity: lerpDouble(0.70, 0.55, t)!,
+            overlayOpacity: lerpDouble(o3, o2, t)!,
             playBtnOpacity: 0.0,
           );
         }
-        // Forward: offset 3 was in hidden queue (190px -> 144px)
+        // Forward: offset 3 was at offset 4 (x4 -> x3)
         if (offset == 3) {
           return _CardAnimationState(
-            x: lerpDouble(190.0, 144.0, t)!,
-            scale: lerpDouble(0.55, 0.70, t)!,
+            x: lerpDouble(x4, x3, t)!,
+            scale: lerpDouble(s4, s3, t)!,
+            opacity: 1.0,
+            overlayOpacity: lerpDouble(o4, o3, t)!,
+            playBtnOpacity: 0.0,
+          );
+        }
+        // Forward: offset 4 was in hidden queue (xHidden -> x4)
+        if (offset == 4) {
+          return _CardAnimationState(
+            x: lerpDouble(xHidden, x4, t)!,
+            scale: lerpDouble(sHidden, s4, t)!,
             opacity: lerpDouble(0.0, 1.0, t)!,
-            overlayOpacity: lerpDouble(0.85, 0.70, t)!,
+            overlayOpacity: lerpDouble(oHidden, o4, t)!,
             playBtnOpacity: 0.0,
           );
         }
@@ -466,8 +499,8 @@ class _HeroBannerState extends ConsumerState<HeroBanner>
         // Reverse transitions
         if (offset == 0) {
           return _CardAnimationState(
-            x: lerpDouble(-120.0, 0.0, t)!,
-            scale: lerpDouble(0.90, 1.0, t)!,
+            x: lerpDouble(xExiting, x0, t)!,
+            scale: lerpDouble(0.90, s0, t)!,
             opacity: lerpDouble(0.0, 1.0, t)!,
             overlayOpacity: 0.0,
             playBtnOpacity: lerpDouble(0.0, 1.0, t)!,
@@ -475,78 +508,96 @@ class _HeroBannerState extends ConsumerState<HeroBanner>
         }
         if (offset == 1) {
           return _CardAnimationState(
-            x: lerpDouble(0.0, 52.0, t)!,
-            scale: lerpDouble(1.0, 0.90, t)!,
+            x: lerpDouble(x0, x1, t)!,
+            scale: lerpDouble(s0, s1, t)!,
             opacity: 1.0,
-            overlayOpacity: lerpDouble(0.0, 0.35, t)!,
+            overlayOpacity: lerpDouble(o0, o1, t)!,
             playBtnOpacity: lerpDouble(1.0, 0.0, t)!,
           );
         }
         if (offset == 2) {
           return _CardAnimationState(
-            x: lerpDouble(52.0, 100.0, t)!,
-            scale: lerpDouble(0.90, 0.80, t)!,
+            x: lerpDouble(x1, x2, t)!,
+            scale: lerpDouble(s1, s2, t)!,
             opacity: 1.0,
-            overlayOpacity: lerpDouble(0.35, 0.55, t)!,
+            overlayOpacity: lerpDouble(o1, o2, t)!,
             playBtnOpacity: 0.0,
           );
         }
         if (offset == 3) {
           return _CardAnimationState(
-            x: lerpDouble(100.0, 144.0, t)!,
-            scale: lerpDouble(0.80, 0.70, t)!,
+            x: lerpDouble(x2, x3, t)!,
+            scale: lerpDouble(s2, s3, t)!,
             opacity: 1.0,
-            overlayOpacity: lerpDouble(0.55, 0.70, t)!,
+            overlayOpacity: lerpDouble(o2, o3, t)!,
+            playBtnOpacity: 0.0,
+          );
+        }
+        if (offset == 4) {
+          return _CardAnimationState(
+            x: lerpDouble(x3, x4, t)!,
+            scale: lerpDouble(s3, s4, t)!,
+            opacity: 1.0,
+            overlayOpacity: lerpDouble(o3, o4, t)!,
             playBtnOpacity: 0.0,
           );
         }
       }
     }
 
-    // ── 3. STATIC / IDLE STATES FOR 4 POSTERS ───────────────────────────────
+    // ── 3. STATIC / IDLE STATES FOR 5 POSTERS ───────────────────────────────
     if (offset == 0) {
       // 1. ACTIVE FRONT CARD
       return const _CardAnimationState(
-        x: 0.0,
-        scale: 1.0,
+        x: x0,
+        scale: s0,
         opacity: 1.0,
-        overlayOpacity: 0.0,
+        overlayOpacity: o0,
         playBtnOpacity: 1.0,
       );
     } else if (offset == 1) {
       // 2. FIRST CARD IN STACK
-      return const _CardAnimationState(
-        x: 52.0,
-        scale: 0.90,
+      return _CardAnimationState(
+        x: x1,
+        scale: s1,
         opacity: 1.0,
-        overlayOpacity: 0.35,
+        overlayOpacity: o1,
         playBtnOpacity: 0.0,
       );
     } else if (offset == 2) {
       // 3. SECOND CARD IN STACK
-      return const _CardAnimationState(
-        x: 100.0,
-        scale: 0.80,
+      return _CardAnimationState(
+        x: x2,
+        scale: s2,
         opacity: 1.0,
-        overlayOpacity: 0.55,
+        overlayOpacity: o2,
         playBtnOpacity: 0.0,
       );
     } else if (offset == 3) {
-      // 4. THIRD CARD IN STACK (Purple outline in user markup)
-      return const _CardAnimationState(
-        x: 144.0,
-        scale: 0.70,
+      // 4. THIRD CARD IN STACK
+      return _CardAnimationState(
+        x: x3,
+        scale: s3,
         opacity: 1.0,
-        overlayOpacity: 0.70,
+        overlayOpacity: o3,
+        playBtnOpacity: 0.0,
+      );
+    } else if (offset == 4) {
+      // 5. FOURTH CARD IN STACK (5th poster peeking at right edge)
+      return _CardAnimationState(
+        x: x4,
+        scale: s4,
+        opacity: 1.0,
+        overlayOpacity: o4,
         playBtnOpacity: 0.0,
       );
     } else {
-      // 5. HIDDEN CARDS
-      return const _CardAnimationState(
-        x: 190.0,
-        scale: 0.55,
+      // 6. HIDDEN CARDS
+      return _CardAnimationState(
+        x: xHidden,
+        scale: sHidden,
         opacity: 0.0,
-        overlayOpacity: 0.85,
+        overlayOpacity: oHidden,
         playBtnOpacity: 0.0,
       );
     }
@@ -812,7 +863,8 @@ class _CompactHeroPosterCard extends ConsumerWidget {
 }
 
 /// Movie Logo widget: loads official transparent PNG logo from TMDB images endpoint
-/// or falls back to bold stylized typography
+/// or falls back to bold stylized typography.
+/// Holds a clean fixed-height placeholder during loading so movie text name never flashes before logo.
 class _MovieLogoWidget extends ConsumerWidget {
   final Movie movie;
 
@@ -822,36 +874,44 @@ class _MovieLogoWidget extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final logoAsync = ref.watch(movieLogoProvider(movie.id));
 
-    return logoAsync.when(
-      data: (logoUrl) {
-        if (logoUrl != null && logoUrl.isNotEmpty) {
-          return SizedBox(
-            height: 34,
-            child: CachedNetworkImage(
-              imageUrl: logoUrl,
-              fit: BoxFit.contain,
-              alignment: Alignment.centerLeft,
-              errorWidget: (_, __, ___) => _buildTextTitle(),
-            ),
-          );
-        }
-        return _buildTextTitle();
-      },
-      loading: () => _buildTextTitle(),
-      error: (_, __) => _buildTextTitle(),
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: SizedBox(
+        height: 34,
+        child: logoAsync.when(
+          data: (logoUrl) {
+            if (logoUrl != null && logoUrl.isNotEmpty) {
+              return CachedNetworkImage(
+                imageUrl: logoUrl,
+                fit: BoxFit.contain,
+                alignment: Alignment.centerLeft,
+                placeholder: (_, __) => const SizedBox(height: 34, width: 120),
+                errorWidget: (_, __, ___) => _buildTextTitle(),
+              );
+            }
+            return _buildTextTitle();
+          },
+          // Invisible placeholder while loading so text name never flashes and disappears
+          loading: () => const SizedBox(height: 34, width: 120),
+          error: (_, __) => _buildTextTitle(),
+        ),
+      ),
     );
   }
 
   Widget _buildTextTitle() {
-    return Text(
-      movie.title,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: const TextStyle(
-        color: AppColors.textPrimary,
-        fontSize: 19,
-        fontWeight: FontWeight.w900,
-        letterSpacing: -0.3,
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Text(
+        movie.title,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
+          color: AppColors.textPrimary,
+          fontSize: 19,
+          fontWeight: FontWeight.w900,
+          letterSpacing: -0.3,
+        ),
       ),
     );
   }
