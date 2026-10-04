@@ -1,13 +1,22 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:iconly/iconly.dart';
+import '../../../../core/constants/api_constants.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../data/mock/mock_movies.dart';
+import '../../../../data/models/avatar_item.dart';
+import '../../../../data/models/movie.dart';
 import '../../../auth/presentation/providers/user_avatar_provider.dart';
 import '../../../auth/presentation/screens/choose_avatar_screen.dart';
 import '../../../favorites/presentation/providers/favorites_provider.dart';
+import '../../../home/providers/home_providers.dart';
+import '../../../movie_detail/presentation/screens/movie_detail_screen.dart';
+import '../../../movie_grid/presentation/screens/movie_grid_screen.dart';
+import '../providers/user_profile_provider.dart';
+import '../providers/watch_history_provider.dart';
 
-/// Dedicated full-screen Profile & Account screen
+/// Dedicated Profile Screen matching reference design (media_1791102724286.png)
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
@@ -25,164 +34,146 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final avatar = ref.watch(userAvatarProvider);
-    final favCount = ref.watch(favoritesProvider).length;
+    final profile = ref.watch(userProfileProvider);
+    final watchHistory = ref.watch(watchHistoryProvider);
+    final favorites = ref.watch(favoritesProvider);
+
+    // Provide 3 fallback movies for Saved Movies if favorites is empty
+    final savedMovies = favorites.isNotEmpty
+        ? favorites
+        : [
+            MockData.trendingMovies[1],
+            MockData.trendingMovies[2],
+            if (MockData.trendingMovies.length > 3) MockData.trendingMovies[3],
+          ];
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFF161822),
       body: SafeArea(
-        top: false,
+        top: true,
         bottom: false,
         child: ListView(
           physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 110),
+          padding: const EdgeInsets.only(bottom: 120),
           children: [
-            // ── Top Title ──────────────────────────────────────────────────
-            const Text(
-              'My Profile',
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 24,
-                fontWeight: FontWeight.w900,
-                letterSpacing: -0.4,
+            // ── Top Navigation Bar (< Chevron) ──────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(10, 8, 16, 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: IconButton(
+                  onPressed: () => navigateToBottomNavTab(context, ref, 0),
+                  icon: const Icon(
+                    Icons.chevron_left_rounded,
+                    color: Colors.white,
+                    size: 30,
+                  ),
+                ),
               ),
             ),
 
-            const SizedBox(height: 18),
-
-            // ── User Avatar & Identity Card ─────────────────────────────────
-            Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: const Color(0xFF131620),
-                borderRadius: BorderRadius.circular(22),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.08),
-                  width: 1,
-                ),
-              ),
-              child: Column(
+            // ── User Identity & Stats Header ────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 4, 24, 0),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Active Disney+ Avatar with Edit Ring
-                  Stack(
-                    alignment: Alignment.bottomRight,
-                    children: [
-                      Container(
-                        width: 86,
-                        height: 86,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: AppColors.accent,
-                            width: 2.5,
+                  // Circular Avatar with lavender disc
+                  GestureDetector(
+                    onTap: () => _openAvatarPicker(context),
+                    child: Container(
+                      width: 88,
+                      height: 88,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFC4B5FD), // Soft lavender from reference
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Color(0x33C4B5FD),
+                            blurRadius: 16,
+                            offset: Offset(0, 4),
                           ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.accent.withOpacity(0.3),
-                              blurRadius: 16,
-                              spreadRadius: 2,
-                            ),
-                          ],
-                        ),
-                        child: ClipOval(
-                          child: Container(
-                            color: const Color(0xFF1E2130),
-                            child: Image.asset(
-                              avatar.assetPath,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => const Icon(
-                                Icons.person_rounded,
-                                color: Colors.white,
-                                size: 44,
-                              ),
-                            ),
-                          ),
+                        ],
+                      ),
+                      child: ClipOval(
+                        child: Center(
+                          child: avatar.assetPath != AvatarItem.defaultAvatar.assetPath
+                              ? Image.asset(
+                                  avatar.assetPath,
+                                  width: 88,
+                                  height: 88,
+                                  fit: BoxFit.cover,
+                                )
+                              : const Icon(
+                                  Icons.person_rounded,
+                                  size: 60,
+                                  color: Color(0xFF1E1F2E),
+                                ),
                         ),
                       ),
-                      GestureDetector(
-                        onTap: () => _openAvatarPicker(context),
-                        child: Container(
-                          padding: const EdgeInsets.all(5),
-                          decoration: const BoxDecoration(
-                            color: AppColors.accent,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.edit_rounded,
-                            color: Colors.black,
-                            size: 14,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  // Username
-                  const Text(
-                    'Pius Tech',
-                    style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 19,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.2,
                     ),
                   ),
 
-                  const SizedBox(height: 4),
+                  const SizedBox(width: 24),
 
-                  // VIP Badge
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: AppColors.accent.withOpacity(0.18),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: AppColors.accent.withOpacity(0.5),
-                        width: 0.8,
-                      ),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
+                  // Right Metadata Column
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.workspace_premium_rounded,
-                            color: AppColors.accent, size: 13),
-                        SizedBox(width: 4),
+                        // User Name
                         Text(
-                          'FreeWatch VIP • 4K Unlocked',
+                          profile.name,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18.5,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.2,
+                          ),
+                        ),
+
+                        const SizedBox(height: 10),
+
+                        // Movies Watched Label & Count
+                        const Text(
+                          'Movies Watched',
                           style: TextStyle(
-                            color: AppColors.accent,
+                            color: Color(0xFF8E92A4),
                             fontSize: 11,
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 1.5),
+                        Text(
+                          '${profile.moviesWatched}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+
+                        const SizedBox(height: 8),
+
+                        // Average Rating Label & Value
+                        const Text(
+                          'Average Rating',
+                          style: TextStyle(
+                            color: Color(0xFF8E92A4),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 1.5),
+                        Text(
+                          '${profile.averageRating}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // "Change Avatar" Button
-                  OutlinedButton.icon(
-                    onPressed: () => _openAvatarPicker(context),
-                    icon: const Icon(IconlyBold.image,
-                        size: 15, color: Colors.white),
-                    label: const Text(
-                      'Change Disney Avatar',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: Colors.white.withOpacity(0.15)),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
                     ),
                   ),
                 ],
@@ -191,133 +182,561 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
             const SizedBox(height: 18),
 
-            // ── Streaming Statistics Row ────────────────────────────────────
-            Row(
-              children: [
-                Expanded(
-                  child: _buildStatCard('24', 'Streamed', IconlyBold.video),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _buildStatCard(
-                      '$favCount', 'Watchlist', IconlyBold.heart),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _buildStatCard(
-                      '4', 'Offline', Icons.offline_pin_rounded),
-                ),
-              ],
-            ),
+            // ── Social Counters & Action Icons Row ──────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(26, 0, 24, 18),
+              child: Row(
+                children: [
+                  // Following
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Following',
+                        style: TextStyle(
+                          color: Color(0xFF8E92A4),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${profile.followingCount}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
 
-            const SizedBox(height: 24),
+                  const SizedBox(width: 22),
 
-            // ── Streaming Preferences ───────────────────────────────────────
-            const Text(
-              'Playback & Streaming',
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.2,
+                  // Followers
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Followers',
+                        style: TextStyle(
+                          color: Color(0xFF8E92A4),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${profile.followersCount}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const Spacer(),
+
+                  // Action Icons: Edit, Share, Settings
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildHeaderActionButton(
+                        icon: Icons.edit_outlined,
+                        tooltip: 'Edit Profile',
+                        onTap: () => _showEditProfileDialog(context, profile.name),
+                      ),
+                      const SizedBox(width: 14),
+                      _buildHeaderActionButton(
+                        icon: Icons.file_upload_outlined,
+                        tooltip: 'Share Profile',
+                        onTap: () => _shareProfile(context, profile.name),
+                      ),
+                      const SizedBox(width: 14),
+                      _buildHeaderActionButton(
+                        icon: Icons.settings_outlined,
+                        tooltip: 'Settings',
+                        onTap: () => _openSettingsModal(context),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 10),
 
-            _buildSectionContainer([
-              _buildSettingTile(
-                icon: Icons.high_quality_rounded,
-                title: 'Streaming Quality',
-                subtitle: _streamingQuality,
-                onTap: _showQualityPicker,
-              ),
-              _buildDivider(),
-              _buildSettingTile(
-                icon: Icons.record_voice_over_rounded,
-                title: 'Default Translation Audio',
-                subtitle: _audioLanguage,
-                onTap: _showAudioPicker,
-              ),
-              _buildDivider(),
-              _buildSwitchTile(
-                icon: Icons.wifi_rounded,
-                title: 'Download via Wi-Fi only',
-                value: _wifiOnlyDownload,
-                onChanged: (val) => setState(() => _wifiOnlyDownload = val),
-              ),
-            ]),
+            // ── Thin Divider ────────────────────────────────────────────
+            Divider(
+              height: 1,
+              thickness: 0.8,
+              color: Colors.white.withOpacity(0.08),
+            ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 18),
 
-            // ── App Settings ────────────────────────────────────────────────
-            const Text(
-              'App & Storage',
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.2,
+            // ── WATCH HISTORY ───────────────────────────────────────────
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 24),
+              child: Text(
+                'WATCH HISTORY',
+                style: TextStyle(
+                  color: Color(0xFF9EA3B2),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.8,
+                ),
               ),
             ),
-            const SizedBox(height: 10),
 
-            _buildSectionContainer([
-              _buildSwitchTile(
-                icon: IconlyBold.notification,
-                title: 'Push Notifications',
-                value: _pushNotifications,
-                onChanged: (val) => setState(() => _pushNotifications = val),
+            const SizedBox(height: 12),
+
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                children: [
+                  for (int i = 0; i < 3 && i < watchHistory.length; i++) ...[
+                    Expanded(
+                      child: _buildSmallMovieCard(watchHistory[i]),
+                    ),
+                    const SizedBox(width: 10),
+                  ],
+                  _buildMorePillButton(
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MovieGridScreen.routeForCategory(
+                          title: 'Watch History',
+                          movies: watchHistory,
+                        ),
+                      );
+                    },
+                  ),
+                ],
               ),
-              _buildDivider(),
-              _buildSettingTile(
-                icon: Icons.cleaning_services_rounded,
-                title: 'Clear Cache',
-                subtitle: '$_cacheSizeMb MB used',
-                trailing: TextButton(
-                  onPressed: _clearCache,
-                  child: const Text(
-                    'Clear',
+            ),
+
+            const SizedBox(height: 20),
+
+            // ── Thin Divider ────────────────────────────────────────────
+            Divider(
+              height: 1,
+              thickness: 0.8,
+              color: Colors.white.withOpacity(0.08),
+            ),
+
+            const SizedBox(height: 18),
+
+            // ── SAVED MOVIES ────────────────────────────────────────────
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 24),
+              child: Text(
+                'SAVED MOVIES',
+                style: TextStyle(
+                  color: Color(0xFF9EA3B2),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.8,
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                children: [
+                  for (int i = 0; i < 3 && i < savedMovies.length; i++) ...[
+                    Expanded(
+                      child: _buildSmallMovieCard(savedMovies[i]),
+                    ),
+                    const SizedBox(width: 10),
+                  ],
+                  _buildMorePillButton(
+                    onTap: () => navigateToBottomNavTab(context, ref, 2),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 28),
+
+            // ── Thin Divider ────────────────────────────────────────────
+            Divider(
+              height: 1,
+              thickness: 0.8,
+              color: Colors.white.withOpacity(0.08),
+            ),
+
+            const SizedBox(height: 20),
+
+            // ── Preferences & Account Settings Section ──────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'PLAYBACK & SETTINGS',
                     style: TextStyle(
-                        color: AppColors.accent, fontWeight: FontWeight.w700),
+                      color: Color(0xFF9EA3B2),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.8,
+                    ),
                   ),
-                ),
-                onTap: _clearCache,
-              ),
-              _buildDivider(),
-              _buildSettingTile(
-                icon: Icons.info_outline_rounded,
-                title: 'App Version',
-                subtitle: 'FreeWatch v1.0.12 (Official Build 13)',
-              ),
-            ]),
+                  const SizedBox(height: 12),
+                  _buildSectionContainer([
+                    _buildSettingTile(
+                      icon: Icons.high_quality_rounded,
+                      title: 'Streaming Quality',
+                      subtitle: _streamingQuality,
+                      onTap: _showQualityPicker,
+                    ),
+                    _buildDivider(),
+                    _buildSettingTile(
+                      icon: Icons.record_voice_over_rounded,
+                      title: 'Default Translation Audio',
+                      subtitle: _audioLanguage,
+                      onTap: _showAudioPicker,
+                    ),
+                    _buildDivider(),
+                    _buildSwitchTile(
+                      icon: Icons.wifi_rounded,
+                      title: 'Download via Wi-Fi only',
+                      value: _wifiOnlyDownload,
+                      onChanged: (val) => setState(() => _wifiOnlyDownload = val),
+                    ),
+                    _buildDivider(),
+                    _buildSwitchTile(
+                      icon: IconlyBold.notification,
+                      title: 'Push Notifications',
+                      value: _pushNotifications,
+                      onChanged: (val) => setState(() => _pushNotifications = val),
+                    ),
+                    _buildDivider(),
+                    _buildSettingTile(
+                      icon: Icons.cleaning_services_rounded,
+                      title: 'Clear Cache',
+                      subtitle: '$_cacheSizeMb MB used',
+                      trailing: TextButton(
+                        onPressed: _clearCache,
+                        child: const Text(
+                          'Clear',
+                          style: TextStyle(
+                            color: AppColors.accent,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      onTap: _clearCache,
+                    ),
+                    _buildDivider(),
+                    _buildSettingTile(
+                      icon: Icons.info_outline_rounded,
+                      title: 'App Version',
+                      subtitle: 'FreeWatch v1.0.22 (Build 23)',
+                    ),
+                  ]),
 
-            const SizedBox(height: 24),
+                  const SizedBox(height: 20),
 
-            // ── Sign Out Button ─────────────────────────────────────────────
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: OutlinedButton.icon(
-                onPressed: _showSignOutDialog,
-                icon: const Icon(IconlyLight.logout,
-                    color: Color(0xFFFF5252), size: 18),
-                label: const Text(
-                  'Log Out of FreeWatch',
-                  style: TextStyle(
-                    color: Color(0xFFFF5252),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
+                  // Log Out Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: OutlinedButton.icon(
+                      onPressed: _showSignOutDialog,
+                      icon: const Icon(IconlyLight.logout,
+                          color: Color(0xFFFF5252), size: 18),
+                      label: const Text(
+                        'Log Out of FreeWatch',
+                        style: TextStyle(
+                          color: Color(0xFFFF5252),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(
+                            color: const Color(0xFFFF5252).withOpacity(0.4)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-                style: OutlinedButton.styleFrom(
-                  side: BorderSide(color: const Color(0xFFFF5252).withOpacity(0.4)),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Header Action Icon Button ─────────────────────────────────────────────
+  Widget _buildHeaderActionButton({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Tooltip(
+        message: tooltip,
+        child: Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.white.withOpacity(0.06),
+          ),
+          child: Center(
+            child: Icon(
+              icon,
+              color: Colors.white,
+              size: 17,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Small Movie Card for Watch History & Saved Movies ──────────────────────
+  Widget _buildSmallMovieCard(Movie movie) {
+    final posterUrl = movie.posterPath != null && movie.posterPath!.isNotEmpty
+        ? (movie.posterPath!.startsWith('http')
+            ? movie.posterPath!
+            : '${ApiConstants.posterW342}${movie.posterPath}')
+        : null;
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => MovieDetailScreen(movie: movie),
+          ),
+        );
+      },
+      behavior: HitTestBehavior.opaque,
+      child: AspectRatio(
+        aspectRatio: 2 / 2.9,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            color: const Color(0xFF1E2130),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.35),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: posterUrl != null
+                ? CachedNetworkImage(
+                    imageUrl: posterUrl,
+                    fit: BoxFit.cover,
+                    placeholder: (_, __) => Container(color: const Color(0xFF1E2130)),
+                    errorWidget: (_, __, ___) => Container(
+                      color: const Color(0xFF1E2130),
+                      child: const Icon(Icons.movie_rounded,
+                          color: Colors.white24, size: 20),
+                    ),
+                  )
+                : Container(
+                    color: const Color(0xFF1E2130),
+                    child: const Icon(Icons.movie_rounded,
+                        color: Colors.white24, size: 20),
                   ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── "More >" Pill Button matching reference ───────────────────────────────
+  Widget _buildMorePillButton({required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        height: 36,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: Colors.white.withOpacity(0.28),
+            width: 1,
+          ),
+          color: Colors.white.withOpacity(0.04),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'More',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            SizedBox(width: 2),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: Colors.white,
+              size: 16,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Edit Profile Dialog ───────────────────────────────────────────────────
+  void _showEditProfileDialog(BuildContext context, String currentName) {
+    final controller = TextEditingController(text: currentName);
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1C28),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          'Edit Profile',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Display Name',
+              style: TextStyle(color: Colors.white70, fontSize: 13),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: controller,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: const Color(0xFF242738),
+                hintText: 'Enter your name',
+                hintStyle: const TextStyle(color: Colors.white38),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide.none,
                 ),
               ),
             ),
           ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final newName = controller.text.trim();
+              if (newName.isNotEmpty) {
+                ref.read(userProfileProvider.notifier).updateName(newName);
+              }
+              Navigator.of(dialogCtx).pop();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF8B5CF6),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('Save', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Share Profile Action ──────────────────────────────────────────────────
+  void _shareProfile(BuildContext context, String userName) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Profile link for "$userName" copied to clipboard!'),
+        backgroundColor: const Color(0xFF8B5CF6),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  // ── Settings Bottom Sheet ─────────────────────────────────────────────────
+  void _openSettingsModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF181A26),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetCtx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.white24,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Settings & Preferences',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const Icon(Icons.high_quality_rounded, color: AppColors.accent),
+                title: const Text('Streaming Quality', style: TextStyle(color: Colors.white)),
+                subtitle: Text(_streamingQuality, style: const TextStyle(color: Colors.white54)),
+                onTap: () {
+                  Navigator.of(sheetCtx).pop();
+                  _showQualityPicker();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.record_voice_over_rounded, color: AppColors.accent),
+                title: const Text('Translation Audio', style: TextStyle(color: Colors.white)),
+                subtitle: Text(_audioLanguage, style: const TextStyle(color: Colors.white54)),
+                onTap: () {
+                  Navigator.of(sheetCtx).pop();
+                  _showAudioPicker();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.cleaning_services_rounded, color: AppColors.accent),
+                title: const Text('Clear Cache', style: TextStyle(color: Colors.white)),
+                subtitle: Text('$_cacheSizeMb MB used', style: const TextStyle(color: Colors.white54)),
+                onTap: () {
+                  Navigator.of(sheetCtx).pop();
+                  _clearCache();
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -327,43 +746,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => const ChooseAvatarScreen(),
-      ),
-    );
-  }
-
-  Widget _buildStatCard(String value, String label, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 14),
-      decoration: BoxDecoration(
-        color: const Color(0xFF131620),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.08),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: AppColors.accent, size: 20),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 17,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.55),
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -452,90 +834,87 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   void _showQualityPicker() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF10131A),
+      backgroundColor: const Color(0xFF181A26),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) {
-        final options = [
-          'Auto (Up to 4K)',
-          'High (1080p Full HD)',
-          'Medium (720p HD)',
-          'Data Saver (480p SD)',
-        ];
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: options.map((opt) {
-              return ListTile(
-                title: Text(opt,
-                    style: const TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.w600)),
-                trailing: _streamingQuality == opt
-                    ? const Icon(Icons.check_rounded, color: AppColors.accent)
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text(
+                'Select Streaming Quality',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold),
+              ),
+            ),
+            for (final q in ['Auto (Up to 4K)', '1080p Full HD', '720p HD', '480p SD (Data Saver)'])
+              ListTile(
+                title: Text(q, style: const TextStyle(color: Colors.white)),
+                trailing: _streamingQuality == q
+                    ? const Icon(Icons.check, color: AppColors.accent)
                     : null,
                 onTap: () {
-                  setState(() => _streamingQuality = opt);
+                  setState(() => _streamingQuality = q);
                   Navigator.pop(context);
                 },
-              );
-            }).toList(),
-          ),
-        );
-      },
+              ),
+          ],
+        ),
+      ),
     );
   }
 
   void _showAudioPicker() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF10131A),
+      backgroundColor: const Color(0xFF181A26),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) {
-        final options = [
-          'Luganda (VJ Dubbed)',
-          'Original English Audio',
-          'Always Ask on Playback',
-        ];
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: options.map((opt) {
-              return ListTile(
-                title: Text(opt,
-                    style: const TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.w600)),
-                trailing: _audioLanguage == opt
-                    ? const Icon(Icons.check_rounded, color: AppColors.accent)
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text(
+                'Default Translation Audio',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold),
+              ),
+            ),
+            for (final l in ['Luganda (VJ Dubbed)', 'English (Original Audio)', 'Swahili Translation'])
+              ListTile(
+                title: Text(l, style: const TextStyle(color: Colors.white)),
+                trailing: _audioLanguage == l
+                    ? const Icon(Icons.check, color: AppColors.accent)
                     : null,
                 onTap: () {
-                  setState(() => _audioLanguage = opt);
+                  setState(() => _audioLanguage = l);
                   Navigator.pop(context);
                 },
-              );
-            }).toList(),
-          ),
-        );
-      },
+              ),
+          ],
+        ),
+      ),
     );
   }
 
   void _clearCache() {
     setState(() => _cacheSizeMb = 0);
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        backgroundColor: Color(0xFF161922),
-        content: Row(
-          children: [
-            Icon(Icons.check_circle_rounded, color: AppColors.accent),
-            SizedBox(width: 8),
-            Text('App cache successfully cleared (0 MB)'),
-          ],
-        ),
+      SnackBar(
+        content: const Text('App cache cleared successfully (0 MB)'),
+        backgroundColor: AppColors.accent,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
@@ -543,30 +922,34 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   void _showSignOutDialog() {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: const Color(0xFF161922),
-        title: const Text('Log Out',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E2130),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          'Log Out',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
         content: const Text(
           'Are you sure you want to log out of FreeWatch on this device?',
           style: TextStyle(color: Colors.white70),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel',
-                style: TextStyle(color: Colors.white60)),
+            onPressed: () => Navigator.of(dialogCtx).pop(),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
           ),
           ElevatedButton(
             onPressed: () {
-              Navigator.pop(context);
-              context.go('/onboarding');
+              Navigator.of(dialogCtx).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Logged out of FreeWatch')),
+              );
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFFF5252),
-              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text('Log Out'),
+            child: const Text('Log Out', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
