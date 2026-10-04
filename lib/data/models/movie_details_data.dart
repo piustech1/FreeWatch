@@ -88,6 +88,13 @@ class MovieDetailsData {
     return releaseDate!;
   }
 
+  String get releaseYear {
+    if (releaseDate != null && releaseDate!.length >= 4) {
+      return releaseDate!.substring(0, 4);
+    }
+    return '2024';
+  }
+
   factory MovieDetailsData.fromJson(Map<String, dynamic> json) {
     // 1. Genres
     final genresList = (json['genres'] as List<dynamic>?)

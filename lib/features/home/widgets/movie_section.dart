@@ -62,7 +62,7 @@ class MovieSection extends StatelessWidget {
 
         // ── Movie list ─────────────────────────────────────────────────────
         SizedBox(
-          height: 204,
+          height: 232,
           child: isLoading
               ? const MovieRowShimmer()
               : (movies == null || movies!.isEmpty)

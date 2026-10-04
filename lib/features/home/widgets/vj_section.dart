@@ -59,7 +59,7 @@ class VjSection extends StatelessWidget {
 
         // ── Horizontally Scrolling Interlocking Panoramic VJ Cards ──────────
         SizedBox(
-          height: 155,
+          height: 125,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),

@@ -264,7 +264,7 @@ class MovieGridScreen extends ConsumerWidget {
           Expanded(
             child: Container(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(20),
                 color: const Color(0xFF161922),
                 boxShadow: [
                   BoxShadow(
@@ -275,7 +275,7 @@ class MovieGridScreen extends ConsumerWidget {
                 ],
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(20),
                 child: Stack(
                   fit: StackFit.expand,
                   children: [

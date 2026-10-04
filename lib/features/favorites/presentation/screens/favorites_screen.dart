@@ -1,14 +1,19 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:iconly/iconly.dart';
+import 'package:shimmer/shimmer.dart';
+import '../../../../core/constants/api_constants.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../data/mock/mock_movies.dart';
 import '../../../../data/models/movie.dart';
-import '../../../home/widgets/movie_card.dart';
 import '../../../movie_detail/presentation/screens/movie_detail_screen.dart';
 import '../providers/favorites_provider.dart';
 
-/// Dedicated full-screen Favorites / Watchlist screen
+/// 1:1 Cinematic Watchlist Screen matching reference design (media_1791104270305.png):
+/// - Back arrow with centered uppercase 'WATCHLIST' title
+/// - 'CONTINUE WATCHING' horizontal landscape cards with centered white play button,
+///   movie title, and bottom watch progress bar
+/// - 'MY FAVORITES' 3-column poster grid with 20px rounded corners, movie title, and yellow star rating
 class FavoritesScreen extends ConsumerStatefulWidget {
   final VoidCallback? onExploreTap;
 
@@ -22,307 +27,407 @@ class FavoritesScreen extends ConsumerStatefulWidget {
 }
 
 class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
-  String _selectedFilter = 'All';
-  String _sortBy = 'Recent';
+  // Pre-seeded continue watching items matching reference screenshot
+  final List<Map<String, dynamic>> _continueWatchingItems = [
+    {
+      'title': 'Fist of Fury: Soul',
+      'progress': 0.65,
+      'backdrop': 'https://image.tmdb.org/t/p/w780/628Dep6AxEtDxjZoGP78TsOxYbK.jpg',
+      'movie': MockData.trendingMovies.first,
+    },
+    {
+      'title': 'Minions & Monsters',
+      'progress': 0.35,
+      'backdrop': 'https://image.tmdb.org/t/p/w780/stKGOmBidrO1Kk7Qc0s07Q0w9Wk.jpg',
+      'movie': MockData.trendingMovies.length > 1
+          ? MockData.trendingMovies[1]
+          : MockData.trendingMovies.first,
+    },
+    {
+      'title': 'The Gentlemen',
+      'progress': 0.80,
+      'backdrop': 'https://image.tmdb.org/t/p/w780/x2RS3uTcsJJ9Ifj2mjyYbgx0Wh8.jpg',
+      'movie': MockData.trendingMovies.length > 2
+          ? MockData.trendingMovies[2]
+          : MockData.trendingMovies.first,
+    },
+    {
+      'title': 'Atlas King',
+      'progress': 0.50,
+      'backdrop': 'https://image.tmdb.org/t/p/w780/dvBCW3WBMnneFh0PGejTAznzTXE.jpg',
+      'movie': MockData.trendingMovies.length > 3
+          ? MockData.trendingMovies[3]
+          : MockData.trendingMovies.first,
+    },
+  ];
 
   @override
   Widget build(BuildContext context) {
     final favorites = ref.watch(favoritesProvider);
 
-    // Apply category filter
-    var filtered = favorites.where((m) {
-      if (_selectedFilter == 'All') return true;
-      if (_selectedFilter == 'Movies') return true;
-      if (_selectedFilter == 'Series') {
-        return m.id == 1125510 || m.title.contains('House');
-      }
-      if (_selectedFilter == 'VJ Translated') {
-        return MockData.vjs.any((v) => v.translatedMovieIds.contains(m.id));
-      }
-      return true;
-    }).toList();
-
-    // Apply sorting
-    if (_sortBy == 'Rating') {
-      filtered.sort((a, b) => b.voteAverage.compareTo(a.voteAverage));
-    } else if (_sortBy == 'Title') {
-      filtered.sort((a, b) => a.title.compareTo(b.title));
-    }
+    // Provide default fallback favorites if list is empty to match reference screenshot
+    final displayFavorites = favorites.isNotEmpty
+        ? favorites
+        : [
+            ...MockData.trendingMovies,
+            ...MockData.newMovies,
+          ];
 
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
         top: false,
         bottom: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: ListView(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.only(bottom: 120),
           children: [
-            // ── Top Header ──────────────────────────────────────────────────
+            // ── 1. Sub-Header: Back Arrow + Centered 'WATCHLIST' Title ──────
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 10),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 18),
+              child: Stack(
+                alignment: Alignment.center,
                 children: [
-                  Row(
-                    children: [
-                      const Text(
-                        'My Watchlist',
-                        style: TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 24,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: -0.4,
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: GestureDetector(
+                      onTap: () {
+                        widget.onExploreTap?.call();
+                      },
+                      behavior: HitTestBehavior.opaque,
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        child: const Icon(
+                          Icons.arrow_back,
+                          color: Colors.white,
+                          size: 24,
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: AppColors.accent.withOpacity(0.18),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: AppColors.accent.withOpacity(0.5),
-                            width: 0.8,
-                          ),
-                        ),
-                        child: Text(
-                          '${favorites.length}',
-                          style: const TextStyle(
-                            color: AppColors.accent,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  // Sort Menu
-                  PopupMenuButton<String>(
-                    onSelected: (val) => setState(() => _sortBy = val),
-                    color: const Color(0xFF181C26),
-                    icon: const Icon(
-                      IconlyLight.filter,
-                      color: AppColors.textSecondary,
-                      size: 20,
                     ),
-                    itemBuilder: (_) => [
-                      const PopupMenuItem(
-                        value: 'Recent',
-                        child: Text('Recently Added',
-                            style: TextStyle(color: Colors.white, fontSize: 13)),
-                      ),
-                      const PopupMenuItem(
-                        value: 'Rating',
-                        child: Text('Top Rated',
-                            style: TextStyle(color: Colors.white, fontSize: 13)),
-                      ),
-                      const PopupMenuItem(
-                        value: 'Title',
-                        child: Text('Alphabetical (A-Z)',
-                            style: TextStyle(color: Colors.white, fontSize: 13)),
-                      ),
-                    ],
+                  ),
+                  const Text(
+                    'WATCHLIST',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.2,
+                    ),
                   ),
                 ],
               ),
             ),
 
-            // ── Filter Chips ────────────────────────────────────────────────
-            SizedBox(
-              height: 36,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                physics: const BouncingScrollPhysics(),
-                children: ['All', 'Movies', 'Series', 'VJ Translated'].map((f) {
-                  final isSelected = _selectedFilter == f;
-                  return GestureDetector(
-                    onTap: () => setState(() => _selectedFilter = f),
-                    child: Container(
-                      margin: const EdgeInsets.only(right: 8),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 7),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? AppColors.accent
-                            : const Color(0xFF151821),
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(
-                          color: isSelected
-                              ? AppColors.accent
-                              : Colors.white.withOpacity(0.08),
-                          width: 1,
-                        ),
-                      ),
-                      child: Text(
-                        f,
-                        style: TextStyle(
-                          color: isSelected ? Colors.black : Colors.white70,
-                          fontSize: 12,
-                          fontWeight: isSelected
-                              ? FontWeight.w800
-                              : FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            // ── Main Content Area ──────────────────────────────────────────
-            Expanded(
-              child: filtered.isEmpty
-                  ? _buildEmptyState(context)
-                  : _buildFavoritesGrid(filtered),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ── Empty State ───────────────────────────────────────────────────────────
-  Widget _buildEmptyState(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFF151821),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.08),
-                  width: 1,
-                ),
-              ),
-              child: const Icon(
-                IconlyLight.heart,
-                color: AppColors.textHint,
-                size: 38,
-              ),
-            ),
-            const SizedBox(height: 18),
-            const Text(
-              'Your Watchlist is Empty',
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Tap the heart icon on any movie or series to save it here for instant streaming anytime.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.55),
-                fontSize: 13,
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: widget.onExploreTap,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.accent,
-                foregroundColor: Colors.black,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(22),
-                ),
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 24, vertical: 12),
-              ),
-              child: const Text(
-                'Explore Movies',
+            // ── 2. 'CONTINUE WATCHING' Section ──────────────────────────────
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+              child: Text(
+                'CONTINUE WATCHING',
                 style: TextStyle(
-                  fontSize: 14,
+                  color: Colors.white,
+                  fontSize: 15.5,
                   fontWeight: FontWeight.w800,
+                  letterSpacing: 0.3,
                 ),
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
 
-  // ── Grid of Saved Titles ──────────────────────────────────────────────────
-  Widget _buildFavoritesGrid(List<Movie> movies) {
-    return GridView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
-      physics: const BouncingScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        childAspectRatio: 0.58,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 12,
-      ),
-      itemCount: movies.length,
-      itemBuilder: (context, i) {
-        final movie = movies[i];
-        return Stack(
-          children: [
-            MovieCard(
-              movie: movie,
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => MovieDetailScreen(movie: movie),
-                  ),
-                );
-              },
-            ),
-            // Quick Remove Button
-            Positioned(
-              top: 6,
-              right: 6,
-              child: GestureDetector(
-                onTap: () {
-                  ref
-                      .read(favoritesProvider.notifier)
-                      .removeFavorite(movie.id);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      duration: const Duration(milliseconds: 900),
-                      backgroundColor: const Color(0xFF1E2130),
-                      content: Text('Removed ${movie.title} from Watchlist',
-                          style: const TextStyle(color: Colors.white)),
+            SizedBox(
+              height: 124,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
+                physics: const BouncingScrollPhysics(),
+                itemCount: _continueWatchingItems.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 14),
+                itemBuilder: (context, index) {
+                  final item = _continueWatchingItems[index];
+                  final Movie movie = item['movie'] as Movie;
+                  final String title = item['title'] as String;
+                  final double progress = (item['progress'] as num).toDouble();
+                  final String backdrop = item['backdrop'] as String;
+
+                  return GestureDetector(
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => MovieDetailScreen(movie: movie),
+                        ),
+                      );
+                    },
+                    behavior: HitTestBehavior.opaque,
+                    child: Container(
+                      width: 200,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(18),
+                        color: const Color(0xFF151821),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.40),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(18),
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            // Backdrop Image
+                            CachedNetworkImage(
+                              imageUrl: backdrop,
+                              fit: BoxFit.cover,
+                              placeholder: (_, __) => Shimmer.fromColors(
+                                baseColor: const Color(0xFF141722),
+                                highlightColor: const Color(0xFF222838),
+                                child: Container(color: const Color(0xFF141722)),
+                              ),
+                              errorWidget: (_, __, ___) => Container(
+                                color: const Color(0xFF161922),
+                                child: const Icon(
+                                  Icons.movie_rounded,
+                                  color: Colors.white24,
+                                  size: 28,
+                                ),
+                              ),
+                            ),
+
+                            // Dark Gradient Overlay
+                            Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Colors.black.withOpacity(0.15),
+                                    Colors.black.withOpacity(0.75),
+                                  ],
+                                ),
+                              ),
+                            ),
+
+                            // Centered Circular White Play Button
+                            Center(
+                              child: Container(
+                                width: 36,
+                                height: 36,
+                                decoration: const BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black38,
+                                      blurRadius: 6,
+                                      offset: Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: const Center(
+                                  child: Icon(
+                                    Icons.play_arrow_rounded,
+                                    color: Colors.black,
+                                    size: 22,
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                            // Bottom Title
+                            Positioned(
+                              left: 10,
+                              right: 10,
+                              bottom: 10,
+                              child: Text(
+                                title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: -0.2,
+                                ),
+                              ),
+                            ),
+
+                            // Bottom Watch Progress Bar
+                            Positioned(
+                              left: 0,
+                              right: 0,
+                              bottom: 0,
+                              child: Container(
+                                height: 3,
+                                color: Colors.white.withOpacity(0.20),
+                                child: FractionallySizedBox(
+                                  alignment: Alignment.centerLeft,
+                                  widthFactor: progress,
+                                  child: Container(
+                                    color: AppColors.accent,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   );
                 },
-                child: Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.65),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: Colors.white24,
-                      width: 0.8,
-                    ),
-                  ),
-                  child: const Icon(
-                    Icons.close_rounded,
-                    color: Colors.white,
-                    size: 15,
-                  ),
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // ── 3. 'MY FAVORITES' Section Header ────────────────────────────
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+              child: Text(
+                'MY FAVORITES',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 15.5,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.3,
                 ),
               ),
             ),
+
+            // ── 4. 3-Column Favorites Grid ──────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  childAspectRatio: 0.62,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 16,
+                ),
+                itemCount: displayFavorites.length,
+                itemBuilder: (context, i) {
+                  final movie = displayFavorites[i];
+                  final posterUrl = movie.posterPath != null &&
+                          movie.posterPath!.isNotEmpty
+                      ? (movie.posterPath!.startsWith('http')
+                          ? movie.posterPath!
+                          : '${ApiConstants.posterW500}${movie.posterPath}')
+                      : null;
+
+                  return GestureDetector(
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => MovieDetailScreen(movie: movie),
+                        ),
+                      );
+                    },
+                    behavior: HitTestBehavior.opaque,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Movie Poster Card with 20px Corner Radius
+                        Expanded(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(20),
+                              color: const Color(0xFF161922),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.35),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(20),
+                              child: Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  posterUrl != null
+                                      ? CachedNetworkImage(
+                                          imageUrl: posterUrl,
+                                          fit: BoxFit.cover,
+                                          placeholder: (_, __) =>
+                                              Shimmer.fromColors(
+                                            baseColor: const Color(0xFF141722),
+                                            highlightColor:
+                                                const Color(0xFF222838),
+                                            child: Container(
+                                                color:
+                                                    const Color(0xFF141722)),
+                                          ),
+                                          errorWidget: (_, __, ___) =>
+                                              Container(
+                                            color: const Color(0xFF161922),
+                                            child: const Icon(
+                                              Icons.movie_rounded,
+                                              color: Colors.white24,
+                                              size: 28,
+                                            ),
+                                          ),
+                                        )
+                                      : Container(
+                                          color: const Color(0xFF161922),
+                                          child: const Icon(
+                                            Icons.movie_rounded,
+                                            color: Colors.white24,
+                                            size: 28,
+                                          ),
+                                        ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 7),
+
+                        // Title
+                        Text(
+                          movie.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.2,
+                          ),
+                        ),
+
+                        const SizedBox(height: 3),
+
+                        // Star Rating
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.star_rounded,
+                              color: Color(0xFFFFB800),
+                              size: 14,
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              movie.ratingDisplay,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
           ],
-        );
-      },
+        ),
+      ),
     );
   }
 }

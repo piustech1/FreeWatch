@@ -4,7 +4,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../data/models/vj.dart';
 
 /// Mechanical puzzle-piece cutout for the main solid gradient block.
-/// polygon(40% 0%, 100% 0%, 100% 100%, 45% 100%, 45% 70%, 25% 30%, 40% 30%)
+/// Shifted to ensure the left portrait/face is fully revealed and not cut off.
 class VjMainClipper extends CustomClipper<Path> {
   const VjMainClipper();
 
@@ -13,13 +13,14 @@ class VjMainClipper extends CustomClipper<Path> {
     final w = size.width;
     final h = size.height;
     final path = Path();
-    path.moveTo(w * 0.40, 0);
+    // Polygon giving left face ample room:
+    path.moveTo(w * 0.48, 0);
     path.lineTo(w, 0);
     path.lineTo(w, h);
-    path.lineTo(w * 0.45, h);
-    path.lineTo(w * 0.45, h * 0.70);
-    path.lineTo(w * 0.25, h * 0.30);
-    path.lineTo(w * 0.40, h * 0.30);
+    path.lineTo(w * 0.52, h);
+    path.lineTo(w * 0.52, h * 0.70);
+    path.lineTo(w * 0.35, h * 0.30);
+    path.lineTo(w * 0.48, h * 0.30);
     path.close();
     return path;
   }
@@ -28,9 +29,7 @@ class VjMainClipper extends CustomClipper<Path> {
   bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
 }
 
-/// Accent shape shifted left by 2% on horizontal cutout coordinates
-/// to create a uniform vibrant overlapping slice effect.
-/// polygon(38% 0%, 100% 0%, 100% 100%, 43% 100%, 43% 70%, 23% 30%, 38% 30%)
+/// Accent shape shifted left by 2% to create the uniform vibrant slice.
 class VjAccentClipper extends CustomClipper<Path> {
   const VjAccentClipper();
 
@@ -39,13 +38,13 @@ class VjAccentClipper extends CustomClipper<Path> {
     final w = size.width;
     final h = size.height;
     final path = Path();
-    path.moveTo(w * 0.38, 0);
+    path.moveTo(w * 0.46, 0);
     path.lineTo(w, 0);
     path.lineTo(w, h);
-    path.lineTo(w * 0.43, h);
-    path.lineTo(w * 0.43, h * 0.70);
-    path.lineTo(w * 0.23, h * 0.30);
-    path.lineTo(w * 0.38, h * 0.30);
+    path.lineTo(w * 0.50, h);
+    path.lineTo(w * 0.50, h * 0.70);
+    path.lineTo(w * 0.33, h * 0.30);
+    path.lineTo(w * 0.46, h * 0.30);
     path.close();
     return path;
   }
@@ -149,7 +148,7 @@ class VjCardTheme {
   }
 }
 
-/// Available VJ panoramic interlocking card matching the requested mechanical puzzle cutout design.
+/// Compact Available VJ interlocking card with left-aligned face visibility.
 class VjCard extends StatefulWidget {
   final Vj vj;
   final VoidCallback? onTap;
@@ -162,8 +161,8 @@ class VjCard extends StatefulWidget {
     required this.vj,
     this.onTap,
     this.index,
-    this.width = 310,
-    this.height = 135,
+    this.width = 235,
+    this.height = 105,
   });
 
   @override
@@ -193,43 +192,49 @@ class _VjCardState extends State<VjCard> {
           width: widget.width,
           height: widget.height,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(18),
             color: const Color(0xFF111111),
             boxShadow: [
               BoxShadow(
                 color: theme.shadowColor,
-                blurRadius: 22,
-                offset: const Offset(0, 10),
-                spreadRadius: -4,
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+                spreadRadius: -3,
               ),
               BoxShadow(
-                color: Colors.black.withOpacity(0.55),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
+                color: Colors.black.withOpacity(0.50),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
               ),
             ],
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(18),
             child: Stack(
               fit: StackFit.expand,
               children: [
-                // ── 1. Base Layer: Grayscale Portrait (90% Opacity) ─────────
-                _buildVjImage(),
-
-                // ── 2. Dark Feathered Gradient on Left (60% width) ──────────
+                // ── 1. Base Layer: Grayscale Portrait Anchored to Left ──────
                 Positioned(
                   left: 0,
                   top: 0,
                   bottom: 0,
-                  width: widget.width * 0.60,
+                  width: widget.width * 0.54,
+                  child: _buildVjImage(),
+                ),
+
+                // ── 2. Dark Feathered Gradient on Left edge ─────────────────
+                Positioned(
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: widget.width * 0.35,
                   child: Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.centerLeft,
                         end: Alignment.centerRight,
                         colors: [
-                          Colors.black.withOpacity(0.60),
+                          Colors.black.withOpacity(0.50),
                           Colors.transparent,
                         ],
                       ),
@@ -266,14 +271,14 @@ class _VjCardState extends State<VjCard> {
                   ),
                 ),
 
-                // ── 5. Typography Container (Anchored to Right 55%) ──────────
+                // ── 5. Typography Container (Anchored to Right 52%) ──────────
                 Positioned(
                   right: 0,
                   top: 0,
                   bottom: 0,
-                  width: widget.width * 0.55,
+                  width: widget.width * 0.52,
                   child: Padding(
-                    padding: const EdgeInsets.only(right: 18, left: 10),
+                    padding: const EdgeInsets.only(right: 14, left: 6),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.end,
@@ -287,9 +292,9 @@ class _VjCardState extends State<VjCard> {
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.w900,
-                            fontSize: 21,
-                            letterSpacing: -0.4,
-                            height: 1.1,
+                            fontSize: 16.5,
+                            letterSpacing: -0.3,
+                            height: 1.15,
                           ),
                         ),
                         const SizedBox(height: 3),
@@ -300,8 +305,8 @@ class _VjCardState extends State<VjCard> {
                           textAlign: TextAlign.right,
                           style: TextStyle(
                             color: theme.subtitleColor,
-                            fontWeight: FontWeight.w500,
-                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 11.5,
                             letterSpacing: 0.1,
                           ),
                         ),
@@ -323,13 +328,13 @@ class _VjCardState extends State<VjCard> {
         ? CachedNetworkImage(
             imageUrl: widget.vj.imageUrl,
             fit: BoxFit.cover,
-            alignment: Alignment.topCenter,
+            alignment: Alignment.centerLeft, // Left aligned so face is clearly visible
             placeholder: (_, __) => Container(
               color: const Color(0xFF14161E),
               child: const Center(
                 child: SizedBox(
-                  width: 20,
-                  height: 20,
+                  width: 18,
+                  height: 18,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
                     valueColor: AlwaysStoppedAnimation<Color>(AppColors.accent),
@@ -342,17 +347,17 @@ class _VjCardState extends State<VjCard> {
         : Image.asset(
             widget.vj.imageUrl,
             fit: BoxFit.cover,
-            alignment: Alignment.topCenter,
+            alignment: Alignment.centerLeft, // Left aligned so face is clearly visible
             errorBuilder: (_, __, ___) => _fallbackPlaceholder(),
           );
 
-    // Apply high-contrast black & white grayscale matrix with 90% alpha
+    // Apply high-contrast black & white grayscale matrix
     return ColorFiltered(
       colorFilter: const ColorFilter.matrix(<double>[
         0.2126, 0.7152, 0.0722, 0, 0,
         0.2126, 0.7152, 0.0722, 0, 0,
         0.2126, 0.7152, 0.0722, 0, 0,
-        0,      0,      0,      0.90, 0,
+        0,      0,      0,      0.95, 0,
       ]),
       child: rawImage,
     );
@@ -365,7 +370,7 @@ class _VjCardState extends State<VjCard> {
         child: Icon(
           Icons.movie_creation_rounded,
           color: AppColors.textHint,
-          size: 28,
+          size: 24,
         ),
       ),
     );

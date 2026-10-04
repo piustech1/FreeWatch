@@ -50,7 +50,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF161822),
       body: SafeArea(
-        top: true,
+        top: false,
         bottom: false,
         child: ListView(
           physics: const BouncingScrollPhysics(),
@@ -526,7 +526,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         aspectRatio: 2 / 2.9,
         child: Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(16),
             color: const Color(0xFF1E2130),
             boxShadow: [
               BoxShadow(
@@ -537,7 +537,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ],
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(16),
             child: posterUrl != null
                 ? CachedNetworkImage(
                     imageUrl: posterUrl,

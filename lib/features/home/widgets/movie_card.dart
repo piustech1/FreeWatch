@@ -7,7 +7,8 @@ import '../../../data/models/movie.dart';
 import '../../../data/models/vj.dart';
 import '../../../shared/widgets/shimmer_loading.dart';
 
-/// Portrait movie poster card with small top-right purple VJ card and no bottom text
+/// Portrait movie poster card with 20px rounded corners, top-right VJ pill,
+/// and modern movie title, star rating, and release year underneath.
 class MovieCard extends StatelessWidget {
   final Movie movie;
   final VoidCallback? onTap;
@@ -17,7 +18,7 @@ class MovieCard extends StatelessWidget {
     super.key,
     required this.movie,
     this.onTap,
-    this.width = 135,
+    this.width = 130,
   });
 
   @override
@@ -26,8 +27,8 @@ class MovieCard extends StatelessWidget {
       builder: (context, constraints) {
         final cardWidth = (width.isFinite && width > 0)
             ? width
-            : (constraints.maxWidth.isFinite ? constraints.maxWidth : 135.0);
-        final posterHeight = cardWidth * 1.48;
+            : (constraints.maxWidth.isFinite ? constraints.maxWidth : 130.0);
+        final posterHeight = cardWidth * 1.38;
 
         final posterUrl = movie.posterPath != null
             ? (movie.posterPath!.startsWith('http')
@@ -40,41 +41,104 @@ class MovieCard extends StatelessWidget {
           behavior: HitTestBehavior.opaque,
           child: SizedBox(
             width: cardWidth,
-            height: posterHeight,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  // ── Poster Image ───────────────────────────────────────────
-                  posterUrl != null
-                      ? CachedNetworkImage(
-                          imageUrl: posterUrl,
-                          fit: BoxFit.cover,
-                          placeholder: (_, __) => MovieCardShimmer(
-                            width: cardWidth,
-                            height: posterHeight,
-                          ),
-                          errorWidget: (_, __, ___) => _PlaceholderPoster(
-                            width: cardWidth,
-                            height: posterHeight,
-                            title: movie.title,
-                          ),
-                        )
-                      : _PlaceholderPoster(
-                          width: cardWidth,
-                          height: posterHeight,
-                          title: movie.title,
-                        ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // ── 1. Poster with 20px Corner Radius & Top-Right VJ Pill ──
+                SizedBox(
+                  width: cardWidth,
+                  height: posterHeight,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        posterUrl != null
+                            ? CachedNetworkImage(
+                                imageUrl: posterUrl,
+                                fit: BoxFit.cover,
+                                placeholder: (_, __) => MovieCardShimmer(
+                                  width: cardWidth,
+                                  height: posterHeight,
+                                ),
+                                errorWidget: (_, __, ___) => _PlaceholderPoster(
+                                  width: cardWidth,
+                                  height: posterHeight,
+                                  title: movie.title,
+                                ),
+                              )
+                            : _PlaceholderPoster(
+                                width: cardWidth,
+                                height: posterHeight,
+                                title: movie.title,
+                              ),
 
-                  // ── Top-Right Purple VJ Badge ──────────────────────────────
-                  Positioned(
-                    top: 6,
-                    right: 6,
-                    child: _buildVjBadge(movie),
+                        // Top-Right Purple VJ Badge Pill
+                        Positioned(
+                          top: 6,
+                          right: 6,
+                          child: _buildVjBadge(movie),
+                        ),
+                      ],
+                    ),
                   ),
-                ],
-              ),
+                ),
+
+                const SizedBox(height: 7),
+
+                // ── 2. Movie Title ──────────────────────────────────────────
+                Text(
+                  movie.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+
+                const SizedBox(height: 3),
+
+                // ── 3. Modern Star Rating & Release Year Row ────────────────
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.star_rounded,
+                      color: Color(0xFFFFB800),
+                      size: 14,
+                    ),
+                    const SizedBox(width: 3),
+                    Text(
+                      movie.ratingDisplay,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      '•',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.35),
+                        fontSize: 10,
+                      ),
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      movie.year.isNotEmpty ? movie.year : '2024',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.60),
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         );
@@ -127,7 +191,7 @@ class MovieCard extends StatelessWidget {
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => const Icon(
                     Icons.mic,
-                    size: 10,
+                    size: 9,
                     color: Colors.white,
                   ),
                 ),
@@ -141,7 +205,7 @@ class MovieCard extends StatelessWidget {
               color: Colors.white,
               fontSize: 9.5,
               fontWeight: FontWeight.w700,
-              letterSpacing: 0.2,
+              letterSpacing: 0.1,
             ),
           ),
         ],
@@ -153,12 +217,12 @@ class MovieCard extends StatelessWidget {
 class _PlaceholderPoster extends StatelessWidget {
   final double width;
   final double height;
-  final String? title;
+  final String title;
 
   const _PlaceholderPoster({
     required this.width,
     required this.height,
-    this.title,
+    required this.title,
   });
 
   @override
@@ -166,41 +230,22 @@ class _PlaceholderPoster extends StatelessWidget {
     return Container(
       width: width,
       height: height,
-      decoration: const BoxDecoration(
-        color: AppColors.surfaceLight,
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF252836),
-            Color(0xFF161822),
-          ],
-        ),
-      ),
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(
-            Icons.movie_filter_rounded,
-            color: AppColors.textHint,
-            size: 32,
-          ),
-          if (title != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              title!,
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-              ),
+      color: AppColors.surfaceLight,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Text(
+            title,
+            maxLines: 2,
+            textAlign: TextAlign.center,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: AppColors.textHint,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
             ),
-          ],
-        ],
+          ),
+        ),
       ),
     );
   }

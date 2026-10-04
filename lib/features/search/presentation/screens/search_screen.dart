@@ -30,6 +30,19 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   String _searchQuery = '';
   bool _isGridView = false;
 
+  @override
+  void initState() {
+    super.initState();
+    _searchController.clear();
+    _searchQuery = '';
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   // Filter selections
   String _selectedType = 'Movies';
   String _selectedGenre = 'Adventure';
@@ -105,12 +118,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     'Thriller',
     'Family',
   ];
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
 
   void _openCategory(String category) {
     setState(() {
@@ -470,6 +477,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 onTap: () {
                   setState(() {
                     _searchStep = 1;
+                    _searchController.clear();
+                    _searchQuery = '';
                   });
                 },
                 behavior: HitTestBehavior.opaque,
@@ -546,6 +555,23 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                               ),
                             ),
                           ),
+                          if (_searchController.text.isNotEmpty)
+                            GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _searchController.clear();
+                                  _searchQuery = '';
+                                });
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.only(right: 6),
+                                child: Icon(
+                                  Icons.close_rounded,
+                                  color: Colors.white.withOpacity(0.70),
+                                  size: 20,
+                                ),
+                              ),
+                            ),
                           Icon(
                             Icons.search_rounded,
                             color: Colors.white.withOpacity(0.65),
@@ -861,7 +887,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               Expanded(
                 child: Container(
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(20),
                     color: const Color(0xFF161922),
                     boxShadow: [
                       BoxShadow(
@@ -872,7 +898,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     ],
                   ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(20),
                     child: Stack(
                       fit: StackFit.expand,
                       children: [
