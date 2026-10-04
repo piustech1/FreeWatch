@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../../core/constants/app_colors.dart';
 import '../../../data/models/vj.dart';
 import 'vj_card.dart';
 
-/// Horizontally scrolling row of VJ cards matching the requested rectangular design
+/// Horizontally scrolling row of Available VJs with interlocking panoramic cards.
 class VjSection extends StatelessWidget {
   final List<Vj> vjs;
   final void Function(Vj vj)? onVjTap;
@@ -25,28 +24,32 @@ class VjSection extends StatelessWidget {
       children: [
         // ── Section Header ──────────────────────────────────────────────────
         Padding(
-          padding: const EdgeInsets.fromLTRB(18, 16, 18, 12),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 14),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               const Text(
-                'Available Vj\'s',
+                'Available VJs',
                 style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 19,
+                  color: Colors.white,
+                  fontSize: 22,
                   fontWeight: FontWeight.w800,
-                  letterSpacing: -0.3,
+                  letterSpacing: -0.4,
                 ),
               ),
               GestureDetector(
                 onTap: onSeeAll,
-                child: const Text(
-                  'See all',
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
+                behavior: HitTestBehavior.opaque,
+                child: const Padding(
+                  padding: EdgeInsets.only(bottom: 2),
+                  child: Text(
+                    'See all',
+                    style: TextStyle(
+                      color: Color(0xFFC084FC),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
               ),
@@ -54,19 +57,20 @@ class VjSection extends StatelessWidget {
           ),
         ),
 
-        // ── Horizontally Scrolling Rectangular VJ Cards ─────────────────────
+        // ── Horizontally Scrolling Interlocking Panoramic VJ Cards ──────────
         SizedBox(
-          height: 108,
+          height: 155,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 18),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
             physics: const BouncingScrollPhysics(),
             itemCount: vjs.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            separatorBuilder: (_, __) => const SizedBox(width: 16),
             itemBuilder: (context, index) {
               final vj = vjs[index];
               return VjCard(
                 vj: vj,
+                index: index,
                 onTap: () => onVjTap?.call(vj),
               );
             },
