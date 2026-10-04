@@ -253,28 +253,28 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
 
                 // Centered circular white play button on backdrop art
                 SizedBox(
-                  height: 130,
+                  height: 80,
                   child: Center(
                     child: GestureDetector(
                       onTap: () => _playTrailer(context),
                       child: Container(
-                        width: 58,
-                        height: 58,
+                        width: 52,
+                        height: 52,
                         decoration: BoxDecoration(
                           color: Colors.white,
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withOpacity(0.45),
-                              blurRadius: 16,
-                              offset: const Offset(0, 4),
+                              blurRadius: 14,
+                              offset: const Offset(0, 3),
                             ),
                           ],
                         ),
                         child: const Icon(
                           Icons.play_arrow_rounded,
                           color: Colors.black,
-                          size: 38,
+                          size: 34,
                         ),
                       ),
                     ),
@@ -1580,28 +1580,28 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                       ),
                       // Backdrop center circular white play button
                       SizedBox(
-                        height: 130,
+                        height: 80,
                         child: Center(
                           child: GestureDetector(
                             onTap: () => _playTrailer(context),
                             child: Container(
-                              width: 58,
-                              height: 58,
+                              width: 52,
+                              height: 52,
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 shape: BoxShape.circle,
                                 boxShadow: [
                                   BoxShadow(
                                     color: Colors.black.withOpacity(0.45),
-                                    blurRadius: 16,
-                                    offset: const Offset(0, 4),
+                                    blurRadius: 14,
+                                    offset: const Offset(0, 3),
                                   ),
                                 ],
                               ),
                               child: const Icon(
                                 Icons.play_arrow_rounded,
                                 color: Colors.black,
-                                size: 38,
+                                size: 34,
                               ),
                             ),
                           ),

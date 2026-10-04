@@ -166,7 +166,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         // ── Standard Section Titles (No Subtitles) ──────────────────
         _buildMovieSection(
           context,
-          title: 'Latest to Rewatch',
+          title: 'Latest on FreeWatch',
           asyncValue: latestToRewatchAsync,
         ),
 
