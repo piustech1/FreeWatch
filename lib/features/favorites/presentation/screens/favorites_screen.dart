@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,8 +11,8 @@ import '../../../movie_detail/presentation/screens/movie_detail_screen.dart';
 import '../providers/favorites_provider.dart';
 
 /// 1:1 Cinematic Watchlist Screen matching reference design (media_1791104270305.png):
-/// - Back arrow with centered uppercase 'WATCHLIST' title
-/// - 'CONTINUE WATCHING' horizontal landscape cards with centered white play button,
+/// - iOS frosted glass back button with centered uppercase 'WATCHLIST' title
+/// - 'CONTINUE WATCHING' horizontal landscape cards with centered frosted play button,
 ///   movie title, and bottom watch progress bar
 /// - 'MY FAVORITES' 3-column poster grid with 20px rounded corners, movie title, and yellow star rating
 class FavoritesScreen extends ConsumerStatefulWidget {
@@ -82,7 +83,7 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
           physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.only(bottom: 120),
           children: [
-            // ── 1. Sub-Header: Back Arrow + Centered 'WATCHLIST' Title ──────
+            // ── 1. Sub-Header: iOS Frosted Back Button + Centered 'WATCHLIST' Title ──────
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 18),
               child: Stack(
@@ -95,12 +96,29 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                         widget.onExploreTap?.call();
                       },
                       behavior: HitTestBehavior.opaque,
-                      child: Container(
-                        padding: const EdgeInsets.all(6),
-                        child: const Icon(
-                          Icons.arrow_back,
-                          color: Colors.white,
-                          size: 24,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(18),
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                          child: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.08),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.14),
+                                width: 0.8,
+                              ),
+                            ),
+                            child: const Center(
+                              child: Icon(
+                                Icons.arrow_back_ios_new_rounded,
+                                color: Colors.white,
+                                size: 16,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -161,6 +179,10 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(18),
                         color: const Color(0xFF151821),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.12),
+                          width: 0.8,
+                        ),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withOpacity(0.40),
@@ -207,27 +229,33 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                               ),
                             ),
 
-                            // Centered Circular White Play Button
+                            // Centered Circular White Frosted Play Button
                             Center(
-                              child: Container(
-                                width: 36,
-                                height: 36,
-                                decoration: const BoxDecoration(
-                                  color: Colors.white,
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black38,
-                                      blurRadius: 6,
-                                      offset: Offset(0, 2),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(18),
+                                child: BackdropFilter(
+                                  filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                                  child: Container(
+                                    width: 36,
+                                    height: 36,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.92),
+                                      shape: BoxShape.circle,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.35),
+                                          blurRadius: 6,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
                                     ),
-                                  ],
-                                ),
-                                child: const Center(
-                                  child: Icon(
-                                    Icons.play_arrow_rounded,
-                                    color: Colors.black,
-                                    size: 22,
+                                    child: const Center(
+                                      child: Icon(
+                                        Icons.play_arrow_rounded,
+                                        color: Colors.black,
+                                        size: 22,
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ),
@@ -333,6 +361,10 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(20),
                               color: const Color(0xFF161922),
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.10),
+                                width: 0.8,
+                              ),
                               boxShadow: [
                                 BoxShadow(
                                   color: Colors.black.withOpacity(0.35),

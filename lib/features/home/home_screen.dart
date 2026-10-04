@@ -105,7 +105,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   // ── Tab 0: Home Feed ───────────────────────────────────────────────────────
   Widget _buildHomeFeed(BuildContext context) {
     final trendingAsync = ref.watch(trendingMoviesProvider);
-    final latestToRewatchAsync = ref.watch(latestToRewatchProvider);
     final latestUploadsAsync = ref.watch(latestUploadsProvider);
     final seriesAsync = ref.watch(seriesProvider);
     final actionAsync = ref.watch(actionMoviesProvider);
@@ -163,65 +162,77 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
         ),
 
-        // ── Standard Section Titles (No Subtitles) ──────────────────
+        // ── Standard Section Titles with iOS Icons ──────────────────
         _buildMovieSection(
           context,
           title: 'Latest on FreeWatch',
-          asyncValue: latestToRewatchAsync,
-        ),
-
-        _buildMovieSection(
-          context,
-          title: 'Latest Uploads',
           asyncValue: latestUploadsAsync,
+          icon: Icons.auto_awesome_rounded,
+          iconColor: const Color(0xFF38BDF8),
         ),
 
         _buildMovieSection(
           context,
           title: 'Series',
           asyncValue: seriesAsync,
+          icon: Icons.tv_rounded,
+          iconColor: const Color(0xFFE50914),
         ),
 
         _buildMovieSection(
           context,
           title: 'Action',
           asyncValue: actionAsync,
+          icon: Icons.local_fire_department_rounded,
+          iconColor: const Color(0xFFF97316),
         ),
 
         _buildMovieSection(
           context,
           title: 'Sci-Fi',
           asyncValue: sciFiAsync,
+          icon: Icons.rocket_launch_rounded,
+          iconColor: const Color(0xFFA855F7),
         ),
 
         _buildMovieSection(
           context,
           title: 'Romance',
           asyncValue: romanceAsync,
+          icon: Icons.favorite_rounded,
+          iconColor: const Color(0xFFEC4899),
         ),
 
         _buildMovieSection(
           context,
           title: 'Horror',
           asyncValue: horrorAsync,
+          icon: Icons.nightlight_round,
+          iconColor: const Color(0xFFEF4444),
         ),
 
         _buildMovieSection(
           context,
           title: 'Drama',
           asyncValue: dramaAsync,
+          icon: Icons.theater_comedy_rounded,
+          iconColor: const Color(0xFFF59E0B),
         ),
 
         _buildMovieSection(
           context,
           title: 'Animation',
           asyncValue: animationAsync,
+          icon: Icons.animation_rounded,
+          iconColor: const Color(0xFF10B981),
         ),
 
         _buildMovieSection(
           context,
           title: 'Family',
           asyncValue: familyAsync,
+          icon: Icons.family_restroom_rounded,
+          iconColor: const Color(0xFF06B6D4),
         ),
 
         // ── Space for Floating Nav Bar ────────────────────────────
@@ -234,6 +245,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     BuildContext context, {
     required String title,
     required AsyncValue<List<Movie>> asyncValue,
+    IconData? icon,
+    Color? iconColor,
   }) {
     return SliverToBoxAdapter(
       child: asyncValue.when(
@@ -242,12 +255,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           return MovieSection(
             title: title,
             movies: movies,
+            icon: icon,
+            iconColor: iconColor,
             onMovieTap: _openMovieDetail,
             onSeeAll: () {
               Navigator.of(context).push(
                 MovieGridScreen.routeForCategory(
                   title: title,
                   movies: movies,
+                  icon: icon,
+                  iconColor: iconColor,
                 ),
               );
             },
@@ -256,6 +273,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         loading: () => MovieSection(
           title: title,
           isLoading: true,
+          icon: icon,
+          iconColor: iconColor,
         ),
         error: (_, __) => const SizedBox.shrink(),
       ),

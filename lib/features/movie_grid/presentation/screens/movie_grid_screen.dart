@@ -11,22 +11,28 @@ import '../../../../data/models/vj.dart';
 import '../../../home/providers/home_providers.dart';
 import '../../../home/widgets/floating_nav_bar.dart';
 import '../../../movie_detail/presentation/screens/movie_detail_screen.dart';
+import '../../../notifications/presentation/screens/notifications_screen.dart';
+import '../../../../shared/widgets/free_watch_top_app_bar.dart';
 
 /// 1:1 Cinematic 3-Column Movie Grid Screen matching reference design:
-/// - Displays when a user clicks any VJ card (branded purple capsule with circular VJ photo & name)
-/// - Displays when a user clicks "See All" on any movie section (title e.g. "Fresh Drops", "Drama")
+/// - Fixed FreeWatchTopAppBar matching home and details screens
+/// - iOS frosted glass back button and VJ/category subheader bar
 /// - 3-column movie grid with top VJ badge pill, movie poster, and bottom star rating + release year
 /// - Persistent floating bottom navigation bar connected to global tab switcher
 class MovieGridScreen extends ConsumerWidget {
   final String title;
   final Vj? vj;
   final List<Movie> movies;
+  final IconData? icon;
+  final Color? iconColor;
 
   const MovieGridScreen({
     super.key,
     required this.title,
     this.vj,
     required this.movies,
+    this.icon,
+    this.iconColor,
   });
 
   /// Factory constructor for opening movies translated by a specific VJ
@@ -41,16 +47,20 @@ class MovieGridScreen extends ConsumerWidget {
     );
   }
 
-  /// Factory constructor for opening section movies (e.g. "Fresh Drops", "Drama")
+  /// Factory constructor for opening section movies (e.g. "Latest on FreeWatch", "Drama")
   static MaterialPageRoute routeForCategory({
     required String title,
     required List<Movie> movies,
+    IconData? icon,
+    Color? iconColor,
   }) {
     return MaterialPageRoute(
       builder: (_) => MovieGridScreen(
         title: title,
         vj: null,
         movies: movies,
+        icon: icon,
+        iconColor: iconColor,
       ),
     );
   }
@@ -67,52 +77,115 @@ class MovieGridScreen extends ConsumerWidget {
           children: [
             Column(
               children: [
-                // ── Top Header / App Bar ─────────────────────────────────────
+                // ── Persistent Top App Bar ─────────────────────────────────
+                FreeWatchTopAppBar(
+                  onSearchTap: () => navigateToBottomNavTab(context, ref, 1),
+                  onNotificationTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const NotificationsScreen(),
+                      ),
+                    );
+                  },
+                ),
+
+                // ── iOS Frosted Glass Sub-Header Bar ────────────────────────
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+                  padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      // White circular back button matching reference design
+                      // iOS Frosted Glass Back Button
                       GestureDetector(
                         onTap: () => Navigator.pop(context),
-                        child: Container(
-                          width: 36,
-                          height: 36,
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black38,
-                                blurRadius: 6,
-                                offset: Offset(0, 2),
+                        behavior: HitTestBehavior.opaque,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(18),
+                          child: BackdropFilter(
+                            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                            child: Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.08),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.14),
+                                  width: 0.8,
+                                ),
                               ),
-                            ],
-                          ),
-                          child: const Center(
-                            child: Icon(
-                              Icons.arrow_back_rounded,
-                              color: Colors.black,
-                              size: 20,
+                              child: const Center(
+                                child: Icon(
+                                  Icons.arrow_back_ios_new_rounded,
+                                  color: Colors.white,
+                                  size: 16,
+                                ),
+                              ),
                             ),
                           ),
                         ),
                       ),
 
-                      // Center Title: Branded VJ purple capsule or bold section title
+                      // Center Title: Branded VJ purple capsule or bold section title with icon
                       if (vj != null)
                         _buildBrandedVjCapsule(vj!)
                       else
-                        Text(
-                          title,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 19,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: -0.3,
-                          ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (icon != null) ...[
+                              Container(
+                                width: 28,
+                                height: 28,
+                                decoration: BoxDecoration(
+                                  color: (iconColor ?? AppColors.accent).withOpacity(0.16),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: (iconColor ?? AppColors.accent).withOpacity(0.35),
+                                    width: 0.8,
+                                  ),
+                                ),
+                                child: Center(
+                                  child: Icon(
+                                    icon,
+                                    size: 14,
+                                    color: iconColor ?? AppColors.accent,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                            ],
+                            Text(
+                              title,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: -0.3,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.08),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.12),
+                                  width: 0.6,
+                                ),
+                              ),
+                              child: Text(
+                                '${movies.length}',
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.70),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
 
                       // Right spacer to keep center title symmetrically aligned

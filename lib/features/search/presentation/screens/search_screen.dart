@@ -122,8 +122,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   void _openCategory(String category) {
     setState(() {
       _selectedCategory = category;
-      _searchController.text = category;
-      _searchQuery = category;
+      _searchController.clear();
+      _searchQuery = '';
       _searchStep = 2;
     });
   }
@@ -538,6 +538,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                                   _searchQuery = val.trim();
                                 });
                               },
+                              onSubmitted: (val) {
+                                final query = val.trim();
+                                setState(() {
+                                  _searchQuery = query;
+                                  _searchController.clear();
+                                });
+                              },
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 15,
@@ -587,69 +594,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           ),
         ),
 
-        // ── Horizontal Category / Genre Filter Pills Row ────────────────────
-        SizedBox(
-          height: 38,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            physics: const BouncingScrollPhysics(),
-            itemCount: _quickPillGenres.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 8),
-            itemBuilder: (context, i) {
-              final genre = _quickPillGenres[i];
-              final isSelected =
-                  _selectedCategory.toLowerCase() == genre.toLowerCase();
-              return GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _selectedCategory = genre;
-                    _searchController.text = genre;
-                    _searchQuery = genre;
-                  });
-                },
-                behavior: HitTestBehavior.opaque,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? const Color(0xFF2E3344)
-                            : const Color(0xFF161922).withOpacity(0.65),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: isSelected
-                              ? Colors.white.withOpacity(0.30)
-                              : Colors.white.withOpacity(0.08),
-                          width: 1,
-                        ),
-                      ),
-                      child: Center(
-                        child: Text(
-                          genre,
-                          style: TextStyle(
-                            color: isSelected ? Colors.white : Colors.white60,
-                            fontSize: 13,
-                            fontWeight: isSelected
-                                ? FontWeight.w700
-                                : FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-
-        const SizedBox(height: 16),
+        const SizedBox(height: 8),
 
         // ── Section Header with Sliders Filter & Arrangement Toggle ────────
         Padding(
@@ -1216,6 +1161,104 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             physics: const BouncingScrollPhysics(),
             padding: const EdgeInsets.symmetric(horizontal: 18),
             children: [
+              // ── Quick Select Genre Pills (Frosted Glass) ───────────────
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.bolt_rounded,
+                          color: Color(0xFFC084FC),
+                          size: 16,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'QUICK SELECT GENRE',
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.55),
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      height: 38,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        physics: const BouncingScrollPhysics(),
+                        itemCount: _quickPillGenres.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 8),
+                        itemBuilder: (context, i) {
+                          final genre = _quickPillGenres[i];
+                          final isSelected =
+                              _selectedGenre.toLowerCase() == genre.toLowerCase() ||
+                              _selectedCategory.toLowerCase() == genre.toLowerCase();
+                          return GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _selectedGenre = genre;
+                                _selectedCategory = genre;
+                              });
+                            },
+                            behavior: HitTestBehavior.opaque,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(19),
+                              child: BackdropFilter(
+                                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? const Color(0xFF7C3AED).withOpacity(0.70)
+                                        : const Color(0xFF161922).withOpacity(0.65),
+                                    borderRadius: BorderRadius.circular(19),
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? const Color(0xFFA78BFA).withOpacity(0.80)
+                                          : Colors.white.withOpacity(0.10),
+                                      width: 1,
+                                    ),
+                                    boxShadow: isSelected
+                                        ? [
+                                            BoxShadow(
+                                              color: const Color(0xFF7C3AED).withOpacity(0.35),
+                                              blurRadius: 8,
+                                              offset: const Offset(0, 2),
+                                            ),
+                                          ]
+                                        : null,
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      genre,
+                                      style: TextStyle(
+                                        color: isSelected ? Colors.white : Colors.white70,
+                                        fontSize: 13,
+                                        fontWeight: isSelected
+                                            ? FontWeight.w700
+                                            : FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
               // 1. Type Section (Expanded Radio Options in 2x2 grid)
               _buildAccordionCard(
                 title: 'Type',
