@@ -85,24 +85,9 @@ class MovieCard extends StatelessWidget {
                   ),
                 ),
 
-                const SizedBox(height: 7),
+                const SizedBox(height: 6),
 
-                // ── 2. Movie Title ──────────────────────────────────────────
-                Text(
-                  movie.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.2,
-                  ),
-                ),
-
-                const SizedBox(height: 3),
-
-                // ── 3. Modern Star Rating & Release Year Row ────────────────
+                // ── Modern Star Rating & Release Year Row ────────────────
                 Row(
                   children: [
                     const Icon(

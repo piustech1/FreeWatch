@@ -83,58 +83,7 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
           physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.only(bottom: 120),
           children: [
-            // ── 1. Sub-Header: iOS Frosted Back Button + Centered 'WATCHLIST' Title ──────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 18),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: GestureDetector(
-                      onTap: () {
-                        widget.onExploreTap?.call();
-                      },
-                      behavior: HitTestBehavior.opaque,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(18),
-                        child: BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                          child: Container(
-                            width: 36,
-                            height: 36,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.08),
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: Colors.white.withOpacity(0.14),
-                                width: 0.8,
-                              ),
-                            ),
-                            child: const Center(
-                              child: Icon(
-                                Icons.arrow_back_ios_new_rounded,
-                                color: Colors.white,
-                                size: 16,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const Text(
-                    'WATCHLIST',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            const SizedBox(height: 12),
 
             // ── 2. 'CONTINUE WATCHING' Section ──────────────────────────────
             const Padding(

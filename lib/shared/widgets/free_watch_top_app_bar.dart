@@ -1,20 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iconly/iconly.dart';
 import '../../core/constants/app_colors.dart';
+import '../../features/auth/presentation/providers/user_avatar_provider.dart';
 
-/// Persistent Top Header / App Bar with FreeWatch full logo, search, notification, and cast streaming buttons
-class FreeWatchTopAppBar extends StatelessWidget {
+/// Persistent Top Header / App Bar with FreeWatch full logo, search, notification, and profile avatar
+class FreeWatchTopAppBar extends ConsumerWidget {
   final VoidCallback onSearchTap;
   final VoidCallback onNotificationTap;
+  final VoidCallback? onProfileTap;
 
   const FreeWatchTopAppBar({
     super.key,
     required this.onSearchTap,
     required this.onNotificationTap,
+    this.onProfileTap,
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final avatar = ref.watch(userAvatarProvider);
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(18, 6, 12, 6),
       child: Row(
@@ -74,24 +80,31 @@ class FreeWatchTopAppBar extends StatelessWidget {
 
           const SizedBox(width: 14),
 
-          // ── Cast Button ───────────────────────────────────────────────────
-          IconButton(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  duration: Duration(milliseconds: 1000),
-                  backgroundColor: Color(0xFF161922),
-                  content: Text('Searching for Google Cast & AirPlay devices...',
-                      style: TextStyle(color: Colors.white)),
+          // ── User Selected Profile Avatar ──────────────────────────────────
+          GestureDetector(
+            onTap: onProfileTap,
+            behavior: HitTestBehavior.opaque,
+            child: Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.35),
+                  width: 1.2,
                 ),
-              );
-            },
-            padding: const EdgeInsets.all(6),
-            constraints: const BoxConstraints(),
-            icon: const Icon(
-              Icons.cast_rounded,
-              color: AppColors.textPrimary,
-              size: 23,
+              ),
+              child: ClipOval(
+                child: Image.asset(
+                  avatar.assetPath,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const Icon(
+                    IconlyBold.profile,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+              ),
             ),
           ),
         ],
@@ -99,3 +112,4 @@ class FreeWatchTopAppBar extends StatelessWidget {
     );
   }
 }
+

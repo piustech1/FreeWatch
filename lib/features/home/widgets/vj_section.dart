@@ -29,37 +29,16 @@ class VjSection extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Row(
+              const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFC084FC).withOpacity(0.16),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: const Color(0xFFC084FC).withOpacity(0.40),
-                        width: 1,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFFC084FC).withOpacity(0.20),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: const Center(
-                      child: Icon(
-                        Icons.mic_external_on_rounded,
-                        size: 16,
-                        color: Color(0xFFC084FC),
-                      ),
-                    ),
+                  Icon(
+                    Icons.mic_external_on_rounded,
+                    size: 22,
+                    color: Color(0xFFC084FC),
                   ),
-                  const SizedBox(width: 10),
-                  const Text(
+                  SizedBox(width: 8),
+                  Text(
                     'Available VJs',
                     style: TextStyle(
                       color: Colors.white,

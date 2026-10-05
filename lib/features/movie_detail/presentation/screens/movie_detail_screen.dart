@@ -102,6 +102,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                       ),
                     );
                   },
+                  onProfileTap: () => navigateToBottomNavTab(context, ref, 3),
                 ),
 
                 // ── 2. Scrollable Movie Details Content ─────────────────────
@@ -136,7 +137,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
 
                           // Bottom spacing for floating navigation pill
                           const SliverToBoxAdapter(
-                            child: SizedBox(height: 110),
+                            child: SizedBox(height: 30),
                           ),
                         ],
                       );
@@ -253,7 +254,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
 
                 // Centered circular white play button on backdrop art
                 SizedBox(
-                  height: 80,
+                  height: 210,
                   child: Center(
                     child: GestureDetector(
                       onTap: () => _playTrailer(context),
@@ -677,7 +678,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
     );
   }
 
-  // ── King Action Row: Wide White Play Button + Favorites (+) + Download (⬇) ─
+  // ── King Action Row: Vibrant Green Play Button + Solid Favorites & Downloads ─
   Widget _buildKingActionRow({
     required bool isSeries,
     required bool isFav,
@@ -686,18 +687,18 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
 
     return Row(
       children: [
-        // Main White Pill Play / Resume Button
+        // Main Vibrant Green Pill Play / Resume Button
         Expanded(
           child: GestureDetector(
             onTap: () => _playTrailer(context),
             child: Container(
               height: 50,
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: const Color(0xFF22C55E),
                 borderRadius: BorderRadius.circular(25),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.white.withOpacity(0.18),
+                    color: const Color(0xFF22C55E).withOpacity(0.35),
                     blurRadius: 14,
                     offset: const Offset(0, 3),
                   ),
@@ -708,14 +709,14 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                 children: [
                   const Icon(
                     Icons.play_arrow_rounded,
-                    color: Colors.black,
+                    color: Colors.white,
                     size: 28,
                   ),
                   const SizedBox(width: 6),
                   Text(
                     isSeries ? 'RESUME' : 'PLAY',
                     style: const TextStyle(
-                      color: Colors.black,
+                      color: Colors.white,
                       fontSize: 15,
                       fontWeight: FontWeight.w900,
                       letterSpacing: 0.5,
@@ -728,7 +729,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
         ),
         const SizedBox(width: 12),
 
-        // Add to Watchlist / Favorites Button
+        // Add to Watchlist / Favorites Button (Solid body + solid icon)
         GestureDetector(
           onTap: () {
             ref.read(favoritesProvider.notifier).toggleFavorite(movie);
@@ -751,21 +752,21 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: isFav
-                    ? AppColors.accent.withOpacity(0.6)
-                    : Colors.white.withOpacity(0.14),
-                width: 1,
+                    ? AppColors.accent.withOpacity(0.70)
+                    : Colors.white.withOpacity(0.16),
+                width: 1.2,
               ),
             ),
             child: Icon(
-              isFav ? Icons.check_rounded : Icons.add_rounded,
+              isFav ? Icons.bookmark_added_rounded : Icons.bookmark_add_rounded,
               color: isFav ? AppColors.accent : Colors.white,
-              size: 26,
+              size: 24,
             ),
           ),
         ),
         const SizedBox(width: 12),
 
-        // Download Button
+        // Download Button (Solid body + solid icon)
         GestureDetector(
           onTap: () => _downloadMovie(context),
           child: Container(
@@ -775,14 +776,14 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
               color: const Color(0xFF1E212B),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: Colors.white.withOpacity(0.14),
-                width: 1,
+                color: Colors.white.withOpacity(0.16),
+                width: 1.2,
               ),
             ),
             child: const Icon(
-              Icons.file_download_outlined,
+              Icons.download_rounded,
               color: Colors.white,
-              size: 26,
+              size: 24,
             ),
           ),
         ),
@@ -1293,29 +1294,40 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                     : CrossFadeState.showFirst,
                 duration: const Duration(milliseconds: 250),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 10),
               GestureDetector(
                 onTap: () => setState(() => _isSynopsisExpanded = !_isSynopsisExpanded),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      _isSynopsisExpanded ? 'Show less' : 'Read more',
-                      style: const TextStyle(
-                        color: AppColors.accent,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.14),
+                      width: 0.8,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _isSynopsisExpanded ? 'Show less' : 'Read more',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 4),
-                    Icon(
-                      _isSynopsisExpanded
-                          ? Icons.keyboard_arrow_up_rounded
-                          : Icons.keyboard_arrow_down_rounded,
-                      color: AppColors.accent,
-                      size: 18,
-                    ),
-                  ],
+                      const SizedBox(width: 4),
+                      Icon(
+                        _isSynopsisExpanded
+                            ? Icons.keyboard_arrow_up_rounded
+                            : Icons.keyboard_arrow_down_rounded,
+                        color: Colors.white70,
+                        size: 16,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -1736,7 +1748,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
           ),
         ),
         const SliverToBoxAdapter(
-          child: SizedBox(height: 110),
+          child: SizedBox(height: 30),
         ),
       ],
     );

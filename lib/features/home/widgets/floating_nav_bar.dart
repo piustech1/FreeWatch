@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iconly/iconly.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../auth/presentation/providers/user_avatar_provider.dart';
 
 /// Docked bottom navigation bar matching the modern reference layout:
 /// pure black background, subtle hairline top divider, zero container outlines,
@@ -19,8 +18,6 @@ class FloatingNavBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final avatar = ref.watch(userAvatarProvider);
-
     return Container(
       decoration: const BoxDecoration(
         color: Color(0xFF000000),
@@ -58,32 +55,6 @@ class FloatingNavBar extends ConsumerWidget {
               ),
               _NavBarItem(
                 icon: IconlyBold.profile,
-                customIcon: Container(
-                  width: 24,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: selectedIndex == 3
-                          ? AppColors.accent
-                          : Colors.white.withOpacity(0.4),
-                      width: selectedIndex == 3 ? 1.8 : 1.0,
-                    ),
-                  ),
-                  child: ClipOval(
-                    child: Image.asset(
-                      avatar.assetPath,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Icon(
-                        IconlyBold.profile,
-                        color: selectedIndex == 3
-                            ? AppColors.accent
-                            : const Color(0xFF8E8E93),
-                        size: 20,
-                      ),
-                    ),
-                  ),
-                ),
                 label: 'Profile',
                 isSelected: selectedIndex == 3,
                 onTap: () => onItemSelected(3),
@@ -98,14 +69,12 @@ class FloatingNavBar extends ConsumerWidget {
 
 class _NavBarItem extends StatelessWidget {
   final IconData icon;
-  final Widget? customIcon;
   final String label;
   final bool isSelected;
   final VoidCallback onTap;
 
   const _NavBarItem({
     required this.icon,
-    this.customIcon,
     required this.label,
     required this.isSelected,
     required this.onTap,
@@ -125,12 +94,11 @@ class _NavBarItem extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            customIcon ??
-                Icon(
-                  icon,
-                  color: isSelected ? activeColor : inactiveIconColor,
-                  size: 23,
-                ),
+            Icon(
+              icon,
+              color: isSelected ? activeColor : inactiveIconColor,
+              size: 23,
+            ),
             const SizedBox(height: 4),
             Text(
               label,

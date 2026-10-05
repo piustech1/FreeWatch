@@ -1,3 +1,5 @@
+import '../../core/constants/api_constants.dart';
+
 /// TMDB Movie model
 class Movie {
   final int id;
@@ -23,6 +25,13 @@ class Movie {
     this.genreIds = const [],
     this.popularity,
   });
+
+  /// Full resolved poster URL (handles full URLs and TMDB relative paths)
+  String get posterUrl {
+    if (posterPath == null || posterPath!.isEmpty) return '';
+    if (posterPath!.startsWith('http')) return posterPath!;
+    return '${ApiConstants.posterW500}$posterPath';
+  }
 
   /// Release year shorthand
   String get year => releaseDate != null && releaseDate!.length >= 4

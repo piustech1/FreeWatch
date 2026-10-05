@@ -32,8 +32,6 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
-  String _streamingQuality = 'Auto (Up to 4K)';
-  String _audioLanguage = 'Luganda (VJ Dubbed)';
   int _cacheSizeMb = 142;
 
   // Collapsible section toggles
@@ -64,157 +62,81 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.only(bottom: 120),
           children: [
-            // ── Top Navigation Sub-Header (< PROFILE | 💎 Community) ─────────
+            // ── Top Header Spacer & Logout Button ─────────────────────────
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 20, 12),
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  // Back Arrow Button (Fully functional)
                   _buildGlassCircleButton(
-                    icon: Icons.chevron_left_rounded,
-                    iconSize: 28,
-                    onTap: () {
-                      if (Navigator.canPop(context)) {
-                        Navigator.pop(context);
-                      } else {
-                        navigateToBottomNavTab(context, ref, 0);
-                      }
-                    },
+                    icon: Icons.logout_rounded,
+                    iconSize: 18,
+                    iconColor: const Color(0xFFFF5252),
+                    tooltip: 'Log Out',
+                    onTap: _showSignOutDialog,
                   ),
+                ],
+              ),
+            ),
 
-                  // Center Screen Title
-                  const Text(
-                    'PROFILE',
-                    style: TextStyle(
+            // ── Prominent Avatar & Identity ──────────────────────────────────
+            Center(
+              child: _buildProminentUserAvatar(avatar, profile),
+            ),
+
+            const SizedBox(height: 12),
+
+            // Name + Verified Badge
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Flexible(
+                  child: Text(
+                    profile.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 15,
+                      fontSize: 22,
                       fontWeight: FontWeight.w900,
-                      letterSpacing: 1.2,
+                      letterSpacing: -0.3,
                     ),
                   ),
+                ),
+                const SizedBox(width: 6),
+                const Icon(
+                  Icons.verified_rounded,
+                  color: Color(0xFF38BDF8),
+                  size: 20,
+                ),
+              ],
+            ),
 
-                  // Top Right: VIP Community Gem Badge
-                  _buildCommunityGemBadge(),
-                ],
+            const SizedBox(height: 4),
+
+            // User Bio / Email
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Text(
+                  profile.bio,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Color(0xFF9E9EA7),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w400,
+                    height: 1.25,
+                  ),
+                ),
               ),
             ),
 
-            // ── User Identity Block (Avatar + Verified Name + Edit + Logout) ──
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 6, 20, 16),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // Circular Avatar with direct asset rendering & edit badge
-                  _buildUserAvatarWidget(avatar, profile),
+            const SizedBox(height: 18),
 
-                  const SizedBox(width: 16),
-
-                  // Name & Verified Badge Column
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Flexible(
-                              child: Text(
-                                profile.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: -0.3,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            const Icon(
-                              Icons.verified_rounded,
-                              color: Color(0xFF38BDF8),
-                              size: 19,
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          profile.bio,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Color(0xFF9E9EA7),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w400,
-                            height: 1.25,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(width: 10),
-
-                  // Action Buttons: Edit Modal & Logout Icon
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _buildGlassCircleButton(
-                        icon: Icons.edit_rounded,
-                        iconSize: 18,
-                        tooltip: 'Edit Profile',
-                        onTap: () => _openIosEditProfileModal(context, profile, avatar),
-                      ),
-                      const SizedBox(width: 10),
-                      _buildGlassCircleButton(
-                        icon: Icons.logout_rounded,
-                        iconSize: 18,
-                        iconColor: const Color(0xFFFF5252),
-                        tooltip: 'Log Out',
-                        onTap: _showSignOutDialog,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            // ── Inline Glassmorphic Stat Cards ──────────────────────────────
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _buildInlineStatCard(
-                      icon: Icons.schedule_rounded,
-                      iconColor: const Color(0xFF60A5FA),
-                      value: '${profile.avgWatchTimeHours} hrs',
-                      label: 'Avg Watch Time',
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _buildInlineStatCard(
-                      icon: Icons.file_download_done_rounded,
-                      iconColor: const Color(0xFF34D399),
-                      value: '${profile.totalDownloads} Movies',
-                      label: 'Downloads',
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _buildInlineStatCard(
-                      icon: Icons.movie_filter_rounded,
-                      iconColor: const Color(0xFFFBBF24),
-                      value: '${profile.moviesWatched}',
-                      label: 'Watched',
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            // ── Dual Inline Stat Card (Watched & Downloaded) ─────────────────
+            _buildDualInlineStatCard(profile),
 
             const SizedBox(height: 22),
 
@@ -249,7 +171,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
             const SizedBox(height: 22),
 
-            // ── Pure iOS Glassmorphic Settings (Playback & Settings) ─────────
+            // ── Settings (Clear Cache, App Version) & Community Banner ──────
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
@@ -258,7 +180,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   const Padding(
                     padding: EdgeInsets.only(left: 4, bottom: 10),
                     child: Text(
-                      'PLAYBACK & SETTINGS',
+                      'SETTINGS & SYSTEM',
                       style: TextStyle(
                         color: Color(0xFF8E92A4),
                         fontSize: 12,
@@ -269,26 +191,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ),
                   _buildGlassSettingsContainer([
                     _buildSettingsTile(
-                      icon: Icons.high_quality_rounded,
-                      iconColor: const Color(0xFF38BDF8),
-                      title: 'Streaming Quality',
-                      subtitle: _streamingQuality,
-                      onTap: _showQualityPicker,
-                    ),
-                    _buildSettingsDivider(),
-                    _buildSettingsTile(
-                      icon: Icons.record_voice_over_rounded,
-                      iconColor: const Color(0xFFA855F7),
-                      title: 'Default Translation Audio',
-                      subtitle: _audioLanguage,
-                      onTap: _showAudioPicker,
-                    ),
-                    _buildSettingsDivider(),
-                    _buildSettingsTile(
                       icon: Icons.cleaning_services_rounded,
                       iconColor: const Color(0xFF34D399),
                       title: 'Clear Cache',
-                      subtitle: '$_cacheSizeMb MB used',
+                      subtitle: '$_cacheSizeMb MB cached data',
                       trailing: GestureDetector(
                         onTap: _clearCache,
                         child: Container(
@@ -315,31 +221,48 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ),
                     _buildSettingsDivider(),
                     _buildSettingsTile(
-                      icon: Icons.info_outline_rounded,
-                      iconColor: const Color(0xFFFBBF24),
+                      icon: Icons.info_rounded,
+                      iconColor: const Color(0xFF38BDF8),
                       title: 'App Version',
-                      subtitle: 'FreeWatch v1.0.25 (Build 26)',
+                      subtitle: 'FreeWatch v1.0.28 (Build 29)',
                       trailing: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF10B981).withOpacity(0.18),
-                          borderRadius: BorderRadius.circular(6),
+                          color: const Color(0xFF38BDF8).withOpacity(0.16),
+                          borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: const Color(0xFF10B981).withOpacity(0.40),
+                            color: const Color(0xFF38BDF8).withOpacity(0.35),
                             width: 0.8,
                           ),
                         ),
-                        child: const Text(
-                          'Latest ✓',
-                          style: TextStyle(
-                            color: Color(0xFF34D399),
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'About',
+                              style: TextStyle(
+                                color: Color(0xFF38BDF8),
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            SizedBox(width: 3),
+                            Icon(
+                              Icons.arrow_forward_ios_rounded,
+                              size: 10,
+                              color: Color(0xFF38BDF8),
+                            ),
+                          ],
                         ),
                       ),
+                      onTap: () => _showAboutModal(context),
                     ),
                   ]),
+
+                  const SizedBox(height: 18),
+
+                  // ── Join Community Banner ──────────────────────────────────
+                  _buildCommunityBanner(context),
                 ],
               ),
             ),
@@ -390,51 +313,207 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  // ── Top Right VIP Community Gem Badge ──────────────────────────────────────
-  Widget _buildCommunityGemBadge() {
+  // ── Prominent User Avatar with Overlaid Edit Button ────────────────────────
+  Widget _buildProminentUserAvatar(AvatarItem avatar, UserProfile profile) {
     return GestureDetector(
-      onTap: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Row(
-              children: [
-                Icon(Icons.diamond_rounded, color: Color(0xFFF0ABFC), size: 18),
-                SizedBox(width: 8),
-                Text('FreeWatch VIP Community: Active Member'),
+      onTap: () => _openIosEditProfileModal(context, profile, avatar),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: 118,
+            height: 118,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: const Color(0xFFFFDE39).withOpacity(0.75),
+                width: 2.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFFFDE39).withOpacity(0.20),
+                  blurRadius: 18,
+                  offset: const Offset(0, 4),
+                ),
               ],
             ),
-            backgroundColor: const Color(0xFF2E1A47),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: ClipOval(
+              child: Image.asset(
+                avatar.assetPath,
+                width: 118,
+                height: 118,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const Icon(
+                  Icons.person_rounded,
+                  size: 64,
+                  color: Colors.white,
+                ),
+              ),
+            ),
           ),
-        );
-      },
+          Positioned(
+            bottom: 2,
+            right: 2,
+            child: Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: const Color(0xFF1E212B),
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 2),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.4),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.edit_rounded,
+                size: 16,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Dual Inline Stat Card (Watched & Downloaded) ───────────────────────────
+  Widget _buildDualInlineStatCard(UserProfile profile) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
-              color: const Color(0xFF7E22CE).withOpacity(0.25),
-              borderRadius: BorderRadius.circular(16),
+              color: Colors.white.withOpacity(0.04),
+              borderRadius: BorderRadius.circular(18),
               border: Border.all(
-                color: const Color(0xFFA855F7).withOpacity(0.45),
+                color: Colors.white.withOpacity(0.12),
                 width: 0.8,
               ),
             ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
+            child: Row(
               children: [
-                Icon(Icons.diamond_rounded, color: Color(0xFFE879F9), size: 14),
-                SizedBox(width: 5),
-                Text(
-                  'Community',
-                  style: TextStyle(
-                    color: Color(0xFFF5D0FE),
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.3,
+                // Left: Watched (Blue-Purple Gradient Accent)
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          const Color(0xFF2563EB).withOpacity(0.18),
+                          const Color(0xFF7C3AED).withOpacity(0.10),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: const BorderRadius.horizontal(left: Radius.circular(18)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.movie_rounded,
+                          color: Color(0xFF60A5FA),
+                          size: 26,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '${profile.moviesWatched} Movies',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -0.2,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              const Text(
+                                'Watched',
+                                style: TextStyle(
+                                  color: Color(0xFF93C5FD),
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Hairline vertical separator
+                Container(
+                  width: 1,
+                  height: 44,
+                  color: Colors.white.withOpacity(0.10),
+                ),
+
+                // Right: Downloaded (Orange Gradient Accent)
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          const Color(0xFFEA580C).withOpacity(0.18),
+                          const Color(0xFFF97316).withOpacity(0.08),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: const BorderRadius.horizontal(right: Radius.circular(18)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.download_rounded,
+                          color: Color(0xFFFB923C),
+                          size: 26,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '${profile.totalDownloads} Movies',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -0.2,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              const Text(
+                                'Downloaded',
+                                style: TextStyle(
+                                  color: Color(0xFFFDBA74),
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -445,112 +524,240 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  // ── Circular User Avatar with Direct Asset Rendering & Edit Badge ──────────
-  Widget _buildUserAvatarWidget(AvatarItem avatar, UserProfile profile) {
-    return GestureDetector(
-      onTap: () => _openIosEditProfileModal(context, profile, avatar),
-      child: Stack(
-        children: [
-          Container(
-            width: 76,
-            height: 76,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: const Color(0xFFFFDE39).withOpacity(0.70),
-                width: 2,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFFFFDE39).withOpacity(0.18),
-                  blurRadius: 14,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            child: ClipOval(
-              child: Image.asset(
-                avatar.assetPath,
-                width: 76,
-                height: 76,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const Icon(
-                  Icons.person_rounded,
-                  size: 46,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: 0,
-            right: 0,
+  // ── About FreeWatch Glassmorphic Modal ─────────────────────────────────────
+  void _showAboutModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        return ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
             child: Container(
-              width: 24,
-              height: 24,
+              padding: const EdgeInsets.fromLTRB(22, 14, 22, 32),
               decoration: BoxDecoration(
-                color: const Color(0xFF222533),
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 1.5),
+                color: const Color(0xFF0F121C).withOpacity(0.94),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                border: Border(
+                  top: BorderSide(
+                    color: Colors.white.withOpacity(0.18),
+                    width: 1,
+                  ),
+                ),
               ),
-              child: const Icon(
-                Icons.edit_rounded,
-                size: 13,
-                color: Colors.white,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.25),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Image.asset(
+                    'assets/images/logo_full.png',
+                    height: 50,
+                    fit: BoxFit.contain,
+                  ),
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981).withOpacity(0.18),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: const Color(0xFF10B981).withOpacity(0.40),
+                        width: 0.8,
+                      ),
+                    ),
+                    child: const Text(
+                      'v1.0.28 (Build 29) • Stable Release',
+                      style: TextStyle(
+                        color: Color(0xFF34D399),
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'FreeWatch is your premier cinematic streaming destination for translated movies and blockbuster series, curated by Uganda\'s most renowned VJs.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.80),
+                      fontSize: 13.5,
+                      height: 1.45,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.04),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.08),
+                        width: 0.8,
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        _buildAboutFeatureRow(Icons.hd_rounded, '4K Ultra HD & Dolby Atmos streaming'),
+                        const SizedBox(height: 10),
+                        _buildAboutFeatureRow(Icons.offline_pin_rounded, 'Unlimited offline downloads'),
+                        const SizedBox(height: 10),
+                        _buildAboutFeatureRow(Icons.translate_rounded, 'VJ Junior, Jingo, Ice P & K-Davis translations'),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.accent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: const Text(
+                        'Done',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  // ── Inline Glassmorphic Stat Card ──────────────────────────────────────────
-  Widget _buildInlineStatCard({
-    required IconData icon,
-    required Color iconColor,
-    required String value,
-    required String label,
-  }) {
+  Widget _buildAboutFeatureRow(IconData icon, String text) {
+    return Row(
+      children: [
+        Icon(icon, color: AppColors.accent, size: 18),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 12.5,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── Join Community Banner ──────────────────────────────────────────────────
+  Widget _buildCommunityBanner(BuildContext context) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(18),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.06),
-            borderRadius: BorderRadius.circular(16),
+            gradient: LinearGradient(
+              colors: [
+                const Color(0xFF7C3AED).withOpacity(0.24),
+                const Color(0xFF2563EB).withOpacity(0.16),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(18),
             border: Border.all(
-              color: Colors.white.withOpacity(0.10),
-              width: 0.8,
+              color: const Color(0xFFA78BFA).withOpacity(0.35),
+              width: 0.9,
             ),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
             children: [
-              Icon(icon, color: iconColor, size: 18),
-              const SizedBox(height: 8),
-              Text(
-                value,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.2,
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF7C3AED).withOpacity(0.30),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.groups_rounded,
+                  color: Color(0xFFE9D5FF),
+                  size: 24,
                 ),
               ),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Color(0xFF8E92A4),
-                  fontSize: 10,
-                  fontWeight: FontWeight.w500,
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Join Our Community',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Request VJ movies & chat with fans on Telegram & Discord',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.75),
+                        fontSize: 11.5,
+                        height: 1.25,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              GestureDetector(
+                onTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      duration: const Duration(seconds: 2),
+                      backgroundColor: const Color(0xFF2E1A47),
+                      content: const Text(
+                        'Opening FreeWatch VIP Community...',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Text(
+                    'Join',
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -620,28 +827,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         ),
                       ),
                       const Spacer(),
-                      // If expanded, show "More >" button
+                      // If expanded, show clean continue chevron button
                       if (isExpanded) ...[
                         GestureDetector(
                           onTap: onSeeMore,
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                'More',
-                                style: TextStyle(
-                                  color: AppColors.accent,
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              SizedBox(width: 2),
-                              Icon(
-                                Icons.chevron_right_rounded,
-                                color: AppColors.accent,
-                                size: 16,
-                              ),
-                            ],
+                          behavior: HitTestBehavior.opaque,
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 4),
+                            child: Icon(
+                              Icons.arrow_forward_ios_rounded,
+                              color: Colors.white70,
+                              size: 13,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -861,128 +1058,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       onTap: onTap,
     );
   }
-
-  // ── Quality Picker Modal ──────────────────────────────────────────────────
-  void _showQualityPicker() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (_) => ClipRRect(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: Container(
-            color: const Color(0xFF131520).withOpacity(0.95),
-            padding: const EdgeInsets.only(bottom: 24),
-            child: SafeArea(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const SizedBox(height: 12),
-                  Container(
-                    width: 36,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.white24,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  const Padding(
-                    padding: EdgeInsets.fromLTRB(20, 16, 20, 12),
-                    child: Text(
-                      'Select Streaming Quality',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  for (final q in [
-                    'Auto (Up to 4K)',
-                    '1080p Full HD',
-                    '720p HD',
-                    '480p SD (Data Saver)'
-                  ])
-                    ListTile(
-                      title: Text(q, style: const TextStyle(color: Colors.white, fontSize: 14)),
-                      trailing: _streamingQuality == q
-                          ? const Icon(Icons.check_rounded, color: AppColors.accent)
-                          : null,
-                      onTap: () {
-                        setState(() => _streamingQuality = q);
-                        Navigator.pop(context);
-                      },
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ── Audio Picker Modal ────────────────────────────────────────────────────
-  void _showAudioPicker() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (_) => ClipRRect(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: Container(
-            color: const Color(0xFF131520).withOpacity(0.95),
-            padding: const EdgeInsets.only(bottom: 24),
-            child: SafeArea(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const SizedBox(height: 12),
-                  Container(
-                    width: 36,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.white24,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  const Padding(
-                    padding: EdgeInsets.fromLTRB(20, 16, 20, 12),
-                    child: Text(
-                      'Default Translation Audio',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  for (final l in [
-                    'Luganda (VJ Dubbed)',
-                    'English (Original Audio)',
-                    'Swahili Translation'
-                  ])
-                    ListTile(
-                      title: Text(l, style: const TextStyle(color: Colors.white, fontSize: 14)),
-                      trailing: _audioLanguage == l
-                          ? const Icon(Icons.check_rounded, color: AppColors.accent)
-                          : null,
-                      onTap: () {
-                        setState(() => _audioLanguage = l);
-                        Navigator.pop(context);
-                      },
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   // ── Clear Cache Action ────────────────────────────────────────────────────
   void _clearCache() {
     setState(() => _cacheSizeMb = 0);

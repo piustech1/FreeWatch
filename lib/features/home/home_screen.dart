@@ -58,6 +58,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 FreeWatchTopAppBar(
                   onSearchTap: () => navigateToBottomNavTab(context, ref, 1),
                   onNotificationTap: _openNotifications,
+                  onProfileTap: () => navigateToBottomNavTab(context, ref, 3),
                 ),
 
                 // ── Tab View ──────────────────────────────────────────

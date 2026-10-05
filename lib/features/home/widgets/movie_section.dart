@@ -43,33 +43,12 @@ class MovieSection extends StatelessWidget {
                 child: Row(
                   children: [
                     if (icon != null) ...[
-                      Container(
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(
-                          color: effectiveColor.withOpacity(0.14),
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: effectiveColor.withOpacity(0.35),
-                            width: 1,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: effectiveColor.withOpacity(0.20),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Center(
-                          child: Icon(
-                            icon,
-                            size: 16,
-                            color: effectiveColor,
-                          ),
-                        ),
+                      Icon(
+                        icon,
+                        size: 22,
+                        color: effectiveColor,
                       ),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: 8),
                     ],
                     Flexible(
                       child: Text(
@@ -115,7 +94,7 @@ class MovieSection extends StatelessWidget {
 
         // ── Movie list ─────────────────────────────────────────────────────
         SizedBox(
-          height: 232,
+          height: 208,
           child: isLoading
               ? const MovieRowShimmer()
               : (movies == null || movies!.isEmpty)

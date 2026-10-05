@@ -80,6 +80,12 @@ final categoryOrSearchMoviesProvider =
     return repo.getMoviesByGenre(53); // Thriller
   } else if (catLower.contains('family')) {
     return repo.getMoviesByGenre(10751); // Family
+  } else if (catLower.contains('mystery')) {
+    return repo.getMoviesByGenre(9648); // Mystery
+  } else if (catLower.contains('teen')) {
+    final list = await repo.searchMovies('Teen');
+    if (list.isNotEmpty) return list;
+    return repo.getMoviesByGenre(10751); // Family/Teen fallback
   }
 
   // Fallback to searching category name on TMDB

@@ -72,19 +72,24 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       'query': 'TV shows',
     },
     {
-      'title': 'Music Video',
-      'poster': 'https://image.tmdb.org/t/p/w500/ccRSixnjEcYM9FiQXACecJkQ6kL.jpg', // Tate McRae
-      'query': 'Music Video',
+      'title': 'Family',
+      'poster': 'https://image.tmdb.org/t/p/w500/kDp1vUBnMpe8ak4rjgl3cLELqjU.jpg', // Wonka
+      'query': 'Family',
     },
     {
-      'title': 'Gaming',
-      'poster': 'https://image.tmdb.org/t/p/w500/3O2UgEszp1CVbL8p9XnKkFDkbk3.jpg', // Assassin's Creed
-      'query': 'Gaming',
+      'title': 'Comedy',
+      'poster': 'https://image.tmdb.org/t/p/w500/iuFNMS8U5cb6xfzi51Dbkovj7vM.jpg', // Barbie
+      'query': 'Comedy',
     },
     {
-      'title': 'Anime',
-      'poster': 'https://image.tmdb.org/t/p/w500/vIeu8WysZrQgmE2OMtE9q6W5n3D.jpg', // Suzume
-      'query': 'Anime',
+      'title': 'Teen',
+      'poster': 'https://image.tmdb.org/t/p/w500/8b8R8l88Qje9dn9OE8PY05Nxl1X.jpg', // Dune
+      'query': 'Teen',
+    },
+    {
+      'title': 'Romance',
+      'poster': 'https://image.tmdb.org/t/p/w500/q6y0Go1tsGEsmtFryDOJo3dEmqu.jpg', // The Idea of You
+      'query': 'Romance',
     },
     {
       'title': 'Action',
@@ -97,9 +102,59 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       'query': 'Sci-Fi',
     },
     {
-      'title': 'Comedy',
-      'poster': 'https://image.tmdb.org/t/p/w500/iuFNMS8U5cb6xfzi51Dbkovj7vM.jpg', // Barbie
-      'query': 'Comedy',
+      'title': 'Horror',
+      'poster': 'https://image.tmdb.org/t/p/w500/bXi6IQiCuHDv0Xsp7Na5966WDFG.jpg', // Alien: Romulus
+      'query': 'Horror',
+    },
+    {
+      'title': 'Drama',
+      'poster': 'https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg', // Oppenheimer
+      'query': 'Drama',
+    },
+    {
+      'title': 'Animation',
+      'poster': 'https://image.tmdb.org/t/p/w500/8cdWjvZQUExUUTzyp4t6EDMubfO.jpg', // Spider-Verse
+      'query': 'Animation',
+    },
+    {
+      'title': 'Adventure',
+      'poster': 'https://image.tmdb.org/t/p/w500/fiVW06jE7z9YnO4trhaMEdclSiC.jpg', // Fast X
+      'query': 'Adventure',
+    },
+    {
+      'title': 'Thriller',
+      'poster': 'https://image.tmdb.org/t/p/w500/6MKr3KgOLmzOP6MSuZERO41Lpkt.jpg', // Civil War
+      'query': 'Thriller',
+    },
+    {
+      'title': 'Fantasy',
+      'poster': 'https://image.tmdb.org/t/p/w500/qA5kPY0debq59v9H6eFv8d0yI6I.jpg', // Kung Fu Panda
+      'query': 'Fantasy',
+    },
+    {
+      'title': 'Crime',
+      'poster': 'https://image.tmdb.org/t/p/w500/kKGQzkTyMbAlQUTvBhZ1nFEJ75U.jpg', // The Batman
+      'query': 'Crime',
+    },
+    {
+      'title': 'Mystery',
+      'poster': 'https://image.tmdb.org/t/p/w500/7WsyChQLEftFiDOVTGkv3hFpyyt.jpg', // Glass Onion
+      'query': 'Mystery',
+    },
+    {
+      'title': 'Documentary',
+      'poster': 'https://image.tmdb.org/t/p/w500/u3bZgnGQ9T01sWNhyveQz0wH0Hl.jpg', // Planet Earth
+      'query': 'Documentary',
+    },
+    {
+      'title': 'Gaming',
+      'poster': 'https://image.tmdb.org/t/p/w500/3O2UgEszp1CVbL8p9XnKkFDkbk3.jpg', // Assassin's Creed
+      'query': 'Gaming',
+    },
+    {
+      'title': 'Music Video',
+      'poster': 'https://image.tmdb.org/t/p/w500/ccRSixnjEcYM9FiQXACecJkQ6kL.jpg', // Tate McRae
+      'query': 'Music Video',
     },
   ];
 
@@ -295,9 +350,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               itemCount: _folderCategories.length,
               itemBuilder: (context, i) {
                 final cat = _folderCategories[i];
-                return _buildFolderCard(
+                return _FolderCardItem(
                   title: cat['title'] as String,
-                  posterUrl: cat['poster'] as String,
+                  query: cat['query'] as String,
+                  fallbackPoster: cat['poster'] as String,
                   onTap: () => _openCategory(cat['query'] as String),
                 );
               },
@@ -305,137 +361,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           ],
         ),
       ],
-    );
-  }
-
-  /// Custom folder card with realistic physical folder tabs matching reference
-  Widget _buildFolderCard({
-    required String title,
-    required String posterUrl,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final cardWidth = constraints.maxWidth;
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    // Back tab tier 2 (top-most ridge, slightly narrower)
-                    Positioned(
-                      top: 0,
-                      left: cardWidth * 0.16,
-                      right: cardWidth * 0.16,
-                      height: 14,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1D212C),
-                          borderRadius: const BorderRadius.vertical(top: Radius.circular(7)),
-                          border: Border(
-                            top: BorderSide(
-                              color: Colors.white.withOpacity(0.08),
-                              width: 0.8,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    // Back tab tier 1 (main folder back tab)
-                    Positioned(
-                      top: 5,
-                      left: 10,
-                      right: 10,
-                      height: 16,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF282C38),
-                          borderRadius: const BorderRadius.vertical(top: Radius.circular(9)),
-                          border: Border(
-                            top: BorderSide(
-                              color: Colors.white.withOpacity(0.16),
-                              width: 0.9,
-                            ),
-                            left: BorderSide(
-                              color: Colors.white.withOpacity(0.08),
-                              width: 0.8,
-                            ),
-                            right: BorderSide(
-                              color: Colors.white.withOpacity(0.08),
-                              width: 0.8,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    // Front Poster Card
-                    Positioned.fill(
-                      top: 13,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.55),
-                              blurRadius: 14,
-                              offset: const Offset(0, 6),
-                            ),
-                          ],
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(16),
-                          child: CachedNetworkImage(
-                            imageUrl: posterUrl,
-                            fit: BoxFit.cover,
-                            placeholder: (_, __) => Shimmer.fromColors(
-                              baseColor: const Color(0xFF181B24),
-                              highlightColor: const Color(0xFF262C3A),
-                              child: Container(color: const Color(0xFF181B24)),
-                            ),
-                            errorWidget: (_, __, ___) => Container(
-                              color: const Color(0xFF181B24),
-                              child: const Icon(
-                                Icons.movie_rounded,
-                                color: Colors.white24,
-                                size: 36,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 9),
-
-              // Category Label (Left-aligned under card matching reference)
-              Padding(
-                padding: const EdgeInsets.only(left: 2),
-                child: Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: -0.1,
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
-      ),
     );
   }
 
@@ -1617,6 +1542,182 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Custom folder card with realistic physical folder tabs and dynamic TMDB poster binding
+class _FolderCardItem extends ConsumerWidget {
+  final String title;
+  final String query;
+  final String fallbackPoster;
+  final VoidCallback onTap;
+
+  const _FolderCardItem({
+    required this.title,
+    required this.query,
+    required this.fallbackPoster,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final searchParam = SearchCategoryParam(category: query, query: '');
+    final moviesAsync = ref.watch(categoryOrSearchMoviesProvider(searchParam));
+
+    final posterToDisplay = moviesAsync.when(
+      data: (movies) {
+        if (movies.isNotEmpty) {
+          final withPoster = movies.firstWhere(
+            (m) => m.posterUrl.isNotEmpty && !m.posterUrl.contains('placeholder'),
+            orElse: () => movies.first,
+          );
+          if (withPoster.posterUrl.isNotEmpty) {
+            return withPoster.posterUrl;
+          }
+        }
+        return fallbackPoster;
+      },
+      loading: () => fallbackPoster,
+      error: (_, __) => fallbackPoster,
+    );
+
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final cardWidth = constraints.maxWidth;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    // Back tab tier 2 (top-most ridge, slightly narrower, smooth rounded corners)
+                    Positioned(
+                      top: 0,
+                      left: cardWidth * 0.16,
+                      right: cardWidth * 0.16,
+                      height: 18,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [Color(0xFF2B303E), Color(0xFF1B1E28)],
+                          ),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.12),
+                            width: 0.8,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.35),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // Back tab tier 1 (main folder back tab, smooth rounded corners)
+                    Positioned(
+                      top: 6,
+                      left: 10,
+                      right: 10,
+                      height: 20,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [Color(0xFF383D4E), Color(0xFF242835)],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.16),
+                            width: 0.8,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.40),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // Front Poster Card
+                    Positioned.fill(
+                      top: 14,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.15),
+                            width: 0.8,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.55),
+                              blurRadius: 14,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: CachedNetworkImage(
+                            imageUrl: posterToDisplay,
+                            fit: BoxFit.cover,
+                            placeholder: (_, __) => Shimmer.fromColors(
+                              baseColor: const Color(0xFF181B24),
+                              highlightColor: const Color(0xFF262C3A),
+                              child: Container(color: const Color(0xFF181B24)),
+                            ),
+                            errorWidget: (_, __, ___) => Container(
+                              color: const Color(0xFF181B24),
+                              child: const Icon(
+                                Icons.movie_rounded,
+                                color: Colors.white24,
+                                size: 36,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 9),
+
+              // Category Label (Left-aligned under card matching reference)
+              Padding(
+                padding: const EdgeInsets.only(left: 2),
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: -0.1,
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
