@@ -12,6 +12,7 @@ class Movie {
   final int? voteCount;
   final List<int> genreIds;
   final double? popularity;
+  final bool isTv;
 
   const Movie({
     required this.id,
@@ -24,6 +25,7 @@ class Movie {
     this.voteCount,
     this.genreIds = const [],
     this.popularity,
+    this.isTv = false,
   });
 
   /// Full resolved poster URL (handles full URLs and TMDB relative paths)
@@ -42,6 +44,10 @@ class Movie {
   String get ratingDisplay => voteAverage.toStringAsFixed(1);
 
   factory Movie.fromJson(Map<String, dynamic> json) {
+    final bool isTvShow = json['media_type'] == 'tv' ||
+        json['first_air_date'] != null ||
+        (json['title'] == null && json['name'] != null);
+
     return Movie(
       id: json['id'] as int,
       title: (json['title'] ?? json['name'] ?? '') as String,
@@ -57,6 +63,7 @@ class Movie {
               .toList() ??
           [],
       popularity: (json['popularity'] as num?)?.toDouble(),
+      isTv: isTvShow,
     );
   }
 

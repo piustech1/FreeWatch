@@ -30,9 +30,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   VideoPlayerController? _bgVideoController;
 
   // Screen 2 Auth form states
-  bool _isSignUp = true;
+  bool _isSignUp = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  bool _rememberMe = true;
 
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
@@ -49,15 +50,18 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     )..repeat();
 
     // Muted looping cinematic movie background video bundled locally in assets
-    _bgVideoController = VideoPlayerController.asset(
-      'assets/videos/onboarding_bg.mp4',
-    )..initialize().then((_) {
+    try {
+      _bgVideoController = VideoPlayerController.asset(
+        'assets/videos/onboarding_bg.mp4',
+      );
+      _bgVideoController?.initialize().then((_) {
         if (!mounted) return;
         setState(() {});
         _bgVideoController?.setLooping(true);
         _bgVideoController?.setVolume(0.0);
         _bgVideoController?.play();
-      });
+      }).catchError((_) {});
+    } catch (_) {}
   }
 
   void _goToAuthPage() {
@@ -160,110 +164,153 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // PAGE 1: BRAND INTRO
+  // PAGE 1: BRAND INTRO (Spacious, elegant, responsive layout)
   // ─────────────────────────────────────────────────────────────────────────
   Widget _buildPage1(BuildContext context) {
     return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.end,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Left-Aligned FW Initials Logo
-            Image.asset(
-              'assets/images/logo_initials.png',
-              height: 48,
-              fit: BoxFit.contain,
-            ),
-            const SizedBox(height: 14),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: IntrinsicHeight(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Top Row: Logo & direct Log In shortcut
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Image.asset(
+                            'assets/images/logo_initials.png',
+                            height: 44,
+                            fit: BoxFit.contain,
+                          ),
+                          GestureDetector(
+                            onTap: () {
+                              setState(() => _isSignUp = false);
+                              _goToAuthPage();
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.10),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.18),
+                                  width: 0.8,
+                                ),
+                              ),
+                              child: const Text(
+                                'Log In',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
 
-            // Left-Aligned Title
-            const Text(
-              'The greatest stories,\nall in one place.',
-              textAlign: TextAlign.left,
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 27,
-                fontWeight: FontWeight.w900,
-                letterSpacing: -0.5,
-                height: 1.2,
-                shadows: [
-                  Shadow(
-                    color: Colors.black,
-                    blurRadius: 12,
-                    offset: Offset(0, 2),
+                      const Spacer(),
+                      const SizedBox(height: 28),
+
+                      // Left-Aligned Title with generous typography & breathing room
+                      const Text(
+                        'The greatest stories,\nall in one place.',
+                        textAlign: TextAlign.left,
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 29,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.6,
+                          height: 1.18,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black,
+                              blurRadius: 16,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      // Left-Aligned Subtitle with comfortable line spacing
+                      Text(
+                        'Unlimited streaming for movies, series & exclusive hits translated by top Ugandan VJs.',
+                        textAlign: TextAlign.left,
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.85),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w400,
+                          height: 1.45,
+                          shadows: const [
+                            Shadow(
+                              color: Colors.black,
+                              blurRadius: 10,
+                              offset: Offset(0, 1),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 22),
+
+                      // 2-Dot Page Indicator
+                      SmoothPageIndicator(
+                        controller: _pageController,
+                        count: 2,
+                        effect: const ExpandingDotsEffect(
+                          dotWidth: 7,
+                          dotHeight: 7,
+                          expansionFactor: 3.5,
+                          spacing: 7,
+                          activeDotColor: AppColors.accent,
+                          dotColor: Color(0xFF383D4A),
+                        ),
+                      ),
+
+                      const SizedBox(height: 22),
+
+                      // Primary "Get Started" Button (Advances to Auth)
+                      SizedBox(
+                        width: double.infinity,
+                        height: 54,
+                        child: ElevatedButton(
+                          onPressed: _goToAuthPage,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.accent,
+                            foregroundColor: Colors.black,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(27),
+                            ),
+                            shadowColor: AppColors.accentGlow,
+                          ),
+                          child: const Text(
+                            'Get Started',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 8),
-
-            // Left-Aligned Subtitle
-            Text(
-              'Unlimited streaming for movies, series & exclusive hits translated by top Ugandan VJs.',
-              textAlign: TextAlign.left,
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.85),
-                fontSize: 13,
-                fontWeight: FontWeight.w400,
-                height: 1.45,
-                shadows: const [
-                  Shadow(
-                    color: Colors.black,
-                    blurRadius: 8,
-                    offset: Offset(0, 1),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 18),
-
-            // 2-Dot Page Indicator
-            SmoothPageIndicator(
-              controller: _pageController,
-              count: 2,
-              effect: const ExpandingDotsEffect(
-                dotWidth: 6,
-                dotHeight: 6,
-                expansionFactor: 3.5,
-                spacing: 6,
-                activeDotColor: AppColors.accent,
-                dotColor: Color(0xFF383D4A),
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // Primary "Get Started" Button (Advances to Auth)
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton(
-                onPressed: _goToAuthPage,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.accent,
-                  foregroundColor: Colors.black,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(26),
-                  ),
-                  shadowColor: AppColors.accentGlow,
                 ),
-                child: const Text(
-                  'Get Started',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0.3,
-                  ),
-                ),
               ),
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -275,160 +322,365 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return SafeArea(
-      child: Center(
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          padding: EdgeInsets.fromLTRB(
-            20,
-            20,
-            20,
-            bottomInset > 0 ? bottomInset + 16 : 20,
-          ),
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 420),
-            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
-            decoration: BoxDecoration(
-              color: const Color(0xFF111420).withOpacity(0.92),
-              borderRadius: BorderRadius.circular(28),
-              border: Border.all(
-                color: Colors.white.withOpacity(0.14),
-                width: 1,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            padding: EdgeInsets.fromLTRB(
+              20,
+              12,
+              20,
+              bottomInset > 0 ? bottomInset + 16 : 24,
+            ),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: constraints.maxHeight - (bottomInset > 0 ? bottomInset + 16 : 36),
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.60),
-                  blurRadius: 30,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Formal English Segmented Pill (Sign Up vs Log In)
-                _buildBrandedAuthSwitcher(),
+              child: Center(
+                child: Container(
+                  constraints: const BoxConstraints(maxWidth: 390),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Top Row: Back button to Page 1
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: GestureDetector(
+                          onTap: () {
+                            _pageController.animateToPage(
+                              0,
+                              duration: const Duration(milliseconds: 350),
+                              curve: Curves.easeInOutCubic,
+                            );
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.14),
+                                width: 0.8,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.arrow_back_ios_new_rounded,
+                                  size: 13,
+                                  color: Colors.white,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Back',
+                                  style: TextStyle(
+                                    color: Colors.white.withOpacity(0.9),
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
 
-                const SizedBox(height: 20),
+                      const SizedBox(height: 12),
 
-                // Dynamic Form Content (Sign Up vs Log In)
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 250),
-                  switchInCurve: Curves.easeOutCubic,
-                  switchOutCurve: Curves.easeInCubic,
-                  child: _isSignUp
-                      ? _buildSignUpContent()
-                      : _buildLogInContent(),
+                      // Brand Icon (matching reference Image 3)
+                      Image.asset(
+                        'assets/images/logo_initials.png',
+                        height: 52,
+                        fit: BoxFit.contain,
+                      ),
+
+                      const SizedBox(height: 14),
+
+                      // Title: Welcome Back / Create Account
+                      Text(
+                        _isSignUp ? 'Create Account' : 'Welcome Back',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 25,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // Floating Liquid Glassmorphic Auth Card
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF131622).withOpacity(0.88),
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.12),
+                            width: 1,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.55),
+                              blurRadius: 28,
+                              offset: const Offset(0, 10),
+                            ),
+                          ],
+                        ),
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 250),
+                          switchInCurve: Curves.easeOutCubic,
+                          switchOutCurve: Curves.easeInCubic,
+                          child: _isSignUp
+                              ? _buildSignUpContent()
+                              : _buildLogInContent(),
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // OR Divider
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Divider(
+                              color: Colors.white.withOpacity(0.12),
+                              thickness: 0.8,
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            child: Text(
+                              'OR',
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.40),
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.8,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Divider(
+                              color: Colors.white.withOpacity(0.12),
+                              thickness: 0.8,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Social Logins (Google & Facebook)
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildSocialAuthPill(
+                              icon: Container(
+                                width: 20,
+                                height: 20,
+                                decoration: const BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.white,
+                                ),
+                                alignment: Alignment.center,
+                                child: const Text(
+                                  'G',
+                                  style: TextStyle(
+                                    color: Color(0xFFEA4335),
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                              ),
+                              label: 'Google',
+                              onTap: _finishAuth,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: _buildSocialAuthPill(
+                              icon: const Icon(
+                                Icons.facebook,
+                                color: Color(0xFF1877F2),
+                                size: 21,
+                              ),
+                              label: 'Facebook',
+                              onTap: _finishAuth,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // Switch between Log In & Sign Up
+                      Center(
+                        child: Wrap(
+                          alignment: WrapAlignment.center,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Text(
+                              _isSignUp
+                                  ? 'Already have an account? '
+                                  : "Don't have an account? ",
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.65),
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: () => setState(() => _isSignUp = !_isSignUp),
+                              child: Text(
+                                _isSignUp ? 'Log In' : 'Create Account',
+                                style: const TextStyle(
+                                  color: Color(0xFFFF4B26),
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      // Guest Skip Option
+                      Center(
+                        child: GestureDetector(
+                          onTap: _finishAuth,
+                          child: Text(
+                            'Explore as Guest >',
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.50),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ],
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }
 
-  // Modern Branded Segmented Control Toggle (Formal English: Sign Up / Log In)
-  Widget _buildBrandedAuthSwitcher() {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.60),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.10),
-          width: 1,
+  Widget _buildLogInContent() {
+    return Column(
+      key: const ValueKey('logInContent'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // 1. Email Field
+        _buildGlassTextField(
+          controller: _emailController,
+          hint: 'Email Address',
+          icon: IconlyLight.message,
+          keyboardType: TextInputType.emailAddress,
         ),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: GestureDetector(
-              onTap: () => setState(() => _isSignUp = true),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 240),
-                curve: Curves.easeOutCubic,
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(
-                  color: _isSignUp ? AppColors.accent : Colors.transparent,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: _isSignUp
-                      ? [
-                          BoxShadow(
-                            color: AppColors.accent.withOpacity(0.35),
-                            blurRadius: 10,
-                            offset: const Offset(0, 2),
-                          ),
-                        ]
-                      : null,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.person_add_rounded,
-                      size: 16,
-                      color: _isSignUp ? Colors.black : Colors.white70,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Sign Up',
-                      style: TextStyle(
-                        color: _isSignUp ? Colors.black : Colors.white70,
-                        fontSize: 13,
-                        fontWeight:
-                            _isSignUp ? FontWeight.w900 : FontWeight.w600,
+        const SizedBox(height: 14),
+
+        // 2. Password Field
+        _buildGlassTextField(
+          controller: _passwordController,
+          hint: 'Password',
+          icon: IconlyLight.lock,
+          obscureText: _obscurePassword,
+          suffixIcon: IconButton(
+            icon: Icon(
+              _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+              color: Colors.white.withOpacity(0.6),
+              size: 19,
+            ),
+            onPressed: () {
+              setState(() => _obscurePassword = !_obscurePassword);
+            },
+          ),
+        ),
+
+        const SizedBox(height: 16),
+
+        // Remember me + Forgot Password (Wrap guarantees zero overflow with large fonts & small screens)
+        Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          runSpacing: 8,
+          children: [
+            GestureDetector(
+              onTap: () => setState(() => _rememberMe = !_rememberMe),
+              behavior: HitTestBehavior.opaque,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 19,
+                    height: 19,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(5),
+                      border: Border.all(
+                        color: _rememberMe
+                            ? const Color(0xFFFF4B26)
+                            : Colors.white.withOpacity(0.35),
+                        width: 1.4,
                       ),
+                      color: _rememberMe
+                          ? const Color(0xFFFF4B26)
+                          : Colors.transparent,
                     ),
-                  ],
+                    child: _rememberMe
+                        ? const Icon(
+                            Icons.check_rounded,
+                            color: Colors.white,
+                            size: 13,
+                          )
+                        : null,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Remember me',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.75),
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            GestureDetector(
+              onTap: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Password reset link sent to your email.'),
+                    backgroundColor: Color(0xFF1E212D),
+                  ),
+                );
+              },
+              child: const Text(
+                'Forgot Password?',
+                style: TextStyle(
+                  color: Color(0xFFFF4B26),
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),
-          ),
-          Expanded(
-            child: GestureDetector(
-              onTap: () => setState(() => _isSignUp = false),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 240),
-                curve: Curves.easeOutCubic,
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(
-                  color: !_isSignUp ? AppColors.accent : Colors.transparent,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: !_isSignUp
-                      ? [
-                          BoxShadow(
-                            color: AppColors.accent.withOpacity(0.35),
-                            blurRadius: 10,
-                            offset: const Offset(0, 2),
-                          ),
-                        ]
-                      : null,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.login_rounded,
-                      size: 16,
-                      color: !_isSignUp ? Colors.black : Colors.white70,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Log In',
-                      style: TextStyle(
-                        color: !_isSignUp ? Colors.black : Colors.white70,
-                        fontSize: 13,
-                        fontWeight:
-                            !_isSignUp ? FontWeight.w900 : FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+          ],
+        ),
+
+        const SizedBox(height: 22),
+
+        // Gradient LOG IN Button
+        _buildGradientSubmitButton('LOG IN'),
+      ],
     );
   }
 
@@ -440,37 +692,19 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Header with Avatar Picker (ONLY in Sign Up!)
+        // Avatar row (only during sign up)
         Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Create Account',
-                    style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 21,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -0.3,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    'Sign up to stream unlimited movies & series',
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.72),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                ],
+              child: Text(
+                'Choose Your Avatar',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.85),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
-            const SizedBox(width: 12),
-            // Avatar Selector (Only during Sign Up)
             GestureDetector(
               onTap: () {
                 Navigator.of(context).push(
@@ -482,18 +716,18 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
               child: Stack(
                 children: [
                   Container(
-                    width: 52,
-                    height: 52,
+                    width: 46,
+                    height: 46,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
                         color: Colors.white,
-                        width: 2.2,
+                        width: 2,
                       ),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.white.withOpacity(0.3),
-                          blurRadius: 10,
+                          blurRadius: 8,
                         ),
                       ],
                     ),
@@ -506,7 +740,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                           errorBuilder: (_, __, ___) => const Icon(
                             Icons.person_rounded,
                             color: Colors.white,
-                            size: 28,
+                            size: 24,
                           ),
                         ),
                       ),
@@ -516,15 +750,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                     right: 0,
                     bottom: 0,
                     child: Container(
-                      padding: const EdgeInsets.all(4),
+                      padding: const EdgeInsets.all(3),
                       decoration: const BoxDecoration(
-                        color: AppColors.accent,
+                        color: Color(0xFFFF4B26),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
                         Icons.edit_rounded,
-                        color: Colors.black,
-                        size: 11,
+                        color: Colors.white,
+                        size: 10,
                       ),
                     ),
                   ),
@@ -534,55 +768,55 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
           ],
         ),
 
-        const SizedBox(height: 18),
+        const SizedBox(height: 16),
 
         // 1. Full Name Field
         _buildGlassTextField(
           controller: _nameController,
           hint: 'Full Name',
-          icon: IconlyBold.profile,
+          icon: IconlyLight.profile,
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 14),
 
         // 2. Email Address Field
         _buildGlassTextField(
           controller: _emailController,
           hint: 'Email Address',
-          icon: IconlyBold.message,
+          icon: IconlyLight.message,
           keyboardType: TextInputType.emailAddress,
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 14),
 
         // 3. Password Field
         _buildGlassTextField(
           controller: _passwordController,
           hint: 'Password',
-          icon: IconlyBold.lock,
+          icon: IconlyLight.lock,
           obscureText: _obscurePassword,
           suffixIcon: IconButton(
             icon: Icon(
-              _obscurePassword ? Icons.visibility_off : Icons.visibility,
+              _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
               color: Colors.white.withOpacity(0.6),
-              size: 18,
+              size: 19,
             ),
             onPressed: () {
               setState(() => _obscurePassword = !_obscurePassword);
             },
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 14),
 
         // 4. Confirm Password Field
         _buildGlassTextField(
           controller: _confirmPasswordController,
           hint: 'Confirm Password',
-          icon: IconlyBold.lock,
+          icon: IconlyLight.lock,
           obscureText: _obscureConfirmPassword,
           suffixIcon: IconButton(
             icon: Icon(
-              _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
+              _obscureConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
               color: Colors.white.withOpacity(0.6),
-              size: 18,
+              size: 19,
             ),
             onPressed: () {
               setState(() => _obscureConfirmPassword = !_obscureConfirmPassword);
@@ -590,210 +824,91 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
           ),
         ),
 
-        const SizedBox(height: 18),
+        const SizedBox(height: 22),
 
-        // Primary Submit Button
-        SizedBox(
-          width: double.infinity,
-          height: 50,
-          child: ElevatedButton(
-            onPressed: _finishAuth,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.accent,
-              foregroundColor: Colors.black,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(25),
-              ),
-              shadowColor: AppColors.accentGlow,
-            ),
-            child: const Text(
-              'Sign Up',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0.3,
-              ),
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 14),
-
-        // Switch to Log In (Formal English)
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              'Already have an account? ',
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.65),
-                fontSize: 12.5,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            GestureDetector(
-              onTap: () => setState(() => _isSignUp = false),
-              child: const Text(
-                'Log In',
-                style: TextStyle(
-                  color: AppColors.accent,
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-          ],
-        ),
-
-        const SizedBox(height: 8),
-
-        // Guest Skip Option
-        Center(
-          child: GestureDetector(
-            onTap: _finishAuth,
-            child: Text(
-              'Explore as Guest >',
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.50),
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ),
+        // Gradient SIGN UP Button
+        _buildGradientSubmitButton('SIGN UP'),
       ],
     );
   }
 
-  Widget _buildLogInContent() {
-    return Column(
-      key: const ValueKey('logInContent'),
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Formal Header (NO Avatar Picker during Log In!)
-        const Text(
-          'Welcome Back',
-          style: TextStyle(
-            color: AppColors.textPrimary,
-            fontSize: 21,
-            fontWeight: FontWeight.w900,
-            letterSpacing: -0.3,
+  Widget _buildGradientSubmitButton(String text) {
+    return Container(
+      width: double.infinity,
+      height: 52,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFFF2A2A), Color(0xFFFF881B)],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
+        borderRadius: BorderRadius.circular(26),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFFF2A2A).withOpacity(0.40),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
           ),
-        ),
-        const SizedBox(height: 3),
-        Text(
-          'Log in to continue streaming on FreeWatch',
-          style: TextStyle(
-            color: Colors.white.withOpacity(0.72),
-            fontSize: 12,
-            fontWeight: FontWeight.w400,
-          ),
-        ),
-
-        const SizedBox(height: 18),
-
-        // 1. Email Address Field
-        _buildGlassTextField(
-          controller: _emailController,
-          hint: 'Email Address',
-          icon: IconlyBold.message,
-          keyboardType: TextInputType.emailAddress,
-        ),
-        const SizedBox(height: 12),
-
-        // 2. Password Field
-        _buildGlassTextField(
-          controller: _passwordController,
-          hint: 'Password',
-          icon: IconlyBold.lock,
-          obscureText: _obscurePassword,
-          suffixIcon: IconButton(
-            icon: Icon(
-              _obscurePassword ? Icons.visibility_off : Icons.visibility,
-              color: Colors.white.withOpacity(0.6),
-              size: 18,
-            ),
-            onPressed: () {
-              setState(() => _obscurePassword = !_obscurePassword);
-            },
-          ),
-        ),
-
-        const SizedBox(height: 18),
-
-        // Primary Submit Button
-        SizedBox(
-          width: double.infinity,
-          height: 50,
-          child: ElevatedButton(
-            onPressed: _finishAuth,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.accent,
-              foregroundColor: Colors.black,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(25),
-              ),
-              shadowColor: AppColors.accentGlow,
-            ),
-            child: const Text(
-              'Log In',
-              style: TextStyle(
-                fontSize: 15,
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(26),
+          onTap: _finishAuth,
+          child: Center(
+            child: Text(
+              text,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 15.5,
                 fontWeight: FontWeight.w900,
-                letterSpacing: 0.3,
+                letterSpacing: 0.6,
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
 
-        const SizedBox(height: 14),
-
-        // Switch to Sign Up (Formal English)
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              "Don't have an account? ",
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.65),
-                fontSize: 12.5,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            GestureDetector(
-              onTap: () => setState(() => _isSignUp = true),
-              child: const Text(
-                'Sign Up',
-                style: TextStyle(
-                  color: AppColors.accent,
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w800,
+  Widget _buildSocialAuthPill({
+    required Widget icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      height: 48,
+      decoration: BoxDecoration(
+        color: const Color(0xFF161924).withOpacity(0.90),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.12),
+          width: 0.8,
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(24),
+          onTap: onTap,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              icon,
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-            ),
-          ],
-        ),
-
-        const SizedBox(height: 8),
-
-        // Guest Skip Option
-        Center(
-          child: GestureDetector(
-            onTap: _finishAuth,
-            child: Text(
-              'Explore as Guest >',
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.50),
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            ],
           ),
         ),
-      ],
+      ),
     );
   }
 
@@ -890,55 +1005,67 @@ class _Infinite4RowPosterWall extends StatelessWidget {
     final row1 = [for (int i = 0; i < count; i++) posters[(i + 5) % count]];
     final row2 = [for (int i = 0; i < count; i++) posters[(i + 9) % count]];
 
-    return Transform.scale(
-      scale: 1.55, // Scale up to completely cover all corners including top-left when tilted
-      child: Transform.rotate(
-        angle: -11 * (math.pi / 180),
-        child: AnimatedBuilder(
-          animation: animation,
-          builder: (context, _) {
-            final double progress = animation.value;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final screenW = constraints.maxWidth > 0 ? constraints.maxWidth : 400.0;
+        return OverflowBox(
+          minWidth: screenW,
+          maxWidth: screenW,
+          minHeight: 0,
+          maxHeight: 1400,
+          child: Transform.scale(
+            scale: 1.55, // Scale up to completely cover all corners including top-left when tilted
+            child: Transform.rotate(
+              angle: -11 * (math.pi / 180),
+              child: AnimatedBuilder(
+                animation: animation,
+                builder: (context, _) {
+                  final double progress = animation.value;
 
-            return Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Row 0: Top row that completely covers the top-left corner gap
-                _InfinitePosterMarquee(
-                  posters: rowTop,
-                  progress: progress,
-                  direction: 1, // Moves RIGHT
-                  phaseOffset: 0.15,
-                ),
-                const SizedBox(height: 12),
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Row 0: Top row that completely covers the top-left corner gap
+                      _InfinitePosterMarquee(
+                        posters: rowTop,
+                        progress: progress,
+                        direction: 1, // Moves RIGHT
+                        phaseOffset: 0.15,
+                      ),
+                      const SizedBox(height: 12),
 
-                // Row 1: Moves LEFT continuously
-                _InfinitePosterMarquee(
-                  posters: row0,
-                  progress: progress,
-                  direction: -1,
-                ),
-                const SizedBox(height: 12),
+                      // Row 1: Moves LEFT continuously
+                      _InfinitePosterMarquee(
+                        posters: row0,
+                        progress: progress,
+                        direction: -1,
+                      ),
+                      const SizedBox(height: 12),
 
-                // Row 2: Moves RIGHT continuously
-                _InfinitePosterMarquee(
-                  posters: row1,
-                  progress: progress,
-                  direction: 1,
-                ),
-                const SizedBox(height: 12),
+                      // Row 2: Moves RIGHT continuously
+                      _InfinitePosterMarquee(
+                        posters: row1,
+                        progress: progress,
+                        direction: 1,
+                      ),
+                      const SizedBox(height: 12),
 
-                // Row 3: Moves LEFT continuously
-                _InfinitePosterMarquee(
-                  posters: row2,
-                  progress: progress,
-                  direction: -1,
-                  phaseOffset: 0.35,
-                ),
-              ],
-            );
-          },
-        ),
-      ),
+                      // Row 3: Moves LEFT continuously
+                      _InfinitePosterMarquee(
+                        posters: row2,
+                        progress: progress,
+                        direction: -1,
+                        phaseOffset: 0.25,
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

@@ -24,7 +24,8 @@ class AppColors {
   static const Color textSecondary = Color(0xFF9AA0B0);
   static const Color textHint = Color(0xFF555B6B);
 
-  // Accent — Vibrant Electric Streaming Green
+  // Accent — Vibrant Electric Streaming Green & FreeWatch Red
+  static const Color primary = Color(0xFFFF4B26);
   static const Color accent = Color(0xFF00E676);
   static const Color accentDark = Color(0xFF00B050);
   static const Color accentLight = Color(0xFF69F0AE);

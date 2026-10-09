@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freewatch/data/mock/mock_movies.dart';
 import 'package:freewatch/features/favorites/presentation/providers/favorites_provider.dart';
 import 'package:freewatch/features/home/widgets/vj_card.dart';
 import 'package:freewatch/features/home/widgets/vj_section.dart';
+import 'package:freewatch/data/models/movie.dart';
+import 'package:freewatch/features/home/providers/home_providers.dart';
+import 'package:freewatch/features/onboarding/onboarding_screen.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -100,6 +104,65 @@ void main() {
       // Verify tap works
       await tester.tap(find.text('VJ JUNIOR'));
       expect(tapped, isTrue);
+    });
+  });
+
+  group('OnboardingScreen layout & spacing tests', () {
+    testWidgets('OnboardingScreen fits on small and standard screens without overflow', (tester) async {
+      // Test small phone screen: 360 x 640
+      tester.view.physicalSize = const Size(360, 640);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            popularMoviesProvider.overrideWith((ref) => Future.value(<Movie>[])),
+            trendingMoviesProvider.overrideWith((ref) => Future.value(<Movie>[])),
+          ],
+          child: const MaterialApp(
+            home: Scaffold(
+              body: OnboardingScreen(),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // Verify Page 1 elements render and fit
+      expect(find.text('The greatest stories,\nall in one place.'), findsOneWidget);
+      expect(find.text('Get Started'), findsOneWidget);
+
+      // Advance to Page 2
+      await tester.tap(find.text('Get Started'));
+      for (int i = 0; i < 8; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+
+      // Verify Page 2 (defaults to Log In) fits without overflow
+      expect(find.text('Welcome Back'), findsOneWidget);
+      expect(find.text('LOG IN'), findsOneWidget);
+      expect(find.text('Email Address'), findsOneWidget);
+      expect(find.text('Back'), findsOneWidget);
+
+      // Switch to Sign Up mode using the account switcher text
+      await tester.tap(find.text('Create Account'));
+      for (int i = 0; i < 6; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+
+      // Verify Page 2 (Sign Up) fits without overflow
+      expect(find.text('Create Account'), findsWidgets);
+      expect(find.text('SIGN UP'), findsOneWidget);
+      expect(find.text('Full Name'), findsOneWidget);
+
+      // Verify Back button returns to Page 1
+      await tester.tap(find.text('Back'));
+      for (int i = 0; i < 8; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(find.text('The greatest stories,\nall in one place.'), findsOneWidget);
     });
   });
 }

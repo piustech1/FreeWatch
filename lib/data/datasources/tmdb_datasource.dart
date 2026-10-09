@@ -79,11 +79,12 @@ class TmdbDatasource {
     return Genre.fromJsonList(res.data as Map<String, dynamic>);
   }
 
-  // ── Movie Logos ───────────────────────────────────────────────────────────
+  // ── Movie & TV Logos ─────────────────────────────────────────────────────
 
-  Future<String?> getMovieLogo(int movieId) async {
+  Future<String?> getMovieLogo(int id) async {
+    // 1. Try movie logo
     try {
-      final res = await _dio.get('/movie/$movieId/images');
+      final res = await _dio.get('/movie/$id/images');
       final data = res.data as Map<String, dynamic>;
       final logos = data['logos'] as List<dynamic>?;
       if (logos != null && logos.isNotEmpty) {
@@ -95,18 +96,58 @@ class TmdbDatasource {
         }
       }
     } catch (_) {}
+
+    // 2. Try TV series logo fallback
+    try {
+      final res = await _dio.get('/tv/$id/images');
+      final data = res.data as Map<String, dynamic>;
+      final logos = data['logos'] as List<dynamic>?;
+      if (logos != null && logos.isNotEmpty) {
+        final enLogos = logos.where((l) => l['iso_639_1'] == 'en').toList();
+        final target = enLogos.isNotEmpty ? enLogos.first : logos.first;
+        final filePath = target['file_path'] as String?;
+        if (filePath != null) {
+          return '${ApiConstants.logoW500}$filePath';
+        }
+      }
+    } catch (_) {}
+
     return null;
   }
 
-  // ── Movie Details with Credits & Similar ──────────────────────────────
+  // ── Movie & TV Details with Credits & Similar ──────────────────────────────
   Future<MovieDetailsData> getMovieDetails(int movieId) async {
+    try {
+      final res = await _dio.get(
+        '/movie/$movieId',
+        queryParameters: {
+          'append_to_response': 'credits,release_dates,similar',
+        },
+      );
+      return MovieDetailsData.fromJson(res.data as Map<String, dynamic>);
+    } catch (_) {
+      // Fallback: If not found in movie endpoint (e.g. 404), fetch as TV show!
+      return await getTvDetails(movieId);
+    }
+  }
+
+  Future<MovieDetailsData> getTvDetails(int tvId) async {
     final res = await _dio.get(
-      '/movie/$movieId',
+      '/tv/$tvId',
       queryParameters: {
-        'append_to_response': 'credits,release_dates,similar',
+        'append_to_response': 'credits,similar,images',
       },
     );
     return MovieDetailsData.fromJson(res.data as Map<String, dynamic>);
+  }
+
+  Future<List<TvEpisodeData>> getTvSeasonEpisodes(int tvId, int seasonNumber) async {
+    final res = await _dio.get('/tv/$tvId/season/$seasonNumber');
+    final data = res.data as Map<String, dynamic>;
+    final episodes = data['episodes'] as List<dynamic>? ?? [];
+    return episodes
+        .map((e) => TvEpisodeData.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   // ── Discover by Genre ─────────────────────────────────────────────────────

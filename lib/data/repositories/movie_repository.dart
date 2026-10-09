@@ -102,7 +102,11 @@ class MovieRepository {
     if (_hasCustomApiKey) {
       try {
         return await _datasource.getMovieDetails(movieId);
-      } catch (_) {}
+      } catch (_) {
+        try {
+          return await _datasource.getTvDetails(movieId);
+        } catch (_) {}
+      }
     }
     // Fallback: construct MovieDetailsData from mock data
     final mockMovie = MockData.getAllMovies().firstWhere(
@@ -127,7 +131,39 @@ class MovieRepository {
         CastMember(id: 4, name: 'Danielle Brooks', character: 'Dawn', profilePath: '/kSpsYjG80eL4qQ3R3n9k6rLqC9p.jpg'),
       ],
       relatedMovies: MockData.trendingMovies.where((m) => m.id != movieId).toList(),
+      isTv: mockMovie.isTv,
+      numberOfSeasons: mockMovie.isTv ? 3 : 0,
+      seasons: mockMovie.isTv
+          ? const [
+              TvSeasonData(id: 1, seasonNumber: 1, name: 'Season 1', episodeCount: 8),
+              TvSeasonData(id: 2, seasonNumber: 2, name: 'Season 2', episodeCount: 8),
+              TvSeasonData(id: 3, seasonNumber: 3, name: 'Season 3', episodeCount: 6),
+            ]
+          : const [],
     );
+  }
+
+  Future<List<TvEpisodeData>> getTvSeasonEpisodes(int tvId, int seasonNumber) async {
+    if (_hasCustomApiKey) {
+      try {
+        final episodes = await _datasource.getTvSeasonEpisodes(tvId, seasonNumber);
+        if (episodes.isNotEmpty) return episodes;
+      } catch (_) {}
+    }
+    // Fallback episodes
+    return List.generate(6, (i) {
+      final epNum = i + 1;
+      return TvEpisodeData(
+        id: epNum,
+        episodeNumber: epNum,
+        seasonNumber: seasonNumber,
+        name: 'Episode $epNum',
+        overview: 'Official episode description',
+        runtime: 48 + (i * 3) % 15,
+        stillPath: null,
+        voteAverage: 8.2,
+      );
+    });
   }
 
   Future<List<Movie>> getMoviesByGenre(int genreId, {int page = 1}) async {

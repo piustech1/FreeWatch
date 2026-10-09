@@ -30,6 +30,84 @@ class CastMember {
       : null;
 }
 
+class TvSeasonData {
+  final int id;
+  final int seasonNumber;
+  final String name;
+  final int episodeCount;
+  final String? posterPath;
+  final String? airDate;
+
+  const TvSeasonData({
+    required this.id,
+    required this.seasonNumber,
+    required this.name,
+    required this.episodeCount,
+    this.posterPath,
+    this.airDate,
+  });
+
+  factory TvSeasonData.fromJson(Map<String, dynamic> json) {
+    return TvSeasonData(
+      id: json['id'] as int? ?? 0,
+      seasonNumber: json['season_number'] as int? ?? 1,
+      name: json['name'] as String? ?? 'Season ${json['season_number'] ?? 1}',
+      episodeCount: json['episode_count'] as int? ?? 0,
+      posterPath: json['poster_path'] as String?,
+      airDate: json['air_date'] as String?,
+    );
+  }
+}
+
+class TvEpisodeData {
+  final int id;
+  final int episodeNumber;
+  final int seasonNumber;
+  final String name;
+  final String overview;
+  final int runtime;
+  final String? stillPath;
+  final double voteAverage;
+
+  const TvEpisodeData({
+    required this.id,
+    required this.episodeNumber,
+    required this.seasonNumber,
+    required this.name,
+    required this.overview,
+    required this.runtime,
+    this.stillPath,
+    required this.voteAverage,
+  });
+
+  String? get stillUrl => stillPath != null && stillPath!.isNotEmpty
+      ? (stillPath!.startsWith('http') ? stillPath! : '${ApiConstants.backdropW780}$stillPath')
+      : null;
+
+  String get formattedRuntime {
+    if (runtime <= 0) return '45m';
+    final hours = runtime ~/ 60;
+    final minutes = runtime % 60;
+    if (hours > 0) {
+      return '${hours}h ${minutes.toString().padLeft(2, '0')}m';
+    }
+    return '${minutes}m';
+  }
+
+  factory TvEpisodeData.fromJson(Map<String, dynamic> json) {
+    return TvEpisodeData(
+      id: json['id'] as int? ?? 0,
+      episodeNumber: json['episode_number'] as int? ?? 1,
+      seasonNumber: json['season_number'] as int? ?? 1,
+      name: json['name'] as String? ?? 'Episode ${json['episode_number'] ?? 1}',
+      overview: json['overview'] as String? ?? '',
+      runtime: json['runtime'] as int? ?? 0,
+      stillPath: json['still_path'] as String?,
+      voteAverage: (json['vote_average'] as num?)?.toDouble() ?? 0.0,
+    );
+  }
+}
+
 class MovieDetailsData {
   final int id;
   final String title;
@@ -42,6 +120,9 @@ class MovieDetailsData {
   final String certification; // e.g. "PG-13", "R", "PG", "6+"
   final List<CastMember> cast;
   final List<Movie> relatedMovies;
+  final bool isTv;
+  final int numberOfSeasons;
+  final List<TvSeasonData> seasons;
 
   const MovieDetailsData({
     required this.id,
@@ -55,6 +136,9 @@ class MovieDetailsData {
     required this.certification,
     required this.cast,
     required this.relatedMovies,
+    this.isTv = false,
+    this.numberOfSeasons = 0,
+    this.seasons = const [],
   });
 
   String get formattedRuntime {
@@ -164,26 +248,55 @@ class MovieDetailsData {
       }
     }
 
-    // 4. Similar / Related movies
-    final similarData = json['similar'] as Map<String, dynamic>?;
+    // 4. Similar / Related movies or TV shows
+    final similarData = (json['similar'] ?? json['recommendations']) as Map<String, dynamic>?;
     final similarResults = (similarData?['results'] as List<dynamic>?)
             ?.take(12)
             .map((m) => Movie.fromJson(m as Map<String, dynamic>))
             .toList() ??
         [];
 
+    final bool isTvShow = json['number_of_seasons'] != null ||
+        json['first_air_date'] != null ||
+        (json['title'] == null && json['name'] != null);
+
+    final String title = (json['title'] ?? json['name'] ?? '') as String;
+    final String? releaseDate = (json['release_date'] ?? json['first_air_date']) as String?;
+
+    int runtime = json['runtime'] as int? ?? 0;
+    if (runtime == 0 && json['episode_run_time'] != null) {
+      final epRuns = json['episode_run_time'] as List<dynamic>?;
+      if (epRuns != null && epRuns.isNotEmpty) {
+        runtime = (epRuns.first as num?)?.toInt() ?? 45;
+      }
+    }
+
+    final seasonsData = json['seasons'] as List<dynamic>?;
+    final List<TvSeasonData> parsedSeasons = seasonsData != null
+        ? seasonsData
+            .map((s) => TvSeasonData.fromJson(s as Map<String, dynamic>))
+            .where((s) => s.seasonNumber > 0)
+            .toList()
+        : [];
+
+    final int numSeasons = json['number_of_seasons'] as int? ??
+        (parsedSeasons.isNotEmpty ? parsedSeasons.length : (isTvShow ? 1 : 0));
+
     return MovieDetailsData(
       id: json['id'] as int? ?? 0,
-      title: json['title'] as String? ?? '',
+      title: title,
       overview: json['overview'] as String? ?? '',
-      runtime: json['runtime'] as int? ?? 0,
-      releaseDate: json['release_date'] as String?,
+      runtime: runtime,
+      releaseDate: releaseDate,
       voteAverage: (json['vote_average'] as num?)?.toDouble() ?? 0.0,
       voteCount: json['vote_count'] as int? ?? 0,
       genres: genresList,
       certification: cert,
       cast: castList,
       relatedMovies: similarResults,
+      isTv: isTvShow,
+      numberOfSeasons: numSeasons,
+      seasons: parsedSeasons,
     );
   }
 }

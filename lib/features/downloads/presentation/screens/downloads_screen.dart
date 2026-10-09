@@ -184,7 +184,7 @@ class DownloadsScreen extends ConsumerWidget {
                         children: [
                           const Icon(
                             IconlyBold.download,
-                            color: Color(0xFFF97316),
+                            color: AppColors.primary,
                             size: 20,
                           ),
                           const SizedBox(width: 8),
@@ -238,23 +238,16 @@ class DownloadsScreen extends ConsumerWidget {
         child: Container(
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                const Color(0xFFF97316).withOpacity(0.18),
-                const Color(0xFF1E222D).withOpacity(0.85),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            color: Colors.white.withOpacity(0.06),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: Colors.white.withOpacity(0.14),
-              width: 0.8,
+              color: Colors.white.withOpacity(0.12),
+              width: 1.0,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.40),
-                blurRadius: 16,
+                color: Colors.black.withOpacity(0.35),
+                blurRadius: 18,
                 offset: const Offset(0, 6),
               ),
             ],
@@ -271,12 +264,12 @@ class DownloadsScreen extends ConsumerWidget {
                         width: 38,
                         height: 38,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF97316).withOpacity(0.25),
+                          color: AppColors.primary.withOpacity(0.18),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
                           IconlyBold.download,
-                          color: Color(0xFFF97316),
+                          color: AppColors.primary,
                           size: 20,
                         ),
                       ),
@@ -307,17 +300,17 @@ class DownloadsScreen extends ConsumerWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.40),
+                      color: Colors.white.withOpacity(0.08),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: Colors.white.withOpacity(0.12),
+                        color: Colors.white.withOpacity(0.14),
                         width: 0.8,
                       ),
                     ),
                     child: Text(
                       totalStorage,
                       style: const TextStyle(
-                        color: Color(0xFFF97316),
+                        color: Colors.white,
                         fontSize: 13,
                         fontWeight: FontWeight.w900,
                       ),
@@ -332,7 +325,7 @@ class DownloadsScreen extends ConsumerWidget {
                   value: 0.35,
                   minHeight: 5,
                   backgroundColor: Colors.white.withOpacity(0.10),
-                  valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFF97316)),
+                  valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
                 ),
               ),
               const SizedBox(height: 6),
@@ -375,12 +368,12 @@ class DownloadsScreen extends ConsumerWidget {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(16),
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+            filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
             child: Container(
               height: 104,
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: const Color(0xFF191D28).withOpacity(0.70),
+                color: Colors.white.withOpacity(0.06),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: Colors.white.withOpacity(0.10),
