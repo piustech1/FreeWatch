@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconly/iconly.dart';
@@ -34,6 +35,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _rememberMe = true;
+  bool _isLoopingSeek = false;
 
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
@@ -49,19 +51,71 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
       duration: const Duration(seconds: 35),
     )..repeat();
 
-    // Muted looping cinematic movie background video bundled locally in assets
+    _initBackgroundVideo();
+  }
+
+  Future<void> _initBackgroundVideo() async {
+    String selectedAsset = 'assets/videos/onboarding_bg.mp4';
     try {
-      _bgVideoController = VideoPlayerController.asset(
-        'assets/videos/onboarding_bg.mp4',
+      final manifest = await AssetManifest.loadFromAssetBundle(rootBundle);
+      final videoAssets = manifest
+          .listAssets()
+          .where((p) => p.startsWith('assets/videos/') && p.endsWith('.mp4'))
+          .toList();
+      // Prioritize user-added custom videos over default onboarding_bg.mp4
+      final customVideo = videoAssets.firstWhere(
+        (p) => !p.contains('onboarding_bg.mp4'),
+        orElse: () => '',
       );
-      _bgVideoController?.initialize().then((_) {
-        if (!mounted) return;
-        setState(() {});
-        _bgVideoController?.setLooping(true);
-        _bgVideoController?.setVolume(0.0);
-        _bgVideoController?.play();
-      }).catchError((_) {});
+      if (customVideo.isNotEmpty) {
+        selectedAsset = customVideo;
+      } else if (videoAssets.isNotEmpty) {
+        selectedAsset = videoAssets.first;
+      }
+    } catch (_) {
+      // Fallback to default asset
+    }
+
+    try {
+      final controller = VideoPlayerController.asset(selectedAsset);
+      _bgVideoController = controller;
+      await controller.initialize();
+      if (!mounted) {
+        controller.dispose();
+        return;
+      }
+      await controller.setVolume(0.0);
+      const loopStart = Duration(seconds: 42);
+      final startOffset = controller.value.duration > loopStart ? loopStart : Duration.zero;
+      if (startOffset > Duration.zero) {
+        await controller.seekTo(startOffset);
+      }
+      controller.addListener(_handleVideoLoop);
+      await controller.play();
+      if (mounted) setState(() {});
     } catch (_) {}
+  }
+
+  void _handleVideoLoop() {
+    final controller = _bgVideoController;
+    if (controller == null || !controller.value.isInitialized || _isLoopingSeek) return;
+    final val = controller.value;
+    const loopStart = Duration(seconds: 42);
+    final startOffset = val.duration > loopStart ? loopStart : Duration.zero;
+
+    // When nearing or reaching the end of the video, seamlessly loop back to 42s
+    if (val.position >= val.duration - const Duration(milliseconds: 350) ||
+        (!val.isPlaying && val.position >= val.duration - const Duration(seconds: 1))) {
+      _isLoopingSeek = true;
+      controller.seekTo(startOffset).then((_) {
+        if (mounted && _bgVideoController == controller) {
+          controller.play();
+          _isLoopingSeek = false;
+        }
+      }).catchError((_) {
+        _isLoopingSeek = false;
+      });
+    }
   }
 
   void _goToAuthPage() {
@@ -78,6 +132,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
 
   @override
   void dispose() {
+    _bgVideoController?.removeListener(_handleVideoLoop);
     _bgVideoController?.dispose();
     _wallController.dispose();
     _pageController.dispose();

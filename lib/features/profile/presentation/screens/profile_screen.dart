@@ -239,7 +239,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       icon: Icons.info_rounded,
                       iconColor: const Color(0xFF38BDF8),
                       title: 'App Version',
-                      subtitle: 'FreeWatch v1.0.31 (Build 32)',
+                      subtitle: 'FreeWatch v1.0.32 (Build 33)',
                       trailing: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
