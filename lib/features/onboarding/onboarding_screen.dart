@@ -48,9 +48,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
       duration: const Duration(seconds: 35),
     )..repeat();
 
-    // Muted looping cinematic movie background video
-    _bgVideoController = VideoPlayerController.networkUrl(
-      Uri.parse('https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4'),
+    // Muted looping cinematic movie background video bundled locally in assets
+    _bgVideoController = VideoPlayerController.asset(
+      'assets/videos/onboarding_bg.mp4',
     )..initialize().then((_) {
         if (!mounted) return;
         setState(() {});
