@@ -121,7 +121,7 @@ class TmdbDatasource {
       final res = await _dio.get(
         '/movie/$movieId',
         queryParameters: {
-          'append_to_response': 'credits,release_dates,similar',
+          'append_to_response': 'credits,release_dates,similar,recommendations',
         },
       );
       return MovieDetailsData.fromJson(res.data as Map<String, dynamic>);
@@ -135,7 +135,7 @@ class TmdbDatasource {
     final res = await _dio.get(
       '/tv/$tvId',
       queryParameters: {
-        'append_to_response': 'credits,similar,images',
+        'append_to_response': 'credits,similar,recommendations,images',
       },
     );
     return MovieDetailsData.fromJson(res.data as Map<String, dynamic>);

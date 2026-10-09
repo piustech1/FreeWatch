@@ -98,42 +98,56 @@ class MovieRepository {
     }
   }
 
-  Future<MovieDetailsData> getMovieDetails(int movieId) async {
+  Future<MovieDetailsData> getMovieDetails(int movieId, {bool isTv = false}) async {
     if (_hasCustomApiKey) {
-      try {
-        return await _datasource.getMovieDetails(movieId);
-      } catch (_) {
+      if (isTv) {
         try {
           return await _datasource.getTvDetails(movieId);
-        } catch (_) {}
+        } catch (_) {
+          try {
+            return await _datasource.getMovieDetails(movieId);
+          } catch (_) {}
+        }
+      } else {
+        try {
+          return await _datasource.getMovieDetails(movieId);
+        } catch (_) {
+          try {
+            return await _datasource.getTvDetails(movieId);
+          } catch (_) {}
+        }
       }
     }
     // Fallback: construct MovieDetailsData from mock data
     final mockMovie = MockData.getAllMovies().firstWhere(
       (m) => m.id == movieId,
-      orElse: () => MockData.trendingMovies.first,
+      orElse: () => isTv ? MockData.popularTv.first : MockData.trendingMovies.first,
     );
+
+    final isActuallyTv = isTv || mockMovie.isTv;
 
     return MovieDetailsData(
       id: mockMovie.id,
       title: mockMovie.title,
       overview: mockMovie.overview ?? '',
-      runtime: 110,
+      runtime: isActuallyTv ? 55 : 110,
       releaseDate: mockMovie.releaseDate ?? '2024-03-01',
       voteAverage: mockMovie.voteAverage,
       voteCount: mockMovie.voteCount ?? 4200,
-      genres: ['Action', 'Adventure'],
-      certification: 'PG-13',
+      genres: isActuallyTv ? ['Drama', 'Mystery'] : ['Action', 'Adventure'],
+      certification: isActuallyTv ? 'TV-MA' : 'PG-13',
       cast: const [
         CastMember(id: 1, name: 'Jason Momoa', character: 'Garrett', profilePath: '/6AUNvdc3RAq7fq9eT01O9450p9C.jpg'),
         CastMember(id: 2, name: 'Jack Black', character: 'Steve', profilePath: '/rtCx0fiYxJVG4Uj0qrPDMu49Vmm.jpg'),
         CastMember(id: 3, name: 'Emma Myers', character: 'Natalie', profilePath: '/4woSOUD0equAYzvwhWBHIJDCM88.jpg'),
         CastMember(id: 4, name: 'Danielle Brooks', character: 'Dawn', profilePath: '/kSpsYjG80eL4qQ3R3n9k6rLqC9p.jpg'),
       ],
-      relatedMovies: MockData.trendingMovies.where((m) => m.id != movieId).toList(),
-      isTv: mockMovie.isTv,
-      numberOfSeasons: mockMovie.isTv ? 3 : 0,
-      seasons: mockMovie.isTv
+      relatedMovies: isActuallyTv
+          ? MockData.popularTv.where((m) => m.id != movieId).toList()
+          : MockData.trendingMovies.where((m) => m.id != movieId).toList(),
+      isTv: isActuallyTv,
+      numberOfSeasons: isActuallyTv ? 3 : 0,
+      seasons: isActuallyTv
           ? const [
               TvSeasonData(id: 1, seasonNumber: 1, name: 'Season 1', episodeCount: 8),
               TvSeasonData(id: 2, seasonNumber: 2, name: 'Season 2', episodeCount: 8),

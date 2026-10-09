@@ -248,13 +248,21 @@ class MovieDetailsData {
       }
     }
 
-    // 4. Similar / Related movies or TV shows
-    final similarData = (json['similar'] ?? json['recommendations']) as Map<String, dynamic>?;
-    final similarResults = (similarData?['results'] as List<dynamic>?)
-            ?.take(12)
-            .map((m) => Movie.fromJson(m as Map<String, dynamic>))
-            .toList() ??
-        [];
+    // 4. Similar / Related movies or TV shows (combine recommendations & similar)
+    final recoList = (json['recommendations'] as Map<String, dynamic>?)?['results'] as List<dynamic>? ?? [];
+    final simList = (json['similar'] as Map<String, dynamic>?)?['results'] as List<dynamic>? ?? [];
+    final combined = [...recoList, ...simList];
+    final seenIds = <int>{};
+    final List<Movie> similarResults = [];
+    for (final item in combined) {
+      if (item is Map<String, dynamic>) {
+        final parsed = Movie.fromJson(item);
+        if (parsed.id != 0 && seenIds.add(parsed.id)) {
+          similarResults.add(parsed);
+          if (similarResults.length >= 14) break;
+        }
+      }
+    }
 
     final bool isTvShow = json['number_of_seasons'] != null ||
         json['first_air_date'] != null ||

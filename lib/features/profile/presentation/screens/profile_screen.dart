@@ -239,38 +239,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       icon: Icons.info_rounded,
                       iconColor: const Color(0xFF38BDF8),
                       title: 'App Version',
-                      subtitle: 'FreeWatch v1.0.33 (Build 34)',
-                      trailing: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF38BDF8).withOpacity(0.16),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: const Color(0xFF38BDF8).withOpacity(0.35),
-                            width: 0.8,
-                          ),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'About',
-                              style: TextStyle(
-                                color: Color(0xFF38BDF8),
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            SizedBox(width: 3),
-                            Icon(
-                              Icons.arrow_forward_ios_rounded,
-                              size: 10,
-                              color: Color(0xFF38BDF8),
-                            ),
-                          ],
-                        ),
-                      ),
-                      onTap: () => _showAboutModal(context),
+                      subtitle: 'FreeWatch v1.0.34 (Build 35)',
+                      trailing: null,
+                      onTap: null,
                     ),
                   ]),
 
@@ -506,267 +477,69 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  // ── About FreeWatch Glassmorphic Modal ─────────────────────────────────────
-  void _showAboutModal(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) {
-        return ClipRRect(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(22, 14, 22, 32),
-              decoration: BoxDecoration(
-                color: const Color(0xFF0F121C).withOpacity(0.94),
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                border: Border(
-                  top: BorderSide(
-                    color: Colors.white.withOpacity(0.18),
-                    width: 1,
-                  ),
-                ),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.25),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Image.asset(
-                    'assets/images/logo_full.png',
-                    height: 50,
-                    fit: BoxFit.contain,
-                  ),
-                  const SizedBox(height: 10),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF10B981).withOpacity(0.18),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: const Color(0xFF10B981).withOpacity(0.40),
-                        width: 0.8,
-                      ),
-                    ),
-                    child: const Text(
-                      'v1.0.28 (Build 29) • Stable Release',
-                      style: TextStyle(
-                        color: Color(0xFF34D399),
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'FreeWatch is your premier cinematic streaming destination for translated movies and blockbuster series, curated by Uganda\'s most renowned VJs.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.80),
-                      fontSize: 13.5,
-                      height: 1.45,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.04),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.08),
-                        width: 0.8,
-                      ),
-                    ),
-                    child: Column(
-                      children: [
-                        _buildAboutFeatureRow(Icons.hd_rounded, '4K Ultra HD & Dolby Atmos streaming'),
-                        const SizedBox(height: 10),
-                        _buildAboutFeatureRow(Icons.offline_pin_rounded, 'Unlimited offline downloads'),
-                        const SizedBox(height: 10),
-                        _buildAboutFeatureRow(Icons.translate_rounded, 'VJ Junior, Jingo, Ice P & K-Davis translations'),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.accent,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
-                      child: const Text(
-                        'Done',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
 
-  Widget _buildAboutFeatureRow(IconData icon, String text) {
-    return Row(
-      children: [
-        Icon(icon, color: AppColors.accent, size: 18),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            text,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 12.5,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
 
   // ── Join TikTok for Updates Banner ─────────────────────────────────────────
   Widget _buildCommunityBanner(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(18),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                const Color(0xFF111422).withOpacity(0.85),
-                const Color(0xFF0A0C14).withOpacity(0.92),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: Colors.white.withOpacity(0.12),
-              width: 0.9,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: Colors.black,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          // White abstract TikTok icon without outline
+          const Icon(
+            Icons.music_note_rounded,
+            color: Colors.white,
+            size: 28,
+          ),
+          const SizedBox(width: 14),
+          const Expanded(
+            child: Text(
+              'Join us on TikTok for updates',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
-          child: Row(
-            children: [
-              // TikTok Music Note glyph box with brand glow
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: Colors.black,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: const Color(0xFF25F4EE).withOpacity(0.55),
-                    width: 1.2,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFFFE2C55).withOpacity(0.35),
-                      blurRadius: 10,
-                      offset: const Offset(2, 2),
+          const SizedBox(width: 12),
+          GestureDetector(
+            onTap: () async {
+              final uri = Uri.parse('https://www.tiktok.com/@freewatch');
+              try {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              } catch (_) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Opening @freewatch on TikTok...'),
+                      backgroundColor: Color(0xFF161822),
                     ),
-                  ],
-                ),
-                child: const Center(
-                  child: Icon(
-                    Icons.music_note_rounded,
-                    color: Colors.white,
-                    size: 24,
-                  ),
+                  );
+                }
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Text(
+                'Join',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Join our TikTok for updates',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Follow @freewatch for upcoming VJ releases, trailers & daily movie updates',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.72),
-                        fontSize: 11.5,
-                        height: 1.25,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 10),
-              GestureDetector(
-                onTap: () async {
-                  final uri = Uri.parse('https://www.tiktok.com/@freewatch');
-                  try {
-                    await launchUrl(uri, mode: LaunchMode.externalApplication);
-                  } catch (_) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Opening @freewatch on TikTok...'),
-                          backgroundColor: Color(0xFF161822),
-                        ),
-                      );
-                    }
-                  }
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFE2C55),
-                    borderRadius: BorderRadius.circular(10),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFFFE2C55).withOpacity(0.4),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: const Text(
-                    'Join',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

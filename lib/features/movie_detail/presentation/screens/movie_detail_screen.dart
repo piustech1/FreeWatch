@@ -101,7 +101,9 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
     final isFav = ref.watch(favoritesProvider.notifier).isFavorite(movie.id);
 
     // Watch live details from TMDB with append_to_response
-    final detailsAsync = ref.watch(movieDetailsProvider(movie.id));
+    final detailsAsync = ref.watch(
+      movieDetailsProvider(MovieDetailsParam(movieId: movie.id, isTv: movie.isTv)),
+    );
 
     // Backdrop URL with fallback
     final backdropUrl = movie.backdropPath != null && movie.backdropPath!.isNotEmpty
@@ -867,12 +869,12 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
             details.overview.isNotEmpty ? details.overview : widget.movie.overview ?? '',
           ),
 
-          // 3. Related Movies Section (Horizontal Carousel)
+          // 3. Related Movies / More Like This Section (Horizontal Carousel)
           if (details.relatedMovies.isNotEmpty) ...[
             const SizedBox(height: 26),
-            const Text(
-              'Related Movies',
-              style: TextStyle(
+            Text(
+              (details.isTv || widget.movie.isTv) ? 'More Like This' : 'Related Movies',
+              style: const TextStyle(
                 color: AppColors.textPrimary,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,

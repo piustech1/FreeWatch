@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../home/providers/home_providers.dart';
+import '../../../home/widgets/floating_nav_bar.dart';
 import '../../../movie_detail/presentation/screens/movie_detail_screen.dart';
+import '../../../../shared/widgets/free_watch_top_app_bar.dart';
 import '../../data/models/notification_item.dart';
 import '../providers/notifications_provider.dart';
 
 /// Notifications screen replicating the clean iOS-inspired design from reference UI:
-/// - iOS back chevron
+/// - Fixed FreeWatchTopAppBar and FloatingNavBar matching home screen
+/// - iOS back chevron & subheader
 /// - Prominent "Notifications" title with red circular count badge [2]
 /// - Distinct "Today" & "This week" sections
 /// - Dark squircle icon tiles with vivid category icons
@@ -19,6 +23,7 @@ class NotificationsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final notifications = ref.watch(notificationsProvider);
     final unreadCount = ref.watch(unreadNotificationsCountProvider);
+    final currentNavIndex = ref.watch(bottomNavIndexProvider);
 
     // Group notifications by section (Today, This week, etc.)
     final todayItems =
@@ -32,120 +37,152 @@ class NotificationsScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        bottom: false,
+        child: Stack(
           children: [
-            // ── Top Back Navigation & Actions ──────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 16, 4),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(
-                      Icons.arrow_back_ios_new_rounded,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                    padding: const EdgeInsets.all(8),
-                    constraints: const BoxConstraints(),
-                  ),
-                  if (unreadCount > 0)
-                    TextButton(
-                      onPressed: () {
-                        ref.read(notificationsProvider.notifier).markAllAsRead();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            duration: Duration(milliseconds: 900),
-                            backgroundColor: Color(0xFF161922),
-                            content: Text(
-                              'All notifications marked as read',
-                              style: TextStyle(color: Colors.white),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── Top Header / App Bar (Fixed across all screens) ──────────────────
+                FreeWatchTopAppBar(
+                  onSearchTap: () {
+                    Navigator.of(context).pop();
+                    navigateToBottomNavTab(context, ref, 1);
+                  },
+                  onNotificationTap: () {},
+                  onProfileTap: () {
+                    Navigator.of(context).pop();
+                    navigateToBottomNavTab(context, ref, 4);
+                  },
+                ),
+
+                // ── Top Subheader: Back Navigation & Actions ──────────────────────────────
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 4, 16, 2),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      IconButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: const Icon(
+                          Icons.arrow_back_ios_new_rounded,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                        padding: const EdgeInsets.all(8),
+                        constraints: const BoxConstraints(),
+                      ),
+                      if (unreadCount > 0)
+                        TextButton(
+                          onPressed: () {
+                            ref.read(notificationsProvider.notifier).markAllAsRead();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                duration: Duration(milliseconds: 900),
+                                backgroundColor: Color(0xFF161922),
+                                content: Text(
+                                  'All notifications marked as read',
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                              ),
+                            );
+                          },
+                          child: Text(
+                            'Mark all read',
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.60),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-                        );
-                      },
-                      child: Text(
-                        'Mark all read',
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.60),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
                         ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-
-            // ── Page Header: "Notifications" + Circular Red Badge ─────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 14),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const Text(
-                    'Notifications',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 32,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -0.6,
-                    ),
+                    ],
                   ),
-                  if (unreadCount > 0) ...[
-                    const SizedBox(width: 10),
-                    Container(
-                      width: 25,
-                      height: 25,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFFF3B30), // iOS vibrant red
-                        shape: BoxShape.circle,
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        '$unreadCount',
-                        style: const TextStyle(
+                ),
+
+                // ── Page Header: "Notifications" + Circular Red Badge ─────────
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      const Text(
+                        'Notifications',
+                        style: TextStyle(
                           color: Colors.white,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
+                          fontSize: 32,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.6,
                         ),
                       ),
-                    ),
-                  ],
-                ],
-              ),
+                      if (unreadCount > 0) ...[
+                        const SizedBox(width: 10),
+                        Container(
+                          width: 25,
+                          height: 25,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFFF3B30), // iOS vibrant red
+                            shape: BoxShape.circle,
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            '$unreadCount',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+
+                // ── Scrollable Notifications List ──────────────────────────────
+                Expanded(
+                  child: notifications.isEmpty
+                      ? _buildEmptyState()
+                      : ListView(
+                          physics: const BouncingScrollPhysics(),
+                          padding: const EdgeInsets.only(bottom: 96),
+                          children: [
+                            if (todayItems.isNotEmpty) ...[
+                              _buildSectionHeader('Today'),
+                              ...todayItems.map(
+                                (item) => _buildNotificationRow(context, ref, item),
+                              ),
+                            ],
+                            if (thisWeekItems.isNotEmpty) ...[
+                              _buildSectionHeader('This week'),
+                              ...thisWeekItems.map(
+                                (item) => _buildNotificationRow(context, ref, item),
+                              ),
+                            ],
+                            if (earlierItems.isNotEmpty) ...[
+                              _buildSectionHeader('Earlier'),
+                              ...earlierItems.map(
+                                (item) => _buildNotificationRow(context, ref, item),
+                              ),
+                            ],
+                          ],
+                        ),
+                ),
+              ],
             ),
 
-            // ── Scrollable Notifications List ──────────────────────────────
-            Expanded(
-              child: notifications.isEmpty
-                  ? _buildEmptyState()
-                  : ListView(
-                      physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.only(bottom: 32),
-                      children: [
-                        if (todayItems.isNotEmpty) ...[
-                          _buildSectionHeader('Today'),
-                          ...todayItems.map(
-                            (item) => _buildNotificationRow(context, ref, item),
-                          ),
-                        ],
-                        if (thisWeekItems.isNotEmpty) ...[
-                          _buildSectionHeader('This week'),
-                          ...thisWeekItems.map(
-                            (item) => _buildNotificationRow(context, ref, item),
-                          ),
-                        ],
-                        if (earlierItems.isNotEmpty) ...[
-                          _buildSectionHeader('Earlier'),
-                          ...earlierItems.map(
-                            (item) => _buildNotificationRow(context, ref, item),
-                          ),
-                        ],
-                      ],
-                    ),
+            // ── Floating Bottom Navigation Pill ──────────────────────────────
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: FloatingNavBar(
+                selectedIndex: currentNavIndex,
+                onItemSelected: (index) {
+                  Navigator.of(context).pop();
+                  navigateToBottomNavTab(context, ref, index);
+                },
+              ),
             ),
           ],
         ),

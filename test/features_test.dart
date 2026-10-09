@@ -145,7 +145,7 @@ void main() {
       expect(find.text('Welcome Back'), findsOneWidget);
       expect(find.text('LOG IN'), findsOneWidget);
       expect(find.text('Email Address'), findsOneWidget);
-      expect(find.text('Back'), findsOneWidget);
+      expect(find.text('Explore as Guest >'), findsOneWidget);
 
       // Switch to Sign Up mode using the account switcher text
       await tester.tap(find.text('Create Account'));
@@ -157,13 +157,7 @@ void main() {
       expect(find.text('Create Account'), findsWidgets);
       expect(find.text('SIGN UP'), findsOneWidget);
       expect(find.text('Full Name'), findsOneWidget);
-
-      // Verify Back button returns to Page 1
-      await tester.tap(find.text('Back'));
-      for (int i = 0; i < 8; i++) {
-        await tester.pump(const Duration(milliseconds: 100));
-      }
-      expect(find.text('The greatest stories,\nall in one place.'), findsOneWidget);
+      expect(find.text('Choose Your Avatar'), findsOneWidget);
     });
   });
 
@@ -178,9 +172,9 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Verify Title and initial unread badge '2'
-      expect(find.text('Notifications'), findsOneWidget);
-      expect(find.text('2'), findsOneWidget);
+      // Verify Title and initial unread badge '2' (in top bar and screen header)
+      expect(find.text('Notifications'), findsWidgets);
+      expect(find.text('2'), findsWidgets);
 
       // Verify Sections "Today" and "This week"
       expect(find.text('Today'), findsOneWidget);

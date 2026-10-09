@@ -66,15 +66,27 @@ class FreeWatchTopAppBar extends ConsumerWidget {
               ),
               if (unreadNotifications > 0)
                 Positioned(
-                  top: 5,
-                  right: 5,
-                  child: Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFF3B30),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.black, width: 1.5),
+                  top: 2,
+                  right: 2,
+                  child: IgnorePointer(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 4.5, vertical: 1.5),
+                      constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFF3B30),
+                        borderRadius: BorderRadius.circular(9),
+                        border: Border.all(color: Colors.black, width: 1.5),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        unreadNotifications > 99 ? '99+' : '$unreadNotifications',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w900,
+                          height: 1.0,
+                        ),
+                      ),
                     ),
                   ),
                 ),

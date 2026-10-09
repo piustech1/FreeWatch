@@ -156,6 +156,61 @@ class MockData {
     ),
   ];
 
+  static const List<Movie> popularTv = [
+    Movie(
+      id: 66732,
+      title: 'Stranger Things',
+      overview:
+          'When a young boy vanishes, a small town uncovers a mystery involving secret experiments, terrifying supernatural forces and one strange little girl.',
+      posterPath: '/49WJfeN0moxb9IPfGn8AIqMGskD.jpg',
+      backdropPath: '/56v2KjBlU4XaOv9rVYEQypROD7P.jpg',
+      releaseDate: '2016-07-15',
+      voteAverage: 8.6,
+      voteCount: 16800,
+      genreIds: [18, 878, 9648],
+      isTv: true,
+    ),
+    Movie(
+      id: 93405,
+      title: 'Squid Game',
+      overview:
+          'Hundreds of cash-strapped players accept a strange invitation to compete in children\'s games. Inside, a tempting prize awaits with deadly high stakes.',
+      posterPath: '/dDlEmu3EZ0Pgg93K2SVNLCjCSvE.jpg',
+      backdropPath: '/2meX1nMdScFOoV4370rqHWFDxZ.jpg',
+      releaseDate: '2021-09-17',
+      voteAverage: 8.5,
+      voteCount: 13500,
+      genreIds: [18, 9648, 10759],
+      isTv: true,
+    ),
+    Movie(
+      id: 119051,
+      title: 'Wednesday',
+      overview:
+          'A sleuthing, supernaturally infused mystery charting Wednesday Addams\' years as a student at Nevermore Academy.',
+      posterPath: '/9PFonB99nm1VTvgsl2z22oxOpF2.jpg',
+      backdropPath: '/iHSwvRVsRyxpX7FE7GbviaDvgGZ.jpg',
+      releaseDate: '2022-11-23',
+      voteAverage: 8.4,
+      voteCount: 8200,
+      genreIds: [18, 9648, 35],
+      isTv: true,
+    ),
+    Movie(
+      id: 71446,
+      title: 'Money Heist',
+      overview:
+          'To carry out the biggest heist in history, a mysterious man called The Professor recruits a band of eight robbers who have a single characteristic: none of them has anything to lose.',
+      posterPath: '/reEMJA1uzscCbk5rUhGnyRYEvtV.jpg',
+      backdropPath: '/gFZriCkpJYsApPwyQ9qhKeLzFv3.jpg',
+      releaseDate: '2017-05-02',
+      voteAverage: 8.3,
+      voteCount: 18200,
+      genreIds: [80, 18],
+      isTv: true,
+    ),
+  ];
+
   static const List<Vj> vjs = [
     Vj(
       id: 'vj-junior',
@@ -423,7 +478,7 @@ class MockData {
   static List<Movie> getAllMovies() {
     final seen = <int>{};
     final all = <Movie>[];
-    for (final m in [...trendingMovies, ...newMovies, ...popularMovies]) {
+    for (final m in [...trendingMovies, ...newMovies, ...popularMovies, ...popularTv]) {
       if (seen.add(m.id)) {
         all.add(m);
       }
