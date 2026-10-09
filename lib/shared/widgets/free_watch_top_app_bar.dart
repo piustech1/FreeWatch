@@ -30,7 +30,7 @@ class FreeWatchTopAppBar extends ConsumerWidget {
           // ── Brand Logo ────────────────────────────────────────────────────
           Image.asset(
             'assets/images/logo_full.png',
-            height: 48,
+            height: 52,
             fit: BoxFit.contain,
           ),
 

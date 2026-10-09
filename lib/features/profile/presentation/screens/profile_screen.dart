@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/constants/api_constants.dart';
@@ -239,7 +240,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       icon: Icons.info_rounded,
                       iconColor: const Color(0xFF38BDF8),
                       title: 'App Version',
-                      subtitle: 'FreeWatch v1.0.34 (Build 35)',
+                      subtitle: 'FreeWatch v1.0.35 (Build 36)',
                       trailing: null,
                       onTap: null,
                     ),
@@ -490,19 +491,23 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       child: Row(
         children: [
           // White abstract TikTok icon without outline
-          const Icon(
-            Icons.music_note_rounded,
-            color: Colors.white,
-            size: 28,
+          SvgPicture.string(
+            '''<svg viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
+              <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1.04-.1z"/>
+            </svg>''',
+            width: 26,
+            height: 26,
+            colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
           ),
           const SizedBox(width: 14),
           const Expanded(
             child: Text(
-              'Join us on TikTok for updates',
+              'Follow us on TikTok',
               style: TextStyle(
                 color: Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
+                fontSize: 14.5,
+                fontWeight: FontWeight.bold,
+                letterSpacing: -0.2,
               ),
             ),
           ),
@@ -530,7 +535,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 borderRadius: BorderRadius.circular(14),
               ),
               child: const Text(
-                'Join',
+                'Follow',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 13,
