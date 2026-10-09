@@ -9,6 +9,7 @@ import 'package:freewatch/features/home/widgets/vj_section.dart';
 import 'package:freewatch/data/models/movie.dart';
 import 'package:freewatch/features/home/providers/home_providers.dart';
 import 'package:freewatch/features/onboarding/onboarding_screen.dart';
+import 'package:freewatch/features/notifications/presentation/screens/notifications_screen.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -163,6 +164,43 @@ void main() {
         await tester.pump(const Duration(milliseconds: 100));
       }
       expect(find.text('The greatest stories,\nall in one place.'), findsOneWidget);
+    });
+  });
+
+  group('NotificationsScreen UI tests', () {
+    testWidgets('NotificationsScreen renders header, red badge, sections, and items', (tester) async {
+      await tester.pumpWidget(
+        const ProviderScope(
+          child: MaterialApp(
+            home: NotificationsScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Verify Title and initial unread badge '2'
+      expect(find.text('Notifications'), findsOneWidget);
+      expect(find.text('2'), findsOneWidget);
+
+      // Verify Sections "Today" and "This week"
+      expect(find.text('Today'), findsOneWidget);
+      expect(find.text('This week'), findsOneWidget);
+
+      // Verify notification message items
+      expect(find.text('What if your next favorite movie is online right now?'), findsOneWidget);
+      expect(find.text('Meet top picks according to your mood and your interests'), findsOneWidget);
+
+      // Verify back chevron icon
+      expect(find.byIcon(Icons.arrow_back_ios_new_rounded), findsOneWidget);
+
+      // Tap "Mark all read"
+      expect(find.text('Mark all read'), findsOneWidget);
+      await tester.tap(find.text('Mark all read'));
+      await tester.pumpAndSettle();
+
+      // Badge '2' should now disappear because unread count is 0
+      expect(find.text('2'), findsNothing);
+      expect(find.text('Mark all read'), findsNothing);
     });
   });
 }

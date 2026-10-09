@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iconly/iconly.dart';
 import '../../core/constants/app_colors.dart';
 import '../../features/auth/presentation/providers/user_avatar_provider.dart';
+import '../../features/notifications/presentation/providers/notifications_provider.dart';
 
 /// Persistent Top Header / App Bar with FreeWatch full logo, search, notification, and profile avatar
 class FreeWatchTopAppBar extends ConsumerWidget {
@@ -20,6 +21,7 @@ class FreeWatchTopAppBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final avatar = ref.watch(userAvatarProvider);
+    final unreadNotifications = ref.watch(unreadNotificationsCountProvider);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(18, 6, 12, 6),
@@ -62,19 +64,20 @@ class FreeWatchTopAppBar extends ConsumerWidget {
                   size: 24,
                 ),
               ),
-              Positioned(
-                top: 5,
-                right: 5,
-                child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: AppColors.accent,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.black, width: 1.5),
+              if (unreadNotifications > 0)
+                Positioned(
+                  top: 5,
+                  right: 5,
+                  child: Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFF3B30),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.black, width: 1.5),
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
 

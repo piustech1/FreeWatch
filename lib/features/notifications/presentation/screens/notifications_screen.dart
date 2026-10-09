@@ -1,362 +1,309 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/app_colors.dart';
-import '../../../../data/mock/mock_movies.dart';
-import '../../../../data/models/movie.dart';
 import '../../../movie_detail/presentation/screens/movie_detail_screen.dart';
+import '../../data/models/notification_item.dart';
+import '../providers/notifications_provider.dart';
 
-class _NotificationItem {
-  final String id;
-  final String category; // 'Releases', 'VJ Drops', 'System'
-  final String title;
-  final String body;
-  final String time;
-  final IconData icon;
-  final Movie? linkedMovie;
-  bool isRead;
-
-  _NotificationItem({
-    required this.id,
-    required this.category,
-    required this.title,
-    required this.body,
-    required this.time,
-    required this.icon,
-    this.linkedMovie,
-    this.isRead = false,
-  });
-}
-
-/// Dedicated full-screen Notifications screen
-class NotificationsScreen extends StatefulWidget {
+/// Notifications screen replicating the clean iOS-inspired design from reference UI:
+/// - iOS back chevron
+/// - Prominent "Notifications" title with red circular count badge [2]
+/// - Distinct "Today" & "This week" sections
+/// - Dark squircle icon tiles with vivid category icons
+/// - Engaging multi-line streaming notifications
+/// - Solid red unread indicator dots on the right
+class NotificationsScreen extends ConsumerWidget {
   const NotificationsScreen({super.key});
 
   @override
-  State<NotificationsScreen> createState() => _NotificationsScreenState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final notifications = ref.watch(notificationsProvider);
+    final unreadCount = ref.watch(unreadNotificationsCountProvider);
 
-class _NotificationsScreenState extends State<NotificationsScreen> {
-  String _selectedCategory = 'All';
-
-  late final List<_NotificationItem> _notifications;
-
-  @override
-  void initState() {
-    super.initState();
-    _notifications = [
-      _NotificationItem(
-        id: '1',
-        category: 'VJ Drops',
-        title: 'New VJ Translation Drop! 🎙️',
-        body: 'VJ Junior just released the exclusive Luganda studio translation for "Gladiator II". Stream now in 4K!',
-        time: '12m ago',
-        icon: Icons.record_voice_over_rounded,
-        linkedMovie: MockData.newMovies[3], // Gladiator II
-        isRead: false,
-      ),
-      _NotificationItem(
-        id: '2',
-        category: 'Releases',
-        title: 'Blockbuster Arrival 🍿',
-        body: '"Deadpool & Wolverine" is now streaming in Ultra HD with Dolby Atmos master sound.',
-        time: '2h ago',
-        icon: Icons.movie_filter_rounded,
-        linkedMovie: MockData.trendingMovies[2], // Deadpool & Wolverine
-        isRead: false,
-      ),
-      _NotificationItem(
-        id: '3',
-        category: 'VJ Drops',
-        title: 'VJ Emmy Weekend Pick ⚡',
-        body: 'VJ Emmy recommended "Dune: Part Two" with complete Luganda commentary and cultural breakdown.',
-        time: '5h ago',
-        icon: Icons.verified_rounded,
-        linkedMovie: MockData.trendingMovies[1], // Dune 2
-        isRead: true,
-      ),
-      _NotificationItem(
-        id: '4',
-        category: 'Releases',
-        title: 'Fresh Animation Drop ✨',
-        body: 'Disney\'s "Lilo & Stitch" live-action is ready to binge for family movie night.',
-        time: 'Yesterday',
-        icon: Icons.auto_awesome_rounded,
-        linkedMovie: MockData.newMovies[0], // Lilo & Stitch
-        isRead: true,
-      ),
-      _NotificationItem(
-        id: '5',
-        category: 'System',
-        title: 'FreeWatch v1.0.12 Live 🚀',
-        body: 'Your streaming app is now faster with instant video buffering, new search, and Disney avatars.',
-        time: '2 days ago',
-        icon: Icons.rocket_launch_rounded,
-        isRead: true,
-      ),
-    ];
-  }
-
-  void _markAllAsRead() {
-    setState(() {
-      for (final n in _notifications) {
-        n.isRead = true;
-      }
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        duration: Duration(milliseconds: 900),
-        backgroundColor: Color(0xFF161922),
-        content: Text('All notifications marked as read',
-            style: TextStyle(color: Colors.white)),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final filtered = _notifications.where((n) {
-      if (_selectedCategory == 'All') return true;
-      return n.category == _selectedCategory;
-    }).toList();
+    // Group notifications by section (Today, This week, etc.)
+    final todayItems =
+        notifications.where((n) => n.section == 'Today').toList();
+    final thisWeekItems =
+        notifications.where((n) => n.section == 'This week').toList();
+    final earlierItems = notifications
+        .where((n) => n.section != 'Today' && n.section != 'This week')
+        .toList();
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded,
-              color: Colors.white, size: 20),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'Notifications',
-          style: TextStyle(
-            color: AppColors.textPrimary,
-            fontSize: 20,
-            fontWeight: FontWeight.w900,
-            letterSpacing: -0.3,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: _markAllAsRead,
-            child: const Text(
-              'Mark all read',
-              style: TextStyle(
-                color: AppColors.accent,
-                fontSize: 12.5,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
       body: SafeArea(
         child: Column(
-          children: [
-            // ── Category Filters ────────────────────────────────────────────
-            SizedBox(
-              height: 36,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                physics: const BouncingScrollPhysics(),
-                children: ['All', 'VJ Drops', 'Releases', 'System'].map((cat) {
-                  final isSelected = _selectedCategory == cat;
-                  return GestureDetector(
-                    onTap: () => setState(() => _selectedCategory = cat),
-                    child: Container(
-                      margin: const EdgeInsets.only(right: 8),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 7),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? AppColors.accent
-                            : const Color(0xFF151821),
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(
-                          color: isSelected
-                              ? AppColors.accent
-                              : Colors.white.withOpacity(0.08),
-                          width: 1,
-                        ),
-                      ),
-                      child: Text(
-                        cat,
-                        style: TextStyle(
-                          color: isSelected ? Colors.black : Colors.white70,
-                          fontSize: 12,
-                          fontWeight: isSelected
-                              ? FontWeight.w800
-                              : FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            // ── Notifications List ──────────────────────────────────────────
-            Expanded(
-              child: filtered.isEmpty
-                  ? Center(
-                      child: Text(
-                        'No notifications in this category',
-                        style: TextStyle(
-                            color: Colors.white.withOpacity(0.5), fontSize: 13),
-                      ),
-                    )
-                  : ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 40),
-                      physics: const BouncingScrollPhysics(),
-                      itemCount: filtered.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 10),
-                      itemBuilder: (context, i) {
-                        final item = filtered[i];
-                        return _buildNotificationCard(item);
-                      },
-                    ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNotificationCard(_NotificationItem item) {
-    return GestureDetector(
-      onTap: () {
-        setState(() => item.isRead = true);
-        if (item.linkedMovie != null) {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => MovieDetailScreen(movie: item.linkedMovie!),
-            ),
-          );
-        }
-      },
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: item.isRead
-              ? const Color(0xFF11141B)
-              : const Color(0xFF161A24),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: item.isRead
-                ? Colors.white.withOpacity(0.06)
-                : AppColors.accent.withOpacity(0.35),
-            width: 1,
-          ),
-        ),
-        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Icon Circle
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: item.isRead
-                    ? const Color(0xFF1C202C)
-                    : AppColors.accent.withOpacity(0.18),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: item.isRead
-                      ? Colors.white12
-                      : AppColors.accent.withOpacity(0.6),
-                  width: 1,
-                ),
-              ),
-              child: Icon(
-                item.icon,
-                color: item.isRead ? Colors.white70 : AppColors.accent,
-                size: 22,
+            // ── Top Back Navigation & Actions ──────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 10, 16, 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(
+                      Icons.arrow_back_ios_new_rounded,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                    padding: const EdgeInsets.all(8),
+                    constraints: const BoxConstraints(),
+                  ),
+                  if (unreadCount > 0)
+                    TextButton(
+                      onPressed: () {
+                        ref.read(notificationsProvider.notifier).markAllAsRead();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            duration: Duration(milliseconds: 900),
+                            backgroundColor: Color(0xFF161922),
+                            content: Text(
+                              'All notifications marked as read',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                          ),
+                        );
+                      },
+                      child: Text(
+                        'Mark all read',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.60),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
 
-            const SizedBox(width: 12),
-
-            // Content
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            // ── Page Header: "Notifications" + Circular Red Badge ─────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 14),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          item.title,
-                          style: TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 14,
-                            fontWeight: item.isRead
-                                ? FontWeight.w700
-                                : FontWeight.w900,
-                          ),
-                        ),
-                      ),
-                      Row(
-                        children: [
-                          Text(
-                            item.time,
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.45),
-                              fontSize: 11,
-                            ),
-                          ),
-                          if (!item.isRead) ...[
-                            const SizedBox(width: 6),
-                            Container(
-                              width: 7,
-                              height: 7,
-                              decoration: const BoxDecoration(
-                                color: AppColors.accent,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    item.body,
+                  const Text(
+                    'Notifications',
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.7),
-                      fontSize: 12.5,
-                      height: 1.4,
+                      color: Colors.white,
+                      fontSize: 32,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.6,
                     ),
                   ),
-                  if (item.linkedMovie != null) ...[
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        const Icon(Icons.play_circle_fill_rounded,
-                            size: 14, color: AppColors.accent),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Stream "${item.linkedMovie!.title}"',
-                          style: const TextStyle(
-                            color: AppColors.accent,
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w700,
-                          ),
+                  if (unreadCount > 0) ...[
+                    const SizedBox(width: 10),
+                    Container(
+                      width: 25,
+                      height: 25,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFFF3B30), // iOS vibrant red
+                        shape: BoxShape.circle,
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        '$unreadCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
                         ),
-                      ],
+                      ),
                     ),
                   ],
                 ],
               ),
             ),
+
+            // ── Scrollable Notifications List ──────────────────────────────
+            Expanded(
+              child: notifications.isEmpty
+                  ? _buildEmptyState()
+                  : ListView(
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.only(bottom: 32),
+                      children: [
+                        if (todayItems.isNotEmpty) ...[
+                          _buildSectionHeader('Today'),
+                          ...todayItems.map(
+                            (item) => _buildNotificationRow(context, ref, item),
+                          ),
+                        ],
+                        if (thisWeekItems.isNotEmpty) ...[
+                          _buildSectionHeader('This week'),
+                          ...thisWeekItems.map(
+                            (item) => _buildNotificationRow(context, ref, item),
+                          ),
+                        ],
+                        if (earlierItems.isNotEmpty) ...[
+                          _buildSectionHeader('Earlier'),
+                          ...earlierItems.map(
+                            (item) => _buildNotificationRow(context, ref, item),
+                          ),
+                        ],
+                      ],
+                    ),
+            ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+      child: Text(
+        title,
+        style: TextStyle(
+          color: Colors.white.withOpacity(0.55),
+          fontSize: 14.5,
+          fontWeight: FontWeight.w700,
+          letterSpacing: -0.1,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNotificationRow(
+    BuildContext context,
+    WidgetRef ref,
+    NotificationItem item,
+  ) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          ref.read(notificationsProvider.notifier).markAsRead(item.id);
+          if (item.linkedMovie != null) {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => MovieDetailScreen(movie: item.linkedMovie!),
+              ),
+            );
+          }
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // 1. Squircle Icon Container
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF13151E),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.08),
+                    width: 0.8,
+                  ),
+                ),
+                alignment: Alignment.center,
+                child: Icon(
+                  item.icon,
+                  color: item.iconColor,
+                  size: 24,
+                ),
+              ),
+
+              const SizedBox(width: 14),
+
+              // 2. Middle Message Text & Timestamp
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      item.message,
+                      style: TextStyle(
+                        color: item.isRead
+                            ? Colors.white.withOpacity(0.72)
+                            : Colors.white,
+                        fontSize: 14.5,
+                        fontWeight:
+                            item.isRead ? FontWeight.w500 : FontWeight.w600,
+                        height: 1.35,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                    if (item.time.isNotEmpty) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        item.time,
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.38),
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+
+              // 3. Right Unread Solid Red Dot Indicator
+              if (!item.isRead)
+                Container(
+                  margin: const EdgeInsets.only(left: 14),
+                  width: 9,
+                  height: 9,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFFF3B30), // Solid red dot matching UI
+                    shape: BoxShape.circle,
+                  ),
+                )
+              else
+                const SizedBox(width: 23),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.06),
+              shape: BoxShape.circle,
+            ),
+            alignment: Alignment.center,
+            child: Icon(
+              Icons.notifications_none_rounded,
+              color: Colors.white.withOpacity(0.40),
+              size: 32,
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'No Notifications',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'You are completely caught up!',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.45),
+              fontSize: 13,
+            ),
+          ),
+        ],
       ),
     );
   }
