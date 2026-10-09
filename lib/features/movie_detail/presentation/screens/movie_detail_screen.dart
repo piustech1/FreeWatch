@@ -1,14 +1,17 @@
 import 'dart:ui';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:video_player/video_player.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../data/mock/mock_movies.dart';
 import '../../../../data/models/movie.dart';
 import '../../../../data/models/movie_details_data.dart';
 import '../../../../data/models/vj.dart';
+import '../../../downloads/presentation/providers/downloads_provider.dart';
 import '../../../home/widgets/floating_nav_bar.dart';
 import '../../../../shared/widgets/free_watch_top_app_bar.dart';
 import '../../../../shared/widgets/shimmer_loading.dart';
@@ -43,6 +46,23 @@ class MovieDetailScreen extends ConsumerStatefulWidget {
 class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
   bool _isSynopsisExpanded = false;
   int _selectedSeason = 1;
+  double _watchlistScale = 1.0;
+  double _downloadScale = 1.0;
+
+  VideoPlayerController? _videoPlayerController;
+  bool _isPlayingVideo = false;
+  bool _isInitializingVideo = false;
+  bool _isFullscreen = false;
+
+  @override
+  void dispose() {
+    if (_isFullscreen) {
+      SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    }
+    _videoPlayerController?.dispose();
+    super.dispose();
+  }
 
   bool _checkIsSeries(Movie movie, MovieDetailsData details) {
     final title = movie.title.toLowerCase();
@@ -62,6 +82,18 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isFullscreen) {
+      return PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, result) {
+          if (!didPop) {
+            _toggleFullscreen();
+          }
+        },
+        child: _buildLandscapeFullscreenPlayer(),
+      );
+    }
+
     final movie = widget.movie;
     final isFav = ref.watch(favoritesProvider.notifier).isFavorite(movie.id);
 
@@ -102,7 +134,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                       ),
                     );
                   },
-                  onProfileTap: () => navigateToBottomNavTab(context, ref, 3),
+                  onProfileTap: () => navigateToBottomNavTab(context, ref, 4),
                 ),
 
                 // ── 2. Scrollable Movie Details Content ─────────────────────
@@ -252,35 +284,62 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                   ],
                 ),
 
-                // Centered circular white play button on backdrop art
-                SizedBox(
-                  height: 210,
-                  child: Center(
-                    child: GestureDetector(
-                      onTap: () => _playTrailer(context),
-                      child: Container(
-                        width: 52,
-                        height: 52,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.45),
-                              blurRadius: 14,
-                              offset: const Offset(0, 3),
+                // Inline video player OR Buffering stream OR Centered circular play button
+                if (_isPlayingVideo && _videoPlayerController != null && _videoPlayerController!.value.isInitialized)
+                  _buildInlineVideoPlayer()
+                else if (_isInitializingVideo)
+                  const SizedBox(
+                    height: 210,
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircularProgressIndicator(
+                            color: Color(0xFF22C55E),
+                            strokeWidth: 2.5,
+                          ),
+                          SizedBox(height: 12),
+                          Text(
+                            'Connecting stream...',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
                             ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.play_arrow_rounded,
-                          color: Colors.black,
-                          size: 34,
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  SizedBox(
+                    height: 210,
+                    child: Center(
+                      child: GestureDetector(
+                        onTap: _playTrailer,
+                        child: Container(
+                          width: 52,
+                          height: 52,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.45),
+                                blurRadius: 14,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.play_arrow_rounded,
+                            color: Colors.black,
+                            size: 34,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
 
                 // Series vs Movie Title & Metadata
                 if (isSeries) ...[
@@ -684,13 +743,19 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
     required bool isFav,
   }) {
     final movie = widget.movie;
+    final isDownloaded = ref.watch(downloadsProvider.notifier).isDownloaded(movie.id);
+
+    final bool isCurrentlyPlaying = _isPlayingVideo && _videoPlayerController?.value.isPlaying == true;
+    final String playLabel = isSeries
+        ? 'RESUME'
+        : (_isPlayingVideo ? (isCurrentlyPlaying ? 'PAUSE' : 'PLAY') : 'PLAY');
 
     return Row(
       children: [
         // Main Vibrant Green Pill Play / Resume Button
         Expanded(
           child: GestureDetector(
-            onTap: () => _playTrailer(context),
+            onTap: _playTrailer,
             child: Container(
               height: 50,
               decoration: BoxDecoration(
@@ -707,14 +772,14 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
-                    Icons.play_arrow_rounded,
+                  Icon(
+                    isCurrentlyPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
                     color: Colors.white,
                     size: 28,
                   ),
                   const SizedBox(width: 6),
                   Text(
-                    isSeries ? 'RESUME' : 'PLAY',
+                    playLabel,
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 15,
@@ -729,61 +794,81 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
         ),
         const SizedBox(width: 12),
 
-        // Add to Watchlist / Favorites Button (Solid body + solid icon)
-        GestureDetector(
-          onTap: () {
-            ref.read(favoritesProvider.notifier).toggleFavorite(movie);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                duration: const Duration(milliseconds: 1000),
-                backgroundColor: const Color(0xFF161922),
-                content: Text(
-                  !isFav ? 'Added to Watchlist' : 'Removed from Watchlist',
-                  style: const TextStyle(color: Colors.white),
+        // Add to Watchlist / Favorites Button with AnimatedScale click bounce
+        AnimatedScale(
+          scale: _watchlistScale,
+          duration: const Duration(milliseconds: 140),
+          curve: Curves.easeInOut,
+          child: GestureDetector(
+            onTap: () async {
+              setState(() => _watchlistScale = 0.82);
+              await Future.delayed(const Duration(milliseconds: 140));
+              if (mounted) setState(() => _watchlistScale = 1.0);
+
+              ref.read(favoritesProvider.notifier).toggleFavorite(movie);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    duration: const Duration(milliseconds: 1000),
+                    backgroundColor: const Color(0xFF161922),
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    content: Text(
+                      !isFav ? 'Added "${movie.title}" to Watchlist' : 'Removed from Watchlist',
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                  ),
+                );
+              }
+            },
+            child: Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                color: const Color(0xFF1E212B),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isFav
+                      ? AppColors.accent.withOpacity(0.70)
+                      : Colors.white.withOpacity(0.16),
+                  width: 1.2,
                 ),
               ),
-            );
-          },
-          child: Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: const Color(0xFF1E212B),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: isFav
-                    ? AppColors.accent.withOpacity(0.70)
-                    : Colors.white.withOpacity(0.16),
-                width: 1.2,
+              child: Icon(
+                isFav ? Icons.bookmark_added_rounded : Icons.bookmark_add_rounded,
+                color: isFav ? AppColors.accent : Colors.white,
+                size: 24,
               ),
-            ),
-            child: Icon(
-              isFav ? Icons.bookmark_added_rounded : Icons.bookmark_add_rounded,
-              color: isFav ? AppColors.accent : Colors.white,
-              size: 24,
             ),
           ),
         ),
         const SizedBox(width: 12),
 
-        // Download Button (Solid body + solid icon)
-        GestureDetector(
-          onTap: () => _downloadMovie(context),
-          child: Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: const Color(0xFF1E212B),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: Colors.white.withOpacity(0.16),
-                width: 1.2,
+        // Download Button with AnimatedScale click bounce and persistent downloadsProvider storage
+        AnimatedScale(
+          scale: _downloadScale,
+          duration: const Duration(milliseconds: 140),
+          curve: Curves.easeInOut,
+          child: GestureDetector(
+            onTap: _downloadMovie,
+            child: Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                color: const Color(0xFF1E212B),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isDownloaded
+                      ? const Color(0xFF22C55E).withOpacity(0.60)
+                      : Colors.white.withOpacity(0.16),
+                  width: 1.2,
+                ),
               ),
-            ),
-            child: const Icon(
-              Icons.download_rounded,
-              color: Colors.white,
-              size: 24,
+              child: Icon(
+                isDownloaded ? Icons.file_download_done_rounded : Icons.download_rounded,
+                color: isDownloaded ? const Color(0xFF22C55E) : Colors.white,
+                size: 24,
+              ),
             ),
           ),
         ),
@@ -1127,16 +1212,54 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
         ),
       ),
     );
+    _playTrailer();
   }
 
-  void _downloadMovie(BuildContext context) {
+  Future<void> _downloadMovie() async {
+    setState(() => _downloadScale = 0.82);
+    await Future.delayed(const Duration(milliseconds: 140));
+    if (mounted) setState(() => _downloadScale = 1.0);
+
+    final downloadsNotifier = ref.read(downloadsProvider.notifier);
+    final alreadyDownloaded = downloadsNotifier.isDownloaded(widget.movie.id);
+
+    if (alreadyDownloaded) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          duration: const Duration(milliseconds: 1500),
+          backgroundColor: const Color(0xFF161922),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          content: Text(
+            '"${widget.movie.title}" is already in your Downloads!',
+            style: const TextStyle(color: Colors.white),
+          ),
+        ),
+      );
+      return;
+    }
+
+    await downloadsNotifier.addDownload(widget.movie);
+
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        duration: const Duration(milliseconds: 1500),
+        duration: const Duration(milliseconds: 2000),
         backgroundColor: const Color(0xFF161922),
-        content: Text(
-          'Downloading "${widget.movie.title}" for offline watching...',
-          style: const TextStyle(color: Colors.white),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle_rounded, color: Color(0xFF22C55E), size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Downloaded "${widget.movie.title}" (1.8 GB, 1080p)',
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -1595,7 +1718,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                         height: 80,
                         child: Center(
                           child: GestureDetector(
-                            onTap: () => _playTrailer(context),
+                            onTap: _playTrailer,
                             child: Container(
                               width: 52,
                               height: 52,
@@ -1754,19 +1877,384 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
     );
   }
 
-  void _playTrailer(BuildContext context) {
-    final Vj assignedVj = MockData.vjs.firstWhere(
-      (v) => v.translatedMovieIds.contains(widget.movie.id),
-      orElse: () => MockData.vjs.first,
+  void _playTrailer() {
+    if (_isPlayingVideo && _videoPlayerController != null) {
+      if (_videoPlayerController!.value.isPlaying) {
+        _videoPlayerController!.pause();
+      } else {
+        _videoPlayerController!.play();
+      }
+      setState(() {});
+      return;
+    }
+
+    setState(() {
+      _isInitializingVideo = true;
+    });
+
+    _videoPlayerController?.dispose();
+
+    // High reliability sample stream URL
+    final videoUri = Uri.parse(
+      'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
     );
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        duration: const Duration(milliseconds: 1500),
-        backgroundColor: const Color(0xFF161922),
-        content: Text(
-          'Streaming "${widget.movie.title}" translated by ${assignedVj.name}...',
-          style: const TextStyle(color: Colors.white),
+    _videoPlayerController = VideoPlayerController.networkUrl(videoUri)
+      ..initialize().then((_) {
+        if (!mounted) return;
+        setState(() {
+          _isInitializingVideo = false;
+          _isPlayingVideo = true;
+        });
+        _videoPlayerController?.play();
+      }).catchError((error) {
+        if (!mounted) return;
+        setState(() {
+          _isInitializingVideo = false;
+          _isPlayingVideo = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load video stream: $error'),
+            backgroundColor: const Color(0xFF161822),
+          ),
+        );
+      });
+  }
+
+  void _toggleFullscreen() {
+    setState(() {
+      _isFullscreen = !_isFullscreen;
+    });
+
+    if (_isFullscreen) {
+      SystemChrome.setPreferredOrientations([
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+      ]);
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    } else {
+      SystemChrome.setPreferredOrientations([
+        DeviceOrientation.portraitUp,
+      ]);
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    }
+  }
+
+  Widget _buildInlineVideoPlayer() {
+    final controller = _videoPlayerController!;
+
+    return Container(
+      height: 210,
+      decoration: BoxDecoration(
+        color: Colors.black,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.18),
+          width: 0.8,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.6),
+            blurRadius: 18,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            AspectRatio(
+              aspectRatio: controller.value.aspectRatio > 0 ? controller.value.aspectRatio : 16 / 9,
+              child: VideoPlayer(controller),
+            ),
+
+            // Top action icons: Fullscreen & Close (Exit inline playback)
+            Positioned(
+              top: 8,
+              right: 8,
+              child: Row(
+                children: [
+                  GestureDetector(
+                    onTap: _toggleFullscreen,
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.black54,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white24, width: 0.8),
+                      ),
+                      child: const Icon(Icons.fullscreen_rounded, color: Colors.white, size: 18),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: () {
+                      controller.pause();
+                      setState(() => _isPlayingVideo = false);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.black54,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white24, width: 0.8),
+                      ),
+                      child: const Icon(Icons.close_rounded, color: Colors.white, size: 18),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Center Play / Pause button
+            GestureDetector(
+              onTap: () {
+                if (controller.value.isPlaying) {
+                  controller.pause();
+                } else {
+                  controller.play();
+                }
+                setState(() {});
+              },
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.black45,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white30, width: 1),
+                ),
+                child: Icon(
+                  controller.value.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                  color: Colors.white,
+                  size: 28,
+                ),
+              ),
+            ),
+
+            // Bottom Progress Bar
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Colors.transparent, Colors.black87],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                ),
+                child: VideoProgressIndicator(
+                  controller,
+                  allowScrubbing: true,
+                  colors: const VideoProgressColors(
+                    playedColor: Color(0xFF22C55E),
+                    bufferedColor: Colors.white30,
+                    backgroundColor: Colors.white12,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLandscapeFullscreenPlayer() {
+    final controller = _videoPlayerController;
+    if (controller == null || !controller.value.isInitialized) {
+      return const Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(
+          child: CircularProgressIndicator(color: Color(0xFF22C55E)),
+        ),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: SafeArea(
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Center(
+              child: AspectRatio(
+                aspectRatio: controller.value.aspectRatio,
+                child: VideoPlayer(controller),
+              ),
+            ),
+
+            // Landscape Controls Overlay
+            Positioned.fill(
+              child: Container(
+                color: Colors.black.withOpacity(0.25),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Top Bar
+                    Row(
+                      children: [
+                        GestureDetector(
+                          onTap: _toggleFullscreen,
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.black54,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white24, width: 0.8),
+                            ),
+                            child: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 20),
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Text(
+                            widget.movie.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF22C55E).withOpacity(0.25),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFF22C55E), width: 0.8),
+                          ),
+                          child: const Text(
+                            '1080p FHD',
+                            style: TextStyle(
+                              color: Color(0xFF22C55E),
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    // Center Controls: Rewind 10s, Play/Pause, Forward 10s
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        IconButton(
+                          iconSize: 36,
+                          icon: const Icon(Icons.replay_10_rounded, color: Colors.white),
+                          onPressed: () {
+                            final current = controller.value.position;
+                            controller.seekTo(current - const Duration(seconds: 10));
+                          },
+                        ),
+                        const SizedBox(width: 32),
+                        GestureDetector(
+                          onTap: () {
+                            if (controller.value.isPlaying) {
+                              controller.pause();
+                            } else {
+                              controller.play();
+                            }
+                            setState(() {});
+                          },
+                          child: Container(
+                            width: 64,
+                            height: 64,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF22C55E),
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF22C55E).withOpacity(0.4),
+                                  blurRadius: 16,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Icon(
+                              controller.value.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                              color: Colors.white,
+                              size: 38,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 32),
+                        IconButton(
+                          iconSize: 36,
+                          icon: const Icon(Icons.forward_10_rounded, color: Colors.white),
+                          onPressed: () {
+                            final current = controller.value.position;
+                            controller.seekTo(current + const Duration(seconds: 10));
+                          },
+                        ),
+                      ],
+                    ),
+
+                    // Bottom Bar
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        VideoProgressIndicator(
+                          controller,
+                          allowScrubbing: true,
+                          colors: const VideoProgressColors(
+                            playedColor: Color(0xFF22C55E),
+                            bufferedColor: Colors.white30,
+                            backgroundColor: Colors.white12,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            ValueListenableBuilder(
+                              valueListenable: controller,
+                              builder: (context, VideoPlayerValue value, _) {
+                                final pos = value.position;
+                                final dur = value.duration;
+                                String format(Duration d) =>
+                                    '${d.inMinutes.remainder(60).toString().padLeft(2, '0')}:${d.inSeconds.remainder(60).toString().padLeft(2, '0')}';
+                                return Text(
+                                  '${format(pos)} / ${format(dur)}',
+                                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                                );
+                              },
+                            ),
+                            GestureDetector(
+                              onTap: _toggleFullscreen,
+                              child: const Row(
+                                children: [
+                                  Icon(Icons.fullscreen_exit_rounded, color: Colors.white, size: 20),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    'Exit Fullscreen',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

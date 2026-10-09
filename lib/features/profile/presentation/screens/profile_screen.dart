@@ -2,6 +2,8 @@ import 'dart:ui';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../data/mock/mock_movies.dart';
@@ -9,6 +11,7 @@ import '../../../../data/models/avatar_item.dart';
 import '../../../../data/models/movie.dart';
 import '../../../auth/presentation/providers/user_avatar_provider.dart';
 import '../../../favorites/presentation/providers/favorites_provider.dart';
+import '../../../downloads/presentation/providers/downloads_provider.dart';
 import '../../../home/providers/home_providers.dart';
 import '../../../movie_detail/presentation/screens/movie_detail_screen.dart';
 import '../../../movie_grid/presentation/screens/movie_grid_screen.dart';
@@ -68,12 +71,24 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  _buildGlassCircleButton(
-                    icon: Icons.logout_rounded,
-                    iconSize: 18,
-                    iconColor: const Color(0xFFFF5252),
-                    tooltip: 'Log Out',
+                  GestureDetector(
                     onTap: _showSignOutDialog,
+                    behavior: HitTestBehavior.opaque,
+                    child: Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE50914),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.logout_rounded,
+                          size: 20,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -224,7 +239,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       icon: Icons.info_rounded,
                       iconColor: const Color(0xFF38BDF8),
                       title: 'App Version',
-                      subtitle: 'FreeWatch v1.0.28 (Build 29)',
+                      subtitle: 'FreeWatch v1.0.29 (Build 30)',
                       trailing: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
@@ -272,46 +287,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  // ── Glass Circle Button (Back, Edit, Logout) ──────────────────────────────
-  Widget _buildGlassCircleButton({
-    required IconData icon,
-    double iconSize = 20,
-    Color iconColor = Colors.white,
-    String? tooltip,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Tooltip(
-        message: tooltip ?? '',
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.08),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.14),
-                  width: 0.8,
-                ),
-              ),
-              child: Center(
-                child: Icon(
-                  icon,
-                  color: iconColor,
-                  size: iconSize,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 
   // ── Prominent User Avatar with Overlaid Edit Button ────────────────────────
   Widget _buildProminentUserAvatar(AvatarItem avatar, UserProfile profile) {
@@ -383,6 +358,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   // ── Dual Inline Stat Card (Watched & Downloaded) ───────────────────────────
   Widget _buildDualInlineStatCard(UserProfile profile) {
+    final downloads = ref.watch(downloadsProvider);
+    final downloadCount = downloads.isNotEmpty ? downloads.length : profile.totalDownloads;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: ClipRRect(
@@ -462,57 +440,61 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   color: Colors.white.withOpacity(0.10),
                 ),
 
-                // Right: Downloaded (Orange Gradient Accent)
+                // Right: Downloaded (Orange Gradient Accent) -> Navigates to Downloads tab (index 3)
                 Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          const Color(0xFFEA580C).withOpacity(0.18),
-                          const Color(0xFFF97316).withOpacity(0.08),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+                  child: GestureDetector(
+                    onTap: () => navigateToBottomNavTab(context, ref, 3),
+                    behavior: HitTestBehavior.opaque,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            const Color(0xFFEA580C).withOpacity(0.18),
+                            const Color(0xFFF97316).withOpacity(0.08),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: const BorderRadius.horizontal(right: Radius.circular(18)),
                       ),
-                      borderRadius: const BorderRadius.horizontal(right: Radius.circular(18)),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.download_rounded,
-                          color: Color(0xFFFB923C),
-                          size: 26,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '${profile.totalDownloads} Movies',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: -0.2,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              const Text(
-                                'Downloaded',
-                                style: TextStyle(
-                                  color: Color(0xFFFDBA74),
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.download_rounded,
+                            color: Color(0xFFFB923C),
+                            size: 26,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '$downloadCount Movies',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: -0.2,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                const Text(
+                                  'Downloaded',
+                                  style: TextStyle(
+                                    color: Color(0xFFFDBA74),
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -665,42 +647,56 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  // ── Join Community Banner ──────────────────────────────────────────────────
+  // ── Join TikTok for Updates Banner ─────────────────────────────────────────
   Widget _buildCommunityBanner(BuildContext context) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(18),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                const Color(0xFF7C3AED).withOpacity(0.24),
-                const Color(0xFF2563EB).withOpacity(0.16),
+                const Color(0xFF111422).withOpacity(0.85),
+                const Color(0xFF0A0C14).withOpacity(0.92),
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
-              color: const Color(0xFFA78BFA).withOpacity(0.35),
+              color: Colors.white.withOpacity(0.12),
               width: 0.9,
             ),
           ),
           child: Row(
             children: [
+              // TikTok Music Note glyph box with brand glow
               Container(
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF7C3AED).withOpacity(0.30),
+                  color: Colors.black,
                   borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: const Color(0xFF25F4EE).withOpacity(0.55),
+                    width: 1.2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFFE2C55).withOpacity(0.35),
+                      blurRadius: 10,
+                      offset: const Offset(2, 2),
+                    ),
+                  ],
                 ),
-                child: const Icon(
-                  Icons.groups_rounded,
-                  color: Color(0xFFE9D5FF),
-                  size: 24,
+                child: const Center(
+                  child: Icon(
+                    Icons.music_note_rounded,
+                    color: Colors.white,
+                    size: 24,
+                  ),
                 ),
               ),
               const SizedBox(width: 14),
@@ -709,18 +705,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Join Our Community',
+                      'Join our TikTok for updates',
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 14.5,
+                        fontSize: 14,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Request VJ movies & chat with fans on Telegram & Discord',
+                      'Follow @freewatch for upcoming VJ releases, trailers & daily movie updates',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.75),
+                        color: Colors.white.withOpacity(0.72),
                         fontSize: 11.5,
                         height: 1.25,
                       ),
@@ -730,30 +726,38 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
               const SizedBox(width: 10),
               GestureDetector(
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      duration: const Duration(seconds: 2),
-                      backgroundColor: const Color(0xFF2E1A47),
-                      content: const Text(
-                        'Opening FreeWatch VIP Community...',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
+                onTap: () async {
+                  final uri = Uri.parse('https://www.tiktok.com/@freewatch');
+                  try {
+                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  } catch (_) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Opening @freewatch on TikTok...'),
+                          backgroundColor: Color(0xFF161822),
+                        ),
+                      );
+                    }
+                  }
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: const Color(0xFFFE2C55),
                     borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFFE2C55).withOpacity(0.4),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: const Text(
                     'Join',
                     style: TextStyle(
-                      color: Colors.black,
+                      color: Colors.white,
                       fontSize: 12,
                       fontWeight: FontWeight.w800,
                     ),
@@ -1101,12 +1105,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   backgroundColor: Color(0xFF161822),
                 ),
               );
+              context.go('/onboarding');
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFF5252),
+              backgroundColor: const Color(0xFFE50914),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text('Log Out', style: TextStyle(color: Colors.white)),
+            child: const Text('Log Out', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ],
       ),

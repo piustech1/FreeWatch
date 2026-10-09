@@ -14,6 +14,7 @@ import '../movie_detail/presentation/screens/movie_detail_screen.dart';
 import '../movie_grid/presentation/screens/movie_grid_screen.dart';
 import '../search/presentation/screens/search_screen.dart';
 import '../favorites/presentation/screens/favorites_screen.dart';
+import '../downloads/presentation/screens/downloads_screen.dart';
 import '../profile/presentation/screens/profile_screen.dart';
 import '../notifications/presentation/screens/notifications_screen.dart';
 
@@ -58,7 +59,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 FreeWatchTopAppBar(
                   onSearchTap: () => navigateToBottomNavTab(context, ref, 1),
                   onNotificationTap: _openNotifications,
-                  onProfileTap: () => navigateToBottomNavTab(context, ref, 3),
+                  onProfileTap: () => navigateToBottomNavTab(context, ref, 4),
                 ),
 
                 // ── Tab View ──────────────────────────────────────────
@@ -77,7 +78,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         onExploreTap: () => navigateToBottomNavTab(context, ref, 0),
                       ),
 
-                      // Tab 3: Dedicated Profile Screen
+                      // Tab 3: Dedicated Downloads Screen
+                      const DownloadsScreen(),
+
+                      // Tab 4: Dedicated Profile Screen
                       const ProfileScreen(),
                     ],
                   ),

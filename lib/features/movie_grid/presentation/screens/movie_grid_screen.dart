@@ -87,7 +87,7 @@ class MovieGridScreen extends ConsumerWidget {
                       ),
                     );
                   },
-                  onProfileTap: () => navigateToBottomNavTab(context, ref, 3),
+                  onProfileTap: () => navigateToBottomNavTab(context, ref, 4),
                 ),
 
                 // ── iOS Frosted Glass Sub-Header Bar ────────────────────────

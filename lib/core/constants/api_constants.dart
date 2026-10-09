@@ -29,7 +29,12 @@ class ApiConstants {
   static const String movieCredits = '/movie/{id}/credits';
   static const String similarMovies = '/movie/{id}/similar';
   static const String searchMovies = '/search/movie';
+  static const String searchMulti = '/search/multi';
+  static const String searchTv = '/search/tv';
   static const String genres = '/genre/movie/list';
   static const String discoverMovie = '/discover/movie';
   static const String discoverTv = '/discover/tv';
+  static const String popularTv = '/tv/popular';
+  static const String topRatedTv = '/tv/top_rated';
+  static const String trendingTv = '/trending/tv/week';
 }

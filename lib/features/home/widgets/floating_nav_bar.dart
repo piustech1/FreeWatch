@@ -54,10 +54,16 @@ class FloatingNavBar extends ConsumerWidget {
                 onTap: () => onItemSelected(2),
               ),
               _NavBarItem(
-                icon: IconlyBold.profile,
-                label: 'Profile',
+                icon: IconlyBold.download,
+                label: 'Downloads',
                 isSelected: selectedIndex == 3,
                 onTap: () => onItemSelected(3),
+              ),
+              _NavBarItem(
+                icon: IconlyBold.profile,
+                label: 'Profile',
+                isSelected: selectedIndex == 4,
+                onTap: () => onItemSelected(4),
               ),
             ],
           ),

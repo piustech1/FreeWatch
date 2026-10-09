@@ -96,7 +96,7 @@ class _ChooseAvatarScreenState extends ConsumerState<ChooseAvatarScreen> {
 
             const SizedBox(height: 8),
 
-            // ── Scrollable Avatar Sections ────────────────────────────────
+            // ── Unified Avatar Grid (No Featured/Disney headers) ──────────
             Expanded(
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
@@ -105,38 +105,11 @@ class _ChooseAvatarScreenState extends ConsumerState<ChooseAvatarScreen> {
                   right: 20,
                   bottom: 32,
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Section 1: Featured
-                    _buildSectionHeader(AvatarItem.categoryFeatured),
-                    const SizedBox(height: 16),
-                    _buildAvatarGrid(AvatarItem.featuredAvatars),
-
-                    const SizedBox(height: 36),
-
-                    // Section 2: Disney
-                    _buildSectionHeader(AvatarItem.categoryDisney),
-                    const SizedBox(height: 16),
-                    _buildAvatarGrid(AvatarItem.disneyAvatars),
-                  ],
-                ),
+                child: _buildAvatarGrid(AvatarItem.allAvatars),
               ),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildSectionHeader(String title) {
-    return Text(
-      title,
-      style: const TextStyle(
-        color: Colors.white,
-        fontSize: 18,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 0.2,
       ),
     );
   }

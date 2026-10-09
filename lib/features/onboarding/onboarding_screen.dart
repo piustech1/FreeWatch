@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconly/iconly.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
+import 'package:video_player/video_player.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/constants/app_colors.dart';
 import '../auth/presentation/providers/user_avatar_provider.dart';
@@ -12,8 +13,9 @@ import '../auth/presentation/screens/choose_avatar_screen.dart';
 import '../home/providers/home_providers.dart';
 
 /// 2-Page Onboarding Experience:
-/// - Screen 1: Infinite 4-row tilted sliding poster wall with brand tagline & "Get Started"
-/// - Screen 2: Dynamic iOS-inspired glassmorphic Sign Up & Log In bottom form with smooth animation
+/// - Ambient looping background movie video with seamless cinematic dark gradient overlay
+/// - Screen 1: Brand tagline & "Get Started"
+/// - Screen 2: Centered dynamic iOS-inspired glassmorphic Sign Up & Log In form with formal English
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
 
@@ -25,7 +27,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     with SingleTickerProviderStateMixin {
   final PageController _pageController = PageController();
   late final AnimationController _wallController;
-  int _currentPage = 0;
+  VideoPlayerController? _bgVideoController;
 
   // Screen 2 Auth form states
   bool _isSignUp = true;
@@ -40,11 +42,22 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   @override
   void initState() {
     super.initState();
-    // Continuous infinite drifting animation for tilted poster marquee
+    // Continuous drifting animation as fallback
     _wallController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 35),
     )..repeat();
+
+    // Muted looping cinematic movie background video
+    _bgVideoController = VideoPlayerController.networkUrl(
+      Uri.parse('https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4'),
+    )..initialize().then((_) {
+        if (!mounted) return;
+        setState(() {});
+        _bgVideoController?.setLooping(true);
+        _bgVideoController?.setVolume(0.0);
+        _bgVideoController?.play();
+      });
   }
 
   void _goToAuthPage() {
@@ -61,6 +74,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
 
   @override
   void dispose() {
+    _bgVideoController?.dispose();
     _wallController.dispose();
     _pageController.dispose();
     _nameController.dispose();
@@ -87,57 +101,56 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
         ? liveUrls.toList()
         : [...liveUrls, ..._fallbackPosters];
 
-    final screenHeight = MediaQuery.of(context).size.height;
-    final blurHeight = _currentPage == 0
-        ? screenHeight * 0.40
-        : screenHeight * 0.50;
-
     return Scaffold(
       backgroundColor: AppColors.background,
       resizeToAvoidBottomInset: false,
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // ── 1. Infinite Gapless 4-Row Tilted Moving Poster Wall ────────────
+          // ── 1. Looping Muted Background Movie Video (With Poster Wall Fallback) ──
           Positioned.fill(
-            child: _Infinite4RowPosterWall(
-              animation: _wallController,
-              posters: allPosters,
-            ),
+            child: _bgVideoController != null && _bgVideoController!.value.isInitialized
+                ? FittedBox(
+                    fit: BoxFit.cover,
+                    child: SizedBox(
+                      width: _bgVideoController!.value.size.width,
+                      height: _bgVideoController!.value.size.height,
+                      child: VideoPlayer(_bgVideoController!),
+                    ),
+                  )
+                : _Infinite4RowPosterWall(
+                    animation: _wallController,
+                    posters: allPosters,
+                  ),
           ),
 
-          // ── 2. Clean Dark Gradient Bottom Overlay (Zero Blur) ────────────
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            height: blurHeight,
+          // ── 2. Cinematic Dark Ambient Gradient Overlay ────────────────────
+          Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.black.withOpacity(0.0),
-                    Colors.black.withOpacity(0.55),
-                    Colors.black.withOpacity(0.85),
-                    Colors.black.withOpacity(0.98),
+                    Colors.black.withOpacity(0.68),
+                    Colors.black.withOpacity(0.42),
+                    Colors.black.withOpacity(0.78),
+                    Colors.black.withOpacity(0.96),
                   ],
-                  stops: const [0.0, 0.20, 0.60, 1.0],
+                  stops: const [0.0, 0.35, 0.70, 1.0],
                 ),
               ),
             ),
           ),
 
-          // ── 3. PageView (Page 1: Brand Intro, Page 2: Dynamic Auth) ────────
+          // ── 3. PageView (Page 1: Brand Intro, Page 2: Centered Dynamic Auth) ──
           PageView(
             controller: _pageController,
-            onPageChanged: (i) => setState(() => _currentPage = i),
             children: [
               // ── PAGE 1: Brand Tagline & Get Started ───────────────────────
               _buildPage1(context),
 
-              // ── PAGE 2: Dynamic iOS-Style Sign Up / Log In Form ───────────
+              // ── PAGE 2: Centered Dynamic iOS-Style Sign Up / Log In Form ──
               _buildPage2(context),
             ],
           ),
@@ -256,88 +269,73 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // PAGE 2: DYNAMIC IOS-INSPIRED SIGN UP / LOG IN FORM (ANIMATED TRANSITION)
+  // PAGE 2: CENTERED DYNAMIC IOS-INSPIRED SIGN UP / LOG IN FORM
   // ─────────────────────────────────────────────────────────────────────────
   Widget _buildPage2(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return SafeArea(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          AnimatedPadding(
-            padding: EdgeInsets.only(
-              left: 18,
-              right: 18,
-              bottom: bottomInset > 0 ? bottomInset + 10 : 14,
-            ),
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.easeOutCubic,
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.4),
-                      blurRadius: 20,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Modern Branded Sliding Segmented Switcher Pill
-                    _buildBrandedAuthSwitcher(),
-
-                    const SizedBox(height: 14),
-
-                    // Dynamic Form Content (Sign Up vs Log In)
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 300),
-                      switchInCurve: Curves.easeOutCubic,
-                      switchOutCurve: Curves.easeInCubic,
-                      transitionBuilder: (child, animation) {
-                        return FadeTransition(
-                          opacity: animation,
-                          child: SlideTransition(
-                            position: Tween<Offset>(
-                              begin: const Offset(0.0, 0.05),
-                              end: Offset.zero,
-                            ).animate(animation),
-                            child: child,
-                          ),
-                        );
-                      },
-                      child: _isSignUp
-                          ? _buildSignUpContent()
-                          : _buildLogInContent(),
-                    ),
-                  ],
-                ),
+      child: Center(
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          padding: EdgeInsets.fromLTRB(
+            20,
+            20,
+            20,
+            bottomInset > 0 ? bottomInset + 16 : 20,
+          ),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 420),
+            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
+            decoration: BoxDecoration(
+              color: const Color(0xFF111420).withOpacity(0.92),
+              borderRadius: BorderRadius.circular(28),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.14),
+                width: 1,
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.60),
+                  blurRadius: 30,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Formal English Segmented Pill (Sign Up vs Log In)
+                _buildBrandedAuthSwitcher(),
+
+                const SizedBox(height: 20),
+
+                // Dynamic Form Content (Sign Up vs Log In)
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 250),
+                  switchInCurve: Curves.easeOutCubic,
+                  switchOutCurve: Curves.easeInCubic,
+                  child: _isSignUp
+                      ? _buildSignUpContent()
+                      : _buildLogInContent(),
+                ),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
 
-  // Modern Branded Segmented Control Toggle
+  // Modern Branded Segmented Control Toggle (Formal English: Sign Up / Log In)
   Widget _buildBrandedAuthSwitcher() {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.55),
+        color: Colors.black.withOpacity(0.60),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Colors.white.withOpacity(0.08),
+          color: Colors.white.withOpacity(0.10),
           width: 1,
         ),
       ),
@@ -349,7 +347,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 240),
                 curve: Curves.easeOutCubic,
-                padding: const EdgeInsets.symmetric(vertical: 8.5),
+                padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
                   color: _isSignUp ? AppColors.accent : Colors.transparent,
                   borderRadius: BorderRadius.circular(12),
@@ -367,16 +365,16 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(
-                      Icons.stars_rounded,
-                      size: 15,
+                      Icons.person_add_rounded,
+                      size: 16,
                       color: _isSignUp ? Colors.black : Colors.white70,
                     ),
-                    const SizedBox(width: 5),
+                    const SizedBox(width: 6),
                     Text(
-                      'Join FreeWatch',
+                      'Sign Up',
                       style: TextStyle(
                         color: _isSignUp ? Colors.black : Colors.white70,
-                        fontSize: 12.5,
+                        fontSize: 13,
                         fontWeight:
                             _isSignUp ? FontWeight.w900 : FontWeight.w600,
                       ),
@@ -392,7 +390,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 240),
                 curve: Curves.easeOutCubic,
-                padding: const EdgeInsets.symmetric(vertical: 8.5),
+                padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
                   color: !_isSignUp ? AppColors.accent : Colors.transparent,
                   borderRadius: BorderRadius.circular(12),
@@ -410,16 +408,16 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(
-                      Icons.bolt_rounded,
-                      size: 15,
+                      Icons.login_rounded,
+                      size: 16,
                       color: !_isSignUp ? Colors.black : Colors.white70,
                     ),
-                    const SizedBox(width: 5),
+                    const SizedBox(width: 6),
                     Text(
-                      'Direct Access',
+                      'Log In',
                       style: TextStyle(
                         color: !_isSignUp ? Colors.black : Colors.white70,
-                        fontSize: 12.5,
+                        fontSize: 13,
                         fontWeight:
                             !_isSignUp ? FontWeight.w900 : FontWeight.w600,
                       ),
@@ -442,7 +440,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Branded Header with Disney Avatar Picker
+        // Header with Avatar Picker (ONLY in Sign Up!)
         Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
@@ -451,20 +449,20 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Unlock FreeWatch VIP',
+                    'Create Account',
                     style: TextStyle(
                       color: AppColors.textPrimary,
-                      fontSize: 20,
+                      fontSize: 21,
                       fontWeight: FontWeight.w900,
                       letterSpacing: -0.3,
                     ),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 3),
                   Text(
-                    'Stream 10,000+ films translated by top Ugandan VJs',
+                    'Sign up to stream unlimited movies & series',
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.70),
-                      fontSize: 11.5,
+                      color: Colors.white.withOpacity(0.72),
+                      fontSize: 12,
                       fontWeight: FontWeight.w400,
                     ),
                   ),
@@ -472,7 +470,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
               ),
             ),
             const SizedBox(width: 12),
-            // Avatar Circle with Edit Badge
+            // Avatar Selector (Only during Sign Up)
             GestureDetector(
               onTap: () {
                 Navigator.of(context).push(
@@ -484,8 +482,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
               child: Stack(
                 children: [
                   Container(
-                    width: 50,
-                    height: 50,
+                    width: 52,
+                    height: 52,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
@@ -508,7 +506,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                           errorBuilder: (_, __, ___) => const Icon(
                             Icons.person_rounded,
                             color: Colors.white,
-                            size: 26,
+                            size: 28,
                           ),
                         ),
                       ),
@@ -518,7 +516,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                     right: 0,
                     bottom: 0,
                     child: Container(
-                      padding: const EdgeInsets.all(3.5),
+                      padding: const EdgeInsets.all(4),
                       decoration: const BoxDecoration(
                         color: AppColors.accent,
                         shape: BoxShape.circle,
@@ -536,7 +534,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
           ],
         ),
 
-        const SizedBox(height: 14),
+        const SizedBox(height: 18),
 
         // 1. Full Name Field
         _buildGlassTextField(
@@ -544,16 +542,16 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
           hint: 'Full Name',
           icon: IconlyBold.profile,
         ),
-        const SizedBox(height: 9),
+        const SizedBox(height: 12),
 
         // 2. Email Address Field
         _buildGlassTextField(
           controller: _emailController,
-          hint: 'Email address',
+          hint: 'Email Address',
           icon: IconlyBold.message,
           keyboardType: TextInputType.emailAddress,
         ),
-        const SizedBox(height: 9),
+        const SizedBox(height: 12),
 
         // 3. Password Field
         _buildGlassTextField(
@@ -572,7 +570,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
             },
           ),
         ),
-        const SizedBox(height: 9),
+        const SizedBox(height: 12),
 
         // 4. Confirm Password Field
         _buildGlassTextField(
@@ -592,12 +590,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
           ),
         ),
 
-        const SizedBox(height: 14),
+        const SizedBox(height: 18),
 
         // Primary Submit Button
         SizedBox(
           width: double.infinity,
-          height: 48,
+          height: 50,
           child: ElevatedButton(
             onPressed: _finishAuth,
             style: ElevatedButton.styleFrom(
@@ -605,14 +603,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
               foregroundColor: Colors.black,
               elevation: 0,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(25),
               ),
               shadowColor: AppColors.accentGlow,
             ),
             child: const Text(
-              'Start Streaming Now • Free',
+              'Sign Up',
               style: TextStyle(
-                fontSize: 14.5,
+                fontSize: 15,
                 fontWeight: FontWeight.w900,
                 letterSpacing: 0.3,
               ),
@@ -620,7 +618,35 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
           ),
         ),
 
-        const SizedBox(height: 10),
+        const SizedBox(height: 14),
+
+        // Switch to Log In (Formal English)
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'Already have an account? ',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.65),
+                fontSize: 12.5,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            GestureDetector(
+              onTap: () => setState(() => _isSignUp = false),
+              child: const Text(
+                'Log In',
+                style: TextStyle(
+                  color: AppColors.accent,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 8),
 
         // Guest Skip Option
         Center(
@@ -629,7 +655,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
             child: Text(
               'Explore as Guest >',
               style: TextStyle(
-                color: Colors.white.withOpacity(0.6),
+                color: Colors.white.withOpacity(0.50),
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
@@ -646,36 +672,36 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Branded Header
+        // Formal Header (NO Avatar Picker during Log In!)
         const Text(
-          'Welcome Back, Cinema Lover',
+          'Welcome Back',
           style: TextStyle(
             color: AppColors.textPrimary,
-            fontSize: 20,
+            fontSize: 21,
             fontWeight: FontWeight.w900,
             letterSpacing: -0.3,
           ),
         ),
-        const SizedBox(height: 2),
+        const SizedBox(height: 3),
         Text(
-          'Pick up your streaming right where you left off',
+          'Log in to continue streaming on FreeWatch',
           style: TextStyle(
-            color: Colors.white.withOpacity(0.70),
-            fontSize: 11.5,
+            color: Colors.white.withOpacity(0.72),
+            fontSize: 12,
             fontWeight: FontWeight.w400,
           ),
         ),
 
-        const SizedBox(height: 14),
+        const SizedBox(height: 18),
 
         // 1. Email Address Field
         _buildGlassTextField(
           controller: _emailController,
-          hint: 'Email address',
+          hint: 'Email Address',
           icon: IconlyBold.message,
           keyboardType: TextInputType.emailAddress,
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
 
         // 2. Password Field
         _buildGlassTextField(
@@ -695,12 +721,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
           ),
         ),
 
-        const SizedBox(height: 14),
+        const SizedBox(height: 18),
 
         // Primary Submit Button
         SizedBox(
           width: double.infinity,
-          height: 48,
+          height: 50,
           child: ElevatedButton(
             onPressed: _finishAuth,
             style: ElevatedButton.styleFrom(
@@ -708,14 +734,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
               foregroundColor: Colors.black,
               elevation: 0,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(25),
               ),
               shadowColor: AppColors.accentGlow,
             ),
             child: const Text(
-              'Enter Cinema World',
+              'Log In',
               style: TextStyle(
-                fontSize: 14.5,
+                fontSize: 15,
                 fontWeight: FontWeight.w900,
                 letterSpacing: 0.3,
               ),
@@ -723,7 +749,35 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
           ),
         ),
 
-        const SizedBox(height: 10),
+        const SizedBox(height: 14),
+
+        // Switch to Sign Up (Formal English)
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              "Don't have an account? ",
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.65),
+                fontSize: 12.5,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            GestureDetector(
+              onTap: () => setState(() => _isSignUp = true),
+              child: const Text(
+                'Sign Up',
+                style: TextStyle(
+                  color: AppColors.accent,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 8),
 
         // Guest Skip Option
         Center(
@@ -732,7 +786,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
             child: Text(
               'Explore as Guest >',
               style: TextStyle(
-                color: Colors.white.withOpacity(0.6),
+                color: Colors.white.withOpacity(0.50),
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
@@ -752,36 +806,42 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     Widget? suffixIcon,
   }) {
     return Container(
-      height: 45,
+      height: 52,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: TextField(
-        controller: controller,
-        obscureText: obscureText,
-        keyboardType: keyboardType,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 13.5,
-          fontWeight: FontWeight.w500,
+        color: Colors.white.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.12),
+          width: 1,
         ),
-        cursorColor: AppColors.accent,
-        decoration: InputDecoration(
-          border: InputBorder.none,
-          isDense: true,
-          contentPadding: const EdgeInsets.symmetric(vertical: 13.5),
-          prefixIcon: Icon(
-            icon,
-            color: AppColors.accent.withOpacity(0.9),
-            size: 17,
+      ),
+      child: Center(
+        child: TextField(
+          controller: controller,
+          obscureText: obscureText,
+          keyboardType: keyboardType,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
           ),
-          suffixIcon: suffixIcon,
-          hintText: hint,
-          hintStyle: TextStyle(
-            color: Colors.white.withOpacity(0.40),
-            fontSize: 13,
-            fontWeight: FontWeight.w400,
+          cursorColor: AppColors.accent,
+          decoration: InputDecoration(
+            border: InputBorder.none,
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            prefixIcon: Icon(
+              icon,
+              color: AppColors.accent.withOpacity(0.9),
+              size: 19,
+            ),
+            suffixIcon: suffixIcon,
+            hintText: hint,
+            hintStyle: TextStyle(
+              color: Colors.white.withOpacity(0.40),
+              fontSize: 13.5,
+              fontWeight: FontWeight.w400,
+            ),
           ),
         ),
       ),

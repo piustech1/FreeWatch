@@ -52,6 +52,19 @@ class TmdbDatasource {
   }
 
   Future<List<Movie>> searchMovies(String query, {int page = 1}) async {
+    try {
+      final res = await _dio.get(
+        ApiConstants.searchMulti,
+        queryParameters: {'query': query, 'page': page},
+      );
+      final results = res.data['results'] as List<dynamic>? ?? [];
+      final moviesAndShows = results
+          .where((e) => e['media_type'] != 'person')
+          .map((e) => Movie.fromJson(e as Map<String, dynamic>))
+          .toList();
+      if (moviesAndShows.isNotEmpty) return moviesAndShows;
+    } catch (_) {}
+
     final res = await _dio.get(
       ApiConstants.searchMovies,
       queryParameters: {'query': query, 'page': page},
@@ -112,7 +125,28 @@ class TmdbDatasource {
 
   // ── TV Series ─────────────────────────────────────────────────────────────
 
+  Future<List<Movie>> getPopularTv({int page = 1}) async {
+    final res = await _dio.get(
+      ApiConstants.popularTv,
+      queryParameters: {'page': page},
+    );
+    return Movie.fromJsonList(res.data as Map<String, dynamic>);
+  }
+
+  Future<List<Movie>> getTrendingTv({int page = 1}) async {
+    final res = await _dio.get(
+      ApiConstants.trendingTv,
+      queryParameters: {'page': page},
+    );
+    return Movie.fromJsonList(res.data as Map<String, dynamic>);
+  }
+
   Future<List<Movie>> getDiscoverTv({int page = 1}) async {
+    try {
+      final popular = await getPopularTv(page: page);
+      if (popular.isNotEmpty) return popular;
+    } catch (_) {}
+
     final res = await _dio.get(
       ApiConstants.discoverTv,
       queryParameters: {

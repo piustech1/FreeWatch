@@ -6,7 +6,7 @@ import '../../../data/repositories/movie_repository.dart';
 
 // ── Global Bottom Navigation Provider & Helper ─────────────────────────────
 
-/// Active tab index on HomeScreen (0: Home, 1: Search, 2: Favorites, 3: Profile)
+/// Active tab index on HomeScreen (0: Home, 1: Search, 2: Favorites, 3: Downloads, 4: Profile)
 final bottomNavIndexProvider = StateProvider<int>((ref) => 0);
 
 /// Navigates to a root bottom nav tab from any screen depth in a single atomic step
