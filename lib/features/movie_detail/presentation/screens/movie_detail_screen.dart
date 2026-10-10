@@ -1040,6 +1040,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                       ep.name,
                       'EP ${ep.episodeNumber}',
                       assignedVj,
+                      episodeVideoUrl: ep.videoUrl,
                     ),
                     child: SizedBox(
                       width: 195,
@@ -1206,13 +1207,13 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
     );
   }
 
-  void _playEpisode(BuildContext context, String title, String ep, Vj assignedVj) {
+  void _playEpisode(BuildContext context, String title, String ep, Vj assignedVj, {String? episodeVideoUrl}) {
     AppToast.show(
       context,
       'Streaming Season $_selectedSeason $ep: "$title" translated by ${assignedVj.name}',
       isSuccess: true,
     );
-    _playTrailer();
+    _playTrailer(streamUrl: episodeVideoUrl);
   }
 
   Future<void> _downloadMovie() async {
@@ -1855,8 +1856,8 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
     );
   }
 
-  void _playTrailer() {
-    if (_isPlayingVideo && _videoPlayerController != null) {
+  void _playTrailer({String? streamUrl}) {
+    if (streamUrl == null && _isPlayingVideo && _videoPlayerController != null) {
       if (_videoPlayerController!.value.isPlaying) {
         _videoPlayerController!.pause();
       } else {
@@ -1872,10 +1873,17 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
 
     _videoPlayerController?.dispose();
 
-    // High reliability sample stream URL
-    final videoUri = Uri.parse(
-      'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-    );
+    final details = ref
+        .read(movieDetailsProvider(
+            MovieDetailsParam(movieId: widget.movie.id, isTv: widget.movie.isTv)))
+        .valueOrNull;
+    final String resolvedUrl = (streamUrl != null && streamUrl.isNotEmpty)
+        ? streamUrl
+        : ((details?.videoUrl?.isNotEmpty == true ? details!.videoUrl! : null) ??
+           (widget.movie.videoUrl?.isNotEmpty == true ? widget.movie.videoUrl! : null) ??
+           'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4');
+
+    final videoUri = Uri.parse(resolvedUrl);
 
     _videoPlayerController = VideoPlayerController.networkUrl(videoUri)
       ..initialize().then((_) {

@@ -68,6 +68,7 @@ class TvEpisodeData {
   final int runtime;
   final String? stillPath;
   final double voteAverage;
+  final String? videoUrl;
 
   const TvEpisodeData({
     required this.id,
@@ -78,6 +79,7 @@ class TvEpisodeData {
     required this.runtime,
     this.stillPath,
     required this.voteAverage,
+    this.videoUrl,
   });
 
   String? get stillUrl => stillPath != null && stillPath!.isNotEmpty
@@ -96,14 +98,15 @@ class TvEpisodeData {
 
   factory TvEpisodeData.fromJson(Map<String, dynamic> json) {
     return TvEpisodeData(
-      id: json['id'] as int? ?? 0,
-      episodeNumber: json['episode_number'] as int? ?? 1,
-      seasonNumber: json['season_number'] as int? ?? 1,
-      name: json['name'] as String? ?? 'Episode ${json['episode_number'] ?? 1}',
+      id: json['id'] as int? ?? (json['tmdbId'] as int? ?? 0),
+      episodeNumber: json['episode_number'] as int? ?? (json['episodeNumber'] as int? ?? 1),
+      seasonNumber: json['season_number'] as int? ?? (json['seasonNumber'] as int? ?? 1),
+      name: (json['name'] ?? json['title']) as String? ?? 'Episode ${json['episode_number'] ?? json['episodeNumber'] ?? 1}',
       overview: json['overview'] as String? ?? '',
-      runtime: json['runtime'] as int? ?? 0,
-      stillPath: json['still_path'] as String?,
+      runtime: (json['runtime'] as num?)?.toInt() ?? 0,
+      stillPath: (json['still_path'] ?? json['backdrop']) as String?,
       voteAverage: (json['vote_average'] as num?)?.toDouble() ?? 0.0,
+      videoUrl: json['videoUrl'] as String?,
     );
   }
 }
@@ -124,6 +127,8 @@ class MovieDetailsData {
   final bool isTv;
   final int numberOfSeasons;
   final List<TvSeasonData> seasons;
+  final String? videoUrl;
+  final String? vjName;
 
   const MovieDetailsData({
     required this.id,
@@ -141,7 +146,49 @@ class MovieDetailsData {
     this.isTv = false,
     this.numberOfSeasons = 0,
     this.seasons = const [],
+    this.videoUrl,
+    this.vjName,
   });
+
+  MovieDetailsData copyWith({
+    int? id,
+    String? title,
+    String? overview,
+    String? backdropPath,
+    int? runtime,
+    String? releaseDate,
+    double? voteAverage,
+    int? voteCount,
+    List<String>? genres,
+    String? certification,
+    List<CastMember>? cast,
+    List<Movie>? relatedMovies,
+    bool? isTv,
+    int? numberOfSeasons,
+    List<TvSeasonData>? seasons,
+    String? videoUrl,
+    String? vjName,
+  }) {
+    return MovieDetailsData(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      overview: overview ?? this.overview,
+      backdropPath: backdropPath ?? this.backdropPath,
+      runtime: runtime ?? this.runtime,
+      releaseDate: releaseDate ?? this.releaseDate,
+      voteAverage: voteAverage ?? this.voteAverage,
+      voteCount: voteCount ?? this.voteCount,
+      genres: genres ?? this.genres,
+      certification: certification ?? this.certification,
+      cast: cast ?? this.cast,
+      relatedMovies: relatedMovies ?? this.relatedMovies,
+      isTv: isTv ?? this.isTv,
+      numberOfSeasons: numberOfSeasons ?? this.numberOfSeasons,
+      seasons: seasons ?? this.seasons,
+      videoUrl: videoUrl ?? this.videoUrl,
+      vjName: vjName ?? this.vjName,
+    );
+  }
 
   String get formattedRuntime {
     if (runtime <= 0) return '1h 45min';

@@ -107,3 +107,9 @@ final animationMoviesProvider = FutureProvider<List<Movie>>((ref) async {
 final familyMoviesProvider = FutureProvider<List<Movie>>((ref) async {
   return ref.watch(movieRepositoryProvider).getMoviesByGenre(10751);
 });
+
+/// Dedicated VJ movies provider (combining MovieMax live translated movies with MockData)
+final vjMoviesProvider = FutureProvider.family<List<Movie>, String>((ref, vjId) async {
+  return ref.watch(movieRepositoryProvider).getMoviesByVj(vjId);
+});
+

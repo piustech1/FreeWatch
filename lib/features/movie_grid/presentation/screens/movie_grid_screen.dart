@@ -68,6 +68,9 @@ class MovieGridScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentNavIndex = ref.watch(bottomNavIndexProvider);
+    final displayMovies = vj != null
+        ? (ref.watch(vjMoviesProvider(vj!.id)).valueOrNull ?? movies)
+        : movies;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -178,7 +181,7 @@ class MovieGridScreen extends ConsumerWidget {
                                 ),
                               ),
                               child: Text(
-                                '${movies.length}',
+                                '${displayMovies.length}',
                                 style: TextStyle(
                                   color: Colors.white.withOpacity(0.70),
                                   fontSize: 11,
@@ -197,7 +200,7 @@ class MovieGridScreen extends ConsumerWidget {
 
                 // ── 3-Column Movie Grid ───────────────────────────────────────
                 Expanded(
-                  child: movies.isEmpty
+                  child: displayMovies.isEmpty
                       ? const Center(
                           child: Text(
                             'No movies found',
@@ -214,10 +217,11 @@ class MovieGridScreen extends ConsumerWidget {
                             crossAxisSpacing: 10,
                             mainAxisSpacing: 16,
                           ),
-                          itemCount: movies.length,
+                          itemCount: displayMovies.length,
                           itemBuilder: (context, index) {
-                            final movie = movies[index];
+                            final movie = displayMovies[index];
                             final vjName = vj?.name ??
+                                movie.vjName ??
                                 _resolveVjNameForMovie(movie, index);
                             return _buildMovieCard(context, movie, vjName);
                           },

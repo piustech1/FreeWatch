@@ -2,7 +2,7 @@ name: freewatch
 description: "FreeWatch - Free Movie Streaming Platform"
 publish_to: 'none'
 
-version: 1.0.37+38
+version: 1.0.38+39
 
 environment:
   sdk: ^3.5.4
@@ -44,6 +44,9 @@ dependencies:
   iconly: ^1.0.1
   shared_preferences: ^2.5.3
   path_provider: ^2.1.5
+  firebase_core: ^4.7.0
+  firebase_auth: ^6.4.0
+  firebase_database: ^12.3.0
 
 dev_dependencies:
   flutter_test:

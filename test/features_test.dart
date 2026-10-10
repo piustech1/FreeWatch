@@ -13,6 +13,7 @@ import 'package:freewatch/features/notifications/presentation/screens/notificati
 import 'package:freewatch/features/home/presentation/screens/all_vjs_screen.dart';
 import 'package:freewatch/shared/widgets/free_watch_top_app_bar.dart';
 import 'package:freewatch/features/home/widgets/floating_nav_bar.dart';
+import 'package:freewatch/data/repositories/movie_repository.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -262,6 +263,50 @@ void main() {
 
       // Persistent floating bottom nav bar present
       expect(find.byType(FloatingNavBar), findsOneWidget);
+    });
+
+    test('Movie.fromJson parses MovieMax Cloudflare R2 streaming payload accurately', () {
+      final sampleMovieMaxJson = {
+        'title': 'Akaal: The Unconquered',
+        'backdrop': 'https://image.tmdb.org/t/p/w1280/zdnDhz5JOppyu3adqOKcXqUNXi6.jpg',
+        'poster': 'https://image.tmdb.org/t/p/w500/pzf5rPLoE5DdYkcZlvYbrH554rE.jpg',
+        'rating': 5.5,
+        'releaseYear': '2025',
+        'runtime': 137,
+        'tmdbId': 1454405,
+        'genres': ['Action', 'History', 'Drama'],
+        'videoUrl': 'https://pub-b99e0d2a3d4b4b618ce04a685e0b44ff.r2.dev/movies/vj ice p/AKAAL_THE_UNCONQUERED_B_ICEP.mp4',
+        'vjName': 'VJ Ice P',
+        'isPublished': true,
+      };
+
+      final movie = Movie.fromJson(sampleMovieMaxJson, key: '-OrEWTCofi8ilgJDF3Oo');
+
+      expect(movie.id, equals(1454405));
+      expect(movie.title, equals('Akaal: The Unconquered'));
+      expect(movie.voteAverage, equals(5.5));
+      expect(movie.releaseDate, equals('2025'));
+      expect(movie.year, equals('2025'));
+      expect(movie.runtime, equals(137));
+      expect(movie.vjName, equals('VJ Ice P'));
+      expect(movie.videoUrl, contains('r2.dev/movies/vj ice p/'));
+      expect(movie.genreNames, contains('Action'));
+      expect(movie.backdropUrl, startsWith('https://image.tmdb.org/'));
+      expect(movie.posterUrl, startsWith('https://image.tmdb.org/'));
+    });
+
+    test('MovieRepository Gap-Filling fills missing details and returns complete metadata', () async {
+      final repo = MovieRepository();
+      // Test movie details with gap-filling fallback
+      final details = await repo.getMovieDetails(1011985); // The Beekeeper
+
+      expect(details.title.isNotEmpty, isTrue);
+      expect(details.overview.isNotEmpty, isTrue);
+      expect(details.backdropPath, isNotNull);
+      expect(details.runtime, greaterThan(0));
+      expect(details.cast.isNotEmpty, isTrue);
+      expect(details.certification.isNotEmpty, isTrue);
+      expect(details.genres.isNotEmpty, isTrue);
     });
   });
 }

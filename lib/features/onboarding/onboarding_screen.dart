@@ -9,7 +9,9 @@ import 'package:video_player/video_player.dart';
 import '../../core/constants/app_colors.dart';
 import '../../shared/widgets/app_toast.dart';
 import '../auth/presentation/providers/user_avatar_provider.dart';
+import '../auth/presentation/providers/auth_providers.dart';
 import '../auth/presentation/screens/choose_avatar_screen.dart';
+import '../profile/presentation/providers/user_profile_provider.dart';
 
 /// 2-Page Onboarding Experience:
 /// - Ambient looping background movie video with seamless cinematic dark gradient overlay
@@ -32,6 +34,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   bool _obscureConfirmPassword = true;
   bool _rememberMe = true;
   bool _isLoopingSeek = false;
+  bool _isLoadingAuth = false;
 
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
@@ -123,6 +126,94 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   void _finishAuth() {
     context.go('/home');
+  }
+
+  Future<void> _handleSubmitAuth() async {
+    if (_isLoadingAuth) return;
+
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    if (email.isEmpty) {
+      AppToast.show(context, 'Please enter your email address', isSuccess: false);
+      return;
+    }
+    if (password.isEmpty) {
+      AppToast.show(context, 'Please enter your password', isSuccess: false);
+      return;
+    }
+
+    if (_isSignUp) {
+      final confirmPassword = _confirmPasswordController.text;
+      if (password.length < 6) {
+        AppToast.show(context, 'Password must be at least 6 characters', isSuccess: false);
+        return;
+      }
+      if (password != confirmPassword) {
+        AppToast.show(context, 'Passwords do not match', isSuccess: false);
+        return;
+      }
+
+      final name = _nameController.text.trim().isNotEmpty
+          ? _nameController.text.trim()
+          : 'FreeWatch Member';
+      final currentAvatar = ref.read(userAvatarProvider);
+
+      setState(() => _isLoadingAuth = true);
+
+      try {
+        final authRepo = ref.read(authRepositoryProvider);
+        await authRepo.signUpWithEmail(
+          email: email,
+          password: password,
+          name: name,
+          avatarAsset: currentAvatar.assetPath,
+        );
+
+        if (!mounted) return;
+        await ref.read(userProfileProvider.notifier).updateName(name);
+
+        if (!mounted) return;
+        AppToast.show(
+          context,
+          'Account created successfully! Welcome to FreeWatch',
+          isSuccess: true,
+        );
+        context.go('/home');
+      } catch (e) {
+        if (!mounted) return;
+        setState(() => _isLoadingAuth = false);
+        AppToast.show(context, formatAuthErrorMessage(e), isSuccess: false);
+      }
+    } else {
+      setState(() => _isLoadingAuth = true);
+
+      try {
+        final authRepo = ref.read(authRepositoryProvider);
+        final cred = await authRepo.signInWithEmail(
+          email: email,
+          password: password,
+        );
+
+        if (!mounted) return;
+        final user = cred.user;
+        if (user != null) {
+          final profile = await authRepo.getUserProfile(user.uid);
+          final displayName = profile?['name'] as String? ?? user.displayName;
+          if (displayName != null && displayName.isNotEmpty) {
+            await ref.read(userProfileProvider.notifier).updateName(displayName);
+          }
+        }
+
+        if (!mounted) return;
+        AppToast.show(context, 'Welcome back to FreeWatch!', isSuccess: true);
+        context.go('/home');
+      } catch (e) {
+        if (!mounted) return;
+        setState(() => _isLoadingAuth = false);
+        AppToast.show(context, formatAuthErrorMessage(e), isSuccess: false);
+      }
+    }
   }
 
   @override
@@ -839,17 +930,26 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(26),
-          onTap: _finishAuth,
+          onTap: _handleSubmitAuth,
           child: Center(
-            child: Text(
-              text,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 15.5,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0.6,
-              ),
-            ),
+            child: _isLoadingAuth
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.2,
+                      color: Colors.white,
+                    ),
+                  )
+                : Text(
+                    text,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15.5,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.6,
+                    ),
+                  ),
           ),
         ),
       ),

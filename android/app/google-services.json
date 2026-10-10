@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "211067099380",
+    "project_id": "freewatch-a0bc7",
+    "storage_bucket": "freewatch-a0bc7.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:211067099380:android:5f633520cef7cf177fe6a1",
+        "android_client_info": {
+          "package_name": "com.freewatch.freewatch"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA7GoAsmMBX0gLlrLr7bb2__AMr8jUehys"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

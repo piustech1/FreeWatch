@@ -13,6 +13,7 @@ import '../../../../data/mock/mock_movies.dart';
 import '../../../../data/models/avatar_item.dart';
 import '../../../../data/models/movie.dart';
 import '../../../auth/presentation/providers/user_avatar_provider.dart';
+import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../../favorites/presentation/providers/favorites_provider.dart';
 import '../../../downloads/presentation/providers/downloads_provider.dart';
 import '../../../home/providers/home_providers.dart';
@@ -859,7 +860,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       message: 'Are you sure you want to log out of FreeWatch on this device?',
       confirmText: 'Log Out',
       confirmColor: const Color(0xFFEF4444),
-      onConfirm: () {
+      onConfirm: () async {
+        try {
+          await ref.read(authRepositoryProvider).signOut();
+        } catch (_) {}
+        if (!mounted) return;
         AppToast.show(
           context,
           'Logged out of FreeWatch',
