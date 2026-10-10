@@ -7,6 +7,8 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../shared/widgets/app_toast.dart';
+import '../../../../shared/widgets/glass_dialog.dart';
 import '../../../../data/mock/mock_movies.dart';
 import '../../../../data/models/avatar_item.dart';
 import '../../../../data/models/movie.dart';
@@ -519,11 +521,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 await launchUrl(uri, mode: LaunchMode.externalApplication);
               } catch (_) {
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Opening @freewatch on TikTok...'),
-                      backgroundColor: Color(0xFF161822),
-                    ),
+                  AppToast.show(
+                    context,
+                    'Opening @freewatch on TikTok...',
+                    isSuccess: false,
                   );
                 }
               }
@@ -843,56 +844,29 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   // ── Clear Cache Action ────────────────────────────────────────────────────
   void _clearCache() {
     setState(() => _cacheSizeMb = 0);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('App cache cleared successfully (0 MB)'),
-        backgroundColor: AppColors.accent,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        duration: const Duration(milliseconds: 1500),
-      ),
+    AppToast.show(
+      context,
+      'App cache cleared successfully (0 MB)',
+      isSuccess: true,
     );
   }
 
   // ── Sign Out Confirmation Dialog ──────────────────────────────────────────
   void _showSignOutDialog() {
-    showDialog(
-      context: context,
-      builder: (dialogCtx) => AlertDialog(
-        backgroundColor: const Color(0xFF171926),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          'Log Out',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        content: const Text(
-          'Are you sure you want to log out of FreeWatch on this device?',
-          style: TextStyle(color: Colors.white70),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogCtx).pop(),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(dialogCtx).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Logged out of FreeWatch'),
-                  backgroundColor: Color(0xFF161822),
-                ),
-              );
-              context.go('/onboarding');
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFE50914),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            child: const Text('Log Out', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
+    GlassDialog.show(
+      context,
+      title: 'Log Out',
+      message: 'Are you sure you want to log out of FreeWatch on this device?',
+      confirmText: 'Log Out',
+      confirmColor: const Color(0xFFEF4444),
+      onConfirm: () {
+        AppToast.show(
+          context,
+          'Logged out of FreeWatch',
+          isSuccess: false,
+        );
+        context.go('/onboarding');
+      },
     );
   }
 
@@ -1162,15 +1136,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               ref.read(userAvatarProvider.notifier).setAvatar(selectedAvatar);
                               Navigator.of(sheetCtx).pop();
 
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: const Text('Profile updated successfully!'),
-                                  backgroundColor: AppColors.accent,
-                                  behavior: SnackBarBehavior.floating,
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12)),
-                                  duration: const Duration(seconds: 2),
-                                ),
+                              AppToast.show(
+                                context,
+                                'Profile updated successfully',
+                                isSuccess: true,
                               );
                             },
                             style: ElevatedButton.styleFrom(

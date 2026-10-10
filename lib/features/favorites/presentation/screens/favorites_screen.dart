@@ -118,7 +118,11 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                     onTap: () {
                       Navigator.of(context).push(
                         MaterialPageRoute(
-                          builder: (_) => MovieDetailScreen(movie: movie),
+                          builder: (_) => MovieDetailScreen(
+                            movie: movie,
+                            resumeProgress: progress,
+                            autoPlay: true,
+                          ),
                         ),
                       );
                     },

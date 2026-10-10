@@ -4,6 +4,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../home/providers/home_providers.dart';
 import '../../../home/widgets/floating_nav_bar.dart';
 import '../../../movie_detail/presentation/screens/movie_detail_screen.dart';
+import '../../../../shared/widgets/app_toast.dart';
 import '../../../../shared/widgets/free_watch_top_app_bar.dart';
 import '../../data/models/notification_item.dart';
 import '../providers/notifications_provider.dart';
@@ -76,15 +77,10 @@ class NotificationsScreen extends ConsumerWidget {
                         TextButton(
                           onPressed: () {
                             ref.read(notificationsProvider.notifier).markAllAsRead();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                duration: Duration(milliseconds: 900),
-                                backgroundColor: Color(0xFF161922),
-                                content: Text(
-                                  'All notifications marked as read',
-                                  style: TextStyle(color: Colors.white),
-                                ),
-                              ),
+                            AppToast.show(
+                              context,
+                              'All notifications marked as read',
+                              isSuccess: true,
                             );
                           },
                           child: Text(

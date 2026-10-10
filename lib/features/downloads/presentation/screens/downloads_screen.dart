@@ -6,6 +6,8 @@ import 'package:iconly/iconly.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../data/models/downloaded_movie.dart';
+import '../../../../shared/widgets/app_toast.dart';
+import '../../../../shared/widgets/glass_dialog.dart';
 import '../../../home/providers/home_providers.dart';
 import '../../../movie_detail/presentation/screens/movie_detail_screen.dart';
 import '../providers/downloads_provider.dart';
@@ -22,136 +24,38 @@ class DownloadsScreen extends ConsumerWidget {
   }
 
   void _confirmDelete(BuildContext context, WidgetRef ref, DownloadedMovie item) {
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: AlertDialog(
-          backgroundColor: const Color(0xFF161922).withOpacity(0.92),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-            side: BorderSide(color: Colors.white.withOpacity(0.12), width: 0.8),
-          ),
-          title: const Text(
-            'Delete Download?',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          content: Text(
-            'Are you sure you want to delete "${item.title}" from your device storage? You can re-download it anytime.',
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.80),
-              fontSize: 13.5,
-              height: 1.4,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: Text(
-                'Cancel',
-                style: TextStyle(color: Colors.white.withOpacity(0.70)),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(ctx).pop();
-                ref.read(downloadsProvider.notifier).removeDownload(item.id);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    duration: const Duration(milliseconds: 1500),
-                    backgroundColor: const Color(0xFF1F2430),
-                    content: Text(
-                      'Deleted "${item.title}" from storage',
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                  ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFEF4444),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Text(
-                'Delete',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        ),
-      ),
+    GlassDialog.show(
+      context,
+      title: 'Delete Download?',
+      message: 'Are you sure you want to delete "${item.title}" from your device storage? You can re-download it anytime.',
+      confirmText: 'Delete',
+      confirmColor: const Color(0xFFEF4444),
+      onConfirm: () {
+        ref.read(downloadsProvider.notifier).removeDownload(item.id);
+        AppToast.show(
+          context,
+          'Deleted "${item.title}" from storage',
+          isSuccess: false,
+        );
+      },
     );
   }
 
   void _confirmClearAll(BuildContext context, WidgetRef ref) {
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: AlertDialog(
-          backgroundColor: const Color(0xFF161922).withOpacity(0.92),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-            side: BorderSide(color: Colors.white.withOpacity(0.12), width: 0.8),
-          ),
-          title: const Text(
-            'Clear All Downloads?',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          content: Text(
-            'This will permanently delete all downloaded movies from your device storage to free up space.',
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.80),
-              fontSize: 13.5,
-              height: 1.4,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: Text(
-                'Cancel',
-                style: TextStyle(color: Colors.white.withOpacity(0.70)),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(ctx).pop();
-                ref.read(downloadsProvider.notifier).clearAllDownloads();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    duration: Duration(milliseconds: 1500),
-                    backgroundColor: Color(0xFF1F2430),
-                    content: Text(
-                      'All downloaded movies cleared',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFEF4444),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Text(
-                'Clear All',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        ),
-      ),
+    GlassDialog.show(
+      context,
+      title: 'Clear All Downloads?',
+      message: 'This will permanently delete all downloaded movies from your device storage to free up space.',
+      confirmText: 'Clear All',
+      confirmColor: const Color(0xFFEF4444),
+      onConfirm: () {
+        ref.read(downloadsProvider.notifier).clearAllDownloads();
+        AppToast.show(
+          context,
+          'All downloaded movies cleared',
+          isSuccess: false,
+        );
+      },
     );
   }
 

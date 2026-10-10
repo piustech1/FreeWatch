@@ -19,6 +19,7 @@ import '../../../favorites/presentation/providers/favorites_provider.dart';
 import '../../../home/providers/home_providers.dart';
 import '../../../movie_grid/presentation/screens/movie_grid_screen.dart';
 import '../../../notifications/presentation/screens/notifications_screen.dart';
+import '../../../../shared/widgets/app_toast.dart';
 import '../providers/movie_detail_providers.dart';
 
 /// Premium iOS Glassmorphic Movie Details Screen:
@@ -33,10 +34,14 @@ import '../providers/movie_detail_providers.dart';
 /// - Full skeleton shimmer loading state (MovieDetailShimmer)
 class MovieDetailScreen extends ConsumerStatefulWidget {
   final Movie movie;
+  final double? resumeProgress;
+  final bool autoPlay;
 
   const MovieDetailScreen({
     super.key,
     required this.movie,
+    this.resumeProgress,
+    this.autoPlay = false,
   });
 
   @override
@@ -53,6 +58,16 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
   bool _isPlayingVideo = false;
   bool _isInitializingVideo = false;
   bool _isFullscreen = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.autoPlay || widget.resumeProgress != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _playTrailer();
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -687,9 +702,11 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
     final isDownloaded = ref.watch(downloadsProvider.notifier).isDownloaded(movie.id);
 
     final bool isCurrentlyPlaying = _isPlayingVideo && _videoPlayerController?.value.isPlaying == true;
-    final String playLabel = isSeries
-        ? 'RESUME'
-        : (_isPlayingVideo ? (isCurrentlyPlaying ? 'PAUSE' : 'PLAY') : 'PLAY');
+    final String playLabel = _isPlayingVideo
+        ? (isCurrentlyPlaying ? 'PAUSE' : 'PLAY')
+        : (widget.resumeProgress != null
+            ? 'RESUME (${(widget.resumeProgress! * 100).toInt()}%)'
+            : (isSeries ? 'RESUME' : 'PLAY'));
 
     return Row(
       children: [
@@ -748,17 +765,10 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
 
               ref.read(favoritesProvider.notifier).toggleFavorite(movie);
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    duration: const Duration(milliseconds: 1000),
-                    backgroundColor: const Color(0xFF161922),
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    content: Text(
-                      !isFav ? 'Added "${movie.title}" to Watchlist' : 'Removed from Watchlist',
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                  ),
+                AppToast.show(
+                  context,
+                  !isFav ? 'Added "${movie.title}" to Watchlist' : 'Removed from Watchlist',
+                  isSuccess: !isFav,
                 );
               }
             },
@@ -1200,15 +1210,10 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
   }
 
   void _playEpisode(BuildContext context, String title, String ep, Vj assignedVj) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        duration: const Duration(milliseconds: 1500),
-        backgroundColor: const Color(0xFF161922),
-        content: Text(
-          'Streaming Season $_selectedSeason $ep: "$title" translated by ${assignedVj.name}...',
-          style: const TextStyle(color: Colors.white),
-        ),
-      ),
+    AppToast.show(
+      context,
+      'Streaming Season $_selectedSeason $ep: "$title" translated by ${assignedVj.name}',
+      isSuccess: true,
     );
     _playTrailer();
   }
@@ -1223,17 +1228,10 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
 
     if (alreadyDownloaded) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          duration: const Duration(milliseconds: 1500),
-          backgroundColor: const Color(0xFF161922),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          content: Text(
-            '"${widget.movie.title}" is already in your Downloads!',
-            style: const TextStyle(color: Colors.white),
-          ),
-        ),
+      AppToast.show(
+        context,
+        '"${widget.movie.title}" is already in your Downloads',
+        isSuccess: false,
       );
       return;
     }
@@ -1241,25 +1239,10 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
     await downloadsNotifier.addDownload(widget.movie);
 
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        duration: const Duration(milliseconds: 2000),
-        backgroundColor: const Color(0xFF161922),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        content: Row(
-          children: [
-            const Icon(Icons.check_circle_rounded, color: Color(0xFF22C55E), size: 20),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'Downloaded "${widget.movie.title}" (1.8 GB, 1080p)',
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-              ),
-            ),
-          ],
-        ),
-      ),
+    AppToast.show(
+      context,
+      'Downloaded "${widget.movie.title}" (1.8 GB, 1080p)',
+      isSuccess: true,
     );
   }
 
@@ -1904,6 +1887,11 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
           _isInitializingVideo = false;
           _isPlayingVideo = true;
         });
+        if (widget.resumeProgress != null && widget.resumeProgress! > 0) {
+          final totalMs = _videoPlayerController!.value.duration.inMilliseconds;
+          final seekMs = (totalMs * widget.resumeProgress!).round();
+          _videoPlayerController?.seekTo(Duration(milliseconds: seekMs));
+        }
         _videoPlayerController?.play();
       }).catchError((error) {
         if (!mounted) return;
@@ -1911,12 +1899,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
           _isInitializingVideo = false;
           _isPlayingVideo = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to load video stream: $error'),
-            backgroundColor: const Color(0xFF161822),
-          ),
-        );
+        AppToast.show(context, 'Failed to load video stream', isSuccess: false);
       });
   }
 

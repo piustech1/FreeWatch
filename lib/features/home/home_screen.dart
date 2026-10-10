@@ -12,6 +12,7 @@ import '../../data/mock/mock_movies.dart';
 import '../../data/models/movie.dart';
 import '../movie_detail/presentation/screens/movie_detail_screen.dart';
 import '../movie_grid/presentation/screens/movie_grid_screen.dart';
+import 'presentation/screens/all_vjs_screen.dart';
 import '../search/presentation/screens/search_screen.dart';
 import '../favorites/presentation/screens/favorites_screen.dart';
 import '../downloads/presentation/screens/downloads_screen.dart';
@@ -158,9 +159,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             },
             onSeeAll: () {
               Navigator.of(context).push(
-                MovieGridScreen.routeForCategory(
-                  title: 'All VJ Movies',
-                  movies: MockData.getAllMovies(),
+                MaterialPageRoute(
+                  builder: (_) => const AllVjsScreen(vjs: MockData.vjs),
                 ),
               );
             },

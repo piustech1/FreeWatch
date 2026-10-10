@@ -1,6 +1,4 @@
-import 'dart:math' as math;
 import 'dart:ui';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,11 +6,10 @@ import 'package:go_router/go_router.dart';
 import 'package:iconly/iconly.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:video_player/video_player.dart';
-import '../../core/constants/api_constants.dart';
 import '../../core/constants/app_colors.dart';
+import '../../shared/widgets/app_toast.dart';
 import '../auth/presentation/providers/user_avatar_provider.dart';
 import '../auth/presentation/screens/choose_avatar_screen.dart';
-import '../home/providers/home_providers.dart';
 
 /// 2-Page Onboarding Experience:
 /// - Ambient looping background movie video with seamless cinematic dark gradient overlay
@@ -25,10 +22,8 @@ class OnboardingScreen extends ConsumerStatefulWidget {
   ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
-    with SingleTickerProviderStateMixin {
+class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final PageController _pageController = PageController();
-  late final AnimationController _wallController;
   VideoPlayerController? _bgVideoController;
 
   // Screen 2 Auth form states
@@ -47,12 +42,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   void initState() {
     super.initState();
     _passwordController.addListener(_onPasswordChanged);
-    // Continuous drifting animation as fallback
-    _wallController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 35),
-    )..repeat();
-
     _initBackgroundVideo();
   }
 
@@ -141,7 +130,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     _passwordController.removeListener(_onPasswordChanged);
     _bgVideoController?.removeListener(_handleVideoLoop);
     _bgVideoController?.dispose();
-    _wallController.dispose();
     _pageController.dispose();
     _nameController.dispose();
     _emailController.dispose();
@@ -152,28 +140,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
 
   @override
   Widget build(BuildContext context) {
-    // Collect posters from TMDB with fallback
-    final trending = ref.watch(trendingMoviesProvider).valueOrNull ?? [];
-    final popular = ref.watch(popularMoviesProvider).valueOrNull ?? [];
-
-    final Set<String> liveUrls = {};
-    for (final m in [...trending, ...popular]) {
-      if (m.posterPath != null && m.posterPath!.isNotEmpty) {
-        liveUrls.add('${ApiConstants.posterW500}${m.posterPath}');
-      }
-    }
-
-    final allPosters = liveUrls.length >= 15
-        ? liveUrls.toList()
-        : [...liveUrls, ..._fallbackPosters];
-
     return Scaffold(
       backgroundColor: AppColors.background,
       resizeToAvoidBottomInset: false,
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // ── 1. Looping Muted Background Movie Video (With Poster Wall Fallback) ──
+          // ── 1. Looping Muted Background Movie Video ──
           Positioned.fill(
             child: _bgVideoController != null && _bgVideoController!.value.isInitialized
                 ? FittedBox(
@@ -184,10 +157,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                       child: VideoPlayer(_bgVideoController!),
                     ),
                   )
-                : _Infinite4RowPosterWall(
-                    animation: _wallController,
-                    posters: allPosters,
-                  ),
+                : const ColoredBox(color: AppColors.background),
           ),
 
           // ── 2. Cinematic Dark Ambient Gradient Overlay ────────────────────
@@ -600,11 +570,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
             ),
             GestureDetector(
               onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Password reset link sent to your email.'),
-                    backgroundColor: Color(0xFF1E212D),
-                  ),
+                AppToast.show(
+                  context,
+                  'Password reset link sent to your email.',
+                  isSuccess: true,
                 );
               },
               child: const Text(
@@ -934,181 +903,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                 ),
               ),
             ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  static const List<String> _fallbackPosters = [
-    'https://image.tmdb.org/t/p/w500/A7EByudX0eOzlkQ2FIbogzyazm2.jpg',
-    'https://image.tmdb.org/t/p/w500/1pdfLvkbY9ohJlCjQH2CZjjYVvJ.jpg',
-    'https://image.tmdb.org/t/p/w500/8cdWjvZQUExUUTzyp4t6EDMubfO.jpg',
-    'https://image.tmdb.org/t/p/w500/2cxhvwyEwRlysAmRH4iodkvo0z5.jpg',
-    'https://image.tmdb.org/t/p/w500/m20yt7Ul7hJBLv0S8j7Hn6Zk2iV.jpg',
-    'https://image.tmdb.org/t/p/w500/kSpsYjG80eL4qQ3R3n9k6rLqC9p.jpg',
-    'https://image.tmdb.org/t/p/w500/aLVkiINNOgr1lYzZCrjWBsEV9um.jpg',
-    'https://image.tmdb.org/t/p/w500/lrkudNqmG39w62M4t4o6kQ7gV0r.jpg',
-    'https://image.tmdb.org/t/p/w500/d5iIlFn5s0ImszYzBPb8JPIfbXD.jpg',
-    'https://image.tmdb.org/t/p/w500/kDp1vUBnMpe8ak4rjgl3cLELqjU.jpg',
-    'https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg',
-    'https://image.tmdb.org/t/p/w500/8b8R8l88Qje9dn9OE8PY05Nxl1X.jpg',
-    'https://image.tmdb.org/t/p/w500/fiVW06jE7z9YnO4trhaMEdclSiC.jpg',
-    'https://image.tmdb.org/t/p/w500/7WsyChQLEftFiDOVTGkv3hFpyyt.jpg',
-    'https://image.tmdb.org/t/p/w500/iuFNMS8U5cb6xfzi51Dbkovj7vM.jpg',
-    'https://image.tmdb.org/t/p/w500/9Gtg2DzBhmYamXBS1hKAhiwbBKS.jpg',
-  ];
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// INFINITE GAPLESS 4-ROW TILTED MOVING POSTER MARQUEE
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _Infinite4RowPosterWall extends StatelessWidget {
-  final Animation<double> animation;
-  final List<String> posters;
-
-  const _Infinite4RowPosterWall({
-    required this.animation,
-    required this.posters,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    // Partition posters evenly across 4 distinct sets
-    final int count = posters.length;
-    final rowTop = [for (int i = 0; i < count; i++) posters[(i + 2) % count]];
-    final row0 = [for (int i = 0; i < count; i++) posters[i % count]];
-    final row1 = [for (int i = 0; i < count; i++) posters[(i + 5) % count]];
-    final row2 = [for (int i = 0; i < count; i++) posters[(i + 9) % count]];
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final screenW = constraints.maxWidth > 0 ? constraints.maxWidth : 400.0;
-        return OverflowBox(
-          minWidth: screenW,
-          maxWidth: screenW,
-          minHeight: 0,
-          maxHeight: 1400,
-          child: Transform.scale(
-            scale: 1.55, // Scale up to completely cover all corners including top-left when tilted
-            child: Transform.rotate(
-              angle: -11 * (math.pi / 180),
-              child: AnimatedBuilder(
-                animation: animation,
-                builder: (context, _) {
-                  final double progress = animation.value;
-
-                  return Column(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // Row 0: Top row that completely covers the top-left corner gap
-                      _InfinitePosterMarquee(
-                        posters: rowTop,
-                        progress: progress,
-                        direction: 1, // Moves RIGHT
-                        phaseOffset: 0.15,
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Row 1: Moves LEFT continuously
-                      _InfinitePosterMarquee(
-                        posters: row0,
-                        progress: progress,
-                        direction: -1,
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Row 2: Moves RIGHT continuously
-                      _InfinitePosterMarquee(
-                        posters: row1,
-                        progress: progress,
-                        direction: 1,
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Row 3: Moves LEFT continuously
-                      _InfinitePosterMarquee(
-                        posters: row2,
-                        progress: progress,
-                        direction: -1,
-                        phaseOffset: 0.25,
-                      ),
-                    ],
-                  );
-                },
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _InfinitePosterMarquee extends StatelessWidget {
-  final List<String> posters;
-  final double progress;
-  final int direction; // -1 for left, 1 for right
-  final double phaseOffset;
-
-  const _InfinitePosterMarquee({
-    required this.posters,
-    required this.progress,
-    required this.direction,
-    this.phaseOffset = 0.0,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    const double cardWidth = 125.0;
-    const double cardMargin = 10.0;
-    const double itemStep = cardWidth + cardMargin;
-    final double cycleWidth = posters.length * itemStep;
-
-    // Seamless gapless translation modulo cycleWidth
-    final double effectiveProgress = (progress + phaseOffset) % 1.0;
-    final double dx = direction < 0
-        ? - (effectiveProgress * cycleWidth)
-        : - cycleWidth + (effectiveProgress * cycleWidth);
-
-    // Quadruple posters list so it spans thousands of pixels with no edge cutoffs
-    final seamlessList = [
-      ...posters,
-      ...posters,
-      ...posters,
-      ...posters,
-    ];
-
-    return SizedBox(
-      height: 185,
-      child: Transform.translate(
-        offset: Offset(dx, 0),
-        child: OverflowBox(
-          alignment: Alignment.centerLeft,
-          maxWidth: double.infinity,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: seamlessList.map((url) {
-              return Padding(
-                padding: const EdgeInsets.only(right: cardMargin),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(14),
-                  child: SizedBox(
-                    width: cardWidth,
-                    height: 185,
-                    child: CachedNetworkImage(
-                      imageUrl: url,
-                      fit: BoxFit.cover,
-                      placeholder: (_, __) => Container(color: const Color(0xFF14161F)),
-                      errorWidget: (_, __, ___) =>
-                          Container(color: const Color(0xFF14161F)),
-                    ),
-                  ),
-                ),
-              );
-            }).toList(),
           ),
         ),
       ),

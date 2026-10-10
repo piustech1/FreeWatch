@@ -11,6 +11,7 @@ import '../../../data/models/movie.dart';
 import '../../../data/models/vj.dart';
 import '../../favorites/presentation/providers/favorites_provider.dart';
 import '../../movie_grid/presentation/screens/movie_grid_screen.dart';
+import '../../../shared/widgets/app_toast.dart';
 import '../providers/home_providers.dart';
 
 /// Refined Hero Section matching user markup image:
@@ -762,17 +763,10 @@ class _CompactHeroPosterCard extends ConsumerWidget {
                 child: GestureDetector(
                   onTap: () {
                     ref.read(favoritesProvider.notifier).toggleFavorite(movie);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        duration: const Duration(milliseconds: 900),
-                        backgroundColor: const Color(0xFF161922),
-                        content: Text(
-                          isFav
-                              ? 'Removed from Watchlist'
-                              : 'Saved to Watchlist',
-                          style: const TextStyle(color: Colors.white),
-                        ),
-                      ),
+                    AppToast.show(
+                      context,
+                      isFav ? 'Removed from Watchlist' : 'Saved to Watchlist',
+                      isSuccess: !isFav,
                     );
                   },
                   child: ClipRRect(
