@@ -1,0 +1,38 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="favBgGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#EF4444" stop-opacity="0.25"/>
+      <stop offset="70%" stop-color="#F43F5E" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="heartGrad" x1="60" y1="50" x2="140" y2="150" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FB7185"/>
+      <stop offset="50%" stop-color="#EF4444"/>
+      <stop offset="100%" stop-color="#BE123C"/>
+    </linearGradient>
+    <linearGradient id="ribbonGrad" x1="90" y1="130" x2="110" y2="165" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#F43F5E"/>
+      <stop offset="100%" stop-color="#881337"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Ambient Glow -->
+  <circle cx="100" cy="100" r="90" fill="url(#favBgGlow)"/>
+
+  <!-- Outer Dotted Orbit -->
+  <circle cx="100" cy="98" r="54" stroke="#F43F5E" stroke-width="1.8" stroke-dasharray="5 7" opacity="0.35"/>
+
+  <!-- Sleek Layered Heart Vector -->
+  <path d="M100 135 C100 135 62 110 62 82 C62 67 73 56 87 56 C95 56 100 62 100 62 C100 62 105 56 113 56 C127 56 138 67 138 82 C138 110 100 135 100 135 Z" 
+        fill="url(#heartGrad)" fill-opacity="0.2" stroke="url(#heartGrad)" stroke-width="3" stroke-linejoin="round"/>
+
+  <!-- Inner Glowing Heart Core -->
+  <path d="M100 120 C100 120 74 102 74 84 C74 74 81 67 90 67 C96 67 100 71 100 71 C100 71 104 67 110 67 C119 67 126 74 126 84 C126 102 100 120 100 120 Z" 
+        fill="url(#heartGrad)" opacity="0.85"/>
+
+  <!-- Subtle Shimmer Star Accents -->
+  <circle cx="56" cy="68" r="2.5" fill="#FDA4AF" opacity="0.75"/>
+  <circle cx="146" cy="74" r="3" fill="#FB7185" opacity="0.8"/>
+  <circle cx="138" cy="132" r="2" fill="#F43F5E" opacity="0.6"/>
+  <path d="M52 115 L54 119 L58 121 L54 123 L52 127 L50 123 L46 121 L50 119 Z" fill="#FDA4AF" opacity="0.7"/>
+</svg>

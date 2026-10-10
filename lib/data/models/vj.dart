@@ -16,4 +16,24 @@ class Vj {
     required this.movieCount,
     required this.translatedMovieIds,
   });
+
+  Vj copyWith({
+    String? id,
+    String? name,
+    String? nickname,
+    String? specialty,
+    String? imageUrl,
+    int? movieCount,
+    List<int>? translatedMovieIds,
+  }) {
+    return Vj(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      nickname: nickname ?? this.nickname,
+      specialty: specialty ?? this.specialty,
+      imageUrl: imageUrl ?? this.imageUrl,
+      movieCount: movieCount ?? this.movieCount,
+      translatedMovieIds: translatedMovieIds ?? this.translatedMovieIds,
+    );
+  }
 }

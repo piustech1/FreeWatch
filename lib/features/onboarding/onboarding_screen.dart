@@ -128,8 +128,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   Future<void> _handleSubmitAuth() async {
     if (_isLoadingAuth) return;
 
-    final email = _emailController.text.trim();
-    final password = _passwordController.text;
+    final email = _emailController.text.trim().toLowerCase();
+    final password = _passwordController.text.trim();
 
     if (email.isEmpty) {
       AppToast.show(context, 'Please enter your email address', isSuccess: false);
@@ -141,7 +141,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     }
 
     if (_isSignUp) {
-      final confirmPassword = _confirmPasswordController.text;
+      final confirmPassword = _confirmPasswordController.text.trim();
       if (password.length < 6) {
         AppToast.show(context, 'Password must be at least 6 characters', isSuccess: false);
         return;
@@ -168,9 +168,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         );
 
         if (!mounted) return;
-        await ref.read(userProfileProvider.notifier).updateName(name);
+        ref.read(userProfileProvider.notifier).updateName(name);
 
-        if (!mounted) return;
         AppToast.show(
           context,
           'Account created successfully! Welcome to FreeWatch',
@@ -195,14 +194,18 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         if (!mounted) return;
         final user = cred.user;
         if (user != null) {
-          final profile = await authRepo.getUserProfile(user.uid);
-          final displayName = profile?['name'] as String? ?? user.displayName;
+          final displayName = user.displayName;
           if (displayName != null && displayName.isNotEmpty) {
-            await ref.read(userProfileProvider.notifier).updateName(displayName);
+            ref.read(userProfileProvider.notifier).updateName(displayName);
           }
+          authRepo.getUserProfile(user.uid).then((profile) {
+            final name = profile?['name'] as String?;
+            if (name != null && name.isNotEmpty) {
+              ref.read(userProfileProvider.notifier).updateName(name);
+            }
+          }).catchError((_) {});
         }
 
-        if (!mounted) return;
         AppToast.show(context, 'Welcome back to FreeWatch!', isSuccess: true);
         context.go('/home');
       } catch (e) {
@@ -758,6 +761,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           controller: _nameController,
           hint: 'Full Name',
           icon: IconlyLight.profile,
+          textCapitalization: TextCapitalization.words,
         ),
         const SizedBox(height: 14),
 
@@ -943,6 +947,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     TextInputType? keyboardType,
     bool obscureText = false,
     Widget? suffixIcon,
+    TextCapitalization textCapitalization = TextCapitalization.none,
+    bool autocorrect = false,
+    bool enableSuggestions = false,
   }) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
@@ -959,6 +966,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               controller: controller,
               obscureText: obscureText,
               keyboardType: keyboardType,
+              textCapitalization: textCapitalization,
+              autocorrect: autocorrect,
+              enableSuggestions: enableSuggestions,
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 14,

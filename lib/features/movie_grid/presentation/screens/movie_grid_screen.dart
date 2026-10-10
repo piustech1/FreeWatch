@@ -8,11 +8,13 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../data/mock/mock_movies.dart';
 import '../../../../data/models/movie.dart';
 import '../../../../data/models/vj.dart';
+import '../../../../data/repositories/movie_repository.dart';
 import '../../../home/providers/home_providers.dart';
 import '../../../home/widgets/floating_nav_bar.dart';
 import '../../../movie_detail/presentation/screens/movie_detail_screen.dart';
 import '../../../notifications/presentation/screens/notifications_screen.dart';
 import '../../../../shared/widgets/free_watch_top_app_bar.dart';
+import '../../../../shared/widgets/frosted_empty_state.dart';
 
 /// 1:1 Cinematic 3-Column Movie Grid Screen matching reference design:
 /// - Fixed FreeWatchTopAppBar matching home and details screens
@@ -37,12 +39,11 @@ class MovieGridScreen extends ConsumerWidget {
 
   /// Factory constructor for opening movies translated by a specific VJ
   static MaterialPageRoute routeForVj({required Vj vj}) {
-    final movies = MockData.getMoviesByVj(vj.id);
     return MaterialPageRoute(
       builder: (_) => MovieGridScreen(
         title: vj.name,
         vj: vj,
-        movies: movies,
+        movies: const [],
       ),
     );
   }
@@ -69,8 +70,10 @@ class MovieGridScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final currentNavIndex = ref.watch(bottomNavIndexProvider);
     final displayMovies = vj != null
-        ? (ref.watch(vjMoviesProvider(vj!.id)).valueOrNull ?? movies)
-        : movies;
+        ? (ref.watch(vjMoviesObjProvider(vj!)).valueOrNull ??
+            ref.watch(vjMoviesProvider(vj!.id)).valueOrNull ??
+            movies)
+        : (ref.watch(categoryFullMoviesProvider(title)).valueOrNull ?? movies);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -380,10 +383,20 @@ class MovieGridScreen extends ConsumerWidget {
                       right: 6,
                       child: Builder(
                         builder: (context) {
+                          final resolvedVjName = vj?.name ??
+                              (movie.vjName != null && movie.vjName!.isNotEmpty
+                                  ? movie.vjName!
+                                  : 'VJ JUNIOR');
+
+                          final normalized =
+                              MovieRepository.normalizeVjName(resolvedVjName);
                           final resolvedVj = MockData.vjs.firstWhere(
-                            (v) => v.translatedMovieIds.contains(movie.id),
-                            orElse: () => MockData.vjs[(movie.id.abs()) % MockData.vjs.length],
+                            (v) =>
+                                MovieRepository.normalizeVjName(v.name) ==
+                                normalized,
+                            orElse: () => MockData.vjs.first,
                           );
+
                           return Container(
                             padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2.5),
                             decoration: BoxDecoration(
@@ -432,7 +445,7 @@ class MovieGridScreen extends ConsumerWidget {
                                 ),
                                 const SizedBox(width: 3),
                                 Text(
-                                  resolvedVj.name,
+                                  resolvedVjName,
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 9,
@@ -488,121 +501,21 @@ class MovieGridScreen extends ConsumerWidget {
   }
 
   String _resolveVjNameForMovie(Movie movie, int index) {
-    try {
-      final found = MockData.vjs.firstWhere(
-        (v) => v.translatedMovieIds.contains(movie.id),
-      );
-      return found.name;
-    } catch (_) {
-      const fallbackVjs = MockData.vjs;
-      if (fallbackVjs.isNotEmpty) {
-        return fallbackVjs[index % fallbackVjs.length].name;
-      }
-      return 'VJ Junior';
+    if (movie.vjName != null && movie.vjName!.isNotEmpty) {
+      return movie.vjName!;
     }
+    return 'VJ JUNIOR';
   }
 
   Widget _buildEmptyState(BuildContext context) {
     final entityName = vj?.name ?? title;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 28),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 34),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.04),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.10),
-                  width: 0.8,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.40),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 76,
-                    height: 76,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: const Color(0xFF7C3AED).withOpacity(0.15),
-                      border: Border.all(
-                        color: const Color(0xFFA78BFA).withOpacity(0.35),
-                        width: 1.2,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF7C3AED).withOpacity(0.25),
-                          blurRadius: 24,
-                          spreadRadius: 2,
-                        ),
-                      ],
-                    ),
-                    alignment: Alignment.center,
-                    child: const Icon(
-                      Icons.movie_filter_rounded,
-                      color: Color(0xFFA78BFA),
-                      size: 36,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  const Text(
-                    'No Movies Available',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 19,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -0.3,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'No translated releases found for $entityName yet. Check back soon as new movies are regularly uploaded!',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.60),
-                      fontSize: 13.5,
-                      height: 1.45,
-                    ),
-                  ),
-                  const SizedBox(height: 22),
-                  GestureDetector(
-                    onTap: () => Navigator.of(context).pop(),
-                    behavior: HitTestBehavior.opaque,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 11),
-                      decoration: BoxDecoration(
-                        color: AppColors.accent,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Text(
-                        'Browse Other Categories',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
+    return FrostedEmptyState(
+      svgPath: 'assets/images/empty_movies.svg',
+      title: 'No Movies Available',
+      message:
+          'No translated releases found for $entityName yet. Check back soon as new movies are regularly uploaded!',
+      actionText: 'Browse Other Categories',
+      onActionTap: () => Navigator.of(context).pop(),
     );
   }
 }

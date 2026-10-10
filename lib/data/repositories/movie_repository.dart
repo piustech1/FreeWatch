@@ -213,7 +213,20 @@ class MovieRepository {
         .toList();
   }
 
-  // ── 9. Dedicated VJ Movie Filtering with Gap-Filling ─────────────────────────
+  // ── Helper: Normalize VJ names for resilient matching ──────────────────────
+  static String normalizeVjName(String raw) {
+    return raw
+        .toLowerCase()
+        .replaceAll('vj.', '')
+        .replaceAll('vj', '')
+        .replaceAll('.', '')
+        .replaceAll(':', '')
+        .replaceAll('_', '')
+        .replaceAll('-', '')
+        .trim();
+  }
+
+  // ── 9. Dedicated VJ Movie Filtering with Strict Real RTDB Match ─────────────
   Future<List<Movie>> getMoviesByVj(dynamic vjOrId) async {
     Vj vj;
     if (vjOrId is Vj) {
@@ -223,34 +236,144 @@ class MovieRepository {
       vj = MockData.vjs.firstWhere((v) => v.id == idStr, orElse: () => MockData.vjs.first);
     }
 
-    final cleanVjName = vj.name.toLowerCase().replaceAll('vj', '').trim();
-    final List<Movie> combined = [];
+    final cleanVjTarget = normalizeVjName(vj.name);
+    final List<Movie> matching = [];
     final Set<int> seenIds = {};
 
     try {
       final allMovies = await _movieMax.getAllMovies();
-      final vjMovies = allMovies.where((m) {
-        if (m.vjName == null || m.vjName!.isEmpty) return false;
-        final name = m.vjName!.toLowerCase();
-        return name.contains(cleanVjName);
-      }).toList();
+      final allSeries = await _movieMax.getAllSeries();
+      final pool = [...allMovies, ...allSeries];
 
-      for (final m in vjMovies) {
-        if (seenIds.add(m.id)) {
-          combined.add(m);
+      for (final m in pool) {
+        if (m.vjName == null || m.vjName!.isEmpty) continue;
+        final cleanMovieVj = normalizeVjName(m.vjName!);
+        if (cleanMovieVj.contains(cleanVjTarget) || cleanVjTarget.contains(cleanMovieVj)) {
+          if (seenIds.add(m.id)) {
+            // Standardize display VJ name to canonical VJ name
+            matching.add(m.copyWith(vjName: vj.name));
+          }
         }
       }
     } catch (_) {}
 
-    // Gap filler: also merge curated mock movies for this VJ
-    final mockVjMovies = MockData.getMoviesByVj(vj.id);
-    for (final m in mockVjMovies) {
-      if (seenIds.add(m.id)) {
-        combined.add(m);
-      }
-    }
+    if (matching.isNotEmpty) return matching;
 
-    return combined.isNotEmpty ? combined : mockVjMovies;
+    // Fallback: curated mock movies for this VJ
+    final mockVjMovies = MockData.getMoviesByVj(vj.id);
+    return mockVjMovies.map((m) => m.copyWith(vjName: vj.name)).toList();
+  }
+
+  /// Calculates real dynamic movie counts for all VJs directly from RTDB records
+  Future<List<Vj>> getVjsWithRealCounts() async {
+    try {
+      final allMovies = await _movieMax.getAllMovies();
+      final allSeries = await _movieMax.getAllSeries();
+      final pool = [...allMovies, ...allSeries];
+
+      return MockData.vjs.map((vj) {
+        final target = normalizeVjName(vj.name);
+        final count = pool.where((m) {
+          if (m.vjName == null || m.vjName!.isEmpty) return false;
+          final clean = normalizeVjName(m.vjName!);
+          return clean.contains(target) || target.contains(clean);
+        }).length;
+
+        // If database has matching movies, use exact count; otherwise keep minimum 1
+        return vj.copyWith(
+          movieCount: count > 0 ? count : (vj.movieCount > 0 ? vj.movieCount : 1),
+        );
+      }).toList();
+    } catch (_) {
+      return MockData.vjs;
+    }
+  }
+
+  /// Sourced strictly from real RTDB database: finds real streamable related movies
+  Future<List<Movie>> getRelatedMovies(Movie movie) async {
+    try {
+      final all = await _movieMax.getAllMovies();
+      final allSeries = await _movieMax.getAllSeries();
+      final pool = [...all, ...allSeries];
+
+      final cleanVj = movie.vjName != null ? normalizeVjName(movie.vjName!) : '';
+      final movieGenres = Set<int>.from(movie.genreIds);
+
+      final List<Movie> related = [];
+      final Set<int> seenIds = {movie.id};
+
+      // 1. Same VJ
+      if (cleanVj.isNotEmpty) {
+        for (final m in pool) {
+          if (m.id == movie.id) continue;
+          if (m.vjName != null && normalizeVjName(m.vjName!).contains(cleanVj)) {
+            if (seenIds.add(m.id)) {
+              related.add(m);
+            }
+          }
+          if (related.length >= 10) break;
+        }
+      }
+
+      // 2. Shared Genres
+      if (related.length < 15 && movieGenres.isNotEmpty) {
+        for (final m in pool) {
+          if (seenIds.contains(m.id)) continue;
+          final sharesGenre = m.genreIds.any((g) => movieGenres.contains(g));
+          if (sharesGenre) {
+            if (seenIds.add(m.id)) {
+              related.add(m);
+            }
+          }
+          if (related.length >= 15) break;
+        }
+      }
+
+      // 3. Same content type (movies or series)
+      if (related.length < 10) {
+        for (final m in pool) {
+          if (seenIds.contains(m.id)) continue;
+          if (m.isTv == movie.isTv) {
+            if (seenIds.add(m.id)) {
+              related.add(m);
+            }
+          }
+          if (related.length >= 15) break;
+        }
+      }
+
+      if (related.isNotEmpty) return related;
+    } catch (_) {}
+
+    return [];
+  }
+
+  /// Full un-truncated list for 'See All' category pages
+  Future<List<Movie>> getAllMoviesByGenre(int genreId) async {
+    try {
+      final rtdbMovies = await _movieMax.getAllMovies();
+      final filtered = rtdbMovies.where((m) => m.genreIds.contains(genreId)).toList();
+      if (filtered.isNotEmpty) return filtered;
+    } catch (_) {}
+    return getMoviesByGenre(genreId, page: 1);
+  }
+
+  /// Full un-truncated list of uploads for 'See All'
+  Future<List<Movie>> getAllUploads() async {
+    try {
+      final rtdbMovies = await _movieMax.getAllMovies();
+      if (rtdbMovies.isNotEmpty) return rtdbMovies;
+    } catch (_) {}
+    return getNowPlaying(page: 1);
+  }
+
+  /// Full un-truncated list of series for 'See All'
+  Future<List<Movie>> getAllSeriesList() async {
+    try {
+      final rtdbSeries = await _movieMax.getAllSeries();
+      if (rtdbSeries.isNotEmpty) return rtdbSeries;
+    } catch (_) {}
+    return getSeries(page: 1);
   }
 
   // ── 10. Movie Details with Gap-Filling & Metadata Enrichment ─────────────────
@@ -279,13 +402,26 @@ class MovieRepository {
       }
     }
 
-    // 3. If TMDB metadata exists, enrich it with MovieMax streaming link and VJ name
+    // 3. If TMDB metadata exists, enrich it with MovieMax streaming link, VJ name, and real RTDB related movies
     if (tmdbDetails != null) {
+      final realRelated = await getRelatedMovies(
+        movieMaxItem ??
+            Movie(
+              id: movieId,
+              title: tmdbDetails.title,
+              voteAverage: tmdbDetails.voteAverage,
+              vjName: movieMaxItem?.vjName ?? tmdbDetails.vjName,
+              genreIds: movieMaxItem?.genreIds ?? const [],
+              isTv: actuallyTv,
+            ),
+      );
+
       return tmdbDetails.copyWith(
         videoUrl: movieMaxItem?.videoUrl ?? tmdbDetails.videoUrl,
         vjName: movieMaxItem?.vjName ?? tmdbDetails.vjName,
         backdropPath: tmdbDetails.backdropPath ?? movieMaxItem?.backdropPath,
         runtime: tmdbDetails.runtime > 0 ? tmdbDetails.runtime : (movieMaxItem?.runtime ?? 110),
+        relatedMovies: realRelated.isNotEmpty ? realRelated : tmdbDetails.relatedMovies,
       );
     }
 
@@ -307,6 +443,10 @@ class MovieRepository {
     final videoUrl = movieMaxItem?.videoUrl ?? mockFallback.videoUrl;
     final vjName = movieMaxItem?.vjName ?? mockFallback.vjName ?? 'VJ Junior';
 
+    final realFallbackRelated = await getRelatedMovies(
+      movieMaxItem ?? mockFallback,
+    );
+
     return MovieDetailsData(
       id: movieId,
       title: title,
@@ -324,9 +464,11 @@ class MovieRepository {
         CastMember(id: 3, name: 'Emma Myers', character: 'Natalie', profilePath: '/4woSOUD0equAYzvwhWBHIJDCM88.jpg'),
         CastMember(id: 4, name: 'Danielle Brooks', character: 'Dawn', profilePath: '/kSpsYjG80eL4qQ3R3n9k6rLqC9p.jpg'),
       ],
-      relatedMovies: actuallyTv
-          ? MockData.popularTv.where((m) => m.id != movieId).toList()
-          : MockData.trendingMovies.where((m) => m.id != movieId).toList(),
+      relatedMovies: realFallbackRelated.isNotEmpty
+          ? realFallbackRelated
+          : (actuallyTv
+              ? MockData.popularTv.where((m) => m.id != movieId).toList()
+              : MockData.trendingMovies.where((m) => m.id != movieId).toList()),
       isTv: actuallyTv,
       numberOfSeasons: actuallyTv ? 3 : 0,
       seasons: actuallyTv

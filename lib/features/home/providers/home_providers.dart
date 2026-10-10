@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/models/movie.dart';
 import '../../../data/models/genre.dart';
+import '../../../data/models/vj.dart';
 import '../../../data/repositories/movie_repository.dart';
 
 // ── Global Bottom Navigation Provider & Helper ─────────────────────────────
@@ -111,5 +112,47 @@ final familyMoviesProvider = FutureProvider<List<Movie>>((ref) async {
 /// Dedicated VJ movies provider (combining MovieMax live translated movies with MockData)
 final vjMoviesProvider = FutureProvider.family<List<Movie>, String>((ref, vjId) async {
   return ref.watch(movieRepositoryProvider).getMoviesByVj(vjId);
+});
+
+/// Dedicated VJ movies provider accepting full Vj object
+final vjMoviesObjProvider = FutureProvider.family<List<Movie>, Vj>((ref, vj) async {
+  return ref.watch(movieRepositoryProvider).getMoviesByVj(vj);
+});
+
+/// Dynamic real VJ list provider with actual movie counts calculated from RTDB
+final vjsWithCountsProvider = FutureProvider<List<Vj>>((ref) async {
+  return ref.watch(movieRepositoryProvider).getVjsWithRealCounts();
+});
+
+/// Real RTDB related movies provider for a given movie
+final relatedMoviesProvider = FutureProvider.family<List<Movie>, Movie>((ref, movie) async {
+  return ref.watch(movieRepositoryProvider).getRelatedMovies(movie);
+});
+
+/// Comprehensive full-collection provider for 'See All' category screens
+final categoryFullMoviesProvider = FutureProvider.family<List<Movie>, String>((ref, title) async {
+  final repo = ref.watch(movieRepositoryProvider);
+  final lower = title.toLowerCase();
+
+  if (lower.contains('series')) {
+    return repo.getAllSeriesList();
+  } else if (lower.contains('action')) {
+    return repo.getAllMoviesByGenre(28);
+  } else if (lower.contains('sci-fi')) {
+    return repo.getAllMoviesByGenre(878);
+  } else if (lower.contains('romance')) {
+    return repo.getAllMoviesByGenre(10749);
+  } else if (lower.contains('horror')) {
+    return repo.getAllMoviesByGenre(27);
+  } else if (lower.contains('drama')) {
+    return repo.getAllMoviesByGenre(18);
+  } else if (lower.contains('animation')) {
+    return repo.getAllMoviesByGenre(16);
+  } else if (lower.contains('family')) {
+    return repo.getAllMoviesByGenre(10751);
+  } else {
+    // "Latest on FreeWatch", "Trending", "New Releases", etc.
+    return repo.getAllUploads();
+  }
 });
 

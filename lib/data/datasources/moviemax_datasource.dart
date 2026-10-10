@@ -55,14 +55,20 @@ class MovieMaxDatasource {
           // Only include published movies
           final isPublished = map['isPublished'] != false;
           if (isPublished) {
+            if (map['vjName'] == null && map['vj'] != null) {
+              map['vjName'] = map['vj'];
+            }
             movies.add(Movie.fromJson(map, key: key));
           }
         }
       });
 
-      _cachedMovies = movies;
+      // Firebase RTDB keys are chronological ascending; reversing presents
+      // recently uploaded movies first to users.
+      final reversedMovies = movies.reversed.toList();
+      _cachedMovies = reversedMovies;
       _lastMoviesFetch = DateTime.now();
-      return movies;
+      return reversedMovies;
     } catch (e) {
       debugPrint('MovieMax getAllMovies error: $e');
       return _cachedMovies ?? [];
@@ -96,14 +102,18 @@ class MovieMaxDatasource {
             // Mark as TV series
             map['type'] = 'series';
             map['media_type'] = 'tv';
+            if (map['vjName'] == null && map['vj'] != null) {
+              map['vjName'] = map['vj'];
+            }
             seriesList.add(Movie.fromJson(map, key: key));
           }
         }
       });
 
-      _cachedSeries = seriesList;
+      final reversedSeries = seriesList.reversed.toList();
+      _cachedSeries = reversedSeries;
       _lastSeriesFetch = DateTime.now();
-      return seriesList;
+      return reversedSeries;
     } catch (e) {
       debugPrint('MovieMax getAllSeries error: $e');
       return _cachedSeries ?? [];

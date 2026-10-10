@@ -7,6 +7,7 @@ import 'package:shimmer/shimmer.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../data/models/downloaded_movie.dart';
 import '../../../../shared/widgets/app_toast.dart';
+import '../../../../shared/widgets/frosted_empty_state.dart';
 import '../../../../shared/widgets/glass_dialog.dart';
 import '../../../home/providers/home_providers.dart';
 import '../../../movie_detail/presentation/screens/movie_detail_screen.dart';
@@ -267,7 +268,7 @@ class DownloadsScreen extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: GestureDetector(
-        onTap: () => _openMovieDetail(context, item),
+        onTap: item.isDownloading ? null : () => _openMovieDetail(context, item),
         behavior: HitTestBehavior.opaque,
         child: ClipRRect(
           borderRadius: BorderRadius.circular(16),
@@ -286,7 +287,7 @@ class DownloadsScreen extends ConsumerWidget {
               ),
               child: Row(
                 children: [
-                  // Movie Poster with Play Overlay
+                  // Movie Poster with Play / Downloading Overlay
                   Stack(
                     alignment: Alignment.center,
                     children: [
@@ -314,22 +315,33 @@ class DownloadsScreen extends ConsumerWidget {
                         width: 28,
                         height: 28,
                         decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.60),
+                          color: Colors.black.withOpacity(0.65),
                           shape: BoxShape.circle,
                           border: Border.all(color: Colors.white.withOpacity(0.35), width: 0.8),
                         ),
-                        child: const Icon(
-                          Icons.play_arrow_rounded,
-                          color: Colors.white,
-                          size: 18,
-                        ),
+                        child: item.isDownloading
+                            ? const Center(
+                                child: SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.accent),
+                                  ),
+                                ),
+                              )
+                            : const Icon(
+                                Icons.play_arrow_rounded,
+                                color: Colors.white,
+                                size: 18,
+                              ),
                       ),
                     ],
                   ),
 
                   const SizedBox(width: 14),
 
-                  // Metadata Info
+                  // Metadata Info & Download Progress
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -385,44 +397,74 @@ class DownloadsScreen extends ConsumerWidget {
                           ],
                         ),
                         const SizedBox(height: 6),
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.check_circle_rounded,
-                              color: Color(0xFF22C55E),
-                              size: 13,
+                        if (item.isDownloading) ...[
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(2),
+                            child: LinearProgressIndicator(
+                              value: item.downloadProgress,
+                              minHeight: 4,
+                              backgroundColor: Colors.white.withOpacity(0.12),
+                              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.accent),
                             ),
-                            const SizedBox(width: 4),
-                            Text(
-                              item.formattedFileSize,
-                              style: TextStyle(
-                                color: Colors.white.withOpacity(0.65),
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w600,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Downloading ${(item.downloadProgress * 100).toInt()}%',
+                            style: const TextStyle(
+                              color: AppColors.accent,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ] else ...[
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.check_circle_rounded,
+                                color: Color(0xFF22C55E),
+                                size: 13,
                               ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              '•  Offline Ready',
-                              style: TextStyle(
-                                color: Colors.white.withOpacity(0.40),
-                                fontSize: 11,
+                              const SizedBox(width: 4),
+                              Text(
+                                item.formattedFileSize,
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.65),
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
+                              const SizedBox(width: 8),
+                              Text(
+                                '•  Offline Ready',
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.40),
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ],
                     ),
                   ),
 
-                  // Delete Action Button
+                  // Delete / Cancel Action Button
                   GestureDetector(
-                    onTap: () => _confirmDelete(context, ref, item),
+                    onTap: () {
+                      if (item.isDownloading) {
+                        ref.read(downloadsProvider.notifier).cancelDownload(item.id);
+                        AppToast.show(context, 'Canceled download for "${item.title}"');
+                      } else {
+                        _confirmDelete(context, ref, item);
+                      }
+                    },
                     behavior: HitTestBehavior.opaque,
                     child: Padding(
                       padding: const EdgeInsets.all(8),
                       child: Icon(
-                        Icons.delete_outline_rounded,
+                        item.isDownloading
+                            ? Icons.close_rounded
+                            : Icons.delete_outline_rounded,
                         color: Colors.white.withOpacity(0.45),
                         size: 20,
                       ),
@@ -438,104 +480,13 @@ class DownloadsScreen extends ConsumerWidget {
   }
 
   Widget _buildEmptyState(BuildContext context, WidgetRef ref) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 34),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.04),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.10),
-                  width: 0.8,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.40),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 76,
-                    height: 76,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF97316).withOpacity(0.15),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: const Color(0xFFF97316).withOpacity(0.35),
-                        width: 1.2,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFFF97316).withOpacity(0.25),
-                          blurRadius: 24,
-                          spreadRadius: 2,
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      IconlyBold.download,
-                      color: Color(0xFFFB923C),
-                      size: 36,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  const Text(
-                    'No Downloaded Movies',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 19,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -0.3,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Download your favorite Luganda dubbed movies and series to watch them offline anytime without internet.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.60),
-                      fontSize: 13.5,
-                      height: 1.45,
-                    ),
-                  ),
-                  const SizedBox(height: 22),
-                  GestureDetector(
-                    onTap: () => navigateToBottomNavTab(context, ref, 0),
-                    behavior: HitTestBehavior.opaque,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 11),
-                      decoration: BoxDecoration(
-                        color: AppColors.accent,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Text(
-                        'Explore Movies',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
+    return FrostedEmptyState(
+      svgPath: 'assets/images/empty_downloads.svg',
+      title: 'No Downloaded Movies',
+      message:
+          'Download your favorite Luganda dubbed movies and series to watch them offline anytime without internet.',
+      actionText: 'Explore Movies',
+      onActionTap: () => navigateToBottomNavTab(context, ref, 0),
     );
   }
 }

@@ -895,6 +895,24 @@ class _MovieLogoWidget extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // 1. Direct logo from Realtime Database
+    if (movie.logoUrl != null && movie.logoUrl!.isNotEmpty) {
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: SizedBox(
+          height: 34,
+          child: CachedNetworkImage(
+            imageUrl: movie.logoUrl!,
+            fit: BoxFit.contain,
+            alignment: Alignment.centerLeft,
+            placeholder: (_, __) => _buildTextTitle(),
+            errorWidget: (_, __, ___) => _buildTextTitle(),
+          ),
+        ),
+      );
+    }
+
+    // 2. TMDB fallback logo
     final logoAsync = ref.watch(movieLogoProvider(movie.id));
 
     return Align(
@@ -908,14 +926,13 @@ class _MovieLogoWidget extends ConsumerWidget {
                 imageUrl: logoUrl,
                 fit: BoxFit.contain,
                 alignment: Alignment.centerLeft,
-                placeholder: (_, __) => const SizedBox(height: 34, width: 120),
+                placeholder: (_, __) => _buildTextTitle(),
                 errorWidget: (_, __, ___) => _buildTextTitle(),
               );
             }
             return _buildTextTitle();
           },
-          // Invisible placeholder while loading so text name never flashes and disappears
-          loading: () => const SizedBox(height: 34, width: 120),
+          loading: () => _buildTextTitle(),
           error: (_, __) => _buildTextTitle(),
         ),
       ),

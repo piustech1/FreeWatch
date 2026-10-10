@@ -34,11 +34,28 @@ class WatchHistoryNotifier extends StateNotifier<List<Movie>> {
     } catch (_) {}
   }
 
-  void addToHistory(Movie movie) {
+  void addToHistory(Movie movie, {double? progress, int? positionSeconds}) {
+    final updatedMovie = movie.copyWith(
+      resumeProgress: progress ?? movie.resumeProgress ?? 0.15,
+      resumePositionSeconds: positionSeconds ?? movie.resumePositionSeconds ?? 120,
+    );
     state = [
-      movie,
+      updatedMovie,
       ...state.where((m) => m.id != movie.id),
     ];
+    _saveHistory();
+  }
+
+  void updateProgress(int movieId, double progress, int positionSeconds) {
+    state = state.map((m) {
+      if (m.id == movieId) {
+        return m.copyWith(
+          resumeProgress: progress,
+          resumePositionSeconds: positionSeconds,
+        );
+      }
+      return m;
+    }).toList();
     _saveHistory();
   }
 }

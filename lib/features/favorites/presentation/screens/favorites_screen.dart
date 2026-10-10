@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../shared/widgets/frosted_empty_state.dart';
 import '../../../home/providers/home_providers.dart';
 import '../../../movie_detail/presentation/screens/movie_detail_screen.dart';
 import '../../../profile/presentation/providers/watch_history_provider.dart';
@@ -418,111 +419,19 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
   }
 
   Widget _buildEmptyWatchlistState(BuildContext context, WidgetRef ref) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 34),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.04),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.10),
-                  width: 0.8,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.40),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 76,
-                    height: 76,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: const Color(0xFFEF4444).withOpacity(0.15),
-                      border: Border.all(
-                        color: const Color(0xFFEF4444).withOpacity(0.35),
-                        width: 1.2,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFFEF4444).withOpacity(0.25),
-                          blurRadius: 24,
-                          spreadRadius: 2,
-                        ),
-                      ],
-                    ),
-                    alignment: Alignment.center,
-                    child: const Icon(
-                      Icons.favorite_rounded,
-                      color: Color(0xFFEF4444),
-                      size: 36,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  const Text(
-                    'Your Watchlist is Empty',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 19,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -0.3,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Save your favorite Luganda dubbed movies and series by tapping the heart icon to easily find and stream them anytime.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.60),
-                      fontSize: 13.5,
-                      height: 1.45,
-                    ),
-                  ),
-                  const SizedBox(height: 22),
-                  GestureDetector(
-                    onTap: () {
-                      if (widget.onExploreTap != null) {
-                        widget.onExploreTap!();
-                      } else {
-                        navigateToBottomNavTab(context, ref, 0);
-                      }
-                    },
-                    behavior: HitTestBehavior.opaque,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 11),
-                      decoration: BoxDecoration(
-                        color: AppColors.accent,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Text(
-                        'Explore Movies',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
+    return FrostedEmptyState(
+      svgPath: 'assets/images/empty_favorites.svg',
+      title: 'Your Watchlist is Empty',
+      message:
+          'Save your favorite Luganda dubbed movies and series by tapping the heart icon to easily find and stream them anytime.',
+      actionText: 'Explore Movies',
+      onActionTap: () {
+        if (widget.onExploreTap != null) {
+          widget.onExploreTap!();
+        } else {
+          navigateToBottomNavTab(context, ref, 0);
+        }
+      },
     );
   }
 }

@@ -15,6 +15,10 @@ class DownloadedMovie {
   final String? vjName;
   final String videoUrl;
 
+  final String? localFilePath;
+  final bool isDownloading;
+  final double downloadProgress;
+
   const DownloadedMovie({
     required this.id,
     required this.title,
@@ -28,7 +32,44 @@ class DownloadedMovie {
     this.vjName,
     this.videoUrl =
         'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+    this.localFilePath,
+    this.isDownloading = false,
+    this.downloadProgress = 1.0,
   });
+
+  DownloadedMovie copyWith({
+    int? id,
+    String? title,
+    String? posterPath,
+    String? backdropPath,
+    String? releaseDate,
+    double? voteAverage,
+    int? fileSizeMb,
+    String? quality,
+    DateTime? downloadedAt,
+    String? vjName,
+    String? videoUrl,
+    String? localFilePath,
+    bool? isDownloading,
+    double? downloadProgress,
+  }) {
+    return DownloadedMovie(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      posterPath: posterPath ?? this.posterPath,
+      backdropPath: backdropPath ?? this.backdropPath,
+      releaseDate: releaseDate ?? this.releaseDate,
+      voteAverage: voteAverage ?? this.voteAverage,
+      fileSizeMb: fileSizeMb ?? this.fileSizeMb,
+      quality: quality ?? this.quality,
+      downloadedAt: downloadedAt ?? this.downloadedAt,
+      vjName: vjName ?? this.vjName,
+      videoUrl: videoUrl ?? this.videoUrl,
+      localFilePath: localFilePath ?? this.localFilePath,
+      isDownloading: isDownloading ?? this.isDownloading,
+      downloadProgress: downloadProgress ?? this.downloadProgress,
+    );
+  }
 
   String get posterUrl {
     if (posterPath == null || posterPath!.isEmpty) return '';
@@ -51,6 +92,10 @@ class DownloadedMovie {
       backdropPath: backdropPath,
       releaseDate: releaseDate,
       voteAverage: voteAverage,
+      vjName: vjName,
+      videoUrl: localFilePath != null && localFilePath!.isNotEmpty
+          ? localFilePath
+          : videoUrl,
     );
   }
 
@@ -60,8 +105,10 @@ class DownloadedMovie {
     int? fileSizeMb,
     String? quality,
     String? videoUrl,
+    String? localFilePath,
+    bool isDownloading = false,
+    double downloadProgress = 0.0,
   }) {
-    // Generate realistic movie file size between 720MB and 1450MB if not provided
     final computedSize = fileSizeMb ?? (700 + (movie.id % 800));
     return DownloadedMovie(
       id: movie.id,
@@ -73,9 +120,13 @@ class DownloadedMovie {
       fileSizeMb: computedSize,
       quality: quality ?? '1080p Full HD',
       downloadedAt: DateTime.now(),
-      vjName: vjName,
+      vjName: vjName ?? movie.vjName,
       videoUrl: videoUrl ??
+          movie.videoUrl ??
           'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+      localFilePath: localFilePath,
+      isDownloading: isDownloading,
+      downloadProgress: downloadProgress,
     );
   }
 
@@ -95,6 +146,10 @@ class DownloadedMovie {
       vjName: json['vj_name'] as String?,
       videoUrl: json['video_url'] as String? ??
           'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+      localFilePath: json['local_file_path'] as String?,
+      isDownloading: json['is_downloading'] as bool? ?? false,
+      downloadProgress:
+          (json['download_progress'] as num?)?.toDouble() ?? 1.0,
     );
   }
 
@@ -110,6 +165,9 @@ class DownloadedMovie {
         'downloaded_at': downloadedAt.toIso8601String(),
         'vj_name': vjName,
         'video_url': videoUrl,
+        'local_file_path': localFilePath,
+        'is_downloading': isDownloading,
+        'download_progress': downloadProgress,
       };
 
   @override

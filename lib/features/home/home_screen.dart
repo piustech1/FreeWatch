@@ -120,6 +120,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final dramaAsync = ref.watch(dramaMoviesProvider);
     final animationAsync = ref.watch(animationMoviesProvider);
     final familyAsync = ref.watch(familyMoviesProvider);
+    final vjsAsync = ref.watch(vjsWithCountsProvider);
+    final currentVjs = vjsAsync.valueOrNull ?? MockData.vjs;
 
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
@@ -148,10 +150,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
         const SliverToBoxAdapter(child: SizedBox(height: 8)),
 
-        // ── "Available Vj's" Section (Directly Below Hero) ──────────
+        // ── "Available Vj's" Section (Directly Below Hero with Real Counts) ──────────
         SliverToBoxAdapter(
           child: VjSection(
-            vjs: MockData.vjs,
+            vjs: currentVjs,
             onVjTap: (vj) {
               Navigator.of(context).push(
                 MovieGridScreen.routeForVj(vj: vj),
@@ -160,7 +162,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             onSeeAll: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (_) => const AllVjsScreen(vjs: MockData.vjs),
+                  builder: (_) => AllVjsScreen(vjs: currentVjs),
                 ),
               );
             },

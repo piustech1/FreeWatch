@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:ui';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -11,6 +12,7 @@ import '../../../../data/mock/mock_movies.dart';
 import '../../../../data/models/movie.dart';
 import '../../../../data/models/movie_details_data.dart';
 import '../../../../data/models/vj.dart';
+import '../../../../data/repositories/movie_repository.dart';
 import '../../../downloads/presentation/providers/downloads_provider.dart';
 import '../../../home/widgets/floating_nav_bar.dart';
 import '../../../../shared/widgets/free_watch_top_app_bar.dart';
@@ -19,6 +21,7 @@ import '../../../favorites/presentation/providers/favorites_provider.dart';
 import '../../../home/providers/home_providers.dart';
 import '../../../movie_grid/presentation/screens/movie_grid_screen.dart';
 import '../../../notifications/presentation/screens/notifications_screen.dart';
+import '../../../profile/presentation/providers/watch_history_provider.dart';
 import '../../../../shared/widgets/app_toast.dart';
 import '../providers/movie_detail_providers.dart';
 
@@ -79,6 +82,36 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
     super.dispose();
   }
 
+  Vj _resolveAssignedVj(String? rawName) {
+    if (rawName == null || rawName.trim().isEmpty) {
+      return MockData.vjs.first;
+    }
+    final norm = MovieRepository.normalizeVjName(rawName);
+    return MockData.vjs.firstWhere(
+      (v) => MovieRepository.normalizeVjName(v.name) == norm,
+      orElse: () => Vj(
+        id: norm.toLowerCase().replaceAll(' ', '_'),
+        name: rawName.toUpperCase().startsWith('VJ ')
+            ? rawName.toUpperCase()
+            : 'VJ ${rawName.toUpperCase()}',
+        nickname: rawName,
+        specialty: 'Luganda Dubbing',
+        imageUrl: 'assets/vjs/vj_junior.png',
+        movieCount: 0,
+        translatedMovieIds: const [],
+      ),
+    );
+  }
+
+  String _formatDuration(Duration duration) {
+    final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
+    if (duration.inHours > 0) {
+      return '${duration.inHours}:$minutes:$seconds';
+    }
+    return '$minutes:$seconds';
+  }
+
   bool _checkIsSeries(Movie movie, MovieDetailsData details) {
     if (details.isTv || details.numberOfSeasons > 0 || movie.isTv) return true;
     final title = (details.title.isNotEmpty ? details.title : movie.title).toLowerCase();
@@ -128,10 +161,8 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
             : '${ApiConstants.backdropW1280}$officialBackdropPath')
         : null;
 
-    final Vj assignedVj = MockData.vjs.firstWhere(
-      (v) => v.translatedMovieIds.contains(movie.id),
-      orElse: () => MockData.vjs.first,
-    );
+    final rawVjName = movie.vjName ?? detailsAsync.valueOrNull?.vjName;
+    final Vj assignedVj = _resolveAssignedVj(rawVjName);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -231,6 +262,15 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
     required bool isSeries,
     required bool isFav,
   }) {
+    if (_isPlayingVideo && _videoPlayerController != null && _videoPlayerController!.value.isInitialized) {
+      return _buildEdgeToEdgeHeroPlayer(
+        details: details,
+        assignedVj: assignedVj,
+        isSeries: isSeries,
+        isFav: isFav,
+      );
+    }
+
     return SizedBox(
       width: double.infinity,
       child: Stack(
@@ -301,62 +341,54 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                   ],
                 ),
 
-                // Inline video player OR Buffering stream OR Centered circular play button
-                if (_isPlayingVideo && _videoPlayerController != null && _videoPlayerController!.value.isInitialized)
-                  _buildInlineVideoPlayer()
-                else if (_isInitializingVideo)
-                  const SizedBox(
-                    height: 210,
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          CircularProgressIndicator(
-                            color: Color(0xFF22C55E),
-                            strokeWidth: 2.5,
-                          ),
-                          SizedBox(height: 12),
-                          Text(
-                            'Connecting stream...',
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                else
-                  SizedBox(
-                    height: 210,
-                    child: Center(
-                      child: GestureDetector(
-                        onTap: _playTrailer,
-                        child: Container(
-                          width: 52,
-                          height: 52,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.45),
-                                blurRadius: 14,
-                                offset: const Offset(0, 3),
+                // Buffering stream OR Centered circular play button
+                SizedBox(
+                  height: 210,
+                  child: Center(
+                    child: _isInitializingVideo
+                        ? const Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              CircularProgressIndicator(
+                                color: Color(0xFF22C55E),
+                                strokeWidth: 2.5,
+                              ),
+                              SizedBox(height: 12),
+                              Text(
+                                'Connecting stream...',
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ],
+                          )
+                        : GestureDetector(
+                            onTap: _playTrailer,
+                            child: Container(
+                              width: 52,
+                              height: 52,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.45),
+                                    blurRadius: 14,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(
+                                Icons.play_arrow_rounded,
+                                color: Colors.black,
+                                size: 34,
+                              ),
+                            ),
                           ),
-                          child: const Icon(
-                            Icons.play_arrow_rounded,
-                            color: Colors.black,
-                            size: 34,
-                          ),
-                        ),
-                      ),
-                    ),
                   ),
+                ),
 
                 // Release Date in subtle soft gray
                 Text(
@@ -1223,23 +1255,37 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
 
     final downloadsNotifier = ref.read(downloadsProvider.notifier);
     final alreadyDownloaded = downloadsNotifier.isDownloaded(widget.movie.id);
+    final isDownloading = downloadsNotifier.isDownloading(widget.movie.id);
 
     if (alreadyDownloaded) {
       if (!mounted) return;
       AppToast.show(
         context,
-        '"${widget.movie.title}" is already in your Downloads',
-        isSuccess: false,
+        '"${widget.movie.title}" is already downloaded',
+        isSuccess: true,
       );
       return;
     }
 
-    await downloadsNotifier.addDownload(widget.movie);
+    if (isDownloading) {
+      if (!mounted) return;
+      AppToast.show(
+        context,
+        'Download is already in progress',
+        isSuccess: true,
+      );
+      return;
+    }
+
+    final rawVjName = widget.movie.vjName;
+    final Vj assignedVj = _resolveAssignedVj(rawVjName);
+
+    await downloadsNotifier.startDownload(widget.movie, vjName: assignedVj.name);
 
     if (!mounted) return;
     AppToast.show(
       context,
-      'Downloaded "${widget.movie.title}" (1.8 GB, 1080p)',
+      'Downloading "${widget.movie.title}" (1080p)',
       isSuccess: true,
     );
   }
@@ -1629,6 +1675,52 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
     final isSeries = _checkIsSeriesFallback(movie);
     final year = movie.year.isNotEmpty ? movie.year : '2024';
 
+    if (_isPlayingVideo && _videoPlayerController != null && _videoPlayerController!.value.isInitialized) {
+      return CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          SliverToBoxAdapter(
+            child: _buildEdgeToEdgeHeroPlayerFallback(
+              movie: movie,
+              assignedVj: assignedVj,
+              isSeries: isSeries,
+              isFav: isFav,
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (isSeries) ...[
+                    _buildSeasonsSection(),
+                    const SizedBox(height: 20),
+                    _buildEpisodesSection(backdropUrl, assignedVj),
+                    const SizedBox(height: 24),
+                  ],
+                  const Text(
+                    'Synopsis',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  _buildCollapsibleSynopsis(movie.overview ?? ''),
+                ],
+              ),
+            ),
+          ),
+          const SliverToBoxAdapter(
+            child: SizedBox(height: 30),
+          ),
+        ],
+      );
+    }
+
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
       slivers: [
@@ -1877,35 +1969,68 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
         .read(movieDetailsProvider(
             MovieDetailsParam(movieId: widget.movie.id, isTv: widget.movie.isTv)))
         .valueOrNull;
+
+    // Check if offline local download file exists
+    final downloaded = ref.read(downloadsProvider.notifier).getDownloadedMovie(widget.movie.id);
+    final String? localFilePath = downloaded?.localFilePath;
+    final bool hasLocalFile = localFilePath != null && File(localFilePath).existsSync();
+
     final String resolvedUrl = (streamUrl != null && streamUrl.isNotEmpty)
         ? streamUrl
         : ((details?.videoUrl?.isNotEmpty == true ? details!.videoUrl! : null) ??
            (widget.movie.videoUrl?.isNotEmpty == true ? widget.movie.videoUrl! : null) ??
            'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4');
 
-    final videoUri = Uri.parse(resolvedUrl);
+    final rawVjName = widget.movie.vjName ?? details?.vjName;
+    final Vj assignedVj = _resolveAssignedVj(rawVjName);
 
-    _videoPlayerController = VideoPlayerController.networkUrl(videoUri)
-      ..initialize().then((_) {
-        if (!mounted) return;
-        setState(() {
-          _isInitializingVideo = false;
-          _isPlayingVideo = true;
-        });
-        if (widget.resumeProgress != null && widget.resumeProgress! > 0) {
-          final totalMs = _videoPlayerController!.value.duration.inMilliseconds;
-          final seekMs = (totalMs * widget.resumeProgress!).round();
-          _videoPlayerController?.seekTo(Duration(milliseconds: seekMs));
+    // Save to watch history
+    ref.read(watchHistoryProvider.notifier).addToHistory(
+      widget.movie.copyWith(vjName: assignedVj.name),
+    );
+
+    final VideoPlayerController controller = hasLocalFile
+        ? VideoPlayerController.file(File(localFilePath))
+        : VideoPlayerController.networkUrl(Uri.parse(resolvedUrl));
+
+    _videoPlayerController = controller;
+
+    controller.addListener(() {
+      if (!mounted) return;
+      if (controller.value.isInitialized) {
+        final duration = controller.value.duration;
+        final position = controller.value.position;
+        if (duration.inSeconds > 0) {
+          final progress = (position.inMilliseconds / duration.inMilliseconds).clamp(0.0, 1.0);
+          ref.read(watchHistoryProvider.notifier).updateProgress(
+            widget.movie.id,
+            progress,
+            position.inSeconds,
+          );
         }
-        _videoPlayerController?.play();
-      }).catchError((error) {
-        if (!mounted) return;
-        setState(() {
-          _isInitializingVideo = false;
-          _isPlayingVideo = false;
-        });
-        AppToast.show(context, 'Failed to load video stream', isSuccess: false);
+      }
+    });
+
+    controller.initialize().then((_) {
+      if (!mounted) return;
+      setState(() {
+        _isInitializingVideo = false;
+        _isPlayingVideo = true;
       });
+      if (widget.resumeProgress != null && widget.resumeProgress! > 0) {
+        final totalMs = controller.value.duration.inMilliseconds;
+        final seekMs = (totalMs * widget.resumeProgress!).round();
+        controller.seekTo(Duration(milliseconds: seekMs));
+      }
+      controller.play();
+    }).catchError((error) {
+      if (!mounted) return;
+      setState(() {
+        _isInitializingVideo = false;
+        _isPlayingVideo = false;
+      });
+      AppToast.show(context, 'Failed to load video stream', isSuccess: false);
+    });
   }
 
   void _toggleFullscreen() {
@@ -1927,127 +2052,460 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
     }
   }
 
-  Widget _buildInlineVideoPlayer() {
+  Widget _buildEdgeToEdgeHeroPlayer({
+    required MovieDetailsData details,
+    required Vj assignedVj,
+    required bool isSeries,
+    required bool isFav,
+  }) {
     final controller = _videoPlayerController!;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final playerHeight = screenWidth * 9 / 16;
 
-    return Container(
-      height: 210,
-      decoration: BoxDecoration(
-        color: Colors.black,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.18),
-          width: 0.8,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.6),
-            blurRadius: 18,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            AspectRatio(
-              aspectRatio: controller.value.aspectRatio > 0 ? controller.value.aspectRatio : 16 / 9,
-              child: VideoPlayer(controller),
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Seamless Edge-to-Edge Video Player container (0 margin, 0 padding, 0 border, 0 radius)
+        Container(
+          width: double.infinity,
+          height: playerHeight,
+          color: Colors.black,
+          child: Stack(
+            fit: StackFit.expand,
+            alignment: Alignment.center,
+            children: [
+              Center(
+                child: AspectRatio(
+                  aspectRatio: controller.value.aspectRatio > 0 ? controller.value.aspectRatio : 16 / 9,
+                  child: VideoPlayer(controller),
+                ),
+              ),
 
-            // Top action icons: Fullscreen & Close (Exit inline playback)
-            Positioned(
-              top: 8,
-              right: 8,
-              child: Row(
-                children: [
-                  GestureDetector(
-                    onTap: _toggleFullscreen,
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: Colors.black54,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white24, width: 0.8),
-                      ),
-                      child: const Icon(Icons.fullscreen_rounded, color: Colors.white, size: 18),
+              // Gradient overlays for top and bottom controls
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                height: 60,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Colors.black.withOpacity(0.75), Colors.transparent],
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: () {
+                ),
+              ),
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: 48,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.bottomCenter,
+                      end: Alignment.topCenter,
+                      colors: [Colors.black.withOpacity(0.85), Colors.transparent],
+                    ),
+                  ),
+                ),
+              ),
+
+              // Top Controls Bar (Back, Rating, Fullscreen, Close)
+              Positioned(
+                top: 10,
+                left: 16,
+                right: 16,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _buildTopCircleButton(
+                      icon: Icons.arrow_back_rounded,
+                      onTap: () {
+                        controller.pause();
+                        Navigator.pop(context);
+                      },
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildTopRatingBadge(details.voteAverage),
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: _toggleFullscreen,
+                          child: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.45),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white.withOpacity(0.20), width: 0.8),
+                            ),
+                            child: const Icon(Icons.fullscreen_rounded, color: Colors.white, size: 20),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: () {
+                            controller.pause();
+                            setState(() => _isPlayingVideo = false);
+                          },
+                          child: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.45),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white.withOpacity(0.20), width: 0.8),
+                            ),
+                            child: const Icon(Icons.close_rounded, color: Colors.white, size: 18),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              // Center Play/Pause overlay toggle
+              Center(
+                child: GestureDetector(
+                  onTap: () {
+                    if (controller.value.isPlaying) {
                       controller.pause();
-                      setState(() => _isPlayingVideo = false);
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: Colors.black54,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white24, width: 0.8),
-                      ),
-                      child: const Icon(Icons.close_rounded, color: Colors.white, size: 18),
+                    } else {
+                      controller.play();
+                    }
+                    setState(() {});
+                  },
+                  child: Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.50),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white.withOpacity(0.35), width: 1.2),
+                    ),
+                    child: Icon(
+                      controller.value.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                      color: Colors.white,
+                      size: 32,
                     ),
                   ),
+                ),
+              ),
+
+              // Bottom Progress Scrubber with Timestamps
+              Positioned(
+                bottom: 4,
+                left: 12,
+                right: 12,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    VideoProgressIndicator(
+                      controller,
+                      allowScrubbing: true,
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      colors: const VideoProgressColors(
+                        playedColor: Color(0xFF22C55E),
+                        bufferedColor: Colors.white30,
+                        backgroundColor: Colors.white12,
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 2),
+                      child: ValueListenableBuilder<VideoPlayerValue>(
+                        valueListenable: controller,
+                        builder: (context, value, _) {
+                          return Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                _formatDuration(value.position),
+                                style: const TextStyle(color: Colors.white70, fontSize: 10.5, fontWeight: FontWeight.w600),
+                              ),
+                              Text(
+                                _formatDuration(value.duration),
+                                style: const TextStyle(color: Colors.white70, fontSize: 10.5, fontWeight: FontWeight.w600),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Metadata and King Action Row below edge-to-edge player
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                details.formattedReleaseDate,
+                style: const TextStyle(
+                  color: Color(0xFF9E9EA7),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 0.2,
+                ),
+              ),
+              const SizedBox(height: 8),
+              _buildTitleAndVjRow(
+                title: details.title.isNotEmpty ? details.title : widget.movie.title,
+                assignedVj: assignedVj,
+              ),
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _buildIosMetadataPill(
+                    isSeries
+                        ? (details.numberOfSeasons > 0
+                            ? '${details.numberOfSeasons} ${details.numberOfSeasons == 1 ? "Season" : "Seasons"}'
+                            : 'Series')
+                        : details.formattedRuntime,
+                  ),
+                  _buildIosMetadataPill(details.primaryGenre),
+                  _buildIosMetadataPill(isSeries ? 'TV Series' : 'Movie'),
+                  _buildIosMetadataPill(details.certification),
                 ],
               ),
-            ),
-
-            // Center Play / Pause button
-            GestureDetector(
-              onTap: () {
-                if (controller.value.isPlaying) {
-                  controller.pause();
-                } else {
-                  controller.play();
-                }
-                setState(() {});
-              },
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.black45,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white30, width: 1),
-                ),
-                child: Icon(
-                  controller.value.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                  color: Colors.white,
-                  size: 28,
-                ),
-              ),
-            ),
-
-            // Bottom Progress Bar
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.transparent, Colors.black87],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
-                ),
-                child: VideoProgressIndicator(
-                  controller,
-                  allowScrubbing: true,
-                  colors: const VideoProgressColors(
-                    playedColor: Color(0xFF22C55E),
-                    bufferedColor: Colors.white30,
-                    backgroundColor: Colors.white12,
-                  ),
-                ),
-              ),
-            ),
-          ],
+              const SizedBox(height: 18),
+              _buildKingActionRow(isSeries: isSeries, isFav: isFav),
+            ],
+          ),
         ),
-      ),
+      ],
+    );
+  }
+
+  Widget _buildEdgeToEdgeHeroPlayerFallback({
+    required Movie movie,
+    required Vj assignedVj,
+    required bool isSeries,
+    required bool isFav,
+  }) {
+    final controller = _videoPlayerController!;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final playerHeight = screenWidth * 9 / 16;
+    final year = movie.year.isNotEmpty ? movie.year : '2024';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: double.infinity,
+          height: playerHeight,
+          color: Colors.black,
+          child: Stack(
+            fit: StackFit.expand,
+            alignment: Alignment.center,
+            children: [
+              Center(
+                child: AspectRatio(
+                  aspectRatio: controller.value.aspectRatio > 0 ? controller.value.aspectRatio : 16 / 9,
+                  child: VideoPlayer(controller),
+                ),
+              ),
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                height: 60,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Colors.black.withOpacity(0.75), Colors.transparent],
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: 48,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.bottomCenter,
+                      end: Alignment.topCenter,
+                      colors: [Colors.black.withOpacity(0.85), Colors.transparent],
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 10,
+                left: 16,
+                right: 16,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _buildTopCircleButton(
+                      icon: Icons.arrow_back_rounded,
+                      onTap: () {
+                        controller.pause();
+                        Navigator.pop(context);
+                      },
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildTopRatingBadge(movie.voteAverage),
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: _toggleFullscreen,
+                          child: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.45),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white.withOpacity(0.20), width: 0.8),
+                            ),
+                            child: const Icon(Icons.fullscreen_rounded, color: Colors.white, size: 20),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: () {
+                            controller.pause();
+                            setState(() => _isPlayingVideo = false);
+                          },
+                          child: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.45),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white.withOpacity(0.20), width: 0.8),
+                            ),
+                            child: const Icon(Icons.close_rounded, color: Colors.white, size: 18),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Center(
+                child: GestureDetector(
+                  onTap: () {
+                    if (controller.value.isPlaying) {
+                      controller.pause();
+                    } else {
+                      controller.play();
+                    }
+                    setState(() {});
+                  },
+                  child: Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.50),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white.withOpacity(0.35), width: 1.2),
+                    ),
+                    child: Icon(
+                      controller.value.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                      color: Colors.white,
+                      size: 32,
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: 4,
+                left: 12,
+                right: 12,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    VideoProgressIndicator(
+                      controller,
+                      allowScrubbing: true,
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      colors: const VideoProgressColors(
+                        playedColor: Color(0xFF22C55E),
+                        bufferedColor: Colors.white30,
+                        backgroundColor: Colors.white12,
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 2),
+                      child: ValueListenableBuilder<VideoPlayerValue>(
+                        valueListenable: controller,
+                        builder: (context, value, _) {
+                          return Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                _formatDuration(value.position),
+                                style: const TextStyle(color: Colors.white70, fontSize: 10.5, fontWeight: FontWeight.w600),
+                              ),
+                              Text(
+                                _formatDuration(value.duration),
+                                style: const TextStyle(color: Colors.white70, fontSize: 10.5, fontWeight: FontWeight.w600),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                year,
+                style: const TextStyle(
+                  color: Color(0xFF9E9EA7),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 8),
+              _buildTitleAndVjRow(
+                title: movie.title,
+                assignedVj: assignedVj,
+              ),
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _buildIosMetadataPill('1h 45min'),
+                  _buildIosMetadataPill('Action'),
+                  _buildIosMetadataPill(isSeries ? 'TV Series' : 'Movie'),
+                  _buildIosMetadataPill('PG-13'),
+                ],
+              ),
+              const SizedBox(height: 18),
+              _buildKingActionRow(isSeries: isSeries, isFav: isFav),
+            ],
+          ),
+        ),
+      ],
     );
   }
 

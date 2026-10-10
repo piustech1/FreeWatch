@@ -18,6 +18,9 @@ class Movie {
   final String? vjName;
   final int? runtime;
   final String? firebaseKey;
+  final String? logoUrl;
+  final double? resumeProgress;
+  final int? resumePositionSeconds;
 
   const Movie({
     required this.id,
@@ -36,6 +39,9 @@ class Movie {
     this.vjName,
     this.runtime,
     this.firebaseKey,
+    this.logoUrl,
+    this.resumeProgress,
+    this.resumePositionSeconds,
   });
 
   /// Full resolved poster URL (handles full URLs and TMDB relative paths)
@@ -79,6 +85,9 @@ class Movie {
     String? vjName,
     int? runtime,
     String? firebaseKey,
+    String? logoUrl,
+    double? resumeProgress,
+    int? resumePositionSeconds,
   }) {
     return Movie(
       id: id ?? this.id,
@@ -97,6 +106,9 @@ class Movie {
       vjName: vjName ?? this.vjName,
       runtime: runtime ?? this.runtime,
       firebaseKey: firebaseKey ?? this.firebaseKey,
+      logoUrl: logoUrl ?? this.logoUrl,
+      resumeProgress: resumeProgress ?? this.resumeProgress,
+      resumePositionSeconds: resumePositionSeconds ?? this.resumePositionSeconds,
     );
   }
 
@@ -162,6 +174,9 @@ class Movie {
       vjName: json['vjName'] as String?,
       runtime: json['runtime'] is int ? json['runtime'] as int : null,
       firebaseKey: key ?? json['firebaseKey'] as String?,
+      logoUrl: (json['logoUrl'] ?? json['logo_url'] ?? json['logo']) as String?,
+      resumeProgress: (json['resume_progress'] as num?)?.toDouble(),
+      resumePositionSeconds: json['resume_position_seconds'] as int?,
     );
   }
 
@@ -182,6 +197,9 @@ class Movie {
         'vj_name': vjName,
         'runtime': runtime,
         'firebase_key': firebaseKey,
+        'logo_url': logoUrl,
+        'resume_progress': resumeProgress,
+        'resume_position_seconds': resumePositionSeconds,
       };
 
   /// Parse a TMDB paginated results list
