@@ -72,15 +72,17 @@ jobs:
           tag_name: ${{ github.ref_name || 'v1.0.0' }}
           name: Release ${{ github.ref_name || 'v1.0.0' }}
           body: |
-            ## 🎬 FreeWatch Release
+            ## 🎬 FreeWatch Release ${{ github.ref_name }}
             
-            Download the latest `FreeWatch-release.apk` below and install it directly on your Android device!
+            Download `FreeWatch-release.apk` below and install it directly on your Android device!
             
-            ### What's included:
-            - 🏠 Modern dark streaming Home page with Hero Banner
-            - 🔍 Interactive Filters bottom sheet (Content, Genres, Sort, Year & Rating)
-            - 📱 Floating capsule navigation bar
-            - ⚡ Live TMDB integration + offline mock fallback
+            ### ✨ Highlights in this release:
+            - 🔥 **Firebase Auth & Realtime Streaming**: Dedicated FreeWatch user authentication paired with Realtime Database streaming & automatic TMDB Gap-Filling.
+            - 🔔 **Rich OS Device Notifications**: Background & lock-screen notifications with BigPicture poster preview when new movies arrive.
+            - 🛡️ **Android Stability & Compatibility**: minSdk 23 and Java 8 core library desugaring for stable execution on older & modern Android devices.
+            - 💎 **Universal Liquid Glass Empty States**: Polished empty views for Notifications, Watchlist, Downloads & VJ selections.
+            - 🚫 **Zero Mock Data in Production**: Clean, real-time live data experience.
+          generate_release_notes: true
           draft: false
           prerelease: false
         env:
