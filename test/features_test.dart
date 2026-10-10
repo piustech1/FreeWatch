@@ -10,6 +10,9 @@ import 'package:freewatch/data/models/movie.dart';
 import 'package:freewatch/features/home/providers/home_providers.dart';
 import 'package:freewatch/features/onboarding/onboarding_screen.dart';
 import 'package:freewatch/features/notifications/presentation/screens/notifications_screen.dart';
+import 'package:freewatch/features/home/presentation/screens/all_vjs_screen.dart';
+import 'package:freewatch/shared/widgets/free_watch_top_app_bar.dart';
+import 'package:freewatch/features/home/widgets/floating_nav_bar.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -197,4 +200,70 @@ void main() {
       expect(find.text('Mark all read'), findsNothing);
     });
   });
+
+  group('Strict VJ Movie Filtering and Official Backdrops', () {
+    test('MockData.getMoviesByVj returns strictly movies translated by that VJ', () {
+      final emmyMovies = MockData.getMoviesByVj('vj-emmy');
+      expect(emmyMovies.isNotEmpty, isTrue);
+      // VJ Emmy's movies should only contain Dune Part Two (693134) & Squid Game (93405)
+      for (final m in emmyMovies) {
+        expect(m.id == 693134 || m.id == 93405, isTrue);
+      }
+      // Must not contain Beekeeper or Lilo & Stitch
+      expect(emmyMovies.any((m) => m.id == 1011985), isFalse);
+      expect(emmyMovies.any((m) => m.id == 1084199), isFalse);
+
+      final uncleTMovies = MockData.getMoviesByVj('vj-uncle-t');
+      expect(uncleTMovies.isNotEmpty, isTrue);
+      for (final m in uncleTMovies) {
+        expect(m.id == 1084199 || m.id == 1241982, isTrue);
+      }
+
+      // Check all VJs: each returns strictly their translatedMovieIds
+      for (final vj in MockData.vjs) {
+        final movies = MockData.getMoviesByVj(vj.id);
+        for (final m in movies) {
+          expect(vj.translatedMovieIds.contains(m.id), isTrue,
+              reason: '${vj.name} must not contain movie ${m.title} (${m.id})');
+        }
+      }
+    });
+
+    test('Official TMDB movie backdrops are verified', () {
+      final beekeeper = MockData.trendingMovies.firstWhere((m) => m.id == 1011985);
+      expect(beekeeper.backdropPath, equals('/628Dep6AxEtDxjZoGP78TsOxYbK.jpg'));
+
+      final lilo = MockData.newMovies.firstWhere((m) => m.id == 1084199);
+      expect(lilo.backdropPath, equals('/dvBCW3WBMnneFh0PGejTAznzTXE.jpg'));
+
+      final dune = MockData.trendingMovies.firstWhere((m) => m.id == 693134);
+      expect(dune.backdropPath, equals('/stKGOmBidrO1Kk7Qc0s07Q0w9Wk.jpg'));
+    });
+
+    testWidgets('AllVjsScreen renders top app bar, header, and floating nav bar', (tester) async {
+      await tester.pumpWidget(
+        const ProviderScope(
+          child: MaterialApp(
+            home: AllVjsScreen(vjs: MockData.vjs),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Top app bar present
+      expect(find.byType(FreeWatchTopAppBar), findsOneWidget);
+
+      // Subheader title & VJ count pill present
+      expect(find.text('Available VJs'), findsOneWidget);
+      expect(find.text('${MockData.vjs.length} VJs'), findsOneWidget);
+
+      // Frosted back button present
+      expect(find.byIcon(Icons.arrow_back_ios_new_rounded), findsOneWidget);
+
+      // Persistent floating bottom nav bar present
+      expect(find.byType(FloatingNavBar), findsOneWidget);
+    });
+  });
 }
+
+

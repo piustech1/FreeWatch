@@ -130,6 +130,7 @@ class MovieRepository {
       id: mockMovie.id,
       title: mockMovie.title,
       overview: mockMovie.overview ?? '',
+      backdropPath: mockMovie.backdropPath,
       runtime: isActuallyTv ? 55 : 110,
       releaseDate: mockMovie.releaseDate ?? '2024-03-01',
       voteAverage: mockMovie.voteAverage,

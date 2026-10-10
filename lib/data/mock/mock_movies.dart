@@ -25,7 +25,7 @@ class MockData {
       overview:
           'One man\'s brutal campaign for vengeance takes on national stakes after he is revealed to be a former operative of a powerful and clandestine organization known as Beekeepers.',
       posterPath: '/A7EByudX0eOzlkQ2FIbogzyazm2.jpg',
-      backdropPath: '/4woSOUD0equAYzvwhWBHIJDCM88.jpg',
+      backdropPath: '/628Dep6AxEtDxjZoGP78TsOxYbK.jpg',
       releaseDate: '2024-01-10',
       voteAverage: 7.4,
       voteCount: 2900,
@@ -37,7 +37,7 @@ class MockData {
       overview:
           'Follow the mythic journey of Paul Atreides as he unites with Chani and the Fremen while on a path of revenge against the conspirators who destroyed his family.',
       posterPath: '/1pdfLvkbY9ohJlCjQH2CZjjYVvJ.jpg',
-      backdropPath: '/xOMo8BRK7PfcJv9JCnx7s520DRq.jpg',
+      backdropPath: '/stKGOmBidrO1Kk7Qc0s07Q0w9Wk.jpg',
       releaseDate: '2024-02-27',
       voteAverage: 8.2,
       voteCount: 5200,
@@ -49,7 +49,7 @@ class MockData {
       overview:
           'A listless Wade Wilson toils away in civilian life with his days as the morally flexible mercenary, Deadpool, behind him. But when his homeworld faces an existential threat, Wade must reluctantly suit-up again with an even more reluctant Wolverine.',
       posterPath: '/8cdWjvZQUExUUTzyp4t6EDMubfO.jpg',
-      backdropPath: '/yDHYTfA3R0jFYba16jBB1ef8oIt.jpg',
+      backdropPath: '/x2RS3uTcsJJ9Ifj2mjyYbgx0Wh8.jpg',
       releaseDate: '2024-07-24',
       voteAverage: 7.7,
       voteCount: 4600,
@@ -64,7 +64,7 @@ class MockData {
       overview:
           'Live-action remake of Disney\'s animated classic following a lonely Hawaiian girl who adopts an extraterrestrial pet dog.',
       posterPath: '/m20yt7Ul7hJBLv0S8j7Hn6Zk2iV.jpg',
-      backdropPath: '/4woSOUD0equAYzvwhWBHIJDCM88.jpg',
+      backdropPath: '/dvBCW3WBMnneFh0PGejTAznzTXE.jpg',
       releaseDate: '2025-05-23',
       voteAverage: 7.2,
       voteCount: 340,
@@ -126,7 +126,7 @@ class MockData {
       title: 'Deadpool & Wolverine',
       overview: 'Wade Wilson and Wolverine must team up to save the universe.',
       posterPath: '/8cdWjvZQUExUUTzyp4t6EDMubfO.jpg',
-      backdropPath: '/yDHYTfA3R0jFYba16jBB1ef8oIt.jpg',
+      backdropPath: '/x2RS3uTcsJJ9Ifj2mjyYbgx0Wh8.jpg',
       releaseDate: '2024-07-24',
       voteAverage: 7.7,
       voteCount: 4600,
@@ -137,7 +137,7 @@ class MockData {
       title: 'The Beekeeper',
       overview: 'One man\'s brutal campaign for vengeance.',
       posterPath: '/A7EByudX0eOzlkQ2FIbogzyazm2.jpg',
-      backdropPath: '/4woSOUD0equAYzvwhWBHIJDCM88.jpg',
+      backdropPath: '/628Dep6AxEtDxjZoGP78TsOxYbK.jpg',
       releaseDate: '2024-01-10',
       voteAverage: 7.4,
       voteCount: 2900,
@@ -148,7 +148,7 @@ class MockData {
       title: 'Dune: Part Two',
       overview: 'Paul Atreides unites with Chani and the Fremen.',
       posterPath: '/1pdfLvkbY9ohJlCjQH2CZjjYVvJ.jpg',
-      backdropPath: '/xOMo8BRK7PfcJv9JCnx7s520DRq.jpg',
+      backdropPath: '/stKGOmBidrO1Kk7Qc0s07Q0w9Wk.jpg',
       releaseDate: '2024-02-27',
       voteAverage: 8.2,
       voteCount: 5200,
@@ -219,7 +219,7 @@ class MockData {
       specialty: 'Action, Thrillers & Blockbusters',
       imageUrl: 'assets/vjs/vj junior.png',
       movieCount: 185,
-      translatedMovieIds: [1011985, 533535, 693134],
+      translatedMovieIds: [1011985, 558449],
     ),
     Vj(
       id: 'vj-emmy',
@@ -228,7 +228,7 @@ class MockData {
       specialty: 'Drama, Sci-Fi & Action',
       imageUrl: 'assets/vjs/vj emmy.png',
       movieCount: 128,
-      translatedMovieIds: [693134, 1011985, 558449],
+      translatedMovieIds: [693134, 93405],
     ),
     Vj(
       id: 'vj-ice-p',
@@ -237,7 +237,7 @@ class MockData {
       specialty: 'Sci-Fi, Cyberpunk & Blockbusters',
       imageUrl: 'assets/vjs/vj iceP.jpeg',
       movieCount: 142,
-      translatedMovieIds: [693134, 533535, 1011985],
+      translatedMovieIds: [693134, 974950, 66732],
     ),
     Vj(
       id: 'vj-jingo',
@@ -246,7 +246,7 @@ class MockData {
       specialty: 'Martial Arts, Drama & Crime',
       imageUrl: 'assets/vjs/vj jingo.jpg',
       movieCount: 156,
-      translatedMovieIds: [1011985, 693134, 558449],
+      translatedMovieIds: [71446, 1125510],
     ),
     Vj(
       id: 'vj-uncle-t',
@@ -255,7 +255,7 @@ class MockData {
       specialty: 'Family, Comedy & Adventure',
       imageUrl: 'assets/vjs/vj uncle T.jpeg',
       movieCount: 85,
-      translatedMovieIds: [693134, 1011985, 533535],
+      translatedMovieIds: [1084199, 1241982],
     ),
     Vj(
       id: 'vj-heavy-q',
@@ -264,7 +264,7 @@ class MockData {
       specialty: 'Action, War & Crime Thrillers',
       imageUrl: 'assets/vjs/Vj Heavy Q.jpeg',
       movieCount: 115,
-      translatedMovieIds: [1011985, 533535, 693134],
+      translatedMovieIds: [1011985, 71446],
     ),
     Vj(
       id: 'vj-musa',
@@ -273,7 +273,7 @@ class MockData {
       specialty: 'Drama, Action & Martial Arts',
       imageUrl: 'assets/vjs/Vj Musa.jpeg',
       movieCount: 88,
-      translatedMovieIds: [693134, 1011985, 558449],
+      translatedMovieIds: [558449, 1125510],
     ),
     Vj(
       id: 'vj-shield',
@@ -282,7 +282,7 @@ class MockData {
       specialty: 'Superhero, Sci-Fi & Action',
       imageUrl: 'assets/vjs/Vj shield.png',
       movieCount: 94,
-      translatedMovieIds: [533535, 693134, 1084199],
+      translatedMovieIds: [533535, 693134],
     ),
     Vj(
       id: 'vj-neil',
@@ -291,7 +291,7 @@ class MockData {
       specialty: 'Hollywood Blockbusters & Series',
       imageUrl: 'assets/vjs/vj Neil.jpeg',
       movieCount: 76,
-      translatedMovieIds: [1011985, 693134, 1125510],
+      translatedMovieIds: [533535, 93405],
     ),
     Vj(
       id: 'vj-nelly',
@@ -300,7 +300,7 @@ class MockData {
       specialty: 'High-Octane Action & Thrillers',
       imageUrl: 'assets/vjs/vj Nelly.jpeg',
       movieCount: 68,
-      translatedMovieIds: [533535, 1011985, 974950],
+      translatedMovieIds: [1011985, 533535],
     ),
     Vj(
       id: 'vj-ham',
@@ -309,7 +309,7 @@ class MockData {
       specialty: 'Classics, Action & Crime',
       imageUrl: 'assets/vjs/vj ham.jpeg',
       movieCount: 82,
-      translatedMovieIds: [693134, 533535, 1241982],
+      translatedMovieIds: [558449, 71446],
     ),
     Vj(
       id: 'vj-hd',
@@ -318,7 +318,7 @@ class MockData {
       specialty: 'Action, Mystery & Drama',
       imageUrl: 'assets/vjs/vj hd.jpeg',
       movieCount: 64,
-      translatedMovieIds: [1011985, 533535, 693134],
+      translatedMovieIds: [66732, 93405],
     ),
     Vj(
       id: 'vj-isma-k',
@@ -327,7 +327,7 @@ class MockData {
       specialty: 'Action, Thrillers & Suspense',
       imageUrl: 'assets/vjs/vj isma k.jpeg',
       movieCount: 91,
-      translatedMovieIds: [1011985, 693134, 533535],
+      translatedMovieIds: [1011985, 558449],
     ),
     Vj(
       id: 'vj-isma-pro',
@@ -336,7 +336,7 @@ class MockData {
       specialty: 'Epic Battles & Adventure',
       imageUrl: 'assets/vjs/vj isma pro.jpeg',
       movieCount: 104,
-      translatedMovieIds: [533535, 1011985, 693134],
+      translatedMovieIds: [558449, 1084199],
     ),
     Vj(
       id: 'vj-jovan',
@@ -345,7 +345,7 @@ class MockData {
       specialty: 'Sci-Fi, Mystery & Thrillers',
       imageUrl: 'assets/vjs/vj jovan.jpeg',
       movieCount: 59,
-      translatedMovieIds: [693134, 533535, 1011985],
+      translatedMovieIds: [693134, 66732],
     ),
     Vj(
       id: 'vj-kevin',
@@ -354,7 +354,7 @@ class MockData {
       specialty: 'Military, Spy & Action',
       imageUrl: 'assets/vjs/vj kevin.jpeg',
       movieCount: 73,
-      translatedMovieIds: [1011985, 533535, 693134],
+      translatedMovieIds: [1011985, 71446],
     ),
     Vj(
       id: 'vj-kevo',
@@ -363,7 +363,7 @@ class MockData {
       specialty: 'Fast Action & Car Chases',
       imageUrl: 'assets/vjs/vj kevo.jpeg',
       movieCount: 65,
-      translatedMovieIds: [533535, 693134, 1011985],
+      translatedMovieIds: [533535, 1011985],
     ),
     Vj(
       id: 'vj-kk',
@@ -372,7 +372,7 @@ class MockData {
       specialty: 'Martial Arts & Action',
       imageUrl: 'assets/vjs/vj kk.jpeg',
       movieCount: 120,
-      translatedMovieIds: [1011985, 693134, 533535],
+      translatedMovieIds: [558449, 1011985],
     ),
     Vj(
       id: 'vj-lance',
@@ -381,7 +381,7 @@ class MockData {
       specialty: 'Detective, Crime & Thrillers',
       imageUrl: 'assets/vjs/vj lance.jpeg',
       movieCount: 84,
-      translatedMovieIds: [693134, 533535, 1011985],
+      translatedMovieIds: [71446, 119051],
     ),
     Vj(
       id: 'vj-mark',
@@ -390,7 +390,7 @@ class MockData {
       specialty: 'Dark Thrillers & Mystery',
       imageUrl: 'assets/vjs/vj mark.jpeg',
       movieCount: 97,
-      translatedMovieIds: [1011985, 533535, 693134],
+      translatedMovieIds: [119051, 66732],
     ),
     Vj(
       id: 'vj-martin-k',
@@ -399,7 +399,7 @@ class MockData {
       specialty: 'Drama, Romance & Adventure',
       imageUrl: 'assets/vjs/vj martin k.jpeg',
       movieCount: 71,
-      translatedMovieIds: [693134, 1011985, 533535],
+      translatedMovieIds: [1125510, 1241982],
     ),
     Vj(
       id: 'vj-mk-kisule',
@@ -408,7 +408,7 @@ class MockData {
       specialty: 'Epic Wars & Action Spectacles',
       imageUrl: 'assets/vjs/vj mk kisule.png',
       movieCount: 110,
-      translatedMovieIds: [533535, 1011985, 693134],
+      translatedMovieIds: [558449, 1011985],
     ),
     Vj(
       id: 'vj-mosco',
@@ -417,7 +417,7 @@ class MockData {
       specialty: 'Action, Heist & Suspense',
       imageUrl: 'assets/vjs/vj mosco.jpeg',
       movieCount: 79,
-      translatedMovieIds: [1011985, 693134, 533535],
+      translatedMovieIds: [71446, 533535],
     ),
     Vj(
       id: 'vj-muba',
@@ -426,7 +426,7 @@ class MockData {
       specialty: 'Adventure, Sci-Fi & Action',
       imageUrl: 'assets/vjs/vj muba.jpeg',
       movieCount: 62,
-      translatedMovieIds: [693134, 533535, 1011985],
+      translatedMovieIds: [693134, 1241982],
     ),
     Vj(
       id: 'vj-smk',
@@ -435,7 +435,7 @@ class MockData {
       specialty: 'Kung Fu, Martial Arts & Action',
       imageUrl: 'assets/vjs/vj smk.jpeg',
       movieCount: 89,
-      translatedMovieIds: [1011985, 533535, 693134],
+      translatedMovieIds: [558449, 93405],
     ),
     Vj(
       id: 'vj-tom',
@@ -444,7 +444,7 @@ class MockData {
       specialty: 'Classics, Action & Drama',
       imageUrl: 'assets/vjs/vj tom.png',
       movieCount: 102,
-      translatedMovieIds: [693134, 1011985, 533535],
+      translatedMovieIds: [1125510, 558449],
     ),
     Vj(
       id: 'vj-tonny',
@@ -453,7 +453,7 @@ class MockData {
       specialty: 'Action, Comedy & Series',
       imageUrl: 'assets/vjs/vj tonny.png',
       movieCount: 93,
-      translatedMovieIds: [533535, 693134, 1011985],
+      translatedMovieIds: [533535, 93405],
     ),
     Vj(
       id: 'vj-ulio',
@@ -462,7 +462,7 @@ class MockData {
       specialty: 'Horror, Supernatural & Thrillers',
       imageUrl: 'assets/vjs/vj ulio.jpeg',
       movieCount: 57,
-      translatedMovieIds: [1011985, 533535, 693134],
+      translatedMovieIds: [66732, 119051],
     ),
     Vj(
       id: 'vj-soul',
@@ -471,7 +471,7 @@ class MockData {
       specialty: 'Romance, Drama & Emotional Epics',
       imageUrl: 'assets/vjs/vjsoul.jpeg',
       movieCount: 78,
-      translatedMovieIds: [533535, 693134, 1011985],
+      translatedMovieIds: [1125510, 93405],
     ),
   ];
 
@@ -486,18 +486,10 @@ class MockData {
     return all;
   }
 
+  /// Strictly returns only movies translated by the specified VJ.
   static List<Movie> getMoviesByVj(String vjId) {
     final vj = vjs.firstWhere((v) => v.id == vjId, orElse: () => vjs.first);
     final all = getAllMovies();
-    final matched = all.where((m) => vj.translatedMovieIds.contains(m.id)).toList();
-    final result = <Movie>[...matched];
-    final seen = matched.map((m) => m.id).toSet();
-    for (final m in all) {
-      if (result.length >= 15) break;
-      if (seen.add(m.id)) {
-        result.add(m);
-      }
-    }
-    return result;
+    return all.where((m) => vj.translatedMovieIds.contains(m.id)).toList();
   }
 }

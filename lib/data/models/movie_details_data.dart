@@ -112,6 +112,7 @@ class MovieDetailsData {
   final int id;
   final String title;
   final String overview;
+  final String? backdropPath;
   final int runtime; // in minutes
   final String? releaseDate;
   final double voteAverage;
@@ -128,6 +129,7 @@ class MovieDetailsData {
     required this.id,
     required this.title,
     required this.overview,
+    this.backdropPath,
     required this.runtime,
     this.releaseDate,
     required this.voteAverage,
@@ -294,6 +296,7 @@ class MovieDetailsData {
       id: json['id'] as int? ?? 0,
       title: title,
       overview: json['overview'] as String? ?? '',
+      backdropPath: json['backdrop_path'] as String?,
       runtime: runtime,
       releaseDate: releaseDate,
       voteAverage: (json['vote_average'] as num?)?.toDouble() ?? 0.0,

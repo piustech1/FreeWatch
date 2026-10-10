@@ -120,16 +120,13 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
       movieDetailsProvider(MovieDetailsParam(movieId: movie.id, isTv: movie.isTv)),
     );
 
-    // Backdrop URL with fallback
-    final backdropUrl = movie.backdropPath != null && movie.backdropPath!.isNotEmpty
-        ? (movie.backdropPath!.startsWith('http')
-            ? movie.backdropPath!
-            : '${ApiConstants.backdropW780}${movie.backdropPath}')
-        : (movie.posterPath != null && movie.posterPath!.isNotEmpty
-            ? (movie.posterPath!.startsWith('http')
-                ? movie.posterPath!
-                : '${ApiConstants.posterW500}${movie.posterPath}')
-            : null);
+    // Strictly resolve official TMDB movie backdrop (never stretch vertical posters or use random fallbacks)
+    final officialBackdropPath = detailsAsync.valueOrNull?.backdropPath ?? movie.backdropPath;
+    final backdropUrl = officialBackdropPath != null && officialBackdropPath.isNotEmpty
+        ? (officialBackdropPath.startsWith('http')
+            ? officialBackdropPath
+            : '${ApiConstants.backdropW1280}$officialBackdropPath')
+        : null;
 
     final Vj assignedVj = MockData.vjs.firstWhere(
       (v) => v.translatedMovieIds.contains(movie.id),

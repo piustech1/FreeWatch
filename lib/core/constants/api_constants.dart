@@ -17,6 +17,7 @@ class ApiConstants {
   static const String posterW500 = '$tmdbImageBaseUrl/w500';
   static const String logoW500 = '$tmdbImageBaseUrl/w500';
   static const String backdropW780 = '$tmdbImageBaseUrl/w780';
+  static const String backdropW1280 = '$tmdbImageBaseUrl/w1280';
   static const String backdropOriginal = '$tmdbImageBaseUrl/original';
 
   // Endpoints
