@@ -23,32 +23,40 @@ void main() {
       SharedPreferences.setMockInitialValues({});
     });
 
-    test('Loads initial seed favorites and toggles correctly', () async {
+    test('Starts with clean empty favorites and toggles correctly', () async {
       final notifier = FavoritesNotifier();
       // Allow async initial load
       await Future<void>.delayed(const Duration(milliseconds: 50));
 
-      expect(notifier.state.isNotEmpty, isTrue);
+      expect(notifier.state.isEmpty, isTrue);
 
       final testMovie = MockData.newMovies.first;
-      final wasFav = notifier.isFavorite(testMovie.id);
+      expect(notifier.isFavorite(testMovie.id), isFalse);
 
-      // Toggle favorite
+      // Add to favorites
       notifier.toggleFavorite(testMovie);
-      expect(notifier.isFavorite(testMovie.id), equals(!wasFav));
+      expect(notifier.isFavorite(testMovie.id), isTrue);
+      expect(notifier.state.length, equals(1));
 
-      // Toggle back
+      // Toggle back (remove)
       notifier.toggleFavorite(testMovie);
-      expect(notifier.isFavorite(testMovie.id), equals(wasFav));
+      expect(notifier.isFavorite(testMovie.id), isFalse);
+      expect(notifier.state.isEmpty, isTrue);
     });
 
     test('Can remove and clear all favorites', () async {
       final notifier = FavoritesNotifier();
       await Future<void>.delayed(const Duration(milliseconds: 50));
 
-      final firstId = notifier.state.first.id;
-      notifier.removeFavorite(firstId);
-      expect(notifier.isFavorite(firstId), isFalse);
+      final testMovie = MockData.newMovies.first;
+      notifier.toggleFavorite(testMovie);
+      expect(notifier.isFavorite(testMovie.id), isTrue);
+
+      notifier.removeFavorite(testMovie.id);
+      expect(notifier.isFavorite(testMovie.id), isFalse);
+
+      notifier.toggleFavorite(testMovie);
+      expect(notifier.state.isNotEmpty, isTrue);
 
       notifier.clearAll();
       expect(notifier.state.isEmpty, isTrue);
@@ -149,7 +157,8 @@ void main() {
       expect(find.text('Welcome Back'), findsOneWidget);
       expect(find.text('LOG IN'), findsOneWidget);
       expect(find.text('Email Address'), findsOneWidget);
-      expect(find.text('Explore as Guest >'), findsOneWidget);
+      // Mandatory Auth: Explore as Guest must NOT be present
+      expect(find.text('Explore as Guest >'), findsNothing);
 
       // Switch to Sign Up mode using the account switcher text
       await tester.tap(find.text('Create Account'));
@@ -166,7 +175,7 @@ void main() {
   });
 
   group('NotificationsScreen UI tests', () {
-    testWidgets('NotificationsScreen renders header, red badge, sections, and items', (tester) async {
+    testWidgets('NotificationsScreen renders clean liquid glass empty state and dynamic notifications', (tester) async {
       await tester.pumpWidget(
         const ProviderScope(
           child: MaterialApp(
@@ -176,29 +185,14 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Verify Title and initial unread badge '2' (in top bar and screen header)
+      // Verify Title and clean empty state (zero mock notifications)
       expect(find.text('Notifications'), findsWidgets);
-      expect(find.text('2'), findsWidgets);
-
-      // Verify Sections "Today" and "This week"
-      expect(find.text('Today'), findsOneWidget);
-      expect(find.text('This week'), findsOneWidget);
-
-      // Verify notification message items
-      expect(find.text('What if your next favorite movie is online right now?'), findsOneWidget);
-      expect(find.text('Meet top picks according to your mood and your interests'), findsOneWidget);
+      expect(find.text('No Notifications Yet'), findsOneWidget);
+      expect(find.text('Release Alerts Active'), findsOneWidget);
+      expect(find.text('2'), findsNothing);
 
       // Verify back chevron icon
       expect(find.byIcon(Icons.arrow_back_ios_new_rounded), findsOneWidget);
-
-      // Tap "Mark all read"
-      expect(find.text('Mark all read'), findsOneWidget);
-      await tester.tap(find.text('Mark all read'));
-      await tester.pumpAndSettle();
-
-      // Badge '2' should now disappear because unread count is 0
-      expect(find.text('2'), findsNothing);
-      expect(find.text('Mark all read'), findsNothing);
     });
   });
 

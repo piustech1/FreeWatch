@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../data/models/movie.dart';
-import '../../../../data/mock/mock_movies.dart';
 
 /// Provider for user's favorite / watchlist movies
 final favoritesProvider =
@@ -26,18 +25,10 @@ class FavoritesNotifier extends StateNotifier<List<Movie>> {
             .map((item) => Movie.fromJson(json.decode(item) as Map<String, dynamic>))
             .toList();
       } else {
-        // Seed with a couple of high-rated favorites initially
-        state = [
-          MockData.trendingMovies[1], // Dune 2
-          MockData.trendingMovies[2], // Deadpool & Wolverine
-        ];
-        _saveFavorites();
+        state = [];
       }
     } catch (_) {
-      state = [
-        MockData.trendingMovies[1],
-        MockData.trendingMovies[2],
-      ];
+      state = [];
     }
   }
 

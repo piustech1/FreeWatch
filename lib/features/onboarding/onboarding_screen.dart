@@ -124,9 +124,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     );
   }
 
-  void _finishAuth() {
-    context.go('/home');
-  }
 
   Future<void> _handleSubmitAuth() async {
     if (_isLoadingAuth) return;
@@ -547,23 +544,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                               ),
                             ),
                           ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      // Guest Skip Option
-                      Center(
-                        child: GestureDetector(
-                          onTap: _finishAuth,
-                          child: Text(
-                            'Explore as Guest >',
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.50),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
                         ),
                       ),
                     ],

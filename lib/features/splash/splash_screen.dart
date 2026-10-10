@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../core/constants/app_colors.dart';
 
 /// Modern Mobile Splash Screen:
@@ -55,10 +56,15 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller.forward();
 
-    // Auto-navigate to onboarding after animations complete
+    // Auto-navigate after animations complete: /home if logged in, /onboarding if not
     _navigationTimer = Timer(const Duration(milliseconds: 2800), () {
       if (mounted) {
-        context.go('/onboarding');
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          context.go('/home');
+        } else {
+          context.go('/onboarding');
+        }
       }
     });
   }

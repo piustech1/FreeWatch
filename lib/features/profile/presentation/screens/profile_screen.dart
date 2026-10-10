@@ -9,7 +9,6 @@ import '../../../../core/constants/api_constants.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../shared/widgets/app_toast.dart';
 import '../../../../shared/widgets/glass_dialog.dart';
-import '../../../../data/mock/mock_movies.dart';
 import '../../../../data/models/avatar_item.dart';
 import '../../../../data/models/movie.dart';
 import '../../../auth/presentation/providers/user_avatar_provider.dart';
@@ -52,13 +51,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final watchHistory = ref.watch(watchHistoryProvider);
     final favorites = ref.watch(favoritesProvider);
 
-    final savedMovies = favorites.isNotEmpty
-        ? favorites
-        : [
-            MockData.trendingMovies[1],
-            MockData.trendingMovies[2],
-            if (MockData.trendingMovies.length > 3) MockData.trendingMovies[3],
-          ];
+    final savedMovies = favorites;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -243,7 +236,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       icon: Icons.info_rounded,
                       iconColor: const Color(0xFF38BDF8),
                       title: 'App Version',
-                      subtitle: 'FreeWatch v1.0.35 (Build 36)',
+                      subtitle: 'FreeWatch v1.0.39 (Build 40)',
                       trailing: null,
                       onTap: null,
                     ),
@@ -650,19 +643,44 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           firstChild: const SizedBox.shrink(),
           secondChild: Padding(
             padding: const EdgeInsets.only(top: 12),
-            child: SizedBox(
-              height: 195,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                itemCount: movies.length > 5 ? 5 : movies.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 12),
-                itemBuilder: (context, index) {
-                  return _buildMoviePosterCard(movies[index]);
-                },
-              ),
-            ),
+            child: movies.isEmpty
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.03),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.07),
+                          width: 0.8,
+                        ),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        'No ${title.toLowerCase()} recorded yet',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.40),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  )
+                : SizedBox(
+                    height: 195,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      itemCount: movies.length > 5 ? 5 : movies.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 12),
+                      itemBuilder: (context, index) {
+                        return _buildMoviePosterCard(movies[index]);
+                      },
+                    ),
+                  ),
           ),
           crossFadeState: isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
           duration: const Duration(milliseconds: 250),

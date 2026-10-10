@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../../../data/mock/mock_movies.dart';
 import '../../../../data/models/downloaded_movie.dart';
 import '../../../../data/models/movie.dart';
 
@@ -27,29 +26,7 @@ class DownloadsNotifier extends StateNotifier<List<DownloadedMovie>> {
       }
     } catch (_) {}
 
-    // Initial seed downloads so user has rich offline content out of the box
-    final seedMovies = [
-      DownloadedMovie.fromMovie(
-        MockData.trendingMovies[0],
-        vjName: 'VJ JUNIOR',
-        fileSizeMb: 1120,
-        quality: '1080p Full HD',
-      ),
-      DownloadedMovie.fromMovie(
-        MockData.trendingMovies[1],
-        vjName: 'VJ JINGO',
-        fileSizeMb: 890,
-        quality: '1080p Full HD',
-      ),
-      DownloadedMovie.fromMovie(
-        MockData.trendingMovies[2],
-        vjName: 'VJ EMMY',
-        fileSizeMb: 1450,
-        quality: '4K Ultra HD',
-      ),
-    ];
-    state = seedMovies;
-    _persistDownloads(seedMovies);
+    state = [];
   }
 
   Future<void> _persistDownloads(List<DownloadedMovie> list) async {

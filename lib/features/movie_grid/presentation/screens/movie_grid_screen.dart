@@ -201,12 +201,7 @@ class MovieGridScreen extends ConsumerWidget {
                 // ── 3-Column Movie Grid ───────────────────────────────────────
                 Expanded(
                   child: displayMovies.isEmpty
-                      ? const Center(
-                          child: Text(
-                            'No movies found',
-                            style: TextStyle(color: Colors.white54, fontSize: 14),
-                          ),
-                        )
+                      ? _buildEmptyState(context)
                       : GridView.builder(
                           physics: const BouncingScrollPhysics(),
                           padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
@@ -505,5 +500,109 @@ class MovieGridScreen extends ConsumerWidget {
       }
       return 'VJ Junior';
     }
+  }
+
+  Widget _buildEmptyState(BuildContext context) {
+    final entityName = vj?.name ?? title;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 28),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 34),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.04),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.10),
+                  width: 0.8,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.40),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 76,
+                    height: 76,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: const Color(0xFF7C3AED).withOpacity(0.15),
+                      border: Border.all(
+                        color: const Color(0xFFA78BFA).withOpacity(0.35),
+                        width: 1.2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF7C3AED).withOpacity(0.25),
+                          blurRadius: 24,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                    alignment: Alignment.center,
+                    child: const Icon(
+                      Icons.movie_filter_rounded,
+                      color: Color(0xFFA78BFA),
+                      size: 36,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'No Movies Available',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 19,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'No translated releases found for $entityName yet. Check back soon as new movies are regularly uploaded!',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.60),
+                      fontSize: 13.5,
+                      height: 1.45,
+                    ),
+                  ),
+                  const SizedBox(height: 22),
+                  GestureDetector(
+                    onTap: () => Navigator.of(context).pop(),
+                    behavior: HitTestBehavior.opaque,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 11),
+                      decoration: BoxDecoration(
+                        color: AppColors.accent,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Text(
+                        'Browse Other Categories',
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -14,14 +15,14 @@ class UserProfile {
 
   const UserProfile({
     required this.name,
-    this.bio = 'Action & Sci-Fi enthusiast • Luganda dubbed movie lover',
-    this.dateJoined = 'October 2024',
-    this.moviesWatched = 129,
-    this.averageRating = 3.8,
-    this.avgWatchTimeHours = 48.5,
-    this.totalDownloads = 14,
-    this.followingCount = 52,
-    this.followersCount = 84,
+    this.bio = 'Luganda dubbed movie lover • Streaming on FreeWatch',
+    this.dateJoined = 'Joined Recently',
+    this.moviesWatched = 0,
+    this.averageRating = 0.0,
+    this.avgWatchTimeHours = 0.0,
+    this.totalDownloads = 0,
+    this.followingCount = 0,
+    this.followersCount = 0,
   });
 
   UserProfile copyWith({
@@ -53,7 +54,7 @@ class UserProfileNotifier extends StateNotifier<UserProfile> {
   static const _prefKeyUserName = 'freewatch_user_profile_name';
   static const _prefKeyUserBio = 'freewatch_user_profile_bio';
 
-  UserProfileNotifier() : super(const UserProfile(name: 'Toby Taylor')) {
+  UserProfileNotifier() : super(const UserProfile(name: 'FreeWatch Member')) {
     _loadProfile();
   }
 
@@ -62,10 +63,21 @@ class UserProfileNotifier extends StateNotifier<UserProfile> {
       final prefs = await SharedPreferences.getInstance();
       final savedName = prefs.getString(_prefKeyUserName);
       final savedBio = prefs.getString(_prefKeyUserBio);
+
+      String resolvedName = state.name;
+      if (savedName != null && savedName.trim().isNotEmpty) {
+        resolvedName = savedName.trim();
+      } else {
+        final currentUser = FirebaseAuth.instance.currentUser;
+        if (currentUser?.displayName != null && currentUser!.displayName!.trim().isNotEmpty) {
+          resolvedName = currentUser.displayName!.trim();
+        } else if (currentUser?.email != null && currentUser!.email!.isNotEmpty) {
+          resolvedName = currentUser.email!.split('@').first;
+        }
+      }
+
       state = state.copyWith(
-        name: savedName != null && savedName.trim().isNotEmpty
-            ? savedName.trim()
-            : state.name,
+        name: resolvedName,
         bio: savedBio != null && savedBio.trim().isNotEmpty
             ? savedBio.trim()
             : state.bio,

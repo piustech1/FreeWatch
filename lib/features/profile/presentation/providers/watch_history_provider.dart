@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../../../data/mock/mock_movies.dart';
 import '../../../../data/models/movie.dart';
 
 class WatchHistoryNotifier extends StateNotifier<List<Movie>> {
@@ -20,21 +19,10 @@ class WatchHistoryNotifier extends StateNotifier<List<Movie>> {
             .map((item) => Movie.fromJson(json.decode(item) as Map<String, dynamic>))
             .toList();
       } else {
-        // Pre-seed with popular movies for visual presentation
-        state = [
-          MockData.trendingMovies[0],
-          MockData.trendingMovies[1],
-          MockData.trendingMovies[2],
-          if (MockData.trendingMovies.length > 3) MockData.trendingMovies[3],
-        ];
-        _saveHistory();
+        state = [];
       }
     } catch (_) {
-      state = [
-        MockData.trendingMovies[0],
-        MockData.trendingMovies[1],
-        MockData.trendingMovies[2],
-      ];
+      state = [];
     }
   }
 
