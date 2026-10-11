@@ -96,7 +96,7 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                           MaterialPageRoute(
                             builder: (_) => MovieDetailScreen(
                               movie: movie,
-                              resumeProgress: 0.5,
+                              resumeProgress: movie.resumeProgress,
                               autoPlay: true,
                             ),
                           ),

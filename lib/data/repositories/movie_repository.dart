@@ -106,7 +106,7 @@ class MovieRepository {
       }
     } catch (_) {}
 
-    return MockData.popularTv;
+    return [];
   }
 
   // ── 7. Movies by Genre with TMDB Fallback & Cross-Reference ────────────────
@@ -124,34 +124,50 @@ class MovieRepository {
               g.toLowerCase().contains(genreName.toLowerCase()) ||
               genreName.toLowerCase().contains(g.toLowerCase()));
 
-          // Specific intelligent keywords for Animation & Family
+          // Specific strict franchise keywords for Animation & Family
           bool keywordMatch = false;
           final lowerTitle = m.title.toLowerCase();
           if (genreId == 16) {
-            keywordMatch = lowerTitle.contains('dragon') ||
-                lowerTitle.contains('panda') ||
+            keywordMatch = lowerTitle.contains('panda') ||
+                lowerTitle.contains('how to train your dragon') ||
                 lowerTitle.contains('sonic') ||
                 lowerTitle.contains('mario') ||
-                lowerTitle.contains('lion') ||
+                lowerTitle.contains('lion king') ||
                 lowerTitle.contains('shrek') ||
                 lowerTitle.contains('frozen') ||
                 lowerTitle.contains('nemo') ||
                 lowerTitle.contains('minion') ||
+                lowerTitle.contains('despicable me') ||
+                lowerTitle.contains('toy story') ||
                 lowerTitle.contains('anime') ||
                 lowerTitle.contains('naruto') ||
-                lowerTitle.contains('avatar') ||
-                lowerTitle.contains('toy') ||
-                lowerTitle.contains('quest');
+                lowerTitle.contains('demon slayer') ||
+                lowerTitle.contains('jujutsu') ||
+                lowerTitle.contains('bleach') ||
+                lowerTitle.contains('one piece') ||
+                lowerTitle.contains('attack on titan') ||
+                lowerTitle.contains('spirited away') ||
+                lowerTitle.contains('ghibli') ||
+                lowerTitle.contains('spider-verse') ||
+                lowerTitle.contains('moana') ||
+                lowerTitle.contains('zootopia') ||
+                lowerTitle.contains('coco') ||
+                lowerTitle.contains('encanto') ||
+                lowerTitle.contains('madagascar') ||
+                lowerTitle.contains('ice age') ||
+                lowerTitle.contains('incredibles');
           } else if (genreId == 10751) {
-            keywordMatch = lowerTitle.contains('family') ||
-                lowerTitle.contains('dragon') ||
-                lowerTitle.contains('panda') ||
-                lowerTitle.contains('sonic') ||
-                lowerTitle.contains('dog') ||
-                lowerTitle.contains('pet') ||
-                lowerTitle.contains('magic') ||
-                lowerTitle.contains('kid') ||
-                lowerTitle.contains('wonka');
+            keywordMatch = lowerTitle.contains('home alone') ||
+                lowerTitle.contains('wonka') ||
+                lowerTitle.contains('charlie and the chocolate factory') ||
+                lowerTitle.contains('paddington') ||
+                lowerTitle.contains('night at the museum') ||
+                lowerTitle.contains('mary poppins') ||
+                lowerTitle.contains('jumanji') ||
+                lowerTitle.contains('chronicles of narnia') ||
+                lowerTitle.contains('alvin and the chipmunks') ||
+                lowerTitle.contains('stuart little') ||
+                lowerTitle.contains('matilda');
           }
 
           if (hasId || hasName || keywordMatch) {
@@ -287,28 +303,68 @@ class MovieRepository {
       }
     } catch (_) {}
 
-    if (matching.isNotEmpty) return matching;
+    // If local catalog matches are fewer than 10, search live MunoWatch API for this VJ
+    if (matching.length < 15) {
+      try {
+        final searchResults = await _munowatch.searchMovies(rawName);
+        for (final m in searchResults) {
+          if (seenIds.add(m.id)) {
+            matching.add(m.copyWith(vjName: rawName));
+          }
+        }
+      } catch (_) {}
+    }
 
-    final mockVjMovies = MockData.getMoviesByVj(vjOrId is Vj ? vjOrId.id : vjOrId.toString());
-    return mockVjMovies.map((m) => m.copyWith(vjName: rawName)).toList();
+    return matching;
   }
 
-  /// Calculates real dynamic movie counts for all VJs directly from MunoWatch
+  /// Calculates real dynamic movie counts for all VJs directly from MunoWatch catalog
   Future<List<Vj>> getVjsWithRealCounts() async {
     try {
       final allMovies = await _getAllLugandaMovies();
-      return MockData.vjs.map((vj) {
-        final target = normalizeVjName(vj.name);
-        final count = allMovies.where((m) {
-          if (m.vjName == null || m.vjName!.isEmpty) return false;
-          final clean = normalizeVjName(m.vjName!);
-          return clean.contains(target) || target.contains(clean);
-        }).length;
+      final Map<String, int> vjCounts = {};
+      final Map<String, String> canonicalNames = {};
 
-        return vj.copyWith(
-          movieCount: count > 0 ? count : (vj.movieCount > 0 ? vj.movieCount : 1),
-        );
-      }).toList();
+      for (final m in allMovies) {
+        if (m.vjName != null && m.vjName!.isNotEmpty) {
+          final norm = normalizeVjName(m.vjName!);
+          if (norm.isNotEmpty) {
+            vjCounts[norm] = (vjCounts[norm] ?? 0) + 1;
+            canonicalNames.putIfAbsent(norm, () => m.vjName!);
+          }
+        }
+      }
+
+      final List<Vj> resultVjs = [];
+      final Set<String> processedNorms = {};
+
+      // 1. Process known standard VJs from MockData
+      for (final vj in MockData.vjs) {
+        final norm = normalizeVjName(vj.name);
+        processedNorms.add(norm);
+        final realCount = vjCounts[norm] ?? 0;
+        resultVjs.add(vj.copyWith(
+          movieCount: realCount,
+        ));
+      }
+
+      // 2. Dynamically discover newly catalogued VJs from live MunoWatch API
+      for (final entry in vjCounts.entries) {
+        if (!processedNorms.contains(entry.key) && entry.value > 0) {
+          final raw = canonicalNames[entry.key] ?? 'VJ ${entry.key.toUpperCase()}';
+          resultVjs.add(Vj(
+            id: 'vj_${entry.key}',
+            name: raw.toUpperCase().startsWith('VJ') ? raw : 'VJ $raw',
+            nickname: raw.toUpperCase().startsWith('VJ') ? raw.substring(2).trim() : raw,
+            specialty: 'Luganda Translation',
+            imageUrl: '',
+            movieCount: entry.value,
+            translatedMovieIds: const [],
+          ));
+        }
+      }
+
+      return resultVjs;
     } catch (_) {
       return MockData.vjs;
     }
@@ -552,9 +608,7 @@ class MovieRepository {
     int? tmdbId;
     List<int> tmdbGenreIds = lugandaMovie?.genreIds ?? const [];
     List<String> tmdbGenreNames = lugandaMovie?.genreNames ?? const [];
-    List<CastMember> resolvedCast = const [
-      CastMember(id: 1, name: 'Lead Cast', character: 'Featured Actor', profilePath: null),
-    ];
+    List<CastMember> resolvedCast = const [];
     List<TvSeasonData> resolvedSeasons = const [];
     int resolvedNumberOfSeasons = 0;
     // Strictly respect MunoWatch classification: single movies remain single movies
@@ -706,22 +760,65 @@ class MovieRepository {
       } catch (_) {}
     }
 
-    // 2. Fetch distinct episodes from MunoWatch series endpoint if seriesCode is available
-    if (seriesCode != null && seriesCode.isNotEmpty) {
+    String? activeSeriesCode = seriesCode;
+
+    // If season > 1, search MunoWatch to find that specific season's series_code
+    if (seriesTitle != null && seriesTitle.isNotEmpty) {
       try {
-        final munoEps = await _munowatch.getSeriesEpisodes(seriesCode);
+        final cleanTitle = _cleanTitleForTmdb(seriesTitle);
+        final seasonQuery = seasonNumber > 1 ? '$cleanTitle Season $seasonNumber' : cleanTitle;
+        final searchResults = await _munowatch.searchMovies(seasonQuery);
+        for (final m in searchResults) {
+          if (m.seriesCode != null && m.seriesCode!.isNotEmpty) {
+            final tLower = m.title.toLowerCase();
+            if (seasonNumber > 1 && (tLower.contains('season $seasonNumber') || tLower.contains('s0$seasonNumber') || tLower.contains('s$seasonNumber'))) {
+              activeSeriesCode = m.seriesCode;
+              break;
+            } else {
+              activeSeriesCode ??= m.seriesCode;
+            }
+          }
+        }
+      } catch (_) {}
+    }
+
+    final String? lookupKey = (activeSeriesCode != null && activeSeriesCode.isNotEmpty)
+        ? activeSeriesCode
+        : (tvId > 0 ? tvId.toString() : null);
+
+    // 2. Fetch distinct episodes from MunoWatch series endpoint
+    if (lookupKey != null && lookupKey.isNotEmpty) {
+      try {
+        final munoEps = await _munowatch.getSeriesEpisodes(lookupKey);
         if (munoEps.isNotEmpty) {
           final List<TvEpisodeData> results = [];
+          int minEpNum = 999;
+
           for (int i = 0; i < munoEps.length; i++) {
             final ep = munoEps[i];
             final epId = ep['id'] is int
                 ? ep['id'] as int
                 : (int.tryParse(ep['id']?.toString() ?? '') ?? (i + 1));
-            final epNum = ep['episode'] is int
-                ? ep['episode'] as int
-                : (int.tryParse(ep['episode']?.toString() ?? '') ?? (i + 1));
-            final epTitle = ep['title']?.toString() ?? 'Episode $epNum';
-            final playingUrl = (ep['playingurl'] ?? ep['playingUrl'])?.toString();
+            final epTitle = ep['title']?.toString() ?? 'Episode ${i + 1}';
+
+            int epNum = 0;
+            if (ep['episode'] != null) {
+              epNum = int.tryParse(ep['episode'].toString()) ?? 0;
+            }
+            if (epNum == 0) {
+              final match = RegExp(r'(?:episode|eps|ep|\b)\s*0*(\d+)', caseSensitive: false).firstMatch(epTitle);
+              if (match != null) {
+                epNum = int.tryParse(match.group(1) ?? '') ?? 0;
+              }
+            }
+            if (epNum == 0) {
+              epNum = i + 1;
+            }
+            if (epNum < minEpNum) {
+              minEpNum = epNum;
+            }
+
+            final playingUrl = (ep['playingurl'] ?? ep['playingUrl'])?.toString().trim();
 
             // Match with TMDB episode for enriched backdrop/overview
             final tmdbEp = officialEpisodes.firstWhere(
@@ -733,7 +830,7 @@ class MovieRepository {
                 name: epTitle,
                 overview: 'Official Luganda translated episode release',
                 runtime: 45,
-                stillPath: null,
+                stillPath: (ep['image'] ?? ep['thumbnail'])?.toString(),
                 voteAverage: 8.5,
               ),
             );
@@ -747,13 +844,47 @@ class MovieRepository {
                   : epTitle,
               overview: tmdbEp.overview,
               runtime: tmdbEp.runtime,
-              stillPath: tmdbEp.stillPath,
+              stillPath: tmdbEp.stillPath ?? (ep['image'] ?? ep['thumbnail'])?.toString(),
               voteAverage: tmdbEp.voteAverage,
-              videoUrl: (playingUrl != null && playingUrl.trim().startsWith('http'))
-                  ? playingUrl.trim()
+              videoUrl: (playingUrl != null && playingUrl.startsWith('http'))
+                  ? playingUrl
                   : tmdbEp.videoUrl,
             ));
           }
+
+          // If MunoWatch series array began at Episode 2 (common when parent movie is Episode 1)
+          if (minEpNum == 2 && tvId > 0) {
+            try {
+              final parentMovie = await _munowatch.findMovie(tvId);
+              if (parentMovie != null && parentMovie.videoUrl != null && parentMovie.videoUrl!.isNotEmpty) {
+                final tmdbEp1 = officialEpisodes.firstWhere(
+                  (o) => o.episodeNumber == 1,
+                  orElse: () => TvEpisodeData(
+                    id: tvId,
+                    episodeNumber: 1,
+                    seasonNumber: seasonNumber,
+                    name: 'Episode 1',
+                    overview: parentMovie.overview ?? 'Official Luganda translated episode 1 release',
+                    runtime: 45,
+                    stillPath: parentMovie.backdropPath ?? parentMovie.posterPath,
+                    voteAverage: 8.5,
+                  ),
+                );
+                results.insert(0, TvEpisodeData(
+                  id: tvId,
+                  episodeNumber: 1,
+                  seasonNumber: seasonNumber,
+                  name: tmdbEp1.name.isNotEmpty ? tmdbEp1.name : 'Episode 1',
+                  overview: tmdbEp1.overview,
+                  runtime: tmdbEp1.runtime,
+                  stillPath: tmdbEp1.stillPath ?? parentMovie.backdropPath ?? parentMovie.posterPath,
+                  voteAverage: tmdbEp1.voteAverage,
+                  videoUrl: parentMovie.videoUrl,
+                ));
+              }
+            } catch (_) {}
+          }
+
           if (results.isNotEmpty) return results;
         }
       } catch (_) {}
@@ -825,20 +956,7 @@ class MovieRepository {
       return eps;
     }
 
-    // Fallback mock episodes
-    return List.generate(6, (i) {
-      final epNum = i + 1;
-      return TvEpisodeData(
-        id: epNum,
-        episodeNumber: epNum,
-        seasonNumber: seasonNumber,
-        name: 'Episode $epNum',
-        overview: 'Official translated episode release',
-        runtime: 48 + (i * 3) % 15,
-        stillPath: null,
-        voteAverage: 8.2,
-      );
-    });
+    return [];
   }
 
   /// On-demand stream URL resolution for playback and downloads

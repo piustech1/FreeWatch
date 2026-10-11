@@ -181,13 +181,45 @@ class MunowatchDatasource {
   /// Returns series and episodic releases from MunoWatch
   Future<List<Movie>> getSeriesMovies() async {
     final all = await getAllMovies();
-    final series = all.where((m) => m.isTv).toList();
+    final List<Movie> series = all.where((m) => m.isTv).toList();
+    final Set<int> seenIds = series.map((s) => s.id).toSet();
+
+    // Query top known Luganda translated series directly from MunoWatch API
+    if (series.length < 15) {
+      final popularSeriesQueries = [
+        'Squid Game',
+        'From',
+        'Reacher',
+        'Loki',
+        'Vikings',
+        'Tulsa King',
+        'Money Heist',
+        'Game of Thrones',
+        'House of the Dragon',
+        'The Boys',
+        'Prison Break',
+        'Sword and Fairy',
+        'Breaking Bad',
+      ];
+      for (final query in popularSeriesQueries) {
+        try {
+          final results = await searchMovies(query);
+          for (final m in results) {
+            if ((m.isTv || m.seriesCode != null) && seenIds.add(m.id)) {
+              series.add(m.copyWith(isTv: true));
+            }
+          }
+          if (series.length >= 25) break;
+        } catch (_) {}
+      }
+    }
+
     if (series.isNotEmpty) return series;
 
     // Search specifically for series if none on dashboard
     try {
       final searchSeries = await searchMovies('season');
-      if (searchSeries.isNotEmpty) return searchSeries;
+      if (searchSeries.isNotEmpty) return searchSeries.map((s) => s.copyWith(isTv: true)).toList();
     } catch (_) {}
 
     return [];

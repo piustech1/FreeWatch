@@ -383,18 +383,19 @@ class MovieGridScreen extends ConsumerWidget {
                       right: 6,
                       child: Builder(
                         builder: (context) {
-                          final resolvedVjName = vj?.name ??
-                              (movie.vjName != null && movie.vjName!.isNotEmpty
-                                  ? movie.vjName!
-                                  : 'VJ JUNIOR');
+                          final rawVjName = vj?.name ?? (movie.vjName?.trim());
+                          if (rawVjName == null || rawVjName.isEmpty) {
+                            return const SizedBox.shrink();
+                          }
 
                           final normalized =
-                              MovieRepository.normalizeVjName(resolvedVjName);
-                          final resolvedVj = MockData.vjs.firstWhere(
+                              MovieRepository.normalizeVjName(rawVjName);
+                          final Vj? matchedVj = MockData.vjs.cast<Vj?>().firstWhere(
                             (v) =>
+                                v != null &&
                                 MovieRepository.normalizeVjName(v.name) ==
-                                normalized,
-                            orElse: () => MockData.vjs.first,
+                                    normalized,
+                            orElse: () => null,
                           );
 
                           return Container(
@@ -424,28 +425,34 @@ class MovieGridScreen extends ConsumerWidget {
                                     shape: BoxShape.circle,
                                   ),
                                   child: ClipOval(
-                                    child: ColorFiltered(
-                                      colorFilter: const ColorFilter.matrix(<double>[
-                                        0.2126, 0.7152, 0.0722, 0, 0,
-                                        0.2126, 0.7152, 0.0722, 0, 0,
-                                        0.2126, 0.7152, 0.0722, 0, 0,
-                                        0,      0,      0,      1, 0,
-                                      ]),
-                                      child: Image.asset(
-                                        resolvedVj.imageUrl,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (_, __, ___) => const Icon(
-                                          Icons.mic,
-                                          size: 9,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
+                                    child: matchedVj != null
+                                        ? ColorFiltered(
+                                            colorFilter: const ColorFilter.matrix(<double>[
+                                              0.2126, 0.7152, 0.0722, 0, 0,
+                                              0.2126, 0.7152, 0.0722, 0, 0,
+                                              0.2126, 0.7152, 0.0722, 0, 0,
+                                              0,      0,      0,      1, 0,
+                                            ]),
+                                            child: Image.asset(
+                                              matchedVj.imageUrl,
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (_, __, ___) => const Icon(
+                                                Icons.mic,
+                                                size: 9,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          )
+                                        : const Icon(
+                                            Icons.mic,
+                                            size: 9,
+                                            color: Colors.white,
+                                          ),
                                   ),
                                 ),
                                 const SizedBox(width: 3),
                                 Text(
-                                  resolvedVjName,
+                                  rawVjName,
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 9,

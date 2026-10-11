@@ -22,6 +22,7 @@ import '../../../home/providers/home_providers.dart';
 import '../../../movie_grid/presentation/screens/movie_grid_screen.dart';
 import '../../../notifications/presentation/screens/notifications_screen.dart';
 import '../../../profile/presentation/providers/watch_history_provider.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../../../../shared/widgets/app_toast.dart';
 import '../providers/movie_detail_providers.dart';
 
@@ -61,6 +62,8 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
   bool _isPlayingVideo = false;
   bool _isInitializingVideo = false;
   bool _isFullscreen = false;
+  int? _currentPlayingEpisodeNumber;
+  String? _currentPlayingEpisodeTitle;
 
   @override
   void initState() {
@@ -867,7 +870,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
             const SizedBox(height: 24),
           ],
           // 1. Cast Section (Live TMDB credits, circular & compact, NO "See all")
-          if (details.cast.isNotEmpty) ...[
+          if (details.cast.isNotEmpty && details.cast.any((c) => c.name != 'Lead Cast' && c.name.trim().isNotEmpty)) ...[
             const Text(
               'Cast',
               style: TextStyle(
@@ -1026,13 +1029,70 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'EPISODES',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 16,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 0.5,
+        episodesAsync.when(
+          data: (episodes) {
+            return Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'EPISODES',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                if (episodes.isNotEmpty)
+                  GestureDetector(
+                    onTap: () => _playNextEpisode(episodes, assignedVj),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFC084FC).withOpacity(0.18),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: const Color(0xFFC084FC).withOpacity(0.50),
+                          width: 0.8,
+                        ),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.skip_next_rounded, color: Color(0xFFC084FC), size: 16),
+                          SizedBox(width: 4),
+                          Text(
+                            'Next Episode',
+                            style: TextStyle(
+                              color: Color(0xFFC084FC),
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
+          loading: () => const Text(
+            'EPISODES',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.5,
+            ),
+          ),
+          error: (_, __) => const Text(
+            'EPISODES',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.5,
+            ),
           ),
         ),
         const SizedBox(height: 12),
@@ -1059,6 +1119,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                 itemBuilder: (context, index) {
                   final ep = episodes[index];
                   final String? epImageUrl = ep.stillUrl ?? backdropUrl;
+                  final bool isPlayingThis = _isPlayingVideo && (_currentPlayingEpisodeNumber == ep.episodeNumber);
 
                   return GestureDetector(
                     onTap: () => _playEpisode(
@@ -1067,6 +1128,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                       'EP ${ep.episodeNumber}',
                       assignedVj,
                       episodeVideoUrl: ep.videoUrl,
+                      episodeNumber: ep.episodeNumber,
                     ),
                     child: SizedBox(
                       width: 195,
@@ -1080,9 +1142,12 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(16),
                               color: const Color(0xFF1E212A),
+                              border: isPlayingThis
+                                  ? Border.all(color: const Color(0xFF22C55E), width: 2.0)
+                                  : Border.all(color: Colors.white.withOpacity(0.08), width: 0.8),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.35),
+                                  color: isPlayingThis ? const Color(0xFF22C55E).withOpacity(0.35) : Colors.black.withOpacity(0.35),
                                   blurRadius: 8,
                                   offset: const Offset(0, 3),
                                 ),
@@ -1121,13 +1186,13 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                                   Container(
                                     color: Colors.black.withOpacity(0.28),
                                   ),
-                                  // Centered circular white play button
+                                  // Centered circular white play button (green if active)
                                   Center(
                                     child: Container(
                                       width: 34,
                                       height: 34,
                                       decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.92),
+                                        color: isPlayingThis ? const Color(0xFF22C55E) : Colors.white.withOpacity(0.92),
                                         shape: BoxShape.circle,
                                         boxShadow: [
                                           BoxShadow(
@@ -1137,13 +1202,35 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                                           ),
                                         ],
                                       ),
-                                      child: const Icon(
-                                        Icons.play_arrow_rounded,
-                                        color: Colors.black,
-                                        size: 22,
+                                      child: Icon(
+                                        isPlayingThis ? Icons.volume_up_rounded : Icons.play_arrow_rounded,
+                                        color: isPlayingThis ? Colors.white : Colors.black,
+                                        size: 20,
                                       ),
                                     ),
                                   ),
+                                  // PLAYING Pill badge at top-left if active
+                                  if (isPlayingThis)
+                                    Positioned(
+                                      top: 8,
+                                      left: 8,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF22C55E).withOpacity(0.92),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: const Text(
+                                          'PLAYING',
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: 9.5,
+                                            fontWeight: FontWeight.w900,
+                                            letterSpacing: 0.5,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
                                   // EP X Badge at bottom-right
                                   Positioned(
                                     bottom: 8,
@@ -1233,19 +1320,64 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
     );
   }
 
-  void _playEpisode(BuildContext context, String title, String ep, Vj assignedVj, {String? episodeVideoUrl}) {
+  void _playNextEpisode(List<TvEpisodeData> episodes, Vj assignedVj) {
+    if (episodes.isEmpty) return;
+    int nextIndex = 0;
+    if (_currentPlayingEpisodeNumber != null) {
+      final curIdx = episodes.indexWhere((e) => e.episodeNumber == _currentPlayingEpisodeNumber);
+      if (curIdx != -1 && curIdx + 1 < episodes.length) {
+        nextIndex = curIdx + 1;
+      }
+    }
+    final nextEp = episodes[nextIndex];
+    _playEpisode(
+      context,
+      nextEp.name,
+      'EP ${nextEp.episodeNumber}',
+      assignedVj,
+      episodeVideoUrl: nextEp.videoUrl,
+      episodeNumber: nextEp.episodeNumber,
+    );
+  }
+
+  void _playEpisode(
+    BuildContext context,
+    String title,
+    String ep,
+    Vj assignedVj, {
+    String? episodeVideoUrl,
+    int? episodeNumber,
+  }) {
+    setState(() {
+      _currentPlayingEpisodeTitle = title;
+      if (episodeNumber != null) {
+        _currentPlayingEpisodeNumber = episodeNumber;
+      } else {
+        final match = RegExp(r'\d+').firstMatch(ep);
+        _currentPlayingEpisodeNumber = int.tryParse(match?.group(0) ?? '1');
+      }
+    });
+
     AppToast.show(
       context,
       'Streaming Season $_selectedSeason $ep: "$title" translated by ${assignedVj.name}',
       isSuccess: true,
     );
-    _playTrailer(streamUrl: episodeVideoUrl);
+    _playTrailer(streamUrl: episodeVideoUrl, isEpisodeSwitch: true);
   }
 
   Future<void> _downloadMovie() async {
     setState(() => _downloadScale = 0.82);
     await Future.delayed(const Duration(milliseconds: 140));
     if (mounted) setState(() => _downloadScale = 1.0);
+
+    // Request notification permissions for background progress visibility
+    try {
+      final notifPlugin = FlutterLocalNotificationsPlugin();
+      await notifPlugin
+          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+          ?.requestNotificationsPermission();
+    } catch (_) {}
 
     final downloadsNotifier = ref.read(downloadsProvider.notifier);
     final alreadyDownloaded = downloadsNotifier.isDownloaded(widget.movie.id);
@@ -1311,7 +1443,8 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
 
   // ── Compact Circular Cast List (Live TMDB credits) ─────────────────────────
   Widget _buildCircularCastList(List<CastMember> cast) {
-    if (cast.isEmpty) {
+    final validCast = cast.where((c) => c.name != 'Lead Cast' && c.name.trim().isNotEmpty).toList();
+    if (validCast.isEmpty) {
       return const SizedBox.shrink();
     }
 
@@ -1320,10 +1453,10 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
-        itemCount: cast.length,
+        itemCount: validCast.length,
         separatorBuilder: (_, __) => const SizedBox(width: 14),
         itemBuilder: (context, i) {
-          final member = cast[i];
+          final member = validCast[i];
           final photoUrl = member.photoUrl;
 
           return SizedBox(
@@ -1961,7 +2094,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
     );
   }
 
-  Future<void> _playTrailer({String? streamUrl}) async {
+  Future<void> _playTrailer({String? streamUrl, bool isEpisodeSwitch = false}) async {
     if (streamUrl == null && _isPlayingVideo && _videoPlayerController != null) {
       if (_videoPlayerController!.value.isPlaying) {
         _videoPlayerController!.pause();
@@ -1987,10 +2120,10 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
             initialMovie: widget.movie)))
         .valueOrNull;
 
-    // Check if offline local download file exists
+    // Check if offline local download file exists (ONLY when NOT playing a specific remote episode URL)
     final downloaded = ref.read(downloadsProvider.notifier).getDownloadedMovie(widget.movie.id);
     final String? localFilePath = downloaded?.localFilePath;
-    final bool hasLocalFile = localFilePath != null && File(localFilePath).existsSync();
+    final bool hasLocalFile = (streamUrl == null) && localFilePath != null && File(localFilePath).existsSync();
 
     String? resolvedUrl = (streamUrl != null && streamUrl.isNotEmpty)
         ? streamUrl
@@ -2060,7 +2193,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
         _isInitializingVideo = false;
         _isPlayingVideo = true;
       });
-      if (widget.resumeProgress != null && widget.resumeProgress! > 0) {
+      if (!isEpisodeSwitch && widget.resumeProgress != null && widget.resumeProgress! > 0) {
         final totalMs = controller.value.duration.inMilliseconds;
         final seekMs = (totalMs * widget.resumeProgress!).round();
         controller.seekTo(Duration(milliseconds: seekMs));
@@ -2192,12 +2325,32 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildTopCircleButton(
-                      icon: Icons.arrow_back_rounded,
-                      onTap: () {
-                        controller.pause();
-                        Navigator.pop(context);
-                      },
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildTopCircleButton(
+                          icon: Icons.arrow_back_rounded,
+                          onTap: () {
+                            controller.pause();
+                            Navigator.pop(context);
+                          },
+                        ),
+                        if (_currentPlayingEpisodeTitle != null) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.55),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.white24, width: 0.8),
+                            ),
+                            child: Text(
+                              _currentPlayingEpisodeTitle!,
+                              style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                     Row(
                       mainAxisSize: MainAxisSize.min,
@@ -2240,31 +2393,66 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                 ),
               ),
 
-              // Center Play/Pause overlay toggle
+              // Center Play/Pause & Next Episode overlay controls
               Center(
-                child: GestureDetector(
-                  onTap: () {
-                    if (controller.value.isPlaying) {
-                      controller.pause();
-                    } else {
-                      controller.play();
-                    }
-                    setState(() {});
-                  },
-                  child: Container(
-                    width: 52,
-                    height: 52,
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.50),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white.withOpacity(0.35), width: 1.2),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    GestureDetector(
+                      onTap: () {
+                        if (controller.value.isPlaying) {
+                          controller.pause();
+                        } else {
+                          controller.play();
+                        }
+                        setState(() {});
+                      },
+                      child: Container(
+                        width: 52,
+                        height: 52,
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.50),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white.withOpacity(0.35), width: 1.2),
+                        ),
+                        child: Icon(
+                          controller.value.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                          color: Colors.white,
+                          size: 32,
+                        ),
+                      ),
                     ),
-                    child: Icon(
-                      controller.value.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                      color: Colors.white,
-                      size: 32,
-                    ),
-                  ),
+                    if (isSeries) ...[
+                      const SizedBox(width: 16),
+                      GestureDetector(
+                        onTap: () {
+                          final epsAsync = ref.read(tvSeasonEpisodesProvider(TvSeasonParam(
+                            tvId: widget.movie.id,
+                            seasonNumber: _selectedSeason,
+                            seriesTitle: widget.movie.title,
+                            seriesCode: widget.movie.seriesCode,
+                          ))).valueOrNull;
+                          if (epsAsync != null && epsAsync.isNotEmpty) {
+                            _playNextEpisode(epsAsync, assignedVj);
+                          }
+                        },
+                        child: Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.50),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white.withOpacity(0.35), width: 1.2),
+                          ),
+                          child: const Icon(
+                            Icons.skip_next_rounded,
+                            color: Colors.white,
+                            size: 26,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
 

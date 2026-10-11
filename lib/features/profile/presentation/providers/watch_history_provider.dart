@@ -36,8 +36,8 @@ class WatchHistoryNotifier extends StateNotifier<List<Movie>> {
 
   void addToHistory(Movie movie, {double? progress, int? positionSeconds}) {
     final updatedMovie = movie.copyWith(
-      resumeProgress: progress ?? movie.resumeProgress ?? 0.15,
-      resumePositionSeconds: positionSeconds ?? movie.resumePositionSeconds ?? 120,
+      resumeProgress: progress ?? movie.resumeProgress ?? 0.0,
+      resumePositionSeconds: positionSeconds ?? movie.resumePositionSeconds ?? 0,
     );
     state = [
       updatedMovie,

@@ -323,6 +323,10 @@ class _VjCardState extends State<VjCard> {
   }
 
   Widget _buildVjImage() {
+    if (widget.vj.imageUrl.isEmpty) {
+      return _fallbackPlaceholder();
+    }
+
     final bool isNetwork = widget.vj.imageUrl.startsWith('http');
     final Widget rawImage = isNetwork
         ? CachedNetworkImage(
@@ -365,12 +369,32 @@ class _VjCardState extends State<VjCard> {
 
   Widget _fallbackPlaceholder() {
     return Container(
-      color: const Color(0xFF14161E),
-      child: const Center(
-        child: Icon(
-          Icons.movie_creation_rounded,
-          color: AppColors.textHint,
-          size: 24,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF261838), Color(0xFF12141D)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Center(
+        child: Container(
+          width: 52,
+          height: 52,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: const Color(0xFF7C3AED).withOpacity(0.18),
+            border: Border.all(
+              color: const Color(0xFFA78BFA).withOpacity(0.35),
+              width: 1.5,
+            ),
+          ),
+          child: const Center(
+            child: Icon(
+              Icons.mic_rounded,
+              color: Color(0xFFA78BFA),
+              size: 26,
+            ),
+          ),
         ),
       ),
     );

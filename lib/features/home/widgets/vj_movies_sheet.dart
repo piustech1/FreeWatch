@@ -1,13 +1,14 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../data/mock/mock_movies.dart';
 import '../../../data/models/movie.dart';
 import '../../../data/models/vj.dart';
+import '../providers/home_providers.dart';
 
 /// Interactive modal bottom sheet displaying movies translated by a specific VJ
-class VjMoviesSheet extends StatelessWidget {
+class VjMoviesSheet extends ConsumerWidget {
   final Vj vj;
   final void Function(Movie movie)? onMovieTap;
 
@@ -34,8 +35,9 @@ class VjMoviesSheet extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final movies = MockData.getMoviesByVj(vj.id);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final moviesAsync = ref.watch(vjMoviesObjProvider(vj));
+    final movies = moviesAsync.valueOrNull ?? [];
     final size = MediaQuery.of(context).size;
 
     return Container(
@@ -70,31 +72,44 @@ class VjMoviesSheet extends StatelessWidget {
                     width: 60,
                     height: 60,
                     color: AppColors.surface,
-                    child: ColorFiltered(
-                      colorFilter: const ColorFilter.matrix(<double>[
-                        0.2126, 0.7152, 0.0722, 0, 0,
-                        0.2126, 0.7152, 0.0722, 0, 0,
-                        0.2126, 0.7152, 0.0722, 0, 0,
-                        0,      0,      0,      1, 0,
-                      ]),
-                      child: vj.imageUrl.startsWith('http')
-                          ? CachedNetworkImage(
-                              imageUrl: vj.imageUrl,
-                              fit: BoxFit.cover,
-                              alignment: Alignment.topCenter,
-                              errorWidget: (_, __, ___) => const Center(
-                                child: Icon(Icons.person, color: AppColors.accent, size: 28),
-                              ),
-                            )
-                          : Image.asset(
-                              vj.imageUrl,
-                              fit: BoxFit.cover,
-                              alignment: Alignment.topCenter,
-                              errorBuilder: (_, __, ___) => const Center(
-                                child: Icon(Icons.person, color: AppColors.accent, size: 28),
+                    child: vj.imageUrl.isEmpty
+                        ? Container(
+                            decoration: const BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [Color(0xFF7C3AED), Color(0xFF4C1D95)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
                               ),
                             ),
-                    ),
+                            child: const Center(
+                              child: Icon(Icons.mic_rounded, color: Colors.white, size: 28),
+                            ),
+                          )
+                        : ColorFiltered(
+                            colorFilter: const ColorFilter.matrix(<double>[
+                              0.2126, 0.7152, 0.0722, 0, 0,
+                              0.2126, 0.7152, 0.0722, 0, 0,
+                              0.2126, 0.7152, 0.0722, 0, 0,
+                              0,      0,      0,      1, 0,
+                            ]),
+                            child: vj.imageUrl.startsWith('http')
+                                ? CachedNetworkImage(
+                                    imageUrl: vj.imageUrl,
+                                    fit: BoxFit.cover,
+                                    alignment: Alignment.topCenter,
+                                    errorWidget: (_, __, ___) => const Center(
+                                      child: Icon(Icons.mic_rounded, color: AppColors.accent, size: 28),
+                                    ),
+                                  )
+                                : Image.asset(
+                                    vj.imageUrl,
+                                    fit: BoxFit.cover,
+                                    alignment: Alignment.topCenter,
+                                    errorBuilder: (_, __, ___) => const Center(
+                                      child: Icon(Icons.mic_rounded, color: AppColors.accent, size: 28),
+                                    ),
+                                  ),
+                          ),
                   ),
                 ),
                 const SizedBox(width: 14),
@@ -201,7 +216,7 @@ class VjMoviesSheet extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    'Luganda Voiceover • ${movies.length} Movies Available',
+                    'Luganda Voiceover • ${movies.isNotEmpty ? movies.length : vj.movieCount} Movies Available',
                     style: const TextStyle(
                       color: AppColors.textPrimary,
                       fontSize: 12,
@@ -227,19 +242,54 @@ class VjMoviesSheet extends StatelessWidget {
 
           // ── Movies Grid / List ───────────────────────────────────────────
           Expanded(
-            child: ListView.separated(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-              physics: const BouncingScrollPhysics(),
-              itemCount: movies.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 14),
-              itemBuilder: (context, index) {
-                final movie = movies[index];
-                return _VjMovieTile(
-                  movie: movie,
-                  vjName: vj.name,
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    onMovieTap?.call(movie);
+            child: moviesAsync.when(
+              loading: () => const Center(
+                child: SizedBox(
+                  width: 32,
+                  height: 32,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.accent),
+                  ),
+                ),
+              ),
+              error: (err, stack) => Center(
+                child: Text(
+                  'Failed to load movies for ${vj.name}',
+                  style: const TextStyle(color: Colors.white54, fontSize: 13),
+                ),
+              ),
+              data: (movies) {
+                if (movies.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.movie_filter_rounded, size: 48, color: Colors.white24),
+                        const SizedBox(height: 12),
+                        Text(
+                          'No movies found for ${vj.name}',
+                          style: const TextStyle(color: Colors.white60, fontSize: 14),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                return ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: movies.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 14),
+                  itemBuilder: (context, index) {
+                    final movie = movies[index];
+                    return _VjMovieTile(
+                      movie: movie,
+                      vjName: vj.name,
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        onMovieTap?.call(movie);
+                      },
+                    );
                   },
                 );
               },
