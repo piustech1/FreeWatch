@@ -148,9 +148,13 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
     final movie = widget.movie;
     final isFav = ref.watch(favoritesProvider.notifier).isFavorite(movie.id);
 
-    // Watch live details from TMDB with append_to_response
+    // Watch live details from MunoWatch
     final detailsAsync = ref.watch(
-      movieDetailsProvider(MovieDetailsParam(movieId: movie.id, isTv: movie.isTv)),
+      movieDetailsProvider(MovieDetailsParam(
+        movieId: movie.id,
+        isTv: movie.isTv,
+        initialMovie: movie,
+      )),
     );
 
     // Strictly resolve official TMDB movie backdrop (never stretch vertical posters or use random fallbacks)
@@ -730,12 +734,23 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
     final movie = widget.movie;
     final isDownloaded = ref.watch(downloadsProvider.notifier).isDownloaded(movie.id);
 
+    final details = ref
+        .watch(movieDetailsProvider(MovieDetailsParam(
+            movieId: movie.id, isTv: movie.isTv, initialMovie: movie)))
+        .valueOrNull;
+
+    final bool hasVod = (details?.videoUrl != null && details!.videoUrl!.isNotEmpty) ||
+        (movie.videoUrl != null && movie.videoUrl!.isNotEmpty) ||
+        isDownloaded;
+
     final bool isCurrentlyPlaying = _isPlayingVideo && _videoPlayerController?.value.isPlaying == true;
-    final String playLabel = _isPlayingVideo
-        ? (isCurrentlyPlaying ? 'PAUSE' : 'PLAY')
-        : (widget.resumeProgress != null
-            ? 'RESUME (${(widget.resumeProgress! * 100).toInt()}%)'
-            : (isSeries ? 'RESUME' : 'PLAY'));
+    final String playLabel = !hasVod
+        ? 'NO STREAM'
+        : (_isPlayingVideo
+            ? (isCurrentlyPlaying ? 'PAUSE' : 'PLAY')
+            : (widget.resumeProgress != null
+                ? 'RESUME (${(widget.resumeProgress! * 100).toInt()}%)'
+                : (isSeries ? 'RESUME' : 'PLAY')));
 
     return Row(
       children: [
@@ -746,11 +761,13 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
             child: Container(
               height: 50,
               decoration: BoxDecoration(
-                color: const Color(0xFF22C55E),
+                color: hasVod ? const Color(0xFF22C55E) : const Color(0xFF334155),
                 borderRadius: BorderRadius.circular(25),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF22C55E).withOpacity(0.35),
+                    color: hasVod
+                        ? const Color(0xFF22C55E).withOpacity(0.35)
+                        : Colors.black26,
                     blurRadius: 14,
                     offset: const Offset(0, 3),
                   ),
@@ -760,9 +777,11 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
-                    isCurrentlyPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                    !hasVod
+                        ? Icons.videocam_off_rounded
+                        : (isCurrentlyPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded),
                     color: Colors.white,
-                    size: 28,
+                    size: 26,
                   ),
                   const SizedBox(width: 6),
                   Text(
@@ -1632,12 +1651,16 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                         ),
                       ),
                       const SizedBox(width: 4),
-                      Text(
-                        '• ${relMovie.year.isNotEmpty ? relMovie.year : "2024"}',
-                        style: const TextStyle(
-                          color: Color(0xFF8E92A0),
-                          fontSize: 10,
-                          fontWeight: FontWeight.w500,
+                      Flexible(
+                        child: Text(
+                          '• ${relMovie.year.isNotEmpty ? relMovie.year : "2024"}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Color(0xFF8E92A0),
+                            fontSize: 10,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ),
                     ],
@@ -1966,8 +1989,10 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
     _videoPlayerController?.dispose();
 
     final details = ref
-        .read(movieDetailsProvider(
-            MovieDetailsParam(movieId: widget.movie.id, isTv: widget.movie.isTv)))
+        .read(movieDetailsProvider(MovieDetailsParam(
+            movieId: widget.movie.id,
+            isTv: widget.movie.isTv,
+            initialMovie: widget.movie)))
         .valueOrNull;
 
     // Check if offline local download file exists
@@ -1975,11 +2000,18 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
     final String? localFilePath = downloaded?.localFilePath;
     final bool hasLocalFile = localFilePath != null && File(localFilePath).existsSync();
 
-    final String resolvedUrl = (streamUrl != null && streamUrl.isNotEmpty)
+    final String? resolvedUrl = (streamUrl != null && streamUrl.isNotEmpty)
         ? streamUrl
         : ((details?.videoUrl?.isNotEmpty == true ? details!.videoUrl! : null) ??
-           (widget.movie.videoUrl?.isNotEmpty == true ? widget.movie.videoUrl! : null) ??
-           'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4');
+           (widget.movie.videoUrl?.isNotEmpty == true ? widget.movie.videoUrl! : null));
+
+    if (!hasLocalFile && (resolvedUrl == null || resolvedUrl.isEmpty || !resolvedUrl.startsWith('http'))) {
+      setState(() {
+        _isInitializingVideo = false;
+      });
+      AppToast.show(context, 'No video stream available for this movie on MunoWatch.');
+      return;
+    }
 
     final rawVjName = widget.movie.vjName ?? details?.vjName;
     final Vj assignedVj = _resolveAssignedVj(rawVjName);
@@ -1991,7 +2023,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
 
     final VideoPlayerController controller = hasLocalFile
         ? VideoPlayerController.file(File(localFilePath))
-        : VideoPlayerController.networkUrl(Uri.parse(resolvedUrl));
+        : VideoPlayerController.networkUrl(Uri.parse(resolvedUrl!));
 
     _videoPlayerController = controller;
 

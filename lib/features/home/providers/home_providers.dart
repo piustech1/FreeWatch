@@ -109,7 +109,7 @@ final familyMoviesProvider = FutureProvider<List<Movie>>((ref) async {
   return ref.watch(movieRepositoryProvider).getMoviesByGenre(10751);
 });
 
-/// Dedicated VJ movies provider (combining MovieMax live translated movies with MockData)
+/// Dedicated VJ movies provider (combining MunoWatch live translated movies with MockData)
 final vjMoviesProvider = FutureProvider.family<List<Movie>, String>((ref, vjId) async {
   return ref.watch(movieRepositoryProvider).getMoviesByVj(vjId);
 });
@@ -119,12 +119,12 @@ final vjMoviesObjProvider = FutureProvider.family<List<Movie>, Vj>((ref, vj) asy
   return ref.watch(movieRepositoryProvider).getMoviesByVj(vj);
 });
 
-/// Dynamic real VJ list provider with actual movie counts calculated from RTDB
+/// Dynamic real VJ list provider with actual movie counts calculated from MunoWatch
 final vjsWithCountsProvider = FutureProvider<List<Vj>>((ref) async {
   return ref.watch(movieRepositoryProvider).getVjsWithRealCounts();
 });
 
-/// Real RTDB related movies provider for a given movie
+/// Real MunoWatch related movies provider for a given movie
 final relatedMoviesProvider = FutureProvider.family<List<Movie>, Movie>((ref, movie) async {
   return ref.watch(movieRepositoryProvider).getRelatedMovies(movie);
 });

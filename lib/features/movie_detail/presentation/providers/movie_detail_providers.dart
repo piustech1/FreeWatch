@@ -2,12 +2,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../data/models/movie_details_data.dart';
 import '../../../home/providers/home_providers.dart';
 
+import '../../../../data/models/movie.dart';
+
 /// Parameter object for fetching movie or TV details
 class MovieDetailsParam {
   final int movieId;
   final bool isTv;
+  final Movie? initialMovie;
 
-  const MovieDetailsParam({required this.movieId, this.isTv = false});
+  const MovieDetailsParam({
+    required this.movieId,
+    this.isTv = false,
+    this.initialMovie,
+  });
 
   @override
   bool operator ==(Object other) =>
@@ -25,7 +32,11 @@ class MovieDetailsParam {
 final movieDetailsProvider =
     FutureProvider.family<MovieDetailsData, MovieDetailsParam>((ref, param) async {
   final repository = ref.watch(movieRepositoryProvider);
-  return repository.getMovieDetails(param.movieId, isTv: param.isTv);
+  return repository.getMovieDetails(
+    param.movieId,
+    initialMovie: param.initialMovie,
+    isTv: param.isTv,
+  );
 });
 
 /// Parameter object for fetching TV season episodes

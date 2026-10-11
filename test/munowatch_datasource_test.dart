@@ -43,6 +43,43 @@ void main() {
       expect(hasMatrix, isTrue);
     });
 
+    test('getLatestMovies returns releases from MunoWatch Latest category', () async {
+      final latest = await datasource.getLatestMovies();
+      expect(latest, isNotEmpty);
+      expect(latest.first.title, isNotEmpty);
+    });
+
+    test('getMovieDetails preserves exact MunoWatch movie title and strict VOD', () async {
+      final repo = MovieRepository(munowatchDatasource: datasource);
+
+      // Deep catalog movie ID 10000 ("Gracious Revenge 10")
+      final details = await repo.getMovieDetails(10000);
+      expect(details.id, equals(10000));
+      expect(details.title, equals('Gracious Revenge 10'));
+      expect(details.videoUrl, isNotNull);
+      expect(details.videoUrl, startsWith('http'));
+      expect(details.vjName, equals('Vj Sammy'));
+    });
+
+    test('getMovieDetails strictly sets videoUrl to null if no VOD exists on MunoWatch', () async {
+      final repo = MovieRepository(munowatchDatasource: datasource);
+
+      // Random non-existent ID on MunoWatch
+      final details = await repo.getMovieDetails(99999999);
+      expect(details.videoUrl, isNull); // ZERO fake fallbacks or BigBuckBunny
+    });
+
+    test('getRelatedMovies returns relevant movies from MunoWatch excluding self', () async {
+      final repo = MovieRepository(munowatchDatasource: datasource);
+      final all = await datasource.getAllMovies();
+      expect(all, isNotEmpty);
+
+      final active = all.first;
+      final related = await repo.getRelatedMovies(active);
+      expect(related, isNotEmpty);
+      expect(related.any((m) => m.id == active.id), isFalse);
+    });
+
     test('MovieRepository merges MunoWatch into search and genres', () async {
       final repo = MovieRepository(munowatchDatasource: datasource);
 

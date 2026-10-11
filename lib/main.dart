@@ -43,7 +43,7 @@ void main() async {
   // Riverpod root container
   final container = ProviderContainer();
 
-  // Start background monitoring of MovieMax database for new uploads
+  // Start background monitoring of MumoWatch database for new uploads
   try {
     MovieNotificationTracker(container).startTracking();
   } catch (e) {

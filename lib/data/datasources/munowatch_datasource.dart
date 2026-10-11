@@ -7,20 +7,46 @@ import '../models/movie.dart';
 /// Fetches real-time Luganda-dubbed movies across 13+ categories with live search
 /// and on-demand stream resolution.
 class MunowatchDatasource {
-  static const String _baseUrl = 'https://munowatch.ai.studio';
+  static const String _baseUrl = 'https://mumowatch.ai.studio';
+  static const String _fallbackBaseUrl = 'https://munowatch.ai.studio';
 
   final Dio _dio;
+  final Dio _fallbackDio;
 
   // In-memory caching with TTL
   List<Movie>? _cachedMovies;
+  List<Movie>? _latestMovies;
   DateTime? _lastFetch;
   static const Duration _cacheTtl = Duration(minutes: 15);
 
-  MunowatchDatasource({Dio? dio})
+  // Global registry of all discovered movies (from dashboard, search, and deep lookups)
+  final Map<int, Movie> _knownMoviesMap = {};
+
+  /// Helper web URLs matching MumoWatch web routing conventions
+  static String dashboardWebUrl() => '$_baseUrl/dashboard';
+  static String movieWebUrl(dynamic id) => '$_baseUrl/movie/$id';
+  static String moviePlayWebUrl(dynamic id) => '$_baseUrl/movie/$id/play';
+  static String moviePlayQueryWebUrl({dynamic id}) =>
+      id != null ? '$_baseUrl/movie/play?id=$id' : '$_baseUrl/movie/play';
+  static String seriesWebUrl(String seriesCode) => '$_baseUrl/series/$seriesCode';
+
+  MunowatchDatasource({Dio? dio, Dio? fallbackDio})
       : _dio = dio ??
             Dio(
               BaseOptions(
                 baseUrl: _baseUrl,
+                connectTimeout: const Duration(seconds: 12),
+                receiveTimeout: const Duration(seconds: 15),
+                headers: {
+                  'User-Agent': 'FreeWatch/1.0 (Flutter)',
+                  'Accept': 'application/json, text/plain, */*',
+                },
+              ),
+            ),
+        _fallbackDio = fallbackDio ??
+            Dio(
+              BaseOptions(
+                baseUrl: _fallbackBaseUrl,
                 connectTimeout: const Duration(seconds: 12),
                 receiveTimeout: const Duration(seconds: 15),
                 headers: {
@@ -40,8 +66,22 @@ class MunowatchDatasource {
     }
 
     try {
-      final response = await _dio.get('/api/dashboard');
-      if (response.data == null || response.data is! Map) {
+      Response? response;
+      try {
+        response = await _dio.get('/dashboard');
+        // If mumowatch /dashboard only has flat movies without categories, enrich from fallback
+        if (response.data is Map && (response.data as Map)['dashboard'] == null) {
+          try {
+            final fb = await _fallbackDio.get('/api/dashboard');
+            if (fb.data is Map && (fb.data as Map)['dashboard'] != null) {
+              response = fb;
+            }
+          } catch (_) {}
+        }
+      } catch (_) {
+        response = await _fallbackDio.get('/api/dashboard');
+      }
+      if (response == null || response.data == null || response.data is! Map) {
         return _cachedMovies ?? [];
       }
 
@@ -49,6 +89,7 @@ class MunowatchDatasource {
           Map<String, dynamic>.from(response.data as Map);
 
       final Map<int, Movie> movieMap = {};
+      final List<Movie> latestList = [];
 
       // 1. Featured Banner
       if (data['banner'] is Map) {
@@ -59,6 +100,7 @@ class MunowatchDatasource {
         if (bId != null) {
           final movie = _mapToMovie(banner, defaultCategory: 'Featured');
           movieMap[bId] = movie;
+          _knownMoviesMap[bId] = movie;
         }
       }
 
@@ -67,6 +109,7 @@ class MunowatchDatasource {
         for (final catItem in data['dashboard'] as List) {
           if (catItem is Map) {
             final catName = (catItem['category'] ?? 'General').toString();
+            final bool isLatestCategory = catName.toLowerCase().contains('latest');
             final moviesList = catItem['movies'];
             if (moviesList is List) {
               for (final rawMovie in moviesList) {
@@ -81,8 +124,13 @@ class MunowatchDatasource {
                                       ?.toString() ??
                                   ''));
                   if (mId != null && !movieMap.containsKey(mId)) {
-                    movieMap[mId] = _mapToMovie(movieMapItem,
+                    final movie = _mapToMovie(movieMapItem,
                         defaultCategory: catName);
+                    movieMap[mId] = movie;
+                    _knownMoviesMap[mId] = movie;
+                    if (isLatestCategory) {
+                      latestList.add(movie);
+                    }
                   }
                 }
               }
@@ -91,14 +139,63 @@ class MunowatchDatasource {
         }
       }
 
+      // 3. Movies rail from MumoWatch /dashboard
+      if (data['movies'] is List) {
+        for (final rawMovie in data['movies'] as List) {
+          if (rawMovie is Map) {
+            final movieMapItem = Map<String, dynamic>.from(rawMovie);
+            final int? mId = movieMapItem['id'] is int
+                ? movieMapItem['id'] as int
+                : (movieMapItem['vid'] is int
+                    ? movieMapItem['vid'] as int
+                    : int.tryParse(
+                        (movieMapItem['id'] ?? movieMapItem['vid'])
+                                ?.toString() ??
+                            ''));
+            if (mId != null && !movieMap.containsKey(mId)) {
+              final movie = _mapToMovie(movieMapItem);
+              movieMap[mId] = movie;
+              _knownMoviesMap[mId] = movie;
+            }
+          }
+        }
+      }
+
       _cachedMovies = movieMap.values.toList();
+      _latestMovies = latestList.isNotEmpty
+          ? latestList
+          : _cachedMovies!.take(15).toList();
       _lastFetch = DateTime.now();
-      debugPrint('🎬 [MunowatchDatasource] Loaded ${_cachedMovies!.length} movies from MunoWatch');
+      debugPrint('🎬 [MunowatchDatasource] Loaded ${_cachedMovies!.length} movies (Latest: ${_latestMovies!.length}) from MumoWatch/MunoWatch');
       return _cachedMovies!;
     } catch (e) {
       debugPrint('⚠️ [MunowatchDatasource] Error fetching dashboard: $e');
       return _cachedMovies ?? [];
     }
+  }
+
+  /// Exclusively returns movies from the "Latest on Munowatch" / "Latest Uploads" category
+  Future<List<Movie>> getLatestMovies() async {
+    if (_latestMovies != null && _latestMovies!.isNotEmpty) {
+      return _latestMovies!;
+    }
+    await getAllMovies();
+    return _latestMovies ?? (_cachedMovies?.take(15).toList() ?? []);
+  }
+
+  /// Returns series and episodic releases from MunoWatch
+  Future<List<Movie>> getSeriesMovies() async {
+    final all = await getAllMovies();
+    final series = all.where((m) => m.isTv).toList();
+    if (series.isNotEmpty) return series;
+
+    // Search specifically for series if none on dashboard
+    try {
+      final searchSeries = await searchMovies('season');
+      if (searchSeries.isNotEmpty) return searchSeries;
+    } catch (_) {}
+
+    return [];
   }
 
   /// Live search directly on MunoWatch API across 10,000+ movie database
@@ -119,24 +216,88 @@ class MunowatchDatasource {
     final Map<int, Movie> resultsMap = {};
 
     for (final q in queryVariations) {
+      // 1. Query primary host (mumowatch.ai.studio/search)
       try {
         final response = await _dio.get(
-          '/api/search',
+          '/search',
           queryParameters: {'q': q},
         );
 
-        if (response.data is List) {
+        if (response.data is Map) {
+          final dataMap = response.data as Map;
+          if (dataMap['series'] is List) {
+            for (final s in dataMap['series'] as List) {
+              if (s is Map) {
+                final sTitle = s['title']?.toString() ?? '';
+                final sCode = s['series_code']?.toString() ?? '';
+                if (s['episodes'] is List) {
+                  for (final ep in s['episodes'] as List) {
+                    if (ep is Map) {
+                      final epMap = Map<String, dynamic>.from(ep);
+                      if ((epMap['title'] == null ||
+                              epMap['title'].toString().isEmpty) &&
+                          sTitle.isNotEmpty) {
+                        epMap['title'] = sTitle;
+                      }
+                      if (sCode.isNotEmpty) {
+                        epMap['series_code'] = sCode;
+                      }
+                      final movie = _mapToMovie(epMap);
+                      if (!resultsMap.containsKey(movie.id)) {
+                        resultsMap[movie.id] = movie;
+                        _knownMoviesMap[movie.id] = movie;
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+          if (dataMap['movies'] is List) {
+            for (final item in dataMap['movies'] as List) {
+              if (item is Map) {
+                final movie = _mapToMovie(Map<String, dynamic>.from(item));
+                if (!resultsMap.containsKey(movie.id)) {
+                  resultsMap[movie.id] = movie;
+                  _knownMoviesMap[movie.id] = movie;
+                }
+              }
+            }
+          }
+        } else if (response.data is List) {
           for (final item in response.data as List) {
             if (item is Map) {
               final movie = _mapToMovie(Map<String, dynamic>.from(item));
               if (!resultsMap.containsKey(movie.id)) {
                 resultsMap[movie.id] = movie;
+                _knownMoviesMap[movie.id] = movie;
               }
             }
           }
         }
       } catch (e) {
-        debugPrint('⚠️ [MunowatchDatasource] Live search error for "$q": $e');
+        debugPrint('⚠️ [MunowatchDatasource] Primary search error for "$q": $e');
+      }
+
+      // 2. Query fallback host (munowatch.ai.studio/api/search) if empty
+      if (resultsMap.isEmpty) {
+        try {
+          final response = await _fallbackDio.get(
+            '/api/search',
+            queryParameters: {'q': q},
+          );
+          if (response.data is List) {
+            for (final item in response.data as List) {
+              if (item is Map) {
+                final movie = _mapToMovie(Map<String, dynamic>.from(item));
+                if (!resultsMap.containsKey(movie.id)) {
+                  resultsMap[movie.id] = movie;
+                  _knownMoviesMap[movie.id] = movie;
+                }
+              }
+            }
+          }
+        } catch (_) {}
       }
 
       if (resultsMap.length >= 25) break;
@@ -146,15 +307,59 @@ class MunowatchDatasource {
   }
 
   /// Fetch full stream details (direct .mp4 URL, duration, file size, synopsis)
+  /// Strictly returns direct .mp4 streaming link if available on MumoWatch
   Future<Map<String, dynamic>?> getStreamDetails(int vid) async {
+    // 1. Try GET /movie/$vid on primary host (mumowatch.ai.studio)
     try {
-      final response = await _dio.post(
+      final response = await _dio.get('/movie/$vid');
+      if (response.data is Map) {
+        final map = Map<String, dynamic>.from(response.data as Map);
+        String? rawUrl = (map['playingurl'] ?? map['playingUrl'])?.toString().trim();
+        // Strict VOD verification: Must be a non-empty valid URL
+        if (rawUrl != null && rawUrl.startsWith('http')) {
+          map['playingurl'] = rawUrl;
+        } else {
+          // Check if GET /movie/$vid/play redirects to direct stream URL
+          try {
+            final redirectResponse = await _dio.get(
+              '/movie/$vid/play',
+              options: Options(
+                followRedirects: false,
+                validateStatus: (status) => status != null && status < 400,
+              ),
+            );
+            final location = redirectResponse.headers.value('location');
+            if (location != null && location.trim().startsWith('http')) {
+              rawUrl = location.trim();
+              map['playingurl'] = rawUrl;
+            } else {
+              map['playingurl'] = null;
+            }
+          } catch (_) {
+            map['playingurl'] = null;
+          }
+        }
+        return map;
+      }
+    } catch (_) {}
+
+    // 2. Try POST /api/stream on fallback host (munowatch.ai.studio)
+    try {
+      final response = await _fallbackDio.post(
         '/api/stream',
         data: {'vid': vid},
       );
 
       if (response.data is Map) {
-        return Map<String, dynamic>.from(response.data as Map);
+        final map = Map<String, dynamic>.from(response.data as Map);
+        final rawUrl = (map['playingurl'] ?? map['playingUrl'])?.toString().trim();
+        // Strict VOD verification: Must be a non-empty valid URL
+        if (rawUrl != null && rawUrl.startsWith('http')) {
+          map['playingurl'] = rawUrl;
+        } else {
+          map['playingurl'] = null;
+        }
+        return map;
       }
     } catch (e) {
       debugPrint('⚠️ [MunowatchDatasource] Error fetching stream for ID $vid: $e');
@@ -162,8 +367,17 @@ class MunowatchDatasource {
     return null;
   }
 
-  /// Find a movie by ID or title
+  /// Find a movie by ID or title with deep on-demand stream lookup across 10,000+ catalog
   Future<Movie?> findMovie(int id, {String? title}) async {
+    // 1. Check registry of known movies (ensuring valid non-empty title)
+    if (_knownMoviesMap.containsKey(id)) {
+      final cached = _knownMoviesMap[id]!;
+      if (cached.title.isNotEmpty && cached.title != 'Movie') {
+        return cached;
+      }
+    }
+
+    // 2. Check full cached dashboard movies
     final movies = await getAllMovies();
     final match = movies.firstWhere(
       (m) =>
@@ -171,7 +385,21 @@ class MunowatchDatasource {
           (title != null && m.title.toLowerCase() == title.toLowerCase()),
       orElse: () => const Movie(id: -1, title: '', voteAverage: 0),
     );
-    if (match.id != -1) return match;
+    if (match.id != -1 && match.title.isNotEmpty && match.title != 'Movie') {
+      _knownMoviesMap[match.id] = match;
+      return match;
+    }
+
+    // 3. Deep on-demand lookup via /movie/$id or /api/stream directly for this ID
+    try {
+      final details = await getStreamDetails(id);
+      if (details != null && details['title'] != null && details['title'].toString().trim().isNotEmpty) {
+        final deepMovie = _mapToMovie(details);
+        _knownMoviesMap[id] = deepMovie;
+        return deepMovie;
+      }
+    } catch (_) {}
+
     return null;
   }
 
@@ -227,7 +455,9 @@ class MunowatchDatasource {
       genreIds: genreMapping.ids,
       genreNames: genreMapping.names,
       isTv: isTvShow,
-      videoUrl: playingUrl?.isNotEmpty == true ? playingUrl : null,
+      videoUrl: (playingUrl?.isNotEmpty == true && playingUrl!.startsWith('http'))
+          ? playingUrl
+          : null,
       vjName: rawVj,
       firebaseKey: 'munowatch_$id',
     );
