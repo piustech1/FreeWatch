@@ -113,22 +113,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
   }
 
   bool _checkIsSeries(Movie movie, MovieDetailsData details) {
-    if (details.isTv || details.numberOfSeasons > 0 || movie.isTv) return true;
-    final title = (details.title.isNotEmpty ? details.title : movie.title).toLowerCase();
-    return title.contains('gentlemen') ||
-        title.contains('house of the dragon') ||
-        title.contains('loki') ||
-        title.contains('stranger things') ||
-        title.contains('breaking bad') ||
-        title.contains('squid game') ||
-        title.contains('wednesday') ||
-        title.contains('money heist') ||
-        title.contains('boys') ||
-        title.contains('series') ||
-        movie.genreIds.contains(10759) ||
-        movie.genreIds.contains(10765) ||
-        details.primaryGenre.toLowerCase().contains('tv') ||
-        details.primaryGenre.toLowerCase().contains('series');
+    return details.isTv || movie.isTv;
   }
 
   @override
@@ -1029,7 +1014,12 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
   ) {
     final episodesAsync = ref.watch(
       tvSeasonEpisodesProvider(
-        TvSeasonParam(tvId: widget.movie.id, seasonNumber: _selectedSeason),
+        TvSeasonParam(
+          tvId: widget.movie.id,
+          seasonNumber: _selectedSeason,
+          seriesTitle: widget.movie.title,
+          seriesCode: widget.movie.seriesCode,
+        ),
       ),
     );
 
@@ -1284,7 +1274,32 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
     final rawVjName = widget.movie.vjName;
     final Vj assignedVj = _resolveAssignedVj(rawVjName);
 
-    await downloadsNotifier.startDownload(widget.movie, vjName: assignedVj.name);
+    // Resolve on-demand live BunnyCDN stream URL for download
+    final details = ref
+        .read(movieDetailsProvider(MovieDetailsParam(
+            movieId: widget.movie.id,
+            isTv: widget.movie.isTv,
+            initialMovie: widget.movie)))
+        .valueOrNull;
+
+    String? streamUrl = (widget.movie.videoUrl != null && widget.movie.videoUrl!.isNotEmpty)
+        ? widget.movie.videoUrl
+        : details?.videoUrl;
+
+    if (streamUrl == null || streamUrl.isEmpty) {
+      try {
+        streamUrl = await ref.read(movieRepositoryProvider).resolveStreamUrl(
+          widget.movie.id,
+          title: widget.movie.title,
+        );
+      } catch (_) {}
+    }
+
+    final movieToDownload = (streamUrl != null && streamUrl.isNotEmpty)
+        ? widget.movie.copyWith(videoUrl: streamUrl)
+        : widget.movie;
+
+    await downloadsNotifier.startDownload(movieToDownload, vjName: assignedVj.name);
 
     if (!mounted) return;
     AppToast.show(
@@ -1660,17 +1675,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
   }
 
   bool _checkIsSeriesFallback(Movie movie) {
-    final title = movie.title.toLowerCase();
-    return title.contains('gentlemen') ||
-        title.contains('house of the dragon') ||
-        title.contains('loki') ||
-        title.contains('stranger things') ||
-        title.contains('breaking bad') ||
-        title.contains('squid game') ||
-        title.contains('boys') ||
-        title.contains('series') ||
-        movie.genreIds.contains(10759) ||
-        movie.genreIds.contains(10765);
+    return movie.isTv;
   }
 
   // ── Fallback Scroll View for Offline / Error ───────────────────────────────
@@ -2136,10 +2141,14 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
             fit: StackFit.expand,
             alignment: Alignment.center,
             children: [
-              Center(
-                child: AspectRatio(
-                  aspectRatio: controller.value.aspectRatio > 0 ? controller.value.aspectRatio : 16 / 9,
-                  child: VideoPlayer(controller),
+              SizedBox.expand(
+                child: FittedBox(
+                  fit: BoxFit.cover,
+                  child: SizedBox(
+                    width: controller.value.size.width > 0 ? controller.value.size.width : 16,
+                    height: controller.value.size.height > 0 ? controller.value.size.height : 9,
+                    child: VideoPlayer(controller),
+                  ),
                 ),
               ),
 
@@ -2373,10 +2382,14 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
             fit: StackFit.expand,
             alignment: Alignment.center,
             children: [
-              Center(
-                child: AspectRatio(
-                  aspectRatio: controller.value.aspectRatio > 0 ? controller.value.aspectRatio : 16 / 9,
-                  child: VideoPlayer(controller),
+              SizedBox.expand(
+                child: FittedBox(
+                  fit: BoxFit.cover,
+                  child: SizedBox(
+                    width: controller.value.size.width > 0 ? controller.value.size.width : 16,
+                    height: controller.value.size.height > 0 ? controller.value.size.height : 9,
+                    child: VideoPlayer(controller),
+                  ),
                 ),
               ),
               Positioned(
@@ -2584,19 +2597,25 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
 
     return Scaffold(
       backgroundColor: Colors.black,
-      body: SafeArea(
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Center(
-              child: AspectRatio(
-                aspectRatio: controller.value.aspectRatio,
+      body: Stack(
+        fit: StackFit.expand,
+        alignment: Alignment.center,
+        children: [
+          // Edge-to-edge video touching every screen boundary (zero black side bars)
+          SizedBox.expand(
+            child: FittedBox(
+              fit: BoxFit.cover,
+              child: SizedBox(
+                width: controller.value.size.width > 0 ? controller.value.size.width : 16,
+                height: controller.value.size.height > 0 ? controller.value.size.height : 9,
                 child: VideoPlayer(controller),
               ),
             ),
+          ),
 
-            // Landscape Controls Overlay
-            Positioned.fill(
+          // Landscape Controls Overlay (Wrapped in SafeArea for notch safety)
+          Positioned.fill(
+            child: SafeArea(
               child: Container(
                 color: Colors.black.withOpacity(0.25),
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -2760,8 +2779,8 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

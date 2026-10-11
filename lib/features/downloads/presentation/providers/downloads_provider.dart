@@ -73,13 +73,14 @@ class DownloadsNotifier extends StateNotifier<List<DownloadedMovie>> {
   Future<void> startDownload(Movie movie, {String? vjName}) async {
     if (isDownloaded(movie.id) || isDownloading(movie.id)) return;
 
-    final targetUrl = movie.videoUrl != null && movie.videoUrl!.isNotEmpty
+    final rawUrl = movie.videoUrl != null && movie.videoUrl!.isNotEmpty
         ? movie.videoUrl!
         : 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
+    final targetUrl = rawUrl.trim().replaceAll(' ', '%20');
 
     final initialItem = DownloadedMovie.fromMovie(
       movie,
-      vjName: vjName ?? movie.vjName ?? 'VJ JUNIOR',
+      vjName: vjName ?? movie.vjName ?? 'VJ',
       videoUrl: targetUrl,
       isDownloading: true,
       downloadProgress: 0.05,

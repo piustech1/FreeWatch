@@ -132,9 +132,18 @@ class MovieCard extends StatelessWidget {
   }
 
   Widget _buildVjBadge(Movie movie) {
-    final Vj vj = MockData.vjs.firstWhere(
-      (v) => v.translatedMovieIds.contains(movie.id),
-      orElse: () => MockData.vjs[(movie.id.abs()) % MockData.vjs.length],
+    final vjName = movie.vjName?.trim();
+    if (vjName == null || vjName.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final Vj? matchedVj = MockData.vjs.cast<Vj?>().firstWhere(
+      (v) => v != null && (
+        v.name.toLowerCase() == vjName.toLowerCase() ||
+        vjName.toLowerCase().contains(v.name.toLowerCase()) ||
+        v.name.toLowerCase().contains(vjName.toLowerCase())
+      ),
+      orElse: () => null,
     );
 
     return Container(
@@ -164,28 +173,34 @@ class MovieCard extends StatelessWidget {
               shape: BoxShape.circle,
             ),
             child: ClipOval(
-              child: ColorFiltered(
-                colorFilter: const ColorFilter.matrix(<double>[
-                  0.2126, 0.7152, 0.0722, 0, 0,
-                  0.2126, 0.7152, 0.0722, 0, 0,
-                  0.2126, 0.7152, 0.0722, 0, 0,
-                  0,      0,      0,      1, 0,
-                ]),
-                child: Image.asset(
-                  vj.imageUrl,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const Icon(
-                    Icons.mic,
-                    size: 9,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
+              child: matchedVj != null
+                  ? ColorFiltered(
+                      colorFilter: const ColorFilter.matrix(<double>[
+                        0.2126, 0.7152, 0.0722, 0, 0,
+                        0.2126, 0.7152, 0.0722, 0, 0,
+                        0.2126, 0.7152, 0.0722, 0, 0,
+                        0,      0,      0,      1, 0,
+                      ]),
+                      child: Image.asset(
+                        matchedVj.imageUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Icon(
+                          Icons.mic,
+                          size: 9,
+                          color: Colors.white,
+                        ),
+                      ),
+                    )
+                  : const Icon(
+                      Icons.mic,
+                      size: 9,
+                      color: Colors.white,
+                    ),
             ),
           ),
           const SizedBox(width: 3.5),
           Text(
-            vj.name,
+            vjName,
             style: const TextStyle(
               color: Colors.white,
               fontSize: 9.5,

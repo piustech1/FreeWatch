@@ -43,8 +43,15 @@ final movieDetailsProvider =
 class TvSeasonParam {
   final int tvId;
   final int seasonNumber;
+  final String? seriesTitle;
+  final String? seriesCode;
 
-  const TvSeasonParam({required this.tvId, required this.seasonNumber});
+  const TvSeasonParam({
+    required this.tvId,
+    required this.seasonNumber,
+    this.seriesTitle,
+    this.seriesCode,
+  });
 
   @override
   bool operator ==(Object other) =>
@@ -52,15 +59,21 @@ class TvSeasonParam {
       other is TvSeasonParam &&
           runtimeType == other.runtimeType &&
           tvId == other.tvId &&
-          seasonNumber == other.seasonNumber;
+          seasonNumber == other.seasonNumber &&
+          seriesCode == other.seriesCode;
 
   @override
-  int get hashCode => tvId.hashCode ^ seasonNumber.hashCode;
+  int get hashCode => tvId.hashCode ^ seasonNumber.hashCode ^ seriesCode.hashCode;
 }
 
 final tvSeasonEpisodesProvider =
     FutureProvider.family<List<TvEpisodeData>, TvSeasonParam>((ref, param) async {
   final repository = ref.watch(movieRepositoryProvider);
-  return repository.getTvSeasonEpisodes(param.tvId, param.seasonNumber);
+  return repository.getTvSeasonEpisodes(
+    param.tvId,
+    param.seasonNumber,
+    seriesTitle: param.seriesTitle,
+    seriesCode: param.seriesCode,
+  );
 });
 

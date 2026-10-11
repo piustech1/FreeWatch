@@ -361,6 +361,31 @@ class MunowatchDatasource {
     return null;
   }
 
+  /// Fetch all real episodes for a given series code from MunoWatch
+  Future<List<Map<String, dynamic>>> getSeriesEpisodes(String seriesCode) async {
+    final cleanCode = seriesCode.trim();
+    if (cleanCode.isEmpty) return [];
+
+    try {
+      final response = await _fallbackDio.get('/series/$cleanCode');
+      if (response.data is Map) {
+        final data = response.data as Map;
+        if (data['episodes'] is List) {
+          final List<Map<String, dynamic>> episodes = [];
+          for (final ep in data['episodes'] as List) {
+            if (ep is Map) {
+              episodes.add(Map<String, dynamic>.from(ep));
+            }
+          }
+          return episodes;
+        }
+      }
+    } catch (e) {
+      debugPrint('⚠️ [MunowatchDatasource] Error fetching series episodes for $cleanCode: $e');
+    }
+    return [];
+  }
+
   /// Find a movie by ID or title with deep on-demand stream lookup across 10,000+ catalog
   Future<Movie?> findMovie(int id, {String? title}) async {
     // 1. Check registry of known movies (ensuring valid non-empty title)
@@ -421,18 +446,30 @@ class MunowatchDatasource {
         (json['playingUrl'] ?? json['playingurl'])?.toString();
     final String? description = json['description']?.toString();
 
-    // Clean VJ Name
+    // Clean VJ Name (Strict analysis: only use genuine VJ if present, NEVER mimic fake VJ)
     String? rawVj = (json['vjname'] ?? json['vj'])?.toString().trim();
-    if (rawVj != null && rawVj.isNotEmpty) {
+    if (rawVj != null && rawVj.isNotEmpty && rawVj != 'null') {
       if (!rawVj.toUpperCase().startsWith('VJ ') &&
           !rawVj.toUpperCase().startsWith('VJ.')) {
         rawVj = 'VJ $rawVj';
       }
     } else {
-      rawVj = 'VJ Junior';
+      // Extract from raw title if present (e.g. "HOKUM VJ JINGO.2026")
+      final vjMatch = RegExp(r'\b(VJ\s+[A-Za-z0-9]+)\b', caseSensitive: false).firstMatch(rawTitle);
+      if (vjMatch != null) {
+        rawVj = vjMatch.group(1);
+      } else {
+        rawVj = null; // No VJ: leave null! Do not mimic or invent VJ Junior.
+      }
     }
 
-    final bool isTvShow = cleanTitle.toLowerCase().contains('episode') ||
+    final String? seriesCode = (json['series_code'] ?? json['seriesCode'])?.toString().trim();
+    final int categoryId = json['category_id'] is int
+        ? json['category_id'] as int
+        : (int.tryParse(json['category_id']?.toString() ?? '') ?? 0);
+
+    final bool isTvShow = categoryId == 5 ||
+        (seriesCode != null && seriesCode.isNotEmpty && seriesCode != '0' && seriesCode != json['id']?.toString()) ||
         cleanTitle.toLowerCase().contains('season') ||
         cleanTitle.toLowerCase().contains('series') ||
         cleanTitle.toLowerCase().contains('eps ');
@@ -453,6 +490,7 @@ class MunowatchDatasource {
           ? playingUrl
           : null,
       vjName: rawVj,
+      seriesCode: seriesCode,
       firebaseKey: 'munowatch_$id',
     );
   }

@@ -21,6 +21,7 @@ class Movie {
   final String? logoUrl;
   final double? resumeProgress;
   final int? resumePositionSeconds;
+  final String? seriesCode;
 
   const Movie({
     required this.id,
@@ -42,6 +43,7 @@ class Movie {
     this.logoUrl,
     this.resumeProgress,
     this.resumePositionSeconds,
+    this.seriesCode,
   });
 
   /// Full resolved poster URL (handles full URLs and TMDB relative paths)
@@ -88,6 +90,7 @@ class Movie {
     String? logoUrl,
     double? resumeProgress,
     int? resumePositionSeconds,
+    String? seriesCode,
   }) {
     return Movie(
       id: id ?? this.id,
@@ -109,6 +112,7 @@ class Movie {
       logoUrl: logoUrl ?? this.logoUrl,
       resumeProgress: resumeProgress ?? this.resumeProgress,
       resumePositionSeconds: resumePositionSeconds ?? this.resumePositionSeconds,
+      seriesCode: seriesCode ?? this.seriesCode,
     );
   }
 

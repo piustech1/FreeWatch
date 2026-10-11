@@ -163,18 +163,29 @@ class MovieRepository {
       }
     } catch (_) {}
 
-    // If MunoWatch has fewer than 8 movies for this genre, enrich from TMDB
-    if (matched.length < 8 && _hasCustomApiKey) {
+    // If MunoWatch loaded catalog has fewer than 8 movies for this genre,
+    // search MunoWatch backend directly for genre-matching releases (100% genuine MunoWatch)
+    if (matched.length < 8) {
       try {
-        final tmdbGenreMovies = await _datasource.getMoviesByGenre(genreId, page: page);
-        for (final tm in tmdbGenreMovies) {
-          if (!seenIds.contains(tm.id)) {
-            seenIds.add(tm.id);
-            matched.add(tm.copyWith(
-              vjName: 'VJ Junior',
-              genreIds: [genreId, ...tm.genreIds],
-              genreNames: [genreName, ...tm.genreNames],
-            ));
+        final List<String> targetQueries = [];
+        if (genreId == 16) {
+          targetQueries.addAll(['animation', 'cartoon', 'dragon', 'panda', 'sonic', 'lion', 'shrek']);
+        } else if (genreId == 10751) {
+          targetQueries.addAll(['family', 'kids', 'wonka', 'magic', 'dog']);
+        } else {
+          targetQueries.add(genreName.toLowerCase());
+        }
+
+        for (final q in targetQueries) {
+          final results = await _munowatch.searchMovies(q);
+          for (final rm in results) {
+            if (seenIds.add(rm.id)) {
+              matched.add(rm.copyWith(
+                genreIds: [genreId, ...rm.genreIds],
+                genreNames: [genreName, ...rm.genreNames],
+              ));
+            }
+            if (matched.length >= 25) break;
           }
           if (matched.length >= 25) break;
         }
@@ -369,8 +380,6 @@ class MovieRepository {
               );
               if (munoMatch.id != -1 && seenIds.add(munoMatch.id)) {
                 related.add(munoMatch);
-              } else if (seenIds.add(sim.id)) {
-                related.add(sim.copyWith(vjName: movie.vjName ?? 'VJ Junior'));
               }
               if (related.length >= 8) break;
             }
@@ -548,7 +557,8 @@ class MovieRepository {
     ];
     List<TvSeasonData> resolvedSeasons = const [];
     int resolvedNumberOfSeasons = 0;
-    bool actuallyTv = isTv || (lugandaMovie?.isTv == true);
+    // Strictly respect MunoWatch classification: single movies remain single movies
+    bool actuallyTv = (lugandaMovie != null) ? lugandaMovie.isTv : isTv;
 
     if (_hasCustomApiKey) {
       try {
@@ -564,7 +574,8 @@ class MovieRepository {
           if (tmdbMeta['genre_ids'] is List && (tmdbMeta['genre_ids'] as List).isNotEmpty) {
             tmdbGenreIds = List<int>.from(tmdbMeta['genre_ids'] as List);
           }
-          if (tmdbMeta['is_tv'] == true) {
+          // Only adopt is_tv if lugandaMovie is null (never turn single movie into TV show)
+          if (lugandaMovie == null && tmdbMeta['is_tv'] == true) {
             actuallyTv = true;
           }
 
@@ -598,11 +609,27 @@ class MovieRepository {
       } catch (_) {}
     }
 
-    if (actuallyTv && resolvedSeasons.isEmpty) {
-      resolvedSeasons = const [
-        TvSeasonData(id: 1, seasonNumber: 1, name: 'Season 1', episodeCount: 10),
-      ];
-      resolvedNumberOfSeasons = 1;
+    if (!actuallyTv) {
+      resolvedSeasons = const [];
+      resolvedNumberOfSeasons = 0;
+    } else if (resolvedSeasons.isEmpty) {
+      if (lugandaMovie?.seriesCode != null && lugandaMovie!.seriesCode!.isNotEmpty) {
+        try {
+          final munoEps = await _munowatch.getSeriesEpisodes(lugandaMovie.seriesCode!);
+          if (munoEps.isNotEmpty) {
+            resolvedSeasons = [
+              TvSeasonData(id: 1, seasonNumber: 1, name: 'Season 1', episodeCount: munoEps.length),
+            ];
+            resolvedNumberOfSeasons = 1;
+          }
+        } catch (_) {}
+      }
+      if (resolvedSeasons.isEmpty) {
+        resolvedSeasons = const [
+          TvSeasonData(id: 1, seasonNumber: 1, name: 'Season 1', episodeCount: 1),
+        ];
+        resolvedNumberOfSeasons = 1;
+      }
     }
 
     final genres = tmdbGenreNames.isNotEmpty
@@ -616,7 +643,7 @@ class MovieRepository {
     final releaseDate = lugandaMovie?.releaseDate ?? '2026-01-01';
     final voteAvg = (lugandaMovie?.voteAverage ?? 0.0) > 0 ? lugandaMovie!.voteAverage : 8.5;
     final runtime = resolvedRuntime ?? (actuallyTv ? 55 : 115);
-    final vjName = resolvedVj ?? (lugandaMovie?.vjName ?? 'VJ Junior');
+    final vjName = resolvedVj ?? lugandaMovie?.vjName;
 
     final activeMovieForRelated = lugandaMovie?.copyWith(
           title: currentTitle,
@@ -661,10 +688,11 @@ class MovieRepository {
     int tvId,
     int seasonNumber, {
     String? seriesTitle,
+    String? seriesCode,
   }) async {
     List<TvEpisodeData> officialEpisodes = [];
 
-    // 1. Fetch official TMDB season episodes with real backdrops
+    // 1. Fetch official TMDB season episodes with real backdrops (solely to enrich stills/names)
     if (seriesTitle != null && seriesTitle.isNotEmpty && _hasCustomApiKey) {
       try {
         final tmdbMeta = await _findTmdbMetadata(seriesTitle, isTv: true);
@@ -678,7 +706,60 @@ class MovieRepository {
       } catch (_) {}
     }
 
-    // 2. Search MunoWatch for matching season episodes to attach live Luganda stream URLs
+    // 2. Fetch distinct episodes from MunoWatch series endpoint if seriesCode is available
+    if (seriesCode != null && seriesCode.isNotEmpty) {
+      try {
+        final munoEps = await _munowatch.getSeriesEpisodes(seriesCode);
+        if (munoEps.isNotEmpty) {
+          final List<TvEpisodeData> results = [];
+          for (int i = 0; i < munoEps.length; i++) {
+            final ep = munoEps[i];
+            final epId = ep['id'] is int
+                ? ep['id'] as int
+                : (int.tryParse(ep['id']?.toString() ?? '') ?? (i + 1));
+            final epNum = ep['episode'] is int
+                ? ep['episode'] as int
+                : (int.tryParse(ep['episode']?.toString() ?? '') ?? (i + 1));
+            final epTitle = ep['title']?.toString() ?? 'Episode $epNum';
+            final playingUrl = (ep['playingurl'] ?? ep['playingUrl'])?.toString();
+
+            // Match with TMDB episode for enriched backdrop/overview
+            final tmdbEp = officialEpisodes.firstWhere(
+              (o) => o.episodeNumber == epNum,
+              orElse: () => TvEpisodeData(
+                id: epId,
+                episodeNumber: epNum,
+                seasonNumber: seasonNumber,
+                name: epTitle,
+                overview: 'Official Luganda translated episode release',
+                runtime: 45,
+                stillPath: null,
+                voteAverage: 8.5,
+              ),
+            );
+
+            results.add(TvEpisodeData(
+              id: epId,
+              episodeNumber: epNum,
+              seasonNumber: seasonNumber,
+              name: (tmdbEp.name.isNotEmpty && tmdbEp.name != 'Episode $epNum')
+                  ? tmdbEp.name
+                  : epTitle,
+              overview: tmdbEp.overview,
+              runtime: tmdbEp.runtime,
+              stillPath: tmdbEp.stillPath,
+              voteAverage: tmdbEp.voteAverage,
+              videoUrl: (playingUrl != null && playingUrl.trim().startsWith('http'))
+                  ? playingUrl.trim()
+                  : tmdbEp.videoUrl,
+            ));
+          }
+          if (results.isNotEmpty) return results;
+        }
+      } catch (_) {}
+    }
+
+    // 3. Search MunoWatch for matching season episodes to attach live Luganda stream URLs
     final Map<int, String> streamUrlMap = {};
     try {
       final cleanName = seriesTitle != null ? _cleanTitleForTmdb(seriesTitle) : '';
@@ -704,7 +785,7 @@ class MovieRepository {
       }
     } catch (_) {}
 
-    // 3. Merge TMDB official episodes with MunoWatch streams
+    // 4. Merge TMDB official episodes with MunoWatch streams
     if (officialEpisodes.isNotEmpty) {
       return officialEpisodes.map((ep) {
         final stream = streamUrlMap[ep.episodeNumber];
@@ -758,6 +839,22 @@ class MovieRepository {
         voteAverage: 8.2,
       );
     });
+  }
+
+  /// On-demand stream URL resolution for playback and downloads
+  Future<String?> resolveStreamUrl(int movieId, {String? title}) async {
+    try {
+      final streamDetails = await _munowatch.getStreamDetails(movieId);
+      final playingUrl = streamDetails?['playingurl']?.toString().trim();
+      if (playingUrl != null && playingUrl.startsWith('http')) {
+        return playingUrl;
+      }
+      final found = await _munowatch.findMovie(movieId, title: title);
+      if (found?.videoUrl != null && found!.videoUrl!.startsWith('http')) {
+        return found.videoUrl;
+      }
+    } catch (_) {}
+    return null;
   }
 
   // ── 12. Genres ──────────────────────────────────────────────────────────────
