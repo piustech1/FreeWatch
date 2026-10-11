@@ -663,6 +663,29 @@ class MovieRepository {
       } catch (_) {}
     }
 
+    // For core mock movies, fallback to authentic cast if TMDB is unreachable
+    if (resolvedCast.isEmpty) {
+      if (movieId == 1011985) {
+        resolvedCast = const [
+          CastMember(id: 976, name: 'Jason Statham', character: 'Adam Clay'),
+          CastMember(id: 1729013, name: 'Emmy Raver-Lampman', character: 'Agent Verona Parker'),
+          CastMember(id: 27972, name: 'Josh Hutcherson', character: 'Derek Danforth'),
+          CastMember(id: 1204, name: 'Jeremy Irons', character: 'Wallace Westwyld'),
+        ];
+      } else if (movieId == 693134) {
+        resolvedCast = const [
+          CastMember(id: 1190668, name: 'Timothée Chalamet', character: 'Paul Atreides'),
+          CastMember(id: 505710, name: 'Zendaya', character: 'Chani'),
+          CastMember(id: 933238, name: 'Rebecca Ferguson', character: 'Lady Jessica'),
+        ];
+      } else if (movieId == 533535) {
+        resolvedCast = const [
+          CastMember(id: 10859, name: 'Ryan Reynolds', character: 'Wade Wilson / Deadpool'),
+          CastMember(id: 6968, name: 'Hugh Jackman', character: 'Logan / Wolverine'),
+        ];
+      }
+    }
+
     if (!actuallyTv) {
       resolvedSeasons = const [];
       resolvedNumberOfSeasons = 0;
