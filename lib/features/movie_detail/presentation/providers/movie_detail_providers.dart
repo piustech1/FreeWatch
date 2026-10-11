@@ -60,10 +60,15 @@ class TvSeasonParam {
           runtimeType == other.runtimeType &&
           tvId == other.tvId &&
           seasonNumber == other.seasonNumber &&
+          seriesTitle == other.seriesTitle &&
           seriesCode == other.seriesCode;
 
   @override
-  int get hashCode => tvId.hashCode ^ seasonNumber.hashCode ^ seriesCode.hashCode;
+  int get hashCode =>
+      tvId.hashCode ^
+      seasonNumber.hashCode ^
+      (seriesTitle?.hashCode ?? 0) ^
+      (seriesCode?.hashCode ?? 0);
 }
 
 final tvSeasonEpisodesProvider =

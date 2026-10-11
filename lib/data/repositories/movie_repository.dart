@@ -543,9 +543,19 @@ class MovieRepository {
   /// Clean movie titles for TMDB search (removes VJ names, episode/season markers, Luganda tags)
   static String _cleanTitleForTmdb(String raw) {
     var s = raw.trim();
-    s = s.replaceAll(RegExp(r'\b(season|s)\s*\d+.*', caseSensitive: false), '');
-    s = s.replaceAll(RegExp(r'\b(episode|eps|ep|e)\s*\d+.*', caseSensitive: false), '');
-    s = s.replaceAll(RegExp(r'\bvj\s+[a-zA-Z]+', caseSensitive: false), '');
+    // 1. Remove VJ names anywhere in the string (e.g. "VJ LANCE", "-vjlance", "vj junior")
+    s = s.replaceAll(RegExp(r'[\s\-–—\._]*\bvj[\s\.]*[a-zA-Z0-9]+', caseSensitive: false), '');
+    // 2. Remove Season / Series / Part / Episode markers and anything following
+    s = s.replaceAll(RegExp(r'\b(?:season|seasons|series)\s*\d+.*', caseSensitive: false), '');
+    s = s.replaceAll(RegExp(r'\b(?:episode|episodes|eps|ep|e)\.?\s*\d+.*', caseSensitive: false), '');
+    s = s.replaceAll(RegExp(r'\b(?:part|pt)\.?\s*\d+.*', caseSensitive: false), '');
+    // 3. Remove trailing numbers (e.g. "Money Heist 1", "The Witcher 2", "MobLand 3")
+    s = s.replaceAll(RegExp(r'[\s\-–—:\._]+\d+$'), '');
+    // 4. Normalize dots to spaces if they separate words like "Beauty.In.Black"
+    if (s.contains('.') && !s.endsWith('.mp4')) {
+      s = s.replaceAll('.', ' ');
+    }
+    // 5. Clean trailing punctuation
     s = s.replaceAll(RegExp(r'[:\-–—\s]+$'), '').trim();
     return s.isNotEmpty ? s : raw.trim();
   }
@@ -554,10 +564,14 @@ class MovieRepository {
   Future<Map<String, dynamic>?> _findTmdbMetadata(String title, {bool isTv = false}) async {
     final clean = _cleanTitleForTmdb(title);
     if (clean.isEmpty) return null;
+    final cleanCollapsed = clean.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+
     try {
-      if (isTv) {
-        final tvResults = await _datasource.searchTvShows(clean);
-        if (tvResults.isNotEmpty) {
+      // 1. Always check TV shows first if explicitly isTv OR if title could be a TV show
+      final tvResults = await _datasource.searchTvShows(clean);
+      if (tvResults.isNotEmpty) {
+        // If explicitly requested as TV, take top match
+        if (isTv) {
           final match = tvResults.first;
           return {
             'id': match.id,
@@ -571,8 +585,32 @@ class MovieRepository {
             'is_tv': true,
           };
         }
+        // Otherwise, if a TV show has a strong title match (e.g. Squid Game, MobLand, Money Heist)
+        final matchingTv = tvResults.firstWhere(
+          (tv) {
+            final tvCollapsed = tv.title.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+            return tvCollapsed == cleanCollapsed ||
+                (tvCollapsed.length >= 4 && cleanCollapsed.contains(tvCollapsed)) ||
+                (cleanCollapsed.length >= 4 && tvCollapsed.contains(cleanCollapsed));
+          },
+          orElse: () => const Movie(id: -1, title: '', voteAverage: 0),
+        );
+        if (matchingTv.id != -1) {
+          return {
+            'id': matchingTv.id,
+            'backdrop_path': matchingTv.backdropPath,
+            'poster_path': matchingTv.posterPath,
+            'overview': matchingTv.overview,
+            'vote_average': matchingTv.voteAverage,
+            'vote_count': matchingTv.voteCount,
+            'genre_ids': matchingTv.genreIds,
+            'genre_names': matchingTv.genreNames,
+            'is_tv': true,
+          };
+        }
       }
 
+      // 2. Query movies
       final results = await _datasource.searchMovies(clean);
       if (results.isNotEmpty) {
         final match = results.first;
@@ -586,6 +624,22 @@ class MovieRepository {
           'genre_ids': match.genreIds,
           'genre_names': match.genreNames,
           'is_tv': match.isTv,
+        };
+      }
+
+      // 3. Fallback to any TV result if movie search yielded nothing
+      if (tvResults.isNotEmpty) {
+        final match = tvResults.first;
+        return {
+          'id': match.id,
+          'backdrop_path': match.backdropPath,
+          'poster_path': match.posterPath,
+          'overview': match.overview,
+          'vote_average': match.voteAverage,
+          'vote_count': match.voteCount,
+          'genre_ids': match.genreIds,
+          'genre_names': match.genreNames,
+          'is_tv': true,
         };
       }
     } catch (_) {}
@@ -1110,6 +1164,96 @@ class MovieRepository {
     return null;
   }
 
+  /// On-demand stream URL resolution for a specific episode by title, season, and episode number
+  Future<String?> resolveEpisodeStreamUrl(
+    String seriesTitle,
+    int seasonNumber,
+    int episodeNumber, {
+    int? episodeId,
+  }) async {
+    // 1. If episodeId is provided and > 0, try resolving directly first
+    if (episodeId != null && episodeId > 0) {
+      final directUrl = await getEpisodeStreamUrl(episodeId);
+      if (directUrl != null && directUrl.startsWith('http')) {
+        return directUrl;
+      }
+    }
+
+    final cleanTitle = _cleanTitleForTmdb(seriesTitle);
+    if (cleanTitle.isEmpty) return null;
+
+    try {
+      final List<String> queries = [
+        if (seasonNumber == 1) ...[
+          '$cleanTitle Season 1: Episode $episodeNumber',
+          '$cleanTitle Season 1 Episode $episodeNumber',
+          '$cleanTitle Episode $episodeNumber',
+          '$cleanTitle $episodeNumber',
+        ] else ...[
+          '$cleanTitle Season $seasonNumber: Episode $episodeNumber',
+          '$cleanTitle Season $seasonNumber Episode $episodeNumber',
+          '$cleanTitle S0$seasonNumber E0$episodeNumber',
+          '$cleanTitle Season $seasonNumber',
+        ],
+        cleanTitle,
+      ];
+
+      for (final q in queries) {
+        final results = await _munowatch.searchMovies(q);
+        for (final m in results) {
+          if (!_titleBelongsToSeries(m.title, cleanTitle)) continue;
+
+          final tLower = m.title.toLowerCase();
+          // Season check
+          if (seasonNumber == 1) {
+            if (RegExp(r'\b(?:season\s*[2-9]|s0?[2-9])\b', caseSensitive: false).hasMatch(tLower)) {
+              continue;
+            }
+          } else {
+            if (!tLower.contains('season $seasonNumber') &&
+                !tLower.contains('s0$seasonNumber') &&
+                !tLower.contains('s$seasonNumber')) {
+              continue;
+            }
+          }
+
+          // Episode number extraction
+          final cleanEpTitle = m.title
+              .replaceAll(RegExp(r'\bseason\s*\d+\b', caseSensitive: false), '')
+              .replaceAll(RegExp(r'\bs0?\d+\b', caseSensitive: false), '');
+          int epNum = 0;
+          final match = RegExp(r'\b(?:episode|episodes|eps|ep|e)\.?\s*0*(\d+)\b', caseSensitive: false)
+              .firstMatch(cleanEpTitle);
+          if (match != null) {
+            epNum = int.tryParse(match.group(1) ?? '') ?? 0;
+          }
+          if (epNum == 0) {
+            final matchPart = RegExp(r'\b(?:part|pt)\.?\s*0*(\d+)\b', caseSensitive: false)
+                .firstMatch(cleanEpTitle);
+            if (matchPart != null) {
+              epNum = int.tryParse(matchPart.group(1) ?? '') ?? 0;
+            }
+          }
+          if (epNum == 0) {
+            final matchTrailing = RegExp(r'[-:\s]\s*0*(\d+)\s*$', caseSensitive: false).firstMatch(cleanEpTitle.trim());
+            if (matchTrailing != null) {
+              epNum = int.tryParse(matchTrailing.group(1) ?? '') ?? 0;
+            }
+          }
+
+          if (epNum == episodeNumber || (episodeNumber == 1 && epNum == 0)) {
+            final url = await getEpisodeStreamUrl(m.id);
+            if (url != null && url.startsWith('http')) {
+              return url;
+            }
+          }
+        }
+      }
+    } catch (_) {}
+
+    return null;
+  }
+
   // ── 11. TV Season Episodes with Live Video URLs from MunoWatch ──────────────
   Future<List<TvEpisodeData>> getTvSeasonEpisodes(
     int tvId,
@@ -1119,7 +1263,7 @@ class MovieRepository {
   }) async {
     List<TvEpisodeData> officialEpisodes = [];
 
-    // 1. Fetch official TMDB season episodes with real backdrops (solely to enrich stills/names)
+    // 1. Fetch official TMDB season episodes with real backdrops (names, overviews, stills, runtimes)
     if (seriesTitle != null && seriesTitle.isNotEmpty && _hasCustomApiKey) {
       try {
         final tmdbMeta = await _findTmdbMetadata(seriesTitle, isTv: true);
@@ -1133,366 +1277,128 @@ class MovieRepository {
       } catch (_) {}
     }
 
-    int? clickedSeason;
-    if (seriesTitle != null) {
-      final sMatch = RegExp(r'\bseason\s*(\d+)\b', caseSensitive: false).firstMatch(seriesTitle) ??
-          RegExp(r'\bs0?(\d+)\b', caseSensitive: false).firstMatch(seriesTitle);
-      if (sMatch != null) {
-        clickedSeason = int.tryParse(sMatch.group(1) ?? '');
+    final cleanTitle = seriesTitle != null ? _cleanTitleForTmdb(seriesTitle) : '';
+    final Map<int, Movie> candidateEpisodes = {};
+
+    // 2. Fast single targeted search on MunoWatch (at most 2 queries instead of 60+)
+    if (cleanTitle.isNotEmpty) {
+      try {
+        final Set<int> seenMovieIds = {};
+        final List<Movie> searchResults = [];
+
+        // Query clean title
+        final baseResults = await _munowatch.searchMovies(cleanTitle);
+        for (final m in baseResults) {
+          if (seenMovieIds.add(m.id)) searchResults.add(m);
+        }
+
+        // For season > 1, query specific season title as well
+        if (seasonNumber > 1) {
+          final sResults = await _munowatch.searchMovies('$cleanTitle Season $seasonNumber');
+          for (final m in sResults) {
+            if (seenMovieIds.add(m.id)) searchResults.add(m);
+          }
+        }
+
+        for (final m in searchResults) {
+          if (!_titleBelongsToSeries(m.title, cleanTitle)) continue;
+
+          final tLower = m.title.toLowerCase();
+          bool matchesSeason = false;
+          if (seasonNumber == 1) {
+            final otherSeason = RegExp(r'\b(?:season\s*[2-9]|s0?[2-9])\b', caseSensitive: false).hasMatch(tLower);
+            if (!otherSeason) {
+              matchesSeason = true;
+            }
+          } else {
+            matchesSeason = tLower.contains('season $seasonNumber') ||
+                tLower.contains('s0$seasonNumber') ||
+                tLower.contains('s$seasonNumber');
+          }
+
+          if (!matchesSeason) continue;
+
+          // Extract episode number
+          final cleanEpTitle = m.title
+              .replaceAll(RegExp(r'\bseason\s*\d+\b', caseSensitive: false), '')
+              .replaceAll(RegExp(r'\bs0?\d+\b', caseSensitive: false), '');
+          int epNum = 0;
+          final match = RegExp(r'\b(?:episode|episodes|eps|ep|e)\.?\s*0*(\d+)\b', caseSensitive: false)
+              .firstMatch(cleanEpTitle);
+          if (match != null) {
+            epNum = int.tryParse(match.group(1) ?? '') ?? 0;
+          }
+          if (epNum == 0) {
+            final matchPart = RegExp(r'\b(?:part|pt)\.?\s*0*(\d+)\b', caseSensitive: false)
+                .firstMatch(cleanEpTitle);
+            if (matchPart != null) {
+              epNum = int.tryParse(matchPart.group(1) ?? '') ?? 0;
+            }
+          }
+          if (epNum == 0) {
+            final matchTrailing = RegExp(r'[-:\s]\s*0*(\d+)\s*$', caseSensitive: false).firstMatch(cleanEpTitle.trim());
+            if (matchTrailing != null) {
+              epNum = int.tryParse(matchTrailing.group(1) ?? '') ?? 0;
+            }
+          }
+
+          if (epNum > 0 && !candidateEpisodes.containsKey(epNum)) {
+            candidateEpisodes[epNum] = m;
+          }
+        }
+      } catch (_) {}
+    }
+
+    // 3. Resolve stream URLs for up to 6 discovered episodes in parallel (< 800ms)
+    final Map<int, TvEpisodeData> discoveredEpisodes = {};
+    final candidatesToResolve = candidateEpisodes.entries.take(6).toList();
+    List<Map<String, dynamic>?> streamDetailsList = [];
+    if (candidatesToResolve.isNotEmpty) {
+      try {
+        streamDetailsList = await Future.wait(
+          candidatesToResolve.map((e) => _munowatch.getStreamDetails(e.value.id)),
+        );
+      } catch (_) {}
+    }
+
+    for (int i = 0; i < candidatesToResolve.length; i++) {
+      final entry = candidatesToResolve[i];
+      final epNum = entry.key;
+      final m = entry.value;
+      final detail = i < streamDetailsList.length ? streamDetailsList[i] : null;
+      final playingUrl = (detail?['playingurl'] ?? detail?['playingUrl'])?.toString().trim();
+
+      discoveredEpisodes[epNum] = TvEpisodeData(
+        id: m.id,
+        episodeNumber: epNum,
+        seasonNumber: seasonNumber,
+        name: m.title,
+        overview: m.overview ?? 'Official Luganda translated episode release',
+        runtime: 45,
+        stillPath: m.posterPath,
+        voteAverage: 8.5,
+        videoUrl: (playingUrl != null && playingUrl.startsWith('http')) ? playingUrl : null,
+      );
+    }
+
+    // Include any other candidate episodes with null videoUrl (resolved on-demand on click)
+    for (final entry in candidateEpisodes.entries) {
+      if (!discoveredEpisodes.containsKey(entry.key)) {
+        discoveredEpisodes[entry.key] = TvEpisodeData(
+          id: entry.value.id,
+          episodeNumber: entry.key,
+          seasonNumber: seasonNumber,
+          name: entry.value.title,
+          overview: entry.value.overview ?? 'Official Luganda translated episode release',
+          runtime: 45,
+          stillPath: entry.value.posterPath,
+          voteAverage: 8.5,
+          videoUrl: null,
+        );
       }
     }
 
-    int? startEpId;
-    final cleanTitle = seriesTitle != null ? _cleanTitleForTmdb(seriesTitle) : '';
-    String? targetSeriesCode = (seriesCode != null && seriesCode.isNotEmpty && seriesCode != '0' && (clickedSeason == null || clickedSeason == seasonNumber))
-        ? seriesCode.trim()
-        : null;
-
-    // Search MunoWatch specifically to find that season's starting episode ID
-    if (cleanTitle.isNotEmpty) {
-      try {
-        final List<String> seasonSearchQueries = [];
-        if (seasonNumber == 1) {
-          seasonSearchQueries.addAll([
-            '$cleanTitle Season 1: Episode 1',
-            '$cleanTitle Season 1 Episode 1',
-            '$cleanTitle Season 1',
-            '$cleanTitle S01',
-            '$cleanTitle S1',
-            cleanTitle,
-          ]);
-        } else {
-          seasonSearchQueries.addAll([
-            '$cleanTitle Season $seasonNumber: Episode 1',
-            '$cleanTitle Season $seasonNumber Episode 1',
-            '$cleanTitle Season $seasonNumber',
-            '$cleanTitle S0$seasonNumber',
-            '$cleanTitle S$seasonNumber',
-          ]);
-        }
-
-        for (final q in seasonSearchQueries) {
-          final searchResults = await _munowatch.searchMovies(q);
-          for (final m in searchResults) {
-            if (!_titleBelongsToSeries(m.title, cleanTitle) &&
-                (targetSeriesCode == null || m.seriesCode != targetSeriesCode)) {
-              continue;
-            }
-            final tLower = m.title.toLowerCase();
-            bool matchesSeason = false;
-            if (seasonNumber == 1) {
-              final otherSeason = RegExp(r'\b(?:season\s*[2-9]|s0?[2-9])\b', caseSensitive: false).hasMatch(tLower);
-              if (!otherSeason) {
-                matchesSeason = true;
-              }
-            } else {
-              matchesSeason = tLower.contains('season $seasonNumber') ||
-                  tLower.contains('s0$seasonNumber') ||
-                  tLower.contains('s$seasonNumber');
-            }
-
-            if (matchesSeason) {
-              startEpId = m.id;
-              if (m.seriesCode != null && m.seriesCode!.isNotEmpty && m.seriesCode != '0') {
-                targetSeriesCode ??= m.seriesCode;
-              }
-              break;
-            }
-          }
-          if (startEpId != null) break;
-        }
-      } catch (_) {}
-    }
-
-    // Never contaminate Season 1 with Season 2 ID
-    if (startEpId == null && (clickedSeason == null || clickedSeason == seasonNumber) && tvId > 0) {
-      startEpId = tvId;
-    }
-
-    final Map<int, TvEpisodeData> discoveredEpisodes = {};
-
-    // 2. Targeted episode parallel search across MunoWatch
-    if (cleanTitle.isNotEmpty) {
-      try {
-        final int targetCount = officialEpisodes.isNotEmpty ? officialEpisodes.length : 10;
-        final int epRange = targetCount.clamp(4, 20);
-        final List<Future<List<Movie>>> epQueries = [];
-
-        for (int ep = 1; ep <= epRange; ep++) {
-          if (seasonNumber == 1) {
-            epQueries.add(_munowatch.searchMovies('$cleanTitle Season 1: Episode $ep'));
-            epQueries.add(_munowatch.searchMovies('$cleanTitle Season 1 Episode $ep'));
-            epQueries.add(_munowatch.searchMovies('$cleanTitle $ep'));
-          } else {
-            epQueries.add(_munowatch.searchMovies('$cleanTitle Season $seasonNumber: Episode $ep'));
-            epQueries.add(_munowatch.searchMovies('$cleanTitle Season $seasonNumber Episode $ep'));
-            epQueries.add(_munowatch.searchMovies('$cleanTitle S0$seasonNumber E0$ep'));
-          }
-        }
-
-        final resultsBatch = await Future.wait(epQueries);
-        for (final list in resultsBatch) {
-          for (final m in list) {
-            if (!_titleBelongsToSeries(m.title, cleanTitle) &&
-                (targetSeriesCode == null || m.seriesCode != targetSeriesCode)) {
-              continue;
-            }
-
-            final tLower = m.title.toLowerCase();
-            // Verify season
-            if (seasonNumber == 1) {
-              if (RegExp(r'\b(?:season\s*[2-9]|s0?[2-9])\b', caseSensitive: false).hasMatch(tLower)) {
-                continue;
-              }
-            } else {
-              if (!tLower.contains('season $seasonNumber') &&
-                  !tLower.contains('s0$seasonNumber') &&
-                  !tLower.contains('s$seasonNumber')) {
-                continue;
-              }
-            }
-
-            // Extract episode number
-            final cleanEpTitle = m.title
-                .replaceAll(RegExp(r'\bseason\s*\d+\b', caseSensitive: false), '')
-                .replaceAll(RegExp(r'\bs0?\d+\b', caseSensitive: false), '');
-            int epNum = 0;
-            final match = RegExp(r'\b(?:episode|episodes|eps|ep|e)\.?\s*0*(\d+)\b', caseSensitive: false)
-                .firstMatch(cleanEpTitle);
-            if (match != null) {
-              epNum = int.tryParse(match.group(1) ?? '') ?? 0;
-            }
-            if (epNum == 0) {
-              final matchTrailing = RegExp(r'[-:\s]\s*0*(\d+)\s*$', caseSensitive: false).firstMatch(cleanEpTitle.trim());
-              if (matchTrailing != null) {
-                epNum = int.tryParse(matchTrailing.group(1) ?? '') ?? 0;
-              }
-            }
-
-            if (epNum > 0 && !discoveredEpisodes.containsKey(epNum)) {
-              final streamData = await _munowatch.getStreamDetails(m.id);
-              final playingUrl = (streamData?['playingurl'] ?? streamData?['playingUrl'])?.toString().trim();
-              if (playingUrl != null && playingUrl.startsWith('http')) {
-                discoveredEpisodes[epNum] = TvEpisodeData(
-                  id: m.id,
-                  episodeNumber: epNum,
-                  seasonNumber: seasonNumber,
-                  name: m.title,
-                  overview: m.overview ?? 'Official Luganda translated episode release',
-                  runtime: 45,
-                  stillPath: m.posterPath,
-                  voteAverage: 8.5,
-                  videoUrl: playingUrl,
-                );
-                if (targetSeriesCode == null && m.seriesCode != null && m.seriesCode!.isNotEmpty && m.seriesCode != '0') {
-                  targetSeriesCode = m.seriesCode;
-                }
-              }
-            }
-          }
-        }
-      } catch (_) {}
-    }
-
-    // 3. If seriesCode is available, fetch authentic episodes directly from MunoWatch /series/$code
-    if (targetSeriesCode != null && targetSeriesCode.isNotEmpty) {
-      try {
-        final munoEps = await _munowatch.getSeriesEpisodes(targetSeriesCode);
-        for (int i = 0; i < munoEps.length; i++) {
-          final epData = munoEps[i];
-          final epTitle = (epData['title'] ?? 'Episode ${i + 1}').toString();
-          final epPlayingUrl = (epData['playingurl'] ?? epData['playingUrl'])?.toString().trim();
-          final epId = epData['id'] is int
-              ? epData['id'] as int
-              : (int.tryParse(epData['id']?.toString() ?? '') ?? (startEpId != null ? startEpId + i : i + 1));
-
-          int epNum = 0;
-          if (epData['episode'] != null) {
-            epNum = int.tryParse(epData['episode'].toString()) ?? 0;
-          }
-          if (epNum == 0) {
-            final match = RegExp(r'\b(?:episode|episodes|eps|ep|e)\.?\s*0*(\d+)\b', caseSensitive: false)
-                .firstMatch(epTitle);
-            if (match != null) {
-              epNum = int.tryParse(match.group(1) ?? '') ?? 0;
-            }
-          }
-          if (epNum == 0) {
-            final match = RegExp(r'[-:\s]\s*0*(\d+)\s*$', caseSensitive: false).firstMatch(epTitle.trim());
-            if (match != null) {
-              epNum = int.tryParse(match.group(1) ?? '') ?? 0;
-            }
-          }
-          if (epNum == 0) {
-            epNum = i + 1;
-          }
-
-          if (!discoveredEpisodes.containsKey(epNum)) {
-            discoveredEpisodes[epNum] = TvEpisodeData(
-              id: epId,
-              episodeNumber: epNum,
-              seasonNumber: seasonNumber,
-              name: epTitle,
-              overview: epData['description']?.toString() ?? 'Official Luganda translated episode release',
-              runtime: 45,
-              stillPath: epData['image']?.toString(),
-              voteAverage: 8.5,
-              videoUrl: (epPlayingUrl != null && epPlayingUrl.startsWith('http')) ? epPlayingUrl : null,
-            );
-          }
-        }
-      } catch (_) {}
-    }
-
-    // 4. Probe sequential video IDs from MunoWatch /api/stream starting at startEpId (up to 24 candidates)
-    if (startEpId != null && startEpId > 0) {
-      try {
-        final candidateIds = List.generate(24, (i) => startEpId! + i);
-        final streamDetailsList = await Future.wait(
-          candidateIds.map((id) => _munowatch.getStreamDetails(id)),
-        );
-
-        int consecutiveMismatches = 0;
-
-        for (int i = 0; i < candidateIds.length; i++) {
-          final detail = streamDetailsList[i];
-          if (detail == null) {
-            consecutiveMismatches++;
-            if (consecutiveMismatches >= 5) break;
-            continue;
-          }
-
-          final rawPlayingUrl = (detail['playingurl'] ?? detail['playingUrl'])?.toString().trim();
-          if (rawPlayingUrl == null || !rawPlayingUrl.startsWith('http')) {
-            consecutiveMismatches++;
-            if (consecutiveMismatches >= 5) break;
-            continue;
-          }
-
-          final candSeriesCode = (detail['series_code'] ?? detail['seriesCode'])?.toString().trim();
-          if (i == 0 && targetSeriesCode == null && candSeriesCode != null && candSeriesCode.isNotEmpty && candSeriesCode != '0') {
-            targetSeriesCode = candSeriesCode;
-          }
-
-          // Cross-contamination guard: If both series codes are known and differ, reject
-          if (targetSeriesCode != null &&
-              candSeriesCode != null &&
-              candSeriesCode.isNotEmpty &&
-              candSeriesCode != '0' &&
-              candSeriesCode != targetSeriesCode) {
-            consecutiveMismatches++;
-            if (consecutiveMismatches >= 5) break;
-            continue;
-          }
-
-          final epTitle = detail['title']?.toString() ?? 'Episode ${i + 1}';
-
-          // Strict series affiliation check: Must match series code or series title
-          final bool matchesCode = targetSeriesCode != null && candSeriesCode == targetSeriesCode;
-          final bool matchesTitle = cleanTitle.isNotEmpty && _titleBelongsToSeries(epTitle, cleanTitle);
-          final bool belongsToSeries = (i == 0) || matchesCode || matchesTitle;
-
-          if (!belongsToSeries) {
-            consecutiveMismatches++;
-            if (consecutiveMismatches >= 5) break;
-            continue;
-          }
-
-          final tLower = epTitle.toLowerCase();
-          // Verify season
-          if (seasonNumber == 1) {
-            if (RegExp(r'\b(?:season\s*[2-9]|s0?[2-9])\b', caseSensitive: false).hasMatch(tLower)) {
-              consecutiveMismatches++;
-              if (consecutiveMismatches >= 5) break;
-              continue;
-            }
-          } else {
-            if (!tLower.contains('season $seasonNumber') &&
-                !tLower.contains('s0$seasonNumber') &&
-                !tLower.contains('s$seasonNumber') &&
-                (i > 0 && !matchesCode)) {
-              consecutiveMismatches++;
-              if (consecutiveMismatches >= 5) break;
-              continue;
-            }
-          }
-
-          consecutiveMismatches = 0;
-
-          // Remove season indicator first so "Season 2" does not get extracted as episode 2
-          final cleanEpTitle = epTitle
-              .replaceAll(RegExp(r'\bseason\s*\d+\b', caseSensitive: false), '')
-              .replaceAll(RegExp(r'\bs0?\d+\b', caseSensitive: false), '');
-
-          // Parse episode number
-          int epNum = 0;
-          if (detail['episode'] != null) {
-            epNum = int.tryParse(detail['episode'].toString()) ?? 0;
-          }
-          if (epNum == 0) {
-            final match = RegExp(r'\b(?:episode|episodes|eps|ep|e)\.?\s*0*(\d+)\b', caseSensitive: false)
-                .firstMatch(cleanEpTitle);
-            if (match != null) {
-              epNum = int.tryParse(match.group(1) ?? '') ?? 0;
-            }
-          }
-          if (epNum == 0) {
-            final match = RegExp(r'\b(?:part|pt)\.?\s*0*(\d+)\b', caseSensitive: false)
-                .firstMatch(cleanEpTitle);
-            if (match != null) {
-              epNum = int.tryParse(match.group(1) ?? '') ?? 0;
-            }
-          }
-          if (epNum == 0) {
-            final match = RegExp(r'[-:\s]\s*0*(\d+)\s*$', caseSensitive: false).firstMatch(cleanEpTitle.trim());
-            if (match != null) {
-              epNum = int.tryParse(match.group(1) ?? '') ?? 0;
-            }
-          }
-          if (epNum == 0 && rawPlayingUrl.isNotEmpty) {
-            final urlMatch = RegExp(r'[sS]\d{1,2}[eE](\d{1,3})|[eE][pP]?_?0*(\d{1,3})|_part_?0*(\d{1,3})', caseSensitive: false)
-                .firstMatch(rawPlayingUrl);
-            if (urlMatch != null) {
-              final g = urlMatch.group(1) ?? urlMatch.group(2) ?? urlMatch.group(3);
-              if (g != null) {
-                epNum = int.tryParse(g) ?? 0;
-              }
-            }
-          }
-          if (epNum == 0) {
-            epNum = i + 1;
-          }
-
-          // If episode number is already used with different URL, assign next sequential available number
-          if (discoveredEpisodes.containsKey(epNum) &&
-              discoveredEpisodes[epNum]!.videoUrl != rawPlayingUrl) {
-            final usedNums = discoveredEpisodes.keys.toSet();
-            int nextUnused = 1;
-            while (usedNums.contains(nextUnused)) {
-              nextUnused++;
-            }
-            epNum = nextUnused;
-          }
-
-          final currentEpId = candidateIds[i];
-          if (!discoveredEpisodes.containsKey(epNum)) {
-            discoveredEpisodes[epNum] = TvEpisodeData(
-              id: currentEpId,
-              episodeNumber: epNum,
-              seasonNumber: seasonNumber,
-              name: epTitle,
-              overview: detail['description']?.toString() ?? 'Official Luganda translated episode release',
-              runtime: 45,
-              stillPath: detail['image']?.toString(),
-              voteAverage: 8.5,
-              videoUrl: rawPlayingUrl,
-            );
-          }
-        }
-      } catch (_) {}
-    }
-
-    // 5. Enrich discovered episodes with TMDB official metadata and ensure full episode list
+    // 4. Enrich discovered episodes with TMDB official metadata and ensure full episode list
     if (officialEpisodes.isNotEmpty) {
       final List<TvEpisodeData> combined = [];
       for (final official in officialEpisodes) {
@@ -1508,7 +1414,7 @@ class MovieRepository {
             voteAverage: official.voteAverage > 0 ? official.voteAverage : discovered.voteAverage,
           ));
         } else {
-          // Include official episode in season list with HD still backdrop!
+          // Include official episode in season list with HD still backdrop! (URL resolved on demand)
           combined.add(official);
         }
       }
@@ -1525,6 +1431,22 @@ class MovieRepository {
       final sortedList = discoveredEpisodes.values.toList()
         ..sort((a, b) => a.episodeNumber.compareTo(b.episodeNumber));
       return sortedList;
+    }
+
+    // 5. Fallback if both TMDB and MunoWatch search found 0 items: provide base episode 1
+    if (tvId > 0 && seasonNumber == 1) {
+      return [
+        TvEpisodeData(
+          id: tvId,
+          episodeNumber: 1,
+          seasonNumber: seasonNumber,
+          name: seriesTitle ?? 'Episode 1',
+          overview: 'Luganda translated episode release',
+          runtime: 45,
+          voteAverage: 8.5,
+          videoUrl: null,
+        )
+      ];
     }
 
     return [];

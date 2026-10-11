@@ -125,7 +125,12 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
   }
 
   bool _checkIsSeries(Movie movie, MovieDetailsData details) {
-    return details.isTv || movie.isTv;
+    if (details.isTv || movie.isTv) return true;
+    final titleLower = movie.title.toLowerCase();
+    return titleLower.contains('season') ||
+        titleLower.contains('series') ||
+        titleLower.contains('episode') ||
+        RegExp(r'\b(?:s\d{1,2}|ep?\s*\d+)\b', caseSensitive: false).hasMatch(titleLower);
   }
 
   @override
@@ -1419,12 +1424,18 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
 
     String? targetUrl = episodeVideoUrl;
     if (targetUrl == null || targetUrl.isEmpty) {
-      if (episodeId != null && episodeId > 0) {
-        AppToast.show(
-          context,
-          'Loading Season $_selectedSeason $ep: "$title"...',
-          isSuccess: true,
-        );
+      AppToast.show(
+        context,
+        'Loading Season $_selectedSeason $ep: "$title"...',
+        isSuccess: true,
+      );
+      targetUrl = await ref.read(movieRepositoryProvider).resolveEpisodeStreamUrl(
+        widget.movie.title,
+        _selectedSeason,
+        _currentPlayingEpisodeNumber ?? 1,
+        episodeId: episodeId,
+      );
+      if (targetUrl == null && episodeId != null && episodeId > 0) {
         targetUrl = await ref.read(movieRepositoryProvider).getEpisodeStreamUrl(episodeId);
       }
     }
@@ -1893,7 +1904,12 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
   }
 
   bool _checkIsSeriesFallback(Movie movie) {
-    return movie.isTv;
+    if (movie.isTv) return true;
+    final titleLower = movie.title.toLowerCase();
+    return titleLower.contains('season') ||
+        titleLower.contains('series') ||
+        titleLower.contains('episode') ||
+        RegExp(r'\b(?:s\d{1,2}|ep?\s*\d+)\b', caseSensitive: false).hasMatch(titleLower);
   }
 
   // ── Fallback Scroll View for Offline / Error ───────────────────────────────
