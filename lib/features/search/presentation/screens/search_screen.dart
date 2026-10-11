@@ -63,116 +63,128 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   final List<Map<String, dynamic>> _folderCategories = [
     {
-      'title': 'Movies',
-      'poster': 'https://image.tmdb.org/t/p/w500/wjOHjWCUE0YzDiEzKv8AfqHj3ir.jpg', // Babylon
-      'query': 'Movies',
-    },
-    {
-      'title': 'TV shows',
-      'poster': 'https://image.tmdb.org/t/p/w500/lxWSGo8D6MbFbQmM9tqhbaG80TP.jpg', // Lockwood & Co
-      'query': 'TV shows',
-    },
-    {
-      'title': 'Family',
-      'poster': 'https://image.tmdb.org/t/p/w500/kDp1vUBnMpe8ak4rjgl3cLELqjU.jpg', // Wonka
-      'query': 'Family',
-    },
-    {
-      'title': 'Comedy',
-      'poster': 'https://image.tmdb.org/t/p/w500/iuFNMS8U5cb6xfzi51Dbkovj7vM.jpg', // Barbie
-      'query': 'Comedy',
-    },
-    {
-      'title': 'Teen',
-      'poster': 'https://image.tmdb.org/t/p/w500/8b8R8l88Qje9dn9OE8PY05Nxl1X.jpg', // Dune
-      'query': 'Teen',
-    },
-    {
-      'title': 'Romance',
-      'poster': 'https://image.tmdb.org/t/p/w500/q6y0Go1tsGEsmtFryDOJo3dEmqu.jpg', // The Idea of You
-      'query': 'Romance',
-    },
-    {
       'title': 'Action',
-      'poster': 'https://image.tmdb.org/t/p/w500/bjiS5ipwxb9JFy3XRRN4OAilSeX.jpg', // Top Gun: Maverick
+      'poster': 'https://image.tmdb.org/t/p/w500/bjiS5ipwxb9JFy3XRRN4OAilSeX.jpg',
       'query': 'Action',
     },
     {
-      'title': 'Sci-Fi',
-      'poster': 'https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg', // Interstellar
-      'query': 'Sci-Fi',
-    },
-    {
       'title': 'Horror',
-      'poster': 'https://image.tmdb.org/t/p/w500/bXi6IQiCuHDv0Xsp7Na5966WDFG.jpg', // Alien: Romulus
+      'poster': 'https://image.tmdb.org/t/p/w500/bXi6IQiCuHDv0Xsp7Na5966WDFG.jpg',
       'query': 'Horror',
     },
     {
-      'title': 'Drama',
-      'poster': 'https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg', // Oppenheimer
-      'query': 'Drama',
-    },
-    {
-      'title': 'Animation',
-      'poster': 'https://image.tmdb.org/t/p/w500/8cdWjvZQUExUUTzyp4t6EDMubfO.jpg', // Spider-Verse
-      'query': 'Animation',
+      'title': 'Series',
+      'poster': 'https://image.tmdb.org/t/p/w500/dDlG1v7kWqFfg1k5pW6bEa4Xv34.jpg',
+      'query': 'Series',
     },
     {
       'title': 'Adventure',
-      'poster': 'https://image.tmdb.org/t/p/w500/fiVW06jE7z9YnO4trhaMEdclSiC.jpg', // Fast X
+      'poster': 'https://image.tmdb.org/t/p/w500/8b8R8l88Qje9dn9OE8PY05Nxl1X.jpg',
       'query': 'Adventure',
     },
     {
-      'title': 'Thriller',
-      'poster': 'https://image.tmdb.org/t/p/w500/6MKr3KgOLmzOP6MSuZERO41Lpkt.jpg', // Civil War
-      'query': 'Thriller',
+      'title': 'Love Story',
+      'poster': 'https://image.tmdb.org/t/p/w500/q6y0Go1tsGEsmtFryDOJo3dEmqu.jpg',
+      'query': 'Love Story',
     },
     {
-      'title': 'Fantasy',
-      'poster': 'https://image.tmdb.org/t/p/w500/qA5kPY0debq59v9H6eFv8d0yI6I.jpg', // Kung Fu Panda
-      'query': 'Fantasy',
+      'title': 'Comedy',
+      'poster': 'https://image.tmdb.org/t/p/w500/iuFNMS8U5cb6xfzi51Dbkovj7vM.jpg',
+      'query': 'Comedy',
     },
     {
       'title': 'Crime',
-      'poster': 'https://image.tmdb.org/t/p/w500/kKGQzkTyMbAlQUTvBhZ1nFEJ75U.jpg', // The Batman
+      'poster': 'https://image.tmdb.org/t/p/w500/kKGQzkTyMbAlQUTvBhZ1nFEJ75U.jpg',
       'query': 'Crime',
     },
     {
-      'title': 'Mystery',
-      'poster': 'https://image.tmdb.org/t/p/w500/7WsyChQLEftFiDOVTGkv3hFpyyt.jpg', // Glass Onion
-      'query': 'Mystery',
+      'title': 'Family',
+      'poster': 'https://image.tmdb.org/t/p/w500/kDp1vUBnMpe8ak4rjgl3cLELqjU.jpg',
+      'query': 'Family',
     },
     {
-      'title': 'Documentary',
-      'poster': 'https://image.tmdb.org/t/p/w500/u3bZgnGQ9T01sWNhyveQz0wH0Hl.jpg', // Planet Earth
-      'query': 'Documentary',
+      'title': 'Sci FI',
+      'poster': 'https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg',
+      'query': 'Sci FI',
     },
     {
-      'title': 'Gaming',
-      'poster': 'https://image.tmdb.org/t/p/w500/3O2UgEszp1CVbL8p9XnKkFDkbk3.jpg', // Assassin's Creed
-      'query': 'Gaming',
+      'title': 'Romance',
+      'poster': 'https://image.tmdb.org/t/p/w500/5qHoazZiaLe7oFBok7XlUhg96f2.jpg',
+      'query': 'Romance',
     },
     {
-      'title': 'Music Video',
-      'poster': 'https://image.tmdb.org/t/p/w500/ccRSixnjEcYM9FiQXACecJkQ6kL.jpg', // Tate McRae
-      'query': 'Music Video',
+      'title': 'Kungu Fu',
+      'poster': 'https://image.tmdb.org/t/p/w500/qA5kPY0debq59v9H6eFv8d0yI6I.jpg',
+      'query': 'Kungu Fu',
+    },
+    {
+      'title': 'Drama',
+      'poster': 'https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg',
+      'query': 'Drama',
+    },
+    {
+      'title': 'Sport',
+      'poster': 'https://image.tmdb.org/t/p/w500/H6vke7zGiuL7z75m1N6T5gS4Vp.jpg',
+      'query': 'Sport',
+    },
+    {
+      'title': 'Thriller',
+      'poster': 'https://image.tmdb.org/t/p/w500/6MKr3KgOLmzOP6MSuZERO41Lpkt.jpg',
+      'query': 'Thriller',
+    },
+    {
+      'title': 'Animation',
+      'poster': 'https://image.tmdb.org/t/p/w500/8cdWjvZQUExUUTzyp4t6EDMubfO.jpg',
+      'query': 'Animation',
+    },
+    {
+      'title': 'Korean',
+      'poster': 'https://image.tmdb.org/t/p/w500/7IiTTgloJzvGI1TAYymCfbfl3vT.jpg',
+      'query': 'Korean',
+    },
+    {
+      'title': 'Filipino',
+      'poster': 'https://image.tmdb.org/t/p/w500/r2J02Z2OpNTctfOSN2Ydgii51I3.jpg',
+      'query': 'Filipino',
+    },
+    {
+      'title': 'Indian',
+      'poster': 'https://image.tmdb.org/t/p/w500/kdPMUMJzyYAc4roD52qavX0nLIC.jpg',
+      'query': 'Indian',
+    },
+    {
+      'title': 'Chinese',
+      'poster': 'https://image.tmdb.org/t/p/w500/5kHvC0Vv83g6R52tCq4jL7sDqC6.jpg',
+      'query': 'Chinese',
+    },
+    {
+      'title': 'Ugandan',
+      'poster': 'https://image.tmdb.org/t/p/w500/628Dep6AxEtDxjZoGP78TsOxYbK.jpg',
+      'query': 'Ugandan',
     },
   ];
 
   final List<String> _quickPillGenres = [
     'Action',
-    'Documentary',
-    'Sci-Fi',
-    'Drama',
-    'Comedy',
-    'Adventure',
-    'Animation',
     'Horror',
-    'Romance',
-    'Fantasy',
+    'Series',
+    'Adventure',
+    'Love Story',
+    'Comedy',
     'Crime',
-    'Thriller',
     'Family',
+    'Sci FI',
+    'Romance',
+    'Kungu Fu',
+    'Drama',
+    'Sport',
+    'Thriller',
+    'Animation',
+    'Korean',
+    'Filipino',
+    'Indian',
+    'Chinese',
+    'Ugandan',
   ];
 
   void _openCategory(String category) {

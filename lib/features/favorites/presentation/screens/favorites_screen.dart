@@ -218,7 +218,7 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                                   color: Colors.white.withOpacity(0.20),
                                   child: FractionallySizedBox(
                                     alignment: Alignment.centerLeft,
-                                    widthFactor: 0.5,
+                                    widthFactor: (movie.resumeProgress ?? 0.05).clamp(0.02, 1.0),
                                     child: Container(
                                       color: AppColors.accent,
                                     ),

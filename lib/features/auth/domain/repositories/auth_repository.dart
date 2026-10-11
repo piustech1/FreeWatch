@@ -91,4 +91,68 @@ class AuthRepository {
     }
     return null;
   }
+
+  /// Persist user favorites to FreeWatch RTDB
+  Future<void> saveUserFavorites(String uid, List<Map<String, dynamic>> favoritesJson) async {
+    try {
+      await _database.ref('users/$uid/favorites').set(favoritesJson).timeout(
+        const Duration(seconds: 4),
+        onTimeout: () => debugPrint('RTDB save favorites timed out, continuing in background'),
+      );
+    } catch (e) {
+      debugPrint('Failed to save favorites to RTDB: $e');
+    }
+  }
+
+  /// Retrieve user favorites from FreeWatch RTDB
+  Future<List<Map<String, dynamic>>> getUserFavorites(String uid) async {
+    try {
+      final snapshot = await _database
+          .ref('users/$uid/favorites')
+          .get()
+          .timeout(const Duration(seconds: 4));
+      if (snapshot.exists && snapshot.value is List) {
+        final list = snapshot.value as List;
+        return list
+            .whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList();
+      }
+    } catch (e) {
+      debugPrint('Failed to read favorites from RTDB: $e');
+    }
+    return [];
+  }
+
+  /// Persist user watch history to FreeWatch RTDB
+  Future<void> saveUserWatchHistory(String uid, List<Map<String, dynamic>> historyJson) async {
+    try {
+      await _database.ref('users/$uid/watch_history').set(historyJson).timeout(
+        const Duration(seconds: 4),
+        onTimeout: () => debugPrint('RTDB save watch history timed out, continuing in background'),
+      );
+    } catch (e) {
+      debugPrint('Failed to save watch history to RTDB: $e');
+    }
+  }
+
+  /// Retrieve user watch history from FreeWatch RTDB
+  Future<List<Map<String, dynamic>>> getUserWatchHistory(String uid) async {
+    try {
+      final snapshot = await _database
+          .ref('users/$uid/watch_history')
+          .get()
+          .timeout(const Duration(seconds: 4));
+      if (snapshot.exists && snapshot.value is List) {
+        final list = snapshot.value as List;
+        return list
+            .whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList();
+      }
+    } catch (e) {
+      debugPrint('Failed to read watch history from RTDB: $e');
+    }
+    return [];
+  }
 }

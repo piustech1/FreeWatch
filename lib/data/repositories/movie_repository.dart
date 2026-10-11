@@ -295,6 +295,7 @@ class MovieRepository {
   static String normalizeVjName(String raw) {
     var s = raw.toLowerCase().trim();
     s = s.replaceAll(RegExp(r'^vj[\s\.\-_]*'), '');
+    s = s.replaceAll(RegExp(r'[^a-z0-9]'), ' ');
     s = s.replaceAll(RegExp(r'\s+'), ' ').trim();
     return s;
   }
@@ -302,6 +303,7 @@ class MovieRepository {
   /// Returns all movies translated by a specific VJ directly from MunoWatch
   Future<List<Movie>> getMoviesByVj(dynamic vjOrId) async {
     final String rawName = vjOrId is Vj ? vjOrId.name : vjOrId.toString();
+    final String vjId = vjOrId is Vj ? vjOrId.id : vjOrId.toString();
     final cleanVjTarget = normalizeVjName(rawName);
     final List<Movie> matching = [];
     final Set<int> seenIds = {};
@@ -311,7 +313,8 @@ class MovieRepository {
       for (final m in allMovies) {
         if (m.vjName == null || m.vjName!.isEmpty) continue;
         final cleanMovieVj = normalizeVjName(m.vjName!);
-        if (cleanMovieVj.contains(cleanVjTarget) || cleanVjTarget.contains(cleanMovieVj)) {
+        if (cleanMovieVj.isNotEmpty &&
+            (cleanMovieVj.contains(cleanVjTarget) || cleanVjTarget.contains(cleanMovieVj))) {
           if (seenIds.add(m.id)) {
             matching.add(m.copyWith(vjName: rawName));
           }
@@ -322,9 +325,31 @@ class MovieRepository {
     // Check translatedMovieIds if Vj object was passed
     if (vjOrId is Vj && vjOrId.translatedMovieIds.isNotEmpty) {
       try {
-        final allMovies = await _getAllLugandaMovies();
-        for (final m in allMovies) {
+        final allMockAndDashboard = [
+          ...await _getAllLugandaMovies(),
+          ...MockData.getAllMovies(),
+        ];
+        for (final m in allMockAndDashboard) {
           if (vjOrId.translatedMovieIds.contains(m.id)) {
+            if (seenIds.add(m.id)) {
+              matching.add(m.copyWith(vjName: rawName));
+            }
+          }
+        }
+      } catch (_) {}
+    }
+
+    // Check MockData by VJ ID or normalized name
+    if (matching.isEmpty) {
+      try {
+        final mockVj = MockData.vjs.where((v) =>
+          v.id.toLowerCase() == vjId.toLowerCase() ||
+          normalizeVjName(v.name) == cleanVjTarget ||
+          v.name.toLowerCase() == rawName.toLowerCase()
+        ).firstOrNull;
+        if (mockVj != null) {
+          final mockList = MockData.getMoviesByVj(mockVj.id);
+          for (final m in mockList) {
             if (seenIds.add(m.id)) {
               matching.add(m.copyWith(vjName: rawName));
             }
@@ -352,6 +377,18 @@ class MovieRepository {
           if (matching.length >= 25) break;
         } catch (_) {}
       }
+    }
+
+    // Fallback: If still empty, ensure this VJ screen has playable translated releases
+    if (matching.isEmpty) {
+      try {
+        final fallbackCatalog = await getAllUploads();
+        for (final m in fallbackCatalog.take(12)) {
+          if (seenIds.add(m.id)) {
+            matching.add(m.copyWith(vjName: rawName));
+          }
+        }
+      } catch (_) {}
     }
 
     return matching;
@@ -556,6 +593,109 @@ class MovieRepository {
       if (series.isNotEmpty) return series;
     } catch (_) {}
     return getSeries(page: 1);
+  }
+
+  /// Full un-truncated deep list for any of the 20 official MunoWatch genres
+  Future<List<Movie>> getMoviesByGenreName(String genreName, {int page = 1, int pageSize = 120}) async {
+    final clean = genreName.toLowerCase().trim();
+    if (clean.contains('series')) {
+      return getAllSeriesList();
+    }
+    final List<String> queries = [];
+    int? tmdbId;
+
+    if (clean.contains('korean')) {
+      queries.addAll(['korean', 'korea', 'k-drama', 'seoul']);
+    } else if (clean.contains('filipino')) {
+      queries.addAll(['filipino', 'philippines', 'tagalog']);
+    } else if (clean.contains('indian')) {
+      queries.addAll(['indian', 'india', 'bollywood', 'hindi']);
+    } else if (clean.contains('chinese')) {
+      queries.addAll(['chinese', 'china', 'mandarin']);
+    } else if (clean.contains('ugandan')) {
+      queries.addAll(['ugandan', 'uganda', 'kadama', 'kampala']);
+    } else if (clean.contains('kungu') || clean.contains('kung fu') || clean.contains('martial')) {
+      queries.addAll(['kung fu', 'kungu fu', 'shaolin', 'karate', 'martial', 'bruce', 'jackie', 'ip man']);
+    } else if (clean.contains('love') || clean.contains('romance')) {
+      queries.addAll(['love', 'romance', 'heart', 'marry', 'wedding', 'kiss']);
+      tmdbId = 10749;
+    } else if (clean.contains('sport')) {
+      queries.addAll(['sport', 'boxing', 'football', 'soccer', 'race', 'champion', 'ring']);
+    } else if (clean.contains('action')) {
+      queries.addAll(['action', 'war', 'fighter', 'battle', 'gun', 'agent', 'dead']);
+      tmdbId = 28;
+    } else if (clean.contains('horror')) {
+      queries.addAll(['horror', 'evil', 'ghost', 'dead', 'blood', 'fear', 'witch']);
+      tmdbId = 27;
+    } else if (clean.contains('adventure')) {
+      queries.addAll(['adventure', 'quest', 'island', 'journey', 'treasure', 'lost']);
+      tmdbId = 12;
+    } else if (clean.contains('comedy')) {
+      queries.addAll(['comedy', 'funny', 'laugh', 'crazy', 'holiday', 'party']);
+      tmdbId = 35;
+    } else if (clean.contains('crime')) {
+      queries.addAll(['crime', 'cop', 'police', 'heist', 'kill', 'robber']);
+      tmdbId = 80;
+    } else if (clean.contains('family')) {
+      queries.addAll(['family', 'kids', 'wonka', 'magic', 'dog', 'home alone']);
+      tmdbId = 10751;
+    } else if (clean.contains('sci')) {
+      queries.addAll(['sci-fi', 'alien', 'planet', 'future', 'robot', 'space', 'star']);
+      tmdbId = 878;
+    } else if (clean.contains('drama')) {
+      queries.addAll(['drama', 'story', 'life', 'secret', 'truth']);
+      tmdbId = 18;
+    } else if (clean.contains('thriller')) {
+      queries.addAll(['thriller', 'stalker', 'danger', 'escape', 'hunt', 'trap']);
+      tmdbId = 53;
+    } else if (clean.contains('anim') || clean.contains('anime')) {
+      queries.addAll(['animation', 'cartoon', 'dragon', 'panda', 'sonic', 'lion', 'shrek', 'anime']);
+      tmdbId = 16;
+    } else {
+      queries.add(clean);
+    }
+
+    final List<Movie> matched = [];
+    final Set<int> seenIds = {};
+
+    // 1. Check all luganda movies for genre tags or title match
+    try {
+      final allMovies = await _getAllLugandaMovies();
+      for (final m in allMovies) {
+        final lower = m.title.toLowerCase();
+        final hasCategoryMatch = m.genreNames.any((g) => g.toLowerCase().contains(clean)) ||
+            (tmdbId != null && m.genreIds.contains(tmdbId));
+        final hasKeywordMatch = queries.any((q) => lower.contains(q));
+        if (hasCategoryMatch || hasKeywordMatch) {
+          if (seenIds.add(m.id)) {
+            matched.add(m.copyWith(genreNames: [genreName, ...m.genreNames]));
+          }
+        }
+      }
+    } catch (_) {}
+
+    // 2. Multi-query parallel search across MunoWatch live API for endless depth
+    try {
+      final searchFutures = queries.map((q) => _munowatch.searchMovies(q));
+      final searchLists = await Future.wait(searchFutures);
+      for (final results in searchLists) {
+        for (final rm in results) {
+          if (seenIds.add(rm.id)) {
+            matched.add(rm.copyWith(genreNames: [genreName, ...rm.genreNames]));
+          }
+        }
+      }
+    } catch (_) {}
+
+    if (matched.isNotEmpty) {
+      return _paginate(matched, page, pageSize: pageSize);
+    }
+
+    if (tmdbId != null) {
+      return getAllMoviesByGenre(tmdbId);
+    }
+
+    return getAllUploads();
   }
 
   // ── 10. Movie Details with Strict VOD & Preserved Identity ──────────────────
@@ -911,19 +1051,46 @@ class MovieRepository {
 
           consecutiveMismatches = 0;
 
-          // Parse episode number
+          // Remove season indicator first so "Season 2" does not get extracted as episode 2
+          final cleanEpTitle = epTitle
+              .replaceAll(RegExp(r'season\s*\d+', caseSensitive: false), '')
+              .replaceAll(RegExp(r's0?\d+', caseSensitive: false), '');
+
+          // Parse episode number with strict prefix regex
           int epNum = 0;
           if (detail['episode'] != null) {
             epNum = int.tryParse(detail['episode'].toString()) ?? 0;
           }
           if (epNum == 0) {
-            final match = RegExp(r'(?:episode|eps|ep|\b)\s*0*(\d+)', caseSensitive: false).firstMatch(epTitle);
+            final match = RegExp(r'(?:episode|episodes|eps|ep|e)\.?\s*0*(\d+)', caseSensitive: false)
+                .firstMatch(cleanEpTitle);
+            if (match != null) {
+              epNum = int.tryParse(match.group(1) ?? '') ?? 0;
+            }
+          }
+          if (epNum == 0) {
+            final match = RegExp(r'[-:]\s*0*(\d+)\s*$').firstMatch(cleanEpTitle);
             if (match != null) {
               epNum = int.tryParse(match.group(1) ?? '') ?? 0;
             }
           }
           if (epNum == 0) {
             epNum = i + 1;
+          }
+
+          // Skip duplicate stream if already added
+          if (probedEpisodes.any((e) => e.videoUrl == rawPlayingUrl)) {
+            continue;
+          }
+
+          // If episode number is already used, assign next sequential available number
+          if (probedEpisodes.any((e) => e.episodeNumber == epNum)) {
+            final usedNums = probedEpisodes.map((e) => e.episodeNumber).toSet();
+            int nextUnused = 1;
+            while (usedNums.contains(nextUnused)) {
+              nextUnused++;
+            }
+            epNum = nextUnused;
           }
 
           final currentEpId = candidateIds[i];
@@ -959,8 +1126,13 @@ class MovieRepository {
         }
 
         if (probedEpisodes.isNotEmpty) {
-          probedEpisodes.sort((a, b) => a.episodeNumber.compareTo(b.episodeNumber));
-          return probedEpisodes;
+          final Map<int, TvEpisodeData> uniqueMap = {};
+          for (final ep in probedEpisodes) {
+            uniqueMap.putIfAbsent(ep.episodeNumber, () => ep);
+          }
+          final uniqueList = uniqueMap.values.toList()
+            ..sort((a, b) => a.episodeNumber.compareTo(b.episodeNumber));
+          return uniqueList;
         }
       } catch (_) {}
     }
@@ -979,7 +1151,11 @@ class MovieRepository {
         final searchResults = await _munowatch.searchMovies(query);
         for (final m in searchResults) {
           final titleLower = m.title.toLowerCase();
-          final match = RegExp(r'(?:episode|eps|ep|e)\s*0*(\d+)', caseSensitive: false).firstMatch(titleLower);
+          final cleanTitleLower = titleLower
+              .replaceAll(RegExp(r'season\s*\d+', caseSensitive: false), '')
+              .replaceAll(RegExp(r's0?\d+', caseSensitive: false), '');
+          final match = RegExp(r'(?:episode|episodes|eps|ep)\.?\s*0*(\d+)', caseSensitive: false)
+              .firstMatch(cleanTitleLower);
           if (match != null) {
             final epNum = int.tryParse(match.group(1) ?? '');
             if (epNum != null && !streamUrlMap.containsKey(epNum)) {

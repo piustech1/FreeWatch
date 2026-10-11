@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../data/mock/mock_movies.dart';
 import '../../../../data/models/vj.dart';
 import '../../../../shared/widgets/free_watch_top_app_bar.dart';
 import '../../../movie_grid/presentation/screens/movie_grid_screen.dart';
@@ -22,6 +23,13 @@ class AllVjsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentNavIndex = ref.watch(bottomNavIndexProvider);
+    final dynamicVjs = ref.watch(vjsWithCountsProvider).valueOrNull;
+    final sourceVjs = vjs.isNotEmpty ? vjs : (dynamicVjs ?? MockData.vjs);
+    final displayVjs = vjs.isNotEmpty
+        ? vjs
+        : sourceVjs
+            .where((v) => v.movieCount > 0 || v.translatedMovieIds.isNotEmpty)
+            .toList();
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -109,7 +117,7 @@ class AllVjsScreen extends ConsumerWidget {
                           ),
                         ),
                         child: Text(
-                          '${vjs.length} VJs',
+                          '${displayVjs.length} VJs',
                           style: const TextStyle(
                             color: Color(0xFFC084FC),
                             fontSize: 12,
@@ -132,10 +140,10 @@ class AllVjsScreen extends ConsumerWidget {
                   child: ListView.separated(
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
                     physics: const BouncingScrollPhysics(),
-                    itemCount: vjs.length,
+                    itemCount: displayVjs.length,
                     separatorBuilder: (_, __) => const SizedBox(height: 14),
                     itemBuilder: (context, index) {
-                      final vj = vjs[index];
+                      final vj = displayVjs[index];
                       return LayoutBuilder(
                         builder: (context, constraints) {
                           return VjCard(

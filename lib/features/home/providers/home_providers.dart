@@ -132,27 +132,6 @@ final relatedMoviesProvider = FutureProvider.family<List<Movie>, Movie>((ref, mo
 /// Comprehensive full-collection provider for 'See All' category screens
 final categoryFullMoviesProvider = FutureProvider.family<List<Movie>, String>((ref, title) async {
   final repo = ref.watch(movieRepositoryProvider);
-  final lower = title.toLowerCase();
-
-  if (lower.contains('series')) {
-    return repo.getAllSeriesList();
-  } else if (lower.contains('action')) {
-    return repo.getAllMoviesByGenre(28);
-  } else if (lower.contains('sci-fi')) {
-    return repo.getAllMoviesByGenre(878);
-  } else if (lower.contains('romance')) {
-    return repo.getAllMoviesByGenre(10749);
-  } else if (lower.contains('horror')) {
-    return repo.getAllMoviesByGenre(27);
-  } else if (lower.contains('drama')) {
-    return repo.getAllMoviesByGenre(18);
-  } else if (lower.contains('animation')) {
-    return repo.getAllMoviesByGenre(16);
-  } else if (lower.contains('family')) {
-    return repo.getAllMoviesByGenre(10751);
-  } else {
-    // "Latest on FreeWatch", "Trending", "New Releases", etc.
-    return repo.getAllUploads();
-  }
+  return repo.getMoviesByGenreName(title);
 });
 

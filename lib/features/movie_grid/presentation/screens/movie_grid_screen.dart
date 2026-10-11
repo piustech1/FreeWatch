@@ -69,11 +69,12 @@ class MovieGridScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentNavIndex = ref.watch(bottomNavIndexProvider);
-    final displayMovies = vj != null
-        ? (ref.watch(vjMoviesObjProvider(vj!)).valueOrNull ??
-            ref.watch(vjMoviesProvider(vj!.id)).valueOrNull ??
-            movies)
-        : (ref.watch(categoryFullMoviesProvider(title)).valueOrNull ?? movies);
+    final moviesAsync = vj != null
+        ? ref.watch(vjMoviesObjProvider(vj!))
+        : ref.watch(categoryFullMoviesProvider(title));
+
+    final bool isLoading = moviesAsync.isLoading && movies.isEmpty;
+    final displayMovies = moviesAsync.valueOrNull ?? (movies.isNotEmpty ? movies : <Movie>[]);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -184,7 +185,7 @@ class MovieGridScreen extends ConsumerWidget {
                                 ),
                               ),
                               child: Text(
-                                '${displayMovies.length}',
+                                isLoading ? '...' : '${displayMovies.length}',
                                 style: TextStyle(
                                   color: Colors.white.withOpacity(0.70),
                                   fontSize: 11,
@@ -203,27 +204,29 @@ class MovieGridScreen extends ConsumerWidget {
 
                 // ── 3-Column Movie Grid ───────────────────────────────────────
                 Expanded(
-                  child: displayMovies.isEmpty
-                      ? _buildEmptyState(context)
-                      : GridView.builder(
-                          physics: const BouncingScrollPhysics(),
-                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
-                          gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 3,
-                            childAspectRatio: 0.52,
-                            crossAxisSpacing: 10,
-                            mainAxisSpacing: 16,
-                          ),
-                          itemCount: displayMovies.length,
-                          itemBuilder: (context, index) {
-                            final movie = displayMovies[index];
-                            final vjName = vj?.name ??
-                                movie.vjName ??
-                                _resolveVjNameForMovie(movie, index);
-                            return _buildMovieCard(context, movie, vjName);
-                          },
-                        ),
+                  child: isLoading
+                      ? _buildShimmerGrid()
+                      : (displayMovies.isEmpty
+                          ? _buildEmptyState(context)
+                          : GridView.builder(
+                              physics: const BouncingScrollPhysics(),
+                              padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
+                              gridDelegate:
+                                  const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 3,
+                                childAspectRatio: 0.52,
+                                crossAxisSpacing: 10,
+                                mainAxisSpacing: 16,
+                              ),
+                              itemCount: displayMovies.length,
+                              itemBuilder: (context, index) {
+                                final movie = displayMovies[index];
+                                final vjName = vj?.name ??
+                                    movie.vjName ??
+                                    _resolveVjNameForMovie(movie, index);
+                                return _buildMovieCard(context, movie, vjName);
+                              },
+                            )),
                 ),
               ],
             ),
@@ -512,6 +515,30 @@ class MovieGridScreen extends ConsumerWidget {
       return movie.vjName!;
     }
     return 'VJ JUNIOR';
+  }
+
+  Widget _buildShimmerGrid() {
+    return GridView.builder(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        childAspectRatio: 0.52,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 16,
+      ),
+      itemCount: 9,
+      itemBuilder: (_, __) => Shimmer.fromColors(
+        baseColor: const Color(0xFF161822),
+        highlightColor: const Color(0xFF232736),
+        child: Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFF161822),
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildEmptyState(BuildContext context) {

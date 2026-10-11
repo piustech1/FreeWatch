@@ -23,6 +23,7 @@ import '../../../movie_grid/presentation/screens/movie_grid_screen.dart';
 import '../../../notifications/presentation/screens/notifications_screen.dart';
 import '../../../profile/presentation/providers/watch_history_provider.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../../../../shared/widgets/app_toast.dart';
 import '../providers/movie_detail_providers.dart';
 
@@ -723,10 +724,12 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
     final isDownloaded = ref.watch(downloadsProvider.notifier).isDownloaded(movie.id);
 
     final bool isCurrentlyPlaying = _isPlayingVideo && _videoPlayerController?.value.isPlaying == true;
+    final savedHistory = ref.watch(watchHistoryProvider).where((m) => m.id == movie.id).firstOrNull;
+    final double? effectiveProgress = widget.resumeProgress ?? savedHistory?.resumeProgress;
     final String playLabel = _isPlayingVideo
         ? (isCurrentlyPlaying ? 'PAUSE' : 'PLAY')
-        : (widget.resumeProgress != null
-            ? 'RESUME (${(widget.resumeProgress! * 100).toInt()}%)'
+        : (effectiveProgress != null && effectiveProgress > 0.01
+            ? 'RESUME (${(effectiveProgress * 100).toInt()}%)'
             : (isSeries ? 'RESUME' : 'PLAY'));
 
     return Row(
@@ -1031,6 +1034,16 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
       children: [
         episodesAsync.when(
           data: (episodes) {
+            final Map<int, TvEpisodeData> uniqueMap = {};
+            for (final ep in episodes) {
+              if (!uniqueMap.containsKey(ep.episodeNumber) &&
+                  !uniqueMap.values.any((e) => e.videoUrl == ep.videoUrl && ep.videoUrl != null && ep.videoUrl!.isNotEmpty)) {
+                uniqueMap[ep.episodeNumber] = ep;
+              }
+            }
+            final dedupedEpisodes = uniqueMap.values.toList()
+              ..sort((a, b) => a.episodeNumber.compareTo(b.episodeNumber));
+
             return Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -1043,30 +1056,33 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                     letterSpacing: 0.5,
                   ),
                 ),
-                if (episodes.isNotEmpty)
+                if (dedupedEpisodes.isNotEmpty)
                   GestureDetector(
-                    onTap: () => _playNextEpisode(episodes, assignedVj),
+                    onTap: () => _playNextEpisode(dedupedEpisodes, assignedVj),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFC084FC).withOpacity(0.18),
+                        color: const Color(0xFF22C55E),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: const Color(0xFFC084FC).withOpacity(0.50),
-                          width: 0.8,
-                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF22C55E).withOpacity(0.35),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.skip_next_rounded, color: Color(0xFFC084FC), size: 16),
+                          Icon(Icons.skip_next_rounded, color: Colors.white, size: 16),
                           SizedBox(width: 4),
                           Text(
                             'Next Episode',
                             style: TextStyle(
-                              color: Color(0xFFC084FC),
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         ],
@@ -1100,7 +1116,17 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
           height: 178,
           child: episodesAsync.when(
             data: (episodes) {
-              if (episodes.isEmpty) {
+              final Map<int, TvEpisodeData> uniqueMap = {};
+              for (final ep in episodes) {
+                if (!uniqueMap.containsKey(ep.episodeNumber) &&
+                    !uniqueMap.values.any((e) => e.videoUrl == ep.videoUrl && ep.videoUrl != null && ep.videoUrl!.isNotEmpty)) {
+                  uniqueMap[ep.episodeNumber] = ep;
+                }
+              }
+              final dedupedEpisodes = uniqueMap.values.toList()
+                ..sort((a, b) => a.episodeNumber.compareTo(b.episodeNumber));
+
+              if (dedupedEpisodes.isEmpty) {
                 return Center(
                   child: Text(
                     'No episodes available for Season $_selectedSeason',
@@ -1114,10 +1140,10 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
               return ListView.separated(
                 scrollDirection: Axis.horizontal,
                 physics: const BouncingScrollPhysics(),
-                itemCount: episodes.length,
+                itemCount: dedupedEpisodes.length,
                 separatorBuilder: (_, __) => const SizedBox(width: 14),
                 itemBuilder: (context, index) {
-                  final ep = episodes[index];
+                  final ep = dedupedEpisodes[index];
                   final String? epImageUrl = ep.stillUrl ?? backdropUrl;
                   final bool isPlayingThis = _isPlayingVideo && (_currentPlayingEpisodeNumber == ep.episodeNumber);
 
@@ -1407,6 +1433,19 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
       await notifPlugin
           .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
           ?.requestNotificationsPermission();
+    } catch (_) {}
+
+    // Request Android storage & video media permissions
+    try {
+      if (Platform.isAndroid) {
+        final videoStatus = await Permission.videos.status;
+        if (!videoStatus.isGranted) {
+          final res = await Permission.videos.request();
+          if (!res.isGranted) {
+            await Permission.storage.request();
+          }
+        }
+      }
     } catch (_) {}
 
     final downloadsNotifier = ref.read(downloadsProvider.notifier);
@@ -2225,10 +2264,23 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
         _isInitializingVideo = false;
         _isPlayingVideo = true;
       });
-      if (!isEpisodeSwitch && widget.resumeProgress != null && widget.resumeProgress! > 0) {
-        final totalMs = controller.value.duration.inMilliseconds;
-        final seekMs = (totalMs * widget.resumeProgress!).round();
-        controller.seekTo(Duration(milliseconds: seekMs));
+      if (!isEpisodeSwitch) {
+        double? effProgress = widget.resumeProgress;
+        int? effSeconds;
+        if (effProgress == null || effProgress <= 0) {
+          final hist = ref.read(watchHistoryProvider).where((m) => m.id == widget.movie.id).firstOrNull;
+          if (hist != null) {
+            effProgress = hist.resumeProgress;
+            effSeconds = hist.resumePositionSeconds;
+          }
+        }
+        if (effSeconds != null && effSeconds > 0) {
+          controller.seekTo(Duration(seconds: effSeconds));
+        } else if (effProgress != null && effProgress > 0) {
+          final totalMs = controller.value.duration.inMilliseconds;
+          final seekMs = (totalMs * effProgress).round();
+          controller.seekTo(Duration(milliseconds: seekMs));
+        }
       }
       controller.play();
     }).catchError((error) {
