@@ -1,6 +1,7 @@
 import '../../core/constants/api_constants.dart';
 import '../datasources/tmdb_datasource.dart';
 import '../datasources/moviemax_datasource.dart';
+import '../datasources/munowatch_datasource.dart';
 import '../models/movie.dart';
 import '../models/genre.dart';
 import '../models/movie_details_data.dart';
@@ -8,31 +9,67 @@ import '../models/vj.dart';
 import '../mock/mock_movies.dart';
 
 /// Unified MovieRepository with Hybrid Gap-Filling Architecture:
-/// - Primary: MovieMax Realtime Database (1,531+ movies & 131+ series with direct Cloudflare R2 streaming URLs)
+/// - Primary: Live MunoWatch API (13+ categories with live search) + MovieMax RTDB (1,531+ movies)
 /// - Enrichment & Gap-Filler: TMDB official API (cast, certifications, logos, official 1280 backdrops)
 /// - Offline Resilience: MockData guaranteed fallback
 class MovieRepository {
   final TmdbDatasource _datasource;
   final MovieMaxDatasource _movieMax;
+  final MunowatchDatasource _munowatch;
 
   MovieRepository({
     TmdbDatasource? datasource,
     MovieMaxDatasource? movieMaxDatasource,
+    MunowatchDatasource? munowatchDatasource,
   })  : _datasource = datasource ?? TmdbDatasource(),
-        _movieMax = movieMaxDatasource ?? MovieMaxDatasource();
+        _movieMax = movieMaxDatasource ?? MovieMaxDatasource(),
+        _munowatch = munowatchDatasource ?? MunowatchDatasource();
 
   bool get _hasCustomApiKey =>
       ApiConstants.tmdbApiKey != 'YOUR_TMDB_API_KEY' &&
       ApiConstants.tmdbApiKey.trim().isNotEmpty;
 
+  /// Combined catalog merging live MunoWatch releases across all 13 categories
+  /// with MovieMax RTDB records, deduplicating by normalized title.
+  Future<List<Movie>> _getAllLugandaMovies({bool forceRefresh = false}) async {
+    final List<Movie> results = [];
+    final Set<String> seenTitles = {};
+
+    // 1. Live MunoWatch movies (13 categories)
+    try {
+      final munoList = await _munowatch.getAllMovies(forceRefresh: forceRefresh);
+      for (final m in munoList) {
+        final norm = m.title.toLowerCase().trim();
+        if (norm.isNotEmpty && !seenTitles.contains(norm)) {
+          seenTitles.add(norm);
+          results.add(m);
+        }
+      }
+    } catch (_) {}
+
+    // 2. MovieMax RTDB movies (1,531+ movies)
+    try {
+      final movieMaxList = await _movieMax.getAllMovies(forceRefresh: forceRefresh);
+      for (final m in movieMaxList) {
+        final norm = m.title.toLowerCase().trim();
+        if (norm.isNotEmpty && !seenTitles.contains(norm)) {
+          seenTitles.add(norm);
+          results.add(m);
+        }
+      }
+    } catch (_) {}
+
+    return results;
+  }
+
   // ── 1. Trending Movies ──────────────────────────────────────────────────────
   Future<List<Movie>> getTrending({int page = 1}) async {
     try {
-      final rtdbMovies = await _movieMax.getAllMovies();
-      if (rtdbMovies.isNotEmpty) {
+      final all = await _getAllLugandaMovies();
+      if (all.isNotEmpty) {
         // Return movies sorted by rating and popularity
-        final list = List<Movie>.from(rtdbMovies);
-        list.sort((a, b) => b.voteAverage.compareTo(a.voteAverage));
+        final list = List<Movie>.from(all)
+          ..sort((a, b) => b.voteAverage.compareTo(a.voteAverage));
         return _paginate(list, page, pageSize: 25);
       }
     } catch (_) {}
@@ -50,9 +87,9 @@ class MovieRepository {
   // ── 2. Popular Movies ───────────────────────────────────────────────────────
   Future<List<Movie>> getPopular({int page = 1}) async {
     try {
-      final rtdbMovies = await _movieMax.getAllMovies();
-      if (rtdbMovies.isNotEmpty) {
-        return _paginate(rtdbMovies, page, pageSize: 25);
+      final all = await _getAllLugandaMovies();
+      if (all.isNotEmpty) {
+        return _paginate(all, page, pageSize: 25);
       }
     } catch (_) {}
 
@@ -69,9 +106,9 @@ class MovieRepository {
   // ── 3. Top Rated Movies ─────────────────────────────────────────────────────
   Future<List<Movie>> getTopRated({int page = 1}) async {
     try {
-      final rtdbMovies = await _movieMax.getAllMovies();
-      if (rtdbMovies.isNotEmpty) {
-        final list = List<Movie>.from(rtdbMovies)
+      final all = await _getAllLugandaMovies();
+      if (all.isNotEmpty) {
+        final list = List<Movie>.from(all)
           ..sort((a, b) => b.voteAverage.compareTo(a.voteAverage));
         return _paginate(list, page, pageSize: 25);
       }
@@ -90,10 +127,10 @@ class MovieRepository {
   // ── 4. Now Playing / Latest Uploads ─────────────────────────────────────────
   Future<List<Movie>> getNowPlaying({int page = 1}) async {
     try {
-      final rtdbMovies = await _movieMax.getAllMovies();
-      if (rtdbMovies.isNotEmpty) {
-        // Reverse order represents the latest additions to MovieMax
-        final list = List<Movie>.from(rtdbMovies.reversed);
+      final all = await _getAllLugandaMovies();
+      if (all.isNotEmpty) {
+        // Reverse order represents the latest additions
+        final list = List<Movie>.from(all.reversed);
         return _paginate(list, page, pageSize: 25);
       }
     } catch (_) {}
@@ -111,9 +148,9 @@ class MovieRepository {
   // ── 5. Upcoming Movies ──────────────────────────────────────────────────────
   Future<List<Movie>> getUpcoming({int page = 1}) async {
     try {
-      final rtdbMovies = await _movieMax.getAllMovies();
-      if (rtdbMovies.isNotEmpty) {
-        return _paginate(rtdbMovies, page, pageSize: 25);
+      final all = await _getAllLugandaMovies();
+      if (all.isNotEmpty) {
+        return _paginate(all, page, pageSize: 25);
       }
     } catch (_) {}
 
@@ -151,7 +188,7 @@ class MovieRepository {
     final genreName = _mapGenreIdToName(genreId);
 
     try {
-      final allMovies = await _movieMax.getAllMovies();
+      final allMovies = await _getAllLugandaMovies();
       if (allMovies.isNotEmpty) {
         final matched = allMovies.where((m) {
           final hasId = m.genreIds.contains(genreId);
@@ -179,33 +216,77 @@ class MovieRepository {
         .toList();
   }
 
-  // ── 8. Search Movies across MovieMax and TMDB ────────────────────────────────
+  // ── 8. Search Movies across Live MunoWatch, MovieMax, and TMDB ─────────────
   Future<List<Movie>> searchMovies(String query, {int page = 1}) async {
     final cleanQuery = query.toLowerCase().trim();
     if (cleanQuery.isEmpty) return [];
 
+    final List<Movie> combinedResults = [];
+    final Set<String> seenTitles = {};
+
+    // 1. Live MunoWatch API backend search
     try {
-      final allMovies = await _movieMax.getAllMovies();
-      final allSeries = await _movieMax.getAllSeries();
-      final combined = [...allMovies, ...allSeries];
-
-      final results = combined.where((m) {
-        final titleMatch = m.title.toLowerCase().contains(cleanQuery);
-        final overviewMatch = m.overview != null && m.overview!.toLowerCase().contains(cleanQuery);
-        final vjMatch = m.vjName != null && m.vjName!.toLowerCase().contains(cleanQuery);
-        return titleMatch || overviewMatch || vjMatch;
-      }).toList();
-
-      if (results.isNotEmpty) {
-        return _paginate(results, page, pageSize: 30);
+      final munoSearchResults = await _munowatch.searchMovies(cleanQuery);
+      for (final m in munoSearchResults) {
+        final norm = m.title.toLowerCase().trim();
+        if (norm.isNotEmpty && !seenTitles.contains(norm)) {
+          seenTitles.add(norm);
+          combinedResults.add(m);
+        }
       }
     } catch (_) {}
 
-    if (_hasCustomApiKey) {
+    // 2. Local pool matching across all Luganda movies and series
+    try {
+      final allMovies = await _getAllLugandaMovies();
+      final allSeries = await _movieMax.getAllSeries();
+      final pool = [...allMovies, ...allSeries];
+
+      final qTokens = cleanQuery
+          .replaceAll(RegExp(r'[^a-zA-Z0-9\s]'), ' ')
+          .toLowerCase()
+          .split(RegExp(r'\s+'))
+          .where((t) => t.isNotEmpty)
+          .toList();
+
+      final localMatches = pool.where((m) {
+        final title = m.title.toLowerCase();
+        final overview = (m.overview ?? '').toLowerCase();
+        final vj = (m.vjName ?? '').toLowerCase();
+        final combined = '$title $overview $vj';
+
+        if (combined.contains(cleanQuery)) return true;
+        if (qTokens.isNotEmpty && qTokens.every((t) => combined.contains(t))) {
+          return true;
+        }
+        return false;
+      });
+
+      for (final m in localMatches) {
+        final norm = m.title.toLowerCase().trim();
+        if (norm.isNotEmpty && !seenTitles.contains(norm)) {
+          seenTitles.add(norm);
+          combinedResults.add(m);
+        }
+      }
+    } catch (_) {}
+
+    // 3. TMDB fallback search if pool has few results
+    if (_hasCustomApiKey && combinedResults.length < 10) {
       try {
-        final list = await _datasource.searchMovies(cleanQuery, page: page);
-        if (list.isNotEmpty) return list;
+        final tmdbList = await _datasource.searchMovies(cleanQuery, page: page);
+        for (final m in tmdbList) {
+          final norm = m.title.toLowerCase().trim();
+          if (norm.isNotEmpty && !seenTitles.contains(norm)) {
+            seenTitles.add(norm);
+            combinedResults.add(m);
+          }
+        }
       } catch (_) {}
+    }
+
+    if (combinedResults.isNotEmpty) {
+      return _paginate(combinedResults, page, pageSize: 30);
     }
 
     return MockData.popularMovies
@@ -226,7 +307,7 @@ class MovieRepository {
         .trim();
   }
 
-  // ── 9. Dedicated VJ Movie Filtering with Strict Real RTDB Match ─────────────
+  // ── 9. Dedicated VJ Movie Filtering with Strict Real Match ─────────────────
   Future<List<Movie>> getMoviesByVj(dynamic vjOrId) async {
     Vj vj;
     if (vjOrId is Vj) {
@@ -241,7 +322,7 @@ class MovieRepository {
     final Set<int> seenIds = {};
 
     try {
-      final allMovies = await _movieMax.getAllMovies();
+      final allMovies = await _getAllLugandaMovies();
       final allSeries = await _movieMax.getAllSeries();
       final pool = [...allMovies, ...allSeries];
 
@@ -264,10 +345,10 @@ class MovieRepository {
     return mockVjMovies.map((m) => m.copyWith(vjName: vj.name)).toList();
   }
 
-  /// Calculates real dynamic movie counts for all VJs directly from RTDB records
+  /// Calculates real dynamic movie counts for all VJs directly from merged records
   Future<List<Vj>> getVjsWithRealCounts() async {
     try {
-      final allMovies = await _movieMax.getAllMovies();
+      final allMovies = await _getAllLugandaMovies();
       final allSeries = await _movieMax.getAllSeries();
       final pool = [...allMovies, ...allSeries];
 
@@ -289,10 +370,10 @@ class MovieRepository {
     }
   }
 
-  /// Sourced strictly from real RTDB database: finds real streamable related movies
+  /// Sourced strictly from real records: finds real streamable related movies
   Future<List<Movie>> getRelatedMovies(Movie movie) async {
     try {
-      final all = await _movieMax.getAllMovies();
+      final all = await _getAllLugandaMovies();
       final allSeries = await _movieMax.getAllSeries();
       final pool = [...all, ...allSeries];
 
@@ -351,8 +432,8 @@ class MovieRepository {
   /// Full un-truncated list for 'See All' category pages
   Future<List<Movie>> getAllMoviesByGenre(int genreId) async {
     try {
-      final rtdbMovies = await _movieMax.getAllMovies();
-      final filtered = rtdbMovies.where((m) => m.genreIds.contains(genreId)).toList();
+      final allMovies = await _getAllLugandaMovies();
+      final filtered = allMovies.where((m) => m.genreIds.contains(genreId)).toList();
       if (filtered.isNotEmpty) return filtered;
     } catch (_) {}
     return getMoviesByGenre(genreId, page: 1);
@@ -361,8 +442,8 @@ class MovieRepository {
   /// Full un-truncated list of uploads for 'See All'
   Future<List<Movie>> getAllUploads() async {
     try {
-      final rtdbMovies = await _movieMax.getAllMovies();
-      if (rtdbMovies.isNotEmpty) return rtdbMovies;
+      final allMovies = await _getAllLugandaMovies();
+      if (allMovies.isNotEmpty) return allMovies;
     } catch (_) {}
     return getNowPlaying(page: 1);
   }
@@ -378,13 +459,42 @@ class MovieRepository {
 
   // ── 10. Movie Details with Gap-Filling & Metadata Enrichment ─────────────────
   Future<MovieDetailsData> getMovieDetails(int movieId, {bool isTv = false}) async {
-    // 1. Check MovieMax for streaming link and VJ info
-    Movie? movieMaxItem;
+    // 1. Check MunoWatch and MovieMax for streaming link and VJ info
+    Movie? lugandaMovie;
     try {
-      movieMaxItem = await _movieMax.findMovie(movieId);
+      lugandaMovie = await _munowatch.findMovie(movieId);
+      if (lugandaMovie != null) {
+        // Resolve stream URL on-demand from MunoWatch if missing
+        if (lugandaMovie.videoUrl == null || lugandaMovie.videoUrl!.isEmpty) {
+          final streamDetails = await _munowatch.getStreamDetails(movieId);
+          if (streamDetails != null) {
+            final playingUrl = streamDetails['playingurl']?.toString();
+            final desc = streamDetails['description']?.toString();
+            final dur = streamDetails['duration']?.toString();
+            int? parsedRuntime;
+            if (dur != null && dur.contains('h')) {
+              final parts = dur.split('h');
+              final h = int.tryParse(parts[0].trim()) ?? 1;
+              final m = int.tryParse(parts[1].replaceAll('m', '').trim()) ?? 0;
+              parsedRuntime = h * 60 + m;
+            }
+            lugandaMovie = lugandaMovie.copyWith(
+              videoUrl: playingUrl,
+              overview: desc?.isNotEmpty == true ? desc : lugandaMovie.overview,
+              runtime: parsedRuntime,
+            );
+          }
+        }
+      }
     } catch (_) {}
 
-    final bool actuallyTv = isTv || (movieMaxItem?.isTv == true);
+    if (lugandaMovie == null) {
+      try {
+        lugandaMovie = await _movieMax.findMovie(movieId);
+      } catch (_) {}
+    }
+
+    final bool actuallyTv = isTv || (lugandaMovie?.isTv == true);
 
     // 2. Fetch TMDB rich metadata (cast, certification, backdrop, runtime)
     MovieDetailsData? tmdbDetails;
@@ -402,25 +512,25 @@ class MovieRepository {
       }
     }
 
-    // 3. If TMDB metadata exists, enrich it with MovieMax streaming link, VJ name, and real RTDB related movies
+    // 3. If TMDB metadata exists, enrich it with Luganda streaming link, VJ name, and related movies
     if (tmdbDetails != null) {
       final realRelated = await getRelatedMovies(
-        movieMaxItem ??
+        lugandaMovie ??
             Movie(
               id: movieId,
               title: tmdbDetails.title,
               voteAverage: tmdbDetails.voteAverage,
-              vjName: movieMaxItem?.vjName ?? tmdbDetails.vjName,
-              genreIds: movieMaxItem?.genreIds ?? const [],
+              vjName: lugandaMovie?.vjName ?? tmdbDetails.vjName,
+              genreIds: lugandaMovie?.genreIds ?? const [],
               isTv: actuallyTv,
             ),
       );
 
       return tmdbDetails.copyWith(
-        videoUrl: movieMaxItem?.videoUrl ?? tmdbDetails.videoUrl,
-        vjName: movieMaxItem?.vjName ?? tmdbDetails.vjName,
-        backdropPath: tmdbDetails.backdropPath ?? movieMaxItem?.backdropPath,
-        runtime: tmdbDetails.runtime > 0 ? tmdbDetails.runtime : (movieMaxItem?.runtime ?? 110),
+        videoUrl: lugandaMovie?.videoUrl ?? tmdbDetails.videoUrl,
+        vjName: lugandaMovie?.vjName ?? tmdbDetails.vjName,
+        backdropPath: tmdbDetails.backdropPath ?? lugandaMovie?.backdropPath,
+        runtime: tmdbDetails.runtime > 0 ? tmdbDetails.runtime : (lugandaMovie?.runtime ?? 110),
         relatedMovies: realRelated.isNotEmpty ? realRelated : tmdbDetails.relatedMovies,
       );
     }
@@ -431,20 +541,20 @@ class MovieRepository {
       orElse: () => actuallyTv ? MockData.popularTv.first : MockData.trendingMovies.first,
     );
 
-    final title = movieMaxItem?.title.isNotEmpty == true ? movieMaxItem!.title : mockFallback.title;
-    final overview = movieMaxItem?.overview?.isNotEmpty == true ? movieMaxItem!.overview! : (mockFallback.overview ?? '');
-    final backdrop = movieMaxItem?.backdropPath ?? mockFallback.backdropPath;
-    final releaseDate = movieMaxItem?.releaseDate ?? mockFallback.releaseDate ?? '2025-01-01';
-    final voteAvg = (movieMaxItem?.voteAverage ?? 0.0) > 0 ? movieMaxItem!.voteAverage : mockFallback.voteAverage;
-    final genres = (movieMaxItem?.genreNames.isNotEmpty == true)
-        ? movieMaxItem!.genreNames
+    final title = lugandaMovie?.title.isNotEmpty == true ? lugandaMovie!.title : mockFallback.title;
+    final overview = lugandaMovie?.overview?.isNotEmpty == true ? lugandaMovie!.overview! : (mockFallback.overview ?? '');
+    final backdrop = lugandaMovie?.backdropPath ?? mockFallback.backdropPath;
+    final releaseDate = lugandaMovie?.releaseDate ?? mockFallback.releaseDate ?? '2025-01-01';
+    final voteAvg = (lugandaMovie?.voteAverage ?? 0.0) > 0 ? lugandaMovie!.voteAverage : mockFallback.voteAverage;
+    final genres = (lugandaMovie?.genreNames.isNotEmpty == true)
+        ? lugandaMovie!.genreNames
         : (actuallyTv ? ['Drama', 'Action'] : ['Action', 'Thriller']);
-    final runtime = movieMaxItem?.runtime ?? (actuallyTv ? 55 : 110);
-    final videoUrl = movieMaxItem?.videoUrl ?? mockFallback.videoUrl;
-    final vjName = movieMaxItem?.vjName ?? mockFallback.vjName ?? 'VJ Junior';
+    final runtime = lugandaMovie?.runtime ?? (actuallyTv ? 55 : 110);
+    final videoUrl = lugandaMovie?.videoUrl ?? mockFallback.videoUrl;
+    final vjName = lugandaMovie?.vjName ?? mockFallback.vjName ?? 'VJ Junior';
 
     final realFallbackRelated = await getRelatedMovies(
-      movieMaxItem ?? mockFallback,
+      lugandaMovie ?? mockFallback,
     );
 
     return MovieDetailsData(

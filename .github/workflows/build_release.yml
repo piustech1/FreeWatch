@@ -69,8 +69,8 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
           files: release-artifacts/FreeWatch-release.apk
-          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v1.0.40' }}
-          name: Release ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v1.0.40' }}
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v1.0.41' }}
+          name: Release ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v1.0.41' }}
           body: |
             ## 🎬 FreeWatch Release ${{ github.ref_name }}
             
