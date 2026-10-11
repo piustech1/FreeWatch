@@ -153,6 +153,7 @@ class MovieDetailsData {
   final List<TvSeasonData> seasons;
   final String? videoUrl;
   final String? vjName;
+  final String? seriesCode;
 
   const MovieDetailsData({
     required this.id,
@@ -172,6 +173,7 @@ class MovieDetailsData {
     this.seasons = const [],
     this.videoUrl,
     this.vjName,
+    this.seriesCode,
   });
 
   MovieDetailsData copyWith({
@@ -192,6 +194,7 @@ class MovieDetailsData {
     List<TvSeasonData>? seasons,
     String? videoUrl,
     String? vjName,
+    String? seriesCode,
   }) {
     return MovieDetailsData(
       id: id ?? this.id,
@@ -211,6 +214,7 @@ class MovieDetailsData {
       seasons: seasons ?? this.seasons,
       videoUrl: videoUrl ?? this.videoUrl,
       vjName: vjName ?? this.vjName,
+      seriesCode: seriesCode ?? this.seriesCode,
     );
   }
 

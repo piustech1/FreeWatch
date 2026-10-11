@@ -69,6 +69,14 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
   @override
   void initState() {
     super.initState();
+    // Extract initial season from title if specified (e.g. "Mobland Season 2" -> season 2)
+    final seasonMatch = RegExp(r'(?:season\s*|s)(\d+)', caseSensitive: false).firstMatch(widget.movie.title);
+    if (seasonMatch != null) {
+      final s = int.tryParse(seasonMatch.group(1) ?? '');
+      if (s != null && s > 0) {
+        _selectedSeason = s;
+      }
+    }
     if (widget.autoPlay || widget.resumeProgress != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _playTrailer();
@@ -869,7 +877,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
             const SizedBox(height: 10),
             _buildSeasonsSection(details),
             const SizedBox(height: 22),
-            _buildEpisodesSection(backdropUrl, assignedVj),
+            _buildEpisodesSection(backdropUrl, assignedVj, details),
             const SizedBox(height: 24),
           ],
           // 1. Cast Section (Live TMDB credits, circular & compact, NO "See all")
@@ -927,7 +935,13 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
   Widget _buildSeasonsSection([MovieDetailsData? details]) {
     List<int> seasonNumbers;
     if (details != null && details.seasons.isNotEmpty) {
-      seasonNumbers = details.seasons.map((s) => s.seasonNumber).toList();
+      seasonNumbers = details.seasons
+          .where((s) => s.seasonNumber > 0)
+          .map((s) => s.seasonNumber)
+          .toList();
+      if (seasonNumbers.isEmpty) {
+        seasonNumbers = [1];
+      }
     } else if (details != null && details.numberOfSeasons > 0) {
       seasonNumbers = List.generate(details.numberOfSeasons, (i) => i + 1);
     } else {
@@ -1016,15 +1030,17 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
   // ── Episodes Section with Real TMDB Still Backdrops ────────────────────────
   Widget _buildEpisodesSection(
     String? backdropUrl,
-    Vj assignedVj,
-  ) {
+    Vj assignedVj, [
+    MovieDetailsData? details,
+  ]) {
+    final seriesCode = details?.seriesCode ?? widget.movie.seriesCode;
     final episodesAsync = ref.watch(
       tvSeasonEpisodesProvider(
         TvSeasonParam(
           tvId: widget.movie.id,
           seasonNumber: _selectedSeason,
           seriesTitle: widget.movie.title,
-          seriesCode: widget.movie.seriesCode,
+          seriesCode: seriesCode,
         ),
       ),
     );
@@ -2514,7 +2530,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                             tvId: widget.movie.id,
                             seasonNumber: _selectedSeason,
                             seriesTitle: widget.movie.title,
-                            seriesCode: widget.movie.seriesCode,
+                            seriesCode: details.seriesCode ?? widget.movie.seriesCode,
                           ))).valueOrNull;
                           if (epsAsync != null && epsAsync.isNotEmpty) {
                             _playNextEpisode(epsAsync, assignedVj);

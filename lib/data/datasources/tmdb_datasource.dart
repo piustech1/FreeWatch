@@ -72,6 +72,25 @@ class TmdbDatasource {
     return Movie.fromJsonList(res.data as Map<String, dynamic>);
   }
 
+  Future<List<Movie>> searchTvShows(String query, {int page = 1}) async {
+    try {
+      final res = await _dio.get(
+        ApiConstants.searchTv,
+        queryParameters: {'query': query, 'page': page},
+      );
+      final results = res.data['results'] as List<dynamic>? ?? [];
+      return results
+          .map((e) {
+            final map = Map<String, dynamic>.from(e as Map);
+            map['media_type'] = 'tv';
+            return Movie.fromJson(map);
+          })
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
   // ── Genres ────────────────────────────────────────────────────────────────
 
   Future<List<Genre>> getGenres() async {
