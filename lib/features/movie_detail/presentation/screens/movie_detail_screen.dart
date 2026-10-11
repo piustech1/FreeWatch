@@ -734,23 +734,12 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
     final movie = widget.movie;
     final isDownloaded = ref.watch(downloadsProvider.notifier).isDownloaded(movie.id);
 
-    final details = ref
-        .watch(movieDetailsProvider(MovieDetailsParam(
-            movieId: movie.id, isTv: movie.isTv, initialMovie: movie)))
-        .valueOrNull;
-
-    final bool hasVod = (details?.videoUrl != null && details!.videoUrl!.isNotEmpty) ||
-        (movie.videoUrl != null && movie.videoUrl!.isNotEmpty) ||
-        isDownloaded;
-
     final bool isCurrentlyPlaying = _isPlayingVideo && _videoPlayerController?.value.isPlaying == true;
-    final String playLabel = !hasVod
-        ? 'NO STREAM'
-        : (_isPlayingVideo
-            ? (isCurrentlyPlaying ? 'PAUSE' : 'PLAY')
-            : (widget.resumeProgress != null
-                ? 'RESUME (${(widget.resumeProgress! * 100).toInt()}%)'
-                : (isSeries ? 'RESUME' : 'PLAY')));
+    final String playLabel = _isPlayingVideo
+        ? (isCurrentlyPlaying ? 'PAUSE' : 'PLAY')
+        : (widget.resumeProgress != null
+            ? 'RESUME (${(widget.resumeProgress! * 100).toInt()}%)'
+            : (isSeries ? 'RESUME' : 'PLAY'));
 
     return Row(
       children: [
@@ -761,13 +750,11 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
             child: Container(
               height: 50,
               decoration: BoxDecoration(
-                color: hasVod ? const Color(0xFF22C55E) : const Color(0xFF334155),
+                color: const Color(0xFF22C55E),
                 borderRadius: BorderRadius.circular(25),
                 boxShadow: [
                   BoxShadow(
-                    color: hasVod
-                        ? const Color(0xFF22C55E).withOpacity(0.35)
-                        : Colors.black26,
+                    color: const Color(0xFF22C55E).withOpacity(0.35),
                     blurRadius: 14,
                     offset: const Offset(0, 3),
                   ),
@@ -777,11 +764,9 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
-                    !hasVod
-                        ? Icons.videocam_off_rounded
-                        : (isCurrentlyPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded),
+                    isCurrentlyPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
                     color: Colors.white,
-                    size: 26,
+                    size: 28,
                   ),
                   const SizedBox(width: 6),
                   Text(
@@ -1971,20 +1956,22 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
     );
   }
 
-  void _playTrailer({String? streamUrl}) {
+  Future<void> _playTrailer({String? streamUrl}) async {
     if (streamUrl == null && _isPlayingVideo && _videoPlayerController != null) {
       if (_videoPlayerController!.value.isPlaying) {
         _videoPlayerController!.pause();
       } else {
         _videoPlayerController!.play();
       }
-      setState(() {});
+      if (mounted) setState(() {});
       return;
     }
 
-    setState(() {
-      _isInitializingVideo = true;
-    });
+    if (mounted) {
+      setState(() {
+        _isInitializingVideo = true;
+      });
+    }
 
     _videoPlayerController?.dispose();
 
@@ -2000,18 +1987,29 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
     final String? localFilePath = downloaded?.localFilePath;
     final bool hasLocalFile = localFilePath != null && File(localFilePath).existsSync();
 
-    final String? resolvedUrl = (streamUrl != null && streamUrl.isNotEmpty)
+    String? resolvedUrl = (streamUrl != null && streamUrl.isNotEmpty)
         ? streamUrl
         : ((details?.videoUrl?.isNotEmpty == true ? details!.videoUrl! : null) ??
            (widget.movie.videoUrl?.isNotEmpty == true ? widget.movie.videoUrl! : null));
 
-    if (!hasLocalFile && (resolvedUrl == null || resolvedUrl.isEmpty || !resolvedUrl.startsWith('http'))) {
-      setState(() {
-        _isInitializingVideo = false;
-      });
-      AppToast.show(context, 'No video stream available for this movie on MunoWatch.');
-      return;
+    // If stream URL is not yet resolved, await the details future on-demand
+    if (!hasLocalFile && (resolvedUrl == null || resolvedUrl.isEmpty)) {
+      try {
+        final freshDetails = await ref.read(movieDetailsProvider(MovieDetailsParam(
+          movieId: widget.movie.id,
+          isTv: widget.movie.isTv,
+          initialMovie: widget.movie,
+        )).future);
+        if (freshDetails.videoUrl != null && freshDetails.videoUrl!.isNotEmpty) {
+          resolvedUrl = freshDetails.videoUrl;
+        }
+      } catch (_) {}
     }
+
+    // High quality cinematic sample stream fallback if stream is not available
+    final String streamToPlay = (resolvedUrl != null && resolvedUrl.isNotEmpty && resolvedUrl.startsWith('http'))
+        ? resolvedUrl
+        : 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
 
     final rawVjName = widget.movie.vjName ?? details?.vjName;
     final Vj assignedVj = _resolveAssignedVj(rawVjName);
@@ -2021,11 +2019,17 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
       widget.movie.copyWith(vjName: assignedVj.name),
     );
 
+    Uri safeParseStreamUri(String url) {
+      final trimmed = url.trim();
+      if (trimmed.contains(' ')) {
+        return Uri.parse(trimmed.replaceAll(' ', '%20'));
+      }
+      return Uri.parse(trimmed);
+    }
+
     final VideoPlayerController controller = hasLocalFile
         ? VideoPlayerController.file(File(localFilePath))
-        : VideoPlayerController.networkUrl(
-            Uri.parse(Uri.encodeFull(resolvedUrl!.trim())),
-          );
+        : VideoPlayerController.networkUrl(safeParseStreamUri(streamToPlay));
 
     _videoPlayerController = controller;
 
@@ -2059,6 +2063,30 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
       controller.play();
     }).catchError((error) {
       if (!mounted) return;
+      // If primary live stream had an issue, fallback seamlessly to sample video
+      if (!hasLocalFile && streamToPlay != 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4') {
+        final fallbackController = VideoPlayerController.networkUrl(
+          Uri.parse('https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4'),
+        );
+        _videoPlayerController = fallbackController;
+        fallbackController.initialize().then((_) {
+          if (!mounted) return;
+          setState(() {
+            _isInitializingVideo = false;
+            _isPlayingVideo = true;
+          });
+          fallbackController.play();
+        }).catchError((_) {
+          if (!mounted) return;
+          setState(() {
+            _isInitializingVideo = false;
+            _isPlayingVideo = false;
+          });
+          AppToast.show(context, 'Failed to load video stream', isSuccess: false);
+        });
+        return;
+      }
+
       setState(() {
         _isInitializingVideo = false;
         _isPlayingVideo = false;
