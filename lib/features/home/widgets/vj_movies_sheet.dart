@@ -37,7 +37,6 @@ class VjMoviesSheet extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final moviesAsync = ref.watch(vjMoviesObjProvider(vj));
-    final movies = moviesAsync.valueOrNull ?? [];
     final size = MediaQuery.of(context).size;
 
     return Container(
@@ -207,24 +206,24 @@ class VjMoviesSheet extends ConsumerWidget {
                 color: const Color(0xFF0C0E14),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Row(
+              child: const Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.translate_rounded,
                     color: AppColors.accent,
                     size: 16,
                   ),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8),
                   Text(
-                    'Luganda Voiceover • ${movies.isNotEmpty ? movies.length : vj.movieCount} Movies Available',
-                    style: const TextStyle(
+                    'Luganda Voiceover • Luganda Dubbed',
+                    style: TextStyle(
                       color: AppColors.textPrimary,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  const Spacer(),
-                  const Text(
+                  Spacer(),
+                  Text(
                     'HD 1080p',
                     style: TextStyle(
                       color: AppColors.accent,

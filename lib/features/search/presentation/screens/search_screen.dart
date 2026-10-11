@@ -181,6 +181,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       _searchController.clear();
       _searchQuery = '';
       _searchStep = 2;
+      _isGridView = true;
     });
   }
 

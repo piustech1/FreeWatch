@@ -1129,6 +1129,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                       assignedVj,
                       episodeVideoUrl: ep.videoUrl,
                       episodeNumber: ep.episodeNumber,
+                      episodeId: ep.id,
                     ),
                     child: SizedBox(
                       width: 195,
@@ -1325,10 +1326,24 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
     int nextIndex = 0;
     if (_currentPlayingEpisodeNumber != null) {
       final curIdx = episodes.indexWhere((e) => e.episodeNumber == _currentPlayingEpisodeNumber);
-      if (curIdx != -1 && curIdx + 1 < episodes.length) {
-        nextIndex = curIdx + 1;
+      if (curIdx != -1) {
+        if (curIdx + 1 < episodes.length) {
+          nextIndex = curIdx + 1;
+        } else {
+          AppToast.show(
+            context,
+            'You are on the latest episode of Season $_selectedSeason',
+            isSuccess: true,
+          );
+          return;
+        }
+      } else {
+        nextIndex = 1 < episodes.length ? 1 : 0;
       }
+    } else {
+      nextIndex = 1 < episodes.length ? 1 : 0;
     }
+
     final nextEp = episodes[nextIndex];
     _playEpisode(
       context,
@@ -1337,17 +1352,19 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
       assignedVj,
       episodeVideoUrl: nextEp.videoUrl,
       episodeNumber: nextEp.episodeNumber,
+      episodeId: nextEp.id,
     );
   }
 
-  void _playEpisode(
+  Future<void> _playEpisode(
     BuildContext context,
     String title,
     String ep,
     Vj assignedVj, {
     String? episodeVideoUrl,
     int? episodeNumber,
-  }) {
+    int? episodeId,
+  }) async {
     setState(() {
       _currentPlayingEpisodeTitle = title;
       if (episodeNumber != null) {
@@ -1358,12 +1375,25 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
       }
     });
 
+    String? targetUrl = episodeVideoUrl;
+    if (targetUrl == null || targetUrl.isEmpty) {
+      if (episodeId != null && episodeId > 0) {
+        AppToast.show(
+          context,
+          'Loading Season $_selectedSeason $ep: "$title"...',
+          isSuccess: true,
+        );
+        targetUrl = await ref.read(movieRepositoryProvider).getEpisodeStreamUrl(episodeId);
+      }
+    }
+
+    if (!context.mounted) return;
     AppToast.show(
       context,
       'Streaming Season $_selectedSeason $ep: "$title" translated by ${assignedVj.name}',
       isSuccess: true,
     );
-    _playTrailer(streamUrl: episodeVideoUrl, isEpisodeSwitch: true);
+    await _playTrailer(streamUrl: targetUrl, isEpisodeSwitch: true);
   }
 
   Future<void> _downloadMovie() async {
@@ -2095,7 +2125,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
   }
 
   Future<void> _playTrailer({String? streamUrl, bool isEpisodeSwitch = false}) async {
-    if (streamUrl == null && _isPlayingVideo && _videoPlayerController != null) {
+    if (!isEpisodeSwitch && streamUrl == null && _isPlayingVideo && _videoPlayerController != null) {
       if (_videoPlayerController!.value.isPlaying) {
         _videoPlayerController!.pause();
       } else {
@@ -2120,15 +2150,17 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
             initialMovie: widget.movie)))
         .valueOrNull;
 
-    // Check if offline local download file exists (ONLY when NOT playing a specific remote episode URL)
+    // Check if offline local download file exists (ONLY when NOT playing a specific remote episode URL or switching episodes)
     final downloaded = ref.read(downloadsProvider.notifier).getDownloadedMovie(widget.movie.id);
     final String? localFilePath = downloaded?.localFilePath;
-    final bool hasLocalFile = (streamUrl == null) && localFilePath != null && File(localFilePath).existsSync();
+    final bool hasLocalFile = (!isEpisodeSwitch && streamUrl == null) && localFilePath != null && File(localFilePath).existsSync();
 
     String? resolvedUrl = (streamUrl != null && streamUrl.isNotEmpty)
         ? streamUrl
-        : ((details?.videoUrl?.isNotEmpty == true ? details!.videoUrl! : null) ??
-           (widget.movie.videoUrl?.isNotEmpty == true ? widget.movie.videoUrl! : null));
+        : (isEpisodeSwitch
+            ? null
+            : ((details?.videoUrl?.isNotEmpty == true ? details!.videoUrl! : null) ??
+               (widget.movie.videoUrl?.isNotEmpty == true ? widget.movie.videoUrl! : null)));
 
     // If stream URL is not yet resolved, await the details future on-demand
     if (!hasLocalFile && (resolvedUrl == null || resolvedUrl.isEmpty)) {

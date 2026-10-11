@@ -112,7 +112,7 @@ void main() {
 
       // Verify VJ Junior card content
       expect(find.text('VJ JUNIOR'), findsOneWidget);
-      expect(find.text('185 movies'), findsOneWidget);
+      expect(find.text('LUGANDA DUBBED'), findsWidgets);
 
       // Verify tap works
       await tester.tap(find.text('VJ JUNIOR'));
