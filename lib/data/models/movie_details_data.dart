@@ -82,6 +82,30 @@ class TvEpisodeData {
     this.videoUrl,
   });
 
+  TvEpisodeData copyWith({
+    int? id,
+    int? episodeNumber,
+    int? seasonNumber,
+    String? name,
+    String? overview,
+    int? runtime,
+    String? stillPath,
+    double? voteAverage,
+    String? videoUrl,
+  }) {
+    return TvEpisodeData(
+      id: id ?? this.id,
+      episodeNumber: episodeNumber ?? this.episodeNumber,
+      seasonNumber: seasonNumber ?? this.seasonNumber,
+      name: name ?? this.name,
+      overview: overview ?? this.overview,
+      runtime: runtime ?? this.runtime,
+      stillPath: stillPath ?? this.stillPath,
+      voteAverage: voteAverage ?? this.voteAverage,
+      videoUrl: videoUrl ?? this.videoUrl,
+    );
+  }
+
   String? get stillUrl => stillPath != null && stillPath!.isNotEmpty
       ? (stillPath!.startsWith('http') ? stillPath! : '${ApiConstants.backdropW780}$stillPath')
       : null;

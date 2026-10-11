@@ -6,7 +6,10 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../data/models/avatar_item.dart';
+import '../../../../shared/widgets/free_watch_top_app_bar.dart';
 import '../../../auth/presentation/providers/user_avatar_provider.dart';
+import '../../../home/providers/home_providers.dart';
+import '../../../notifications/presentation/screens/notifications_screen.dart';
 import '../../../profile/presentation/providers/user_profile_provider.dart';
 import '../../domain/models/chat_message.dart';
 import '../providers/chat_provider.dart';
@@ -116,12 +119,27 @@ class _DeveloperChatScreenState extends ConsumerState<DeveloperChatScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: _buildAppBar(context),
       body: SafeArea(
-        top: false,
+        bottom: false,
         child: Column(
           children: [
-            // Chat messages list
+            // ── Signature Persistent Top App Bar ──────────────────────
+            FreeWatchTopAppBar(
+              onSearchTap: () => navigateToBottomNavTab(context, ref, 1),
+              onNotificationTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const NotificationsScreen(),
+                  ),
+                );
+              },
+              onProfileTap: () => navigateToBottomNavTab(context, ref, 4),
+            ),
+
+            // ── iOS Liquid Frosted Glass Admin Subheader ──────────────
+            _buildAdminGlassHeader(context),
+
+            // ── Chat messages list ────────────────────────────────────
             Expanded(
               child: chatState.isLoading && chatState.messages.isEmpty
                   ? const Center(
@@ -160,7 +178,7 @@ class _DeveloperChatScreenState extends ConsumerState<DeveloperChatScreen> {
             // Active Reply Banner (when replying to a message)
             if (_replyingTo != null) _buildReplyPreviewBanner(_replyingTo!),
 
-            // Bottom Input Bar
+            // Floating Liquid Glass Input Dock
             _buildInputBar(),
           ],
         ),
@@ -168,140 +186,198 @@ class _DeveloperChatScreenState extends ConsumerState<DeveloperChatScreen> {
     );
   }
 
-  // ── Top App Bar ─────────────────────────────────────────────────────────────
-  PreferredSizeWidget _buildAppBar(BuildContext context) {
-    return AppBar(
-      backgroundColor: const Color(0xFF0D0F18).withOpacity(0.95),
-      elevation: 0,
-      scrolledUnderElevation: 0,
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
-        onPressed: () => Navigator.of(context).pop(),
-      ),
-      titleSpacing: 0,
-      title: Row(
-        children: [
-          // Admin Avatar with glowing online status badge
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: const Color(0xFF8B5CF6).withOpacity(0.6),
-                    width: 1.8,
+  // ── iOS Liquid Frosted Glass Admin Subheader ────────────────────────────────
+  Widget _buildAdminGlassHeader(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.06),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.14),
+                width: 1.0,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.20),
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                // iOS Frosted Glass Back Button
+                GestureDetector(
+                  onTap: () => Navigator.of(context).pop(),
+                  behavior: HitTestBehavior.opaque,
+                  child: Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.08),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.18),
+                        width: 0.8,
+                      ),
+                    ),
+                    child: const Icon(
+                      Icons.arrow_back_ios_new_rounded,
+                      color: Colors.white,
+                      size: 16,
+                    ),
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF8B5CF6).withOpacity(0.35),
-                      blurRadius: 10,
-                      spreadRadius: 1,
+                ),
+                const SizedBox(width: 12),
+
+                // Admin Avatar with glowing emerald online status badge
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: const Color(0xFF8B5CF6).withOpacity(0.8),
+                          width: 2.0,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF8B5CF6).withOpacity(0.40),
+                            blurRadius: 12,
+                            spreadRadius: 1,
+                          ),
+                        ],
+                      ),
+                      child: ClipOval(
+                        child: Image.asset(
+                          'assets/images/admin_avatar.jpg',
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            color: const Color(0xFF6D28D9),
+                            alignment: Alignment.center,
+                            child: const Icon(
+                              Icons.support_agent_rounded,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: Container(
+                        width: 13,
+                        height: 13,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.black,
+                            width: 2,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF10B981).withOpacity(0.9),
+                              blurRadius: 6,
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ],
                 ),
-                child: ClipOval(
-                  child: Image.asset(
-                    'assets/images/admin_avatar.jpg',
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => const ColoredBox(
-                      color: Color(0xFF1E2230),
-                      child: Icon(Icons.support_agent_rounded, color: Colors.white, size: 22),
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                bottom: 0,
-                right: 0,
-                child: Container(
-                  width: 12,
-                  height: 12,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF10B981),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: const Color(0xFF0D0F18), width: 2),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF10B981).withOpacity(0.8),
-                        blurRadius: 6,
+                const SizedBox(width: 12),
+
+                // Admin Info
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Admin',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                          SizedBox(width: 5),
+                          Icon(
+                            Icons.verified_rounded,
+                            color: Color(0xFF38BDF8),
+                            size: 16,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF10B981),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          const Text(
+                            'Active now • Developer Support',
+                            style: TextStyle(
+                              color: Color(0xFFCBD5E1),
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(width: 12),
-          // Admin Info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Admin',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.2,
+
+                // Info Action Button
+                GestureDetector(
+                  onTap: () => _showSupportInfo(context),
+                  behavior: HitTestBehavior.opaque,
+                  child: Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.08),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.18),
+                        width: 0.8,
                       ),
                     ),
-                    SizedBox(width: 4),
-                    Icon(
-                      Icons.verified_rounded,
-                      color: Color(0xFF38BDF8),
-                      size: 16,
+                    child: const Icon(
+                      Icons.info_outline_rounded,
+                      color: Color(0xFFCBD5E1),
+                      size: 20,
                     ),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 6,
-                      height: 6,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF10B981),
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 5),
-                    const Text(
-                      'Online • FreeWatch Developer Support',
-                      style: TextStyle(
-                        color: Color(0xFF94A3B8),
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ],
             ),
           ),
-        ],
-      ),
-      actions: [
-        IconButton(
-          tooltip: 'Developer Info',
-          icon: const Icon(Icons.info_outline_rounded, color: Color(0xFF94A3B8), size: 22),
-          onPressed: () => _showSupportInfo(context),
-        ),
-        const SizedBox(width: 6),
-      ],
-      bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(1),
-        child: Container(
-          color: Colors.white.withOpacity(0.06),
-          height: 1,
         ),
       ),
     );
@@ -374,93 +450,112 @@ class _DeveloperChatScreenState extends ConsumerState<DeveloperChatScreen> {
     );
   }
 
-  // ── Message Bubble Content ──────────────────────────────────────────────────
+  // ── Message Bubble Content (Liquid Frosted Glass) ───────────────────────────
   Widget _buildBubbleContent(ChatMessage message, bool isUser) {
     final timeStr = DateFormat('h:mm a').format(
       DateTime.fromMillisecondsSinceEpoch(message.timestamp),
     );
 
-    return Container(
-      constraints: const BoxConstraints(maxWidth: 290),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        gradient: isUser
-            ? const LinearGradient(
-                colors: [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              )
-            : null,
-        color: isUser ? null : const Color(0xFF1E2230),
-        borderRadius: BorderRadius.only(
-          topLeft: const Radius.circular(18),
-          topRight: const Radius.circular(18),
-          bottomLeft: Radius.circular(isUser ? 18 : 4),
-          bottomRight: Radius.circular(isUser ? 4 : 18),
-        ),
-        border: Border.all(
-          color: isUser
-              ? Colors.white.withOpacity(0.18)
-              : Colors.white.withOpacity(0.08),
-          width: 0.8,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: isUser
-                ? const Color(0xFF7C3AED).withOpacity(0.25)
-                : Colors.black.withOpacity(0.2),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
+    return ClipRRect(
+      borderRadius: BorderRadius.only(
+        topLeft: const Radius.circular(20),
+        topRight: const Radius.circular(20),
+        bottomLeft: Radius.circular(isUser ? 20 : 4),
+        bottomRight: Radius.circular(isUser ? 4 : 20),
       ),
-      child: Column(
-        crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-        children: [
-          // Quoted message if this was a reply
-          if (message.replyToText != null && message.replyToText!.isNotEmpty)
-            _buildQuotedReplyBox(
-              senderName: message.replyToSender ?? 'Message',
-              text: message.replyToText!,
-              isUser: isUser,
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 290),
+          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 11),
+          decoration: BoxDecoration(
+            gradient: isUser
+                ? const LinearGradient(
+                    colors: [Color(0xFF8B5CF6), Color(0xFF6D28D9)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )
+                : LinearGradient(
+                    colors: [
+                      Colors.white.withOpacity(0.10),
+                      Colors.white.withOpacity(0.05),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+            borderRadius: BorderRadius.only(
+              topLeft: const Radius.circular(20),
+              topRight: const Radius.circular(20),
+              bottomLeft: Radius.circular(isUser ? 20 : 4),
+              bottomRight: Radius.circular(isUser ? 4 : 20),
             ),
-
-          // Message Body
-          SelectableText(
-            message.text,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 14.5,
-              height: 1.35,
-              fontWeight: FontWeight.w400,
+            border: Border.all(
+              color: isUser
+                  ? Colors.white.withOpacity(0.28)
+                  : Colors.white.withOpacity(0.16),
+              width: 1.0,
             ),
+            boxShadow: [
+              BoxShadow(
+                color: isUser
+                    ? const Color(0xFF8B5CF6).withOpacity(0.35)
+                    : Colors.black.withOpacity(0.25),
+                blurRadius: 14,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-
-          const SizedBox(height: 4),
-
-          // Timestamp & Status
-          Row(
-            mainAxisSize: MainAxisSize.min,
+          child: Column(
+            crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
             children: [
-              Text(
-                timeStr,
-                style: TextStyle(
-                  color: isUser ? Colors.white.withOpacity(0.7) : const Color(0xFF94A3B8),
-                  fontSize: 10.5,
+              // Quoted message if this was a reply
+              if (message.replyToText != null && message.replyToText!.isNotEmpty)
+                _buildQuotedReplyBox(
+                  senderName: message.replyToSender ?? 'Message',
+                  text: message.replyToText!,
+                  isUser: isUser,
+                ),
+
+              // Message Body
+              SelectableText(
+                message.text,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14.5,
+                  height: 1.35,
                   fontWeight: FontWeight.w400,
                 ),
               ),
-              if (isUser) ...[
-                const SizedBox(width: 4),
-                Icon(
-                  Icons.done_all_rounded,
-                  color: Colors.white.withOpacity(0.85),
-                  size: 13,
-                ),
-              ],
+
+              const SizedBox(height: 5),
+
+              // Timestamp & Status
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    timeStr,
+                    style: TextStyle(
+                      color: isUser
+                          ? Colors.white.withOpacity(0.75)
+                          : const Color(0xFFCBD5E1).withOpacity(0.75),
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                  if (isUser) ...[
+                    const SizedBox(width: 4),
+                    Icon(
+                      Icons.done_all_rounded,
+                      color: Colors.white.withOpacity(0.9),
+                      size: 13,
+                    ),
+                  ],
+                ],
+              ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -476,9 +571,9 @@ class _DeveloperChatScreenState extends ConsumerState<DeveloperChatScreen> {
       padding: const EdgeInsets.fromLTRB(10, 6, 10, 6),
       decoration: BoxDecoration(
         color: isUser
-            ? Colors.black.withOpacity(0.2)
-            : const Color(0xFF131722).withOpacity(0.7),
-        borderRadius: BorderRadius.circular(8),
+            ? Colors.black.withOpacity(0.25)
+            : Colors.white.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(10),
         border: Border(
           left: BorderSide(
             color: isUser ? Colors.white.withOpacity(0.9) : const Color(0xFF8B5CF6),
@@ -520,15 +615,25 @@ class _DeveloperChatScreenState extends ConsumerState<DeveloperChatScreen> {
       height: 32,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(color: const Color(0xFF8B5CF6).withOpacity(0.5), width: 1.2),
+        border: Border.all(
+          color: const Color(0xFF8B5CF6).withOpacity(0.6),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF8B5CF6).withOpacity(0.3),
+            blurRadius: 6,
+          ),
+        ],
       ),
       child: ClipOval(
         child: Image.asset(
           'assets/images/admin_avatar.jpg',
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => const ColoredBox(
-            color: Color(0xFF1E2230),
-            child: Icon(Icons.support_agent_rounded, color: Colors.white, size: 16),
+          errorBuilder: (_, __, ___) => Container(
+            color: const Color(0xFF6D28D9),
+            alignment: Alignment.center,
+            child: const Icon(Icons.support_agent_rounded, color: Colors.white, size: 16),
           ),
         ),
       ),
@@ -542,7 +647,7 @@ class _DeveloperChatScreenState extends ConsumerState<DeveloperChatScreen> {
       height: 32,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(color: const Color(0xFF8B5CF6).withOpacity(0.5), width: 1.2),
+        border: Border.all(color: const Color(0xFF8B5CF6).withOpacity(0.6), width: 1.2),
       ),
       child: ClipOval(
         child: userAvatar.assetPath.endsWith('.svg')
@@ -569,158 +674,184 @@ class _DeveloperChatScreenState extends ConsumerState<DeveloperChatScreen> {
 
   // ── Reply Preview Banner (Above Input Field) ───────────────────────────────
   Widget _buildReplyPreviewBanner(ChatMessage replyingTo) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFF161925),
-        border: Border(
-          top: BorderSide(color: Colors.white.withOpacity(0.08), width: 0.8),
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 3.5,
-            height: 36,
-            decoration: BoxDecoration(
-              color: const Color(0xFF8B5CF6),
-              borderRadius: BorderRadius.circular(2),
+    return ClipRRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.06),
+            border: Border(
+              top: BorderSide(color: Colors.white.withOpacity(0.12), width: 1.0),
             ),
           ),
-          const SizedBox(width: 10),
-          const Icon(Icons.reply_rounded, color: Color(0xFFA78BFA), size: 20),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Replying to ${replyingTo.senderName}',
-                  style: const TextStyle(
-                    color: Color(0xFFA78BFA),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  replyingTo.text,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Color(0xFFCBD5E1),
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.close_rounded, color: Color(0xFF94A3B8), size: 18),
-            onPressed: _cancelReply,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Bottom Input Bar ────────────────────────────────────────────────────────
-  Widget _buildInputBar() {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF0D0F18),
-        border: Border(
-          top: BorderSide(color: Colors.white.withOpacity(0.08), width: 0.8),
-        ),
-      ),
-      child: Row(
-        children: [
-          // Text Input Box
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1A1D2B),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.1),
-                  width: 0.8,
+          child: Row(
+            children: [
+              Container(
+                width: 3.5,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF8B5CF6),
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              child: TextField(
-                controller: _textController,
-                focusNode: _focusNode,
-                textCapitalization: TextCapitalization.sentences,
-                minLines: 1,
-                maxLines: 4,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 14.5,
-                ),
-                decoration: const InputDecoration(
-                  hintText: 'Ask developer anything...',
-                  hintStyle: TextStyle(
-                    color: Color(0xFF64748B),
-                    fontSize: 14,
-                  ),
-                  border: InputBorder.none,
-                  isDense: true,
-                  contentPadding: EdgeInsets.symmetric(vertical: 11),
-                ),
-                onSubmitted: (_) => _sendMessage(),
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-
-          // Send Button
-          GestureDetector(
-            onTap: _hasText ? _sendMessage : null,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: _hasText
-                    ? const LinearGradient(
-                        colors: [Color(0xFF8B5CF6), Color(0xFF6D28D9)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      )
-                    : const LinearGradient(
-                        colors: [
-                          Color(0xFF2A2E3D),
-                          Color(0xFF1E2230),
-                        ],
+              const SizedBox(width: 10),
+              const Icon(Icons.reply_rounded, color: Color(0xFFA78BFA), size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Replying to ${replyingTo.senderName}',
+                      style: const TextStyle(
+                        color: Color(0xFFA78BFA),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
                       ),
-                boxShadow: _hasText
-                    ? [
-                        BoxShadow(
-                          color: const Color(0xFF8B5CF6).withOpacity(0.4),
-                          blurRadius: 10,
-                          offset: const Offset(0, 2),
-                        ),
-                      ]
-                    : const [],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      replyingTo.text,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFFCBD5E1),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              child: Icon(
-                Icons.send_rounded,
-                color: _hasText ? Colors.white : const Color(0xFF64748B),
-                size: 20,
+              IconButton(
+                icon: const Icon(Icons.close_rounded, color: Color(0xFF94A3B8), size: 18),
+                onPressed: _cancelReply,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 
-  // ── Date Header Widget ──────────────────────────────────────────────────────
+  // ── Floating Liquid Glass Input Dock ────────────────────────────────────────
+  Widget _buildInputBar() {
+    return ClipRRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(14, 10, 14, 16),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.05),
+            border: Border(
+              top: BorderSide(color: Colors.white.withOpacity(0.12), width: 1.0),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.25),
+                blurRadius: 16,
+                offset: const Offset(0, -4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              // Text Input Box with iOS frosted glass
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.16),
+                        width: 1.0,
+                      ),
+                    ),
+                    child: TextField(
+                      controller: _textController,
+                      focusNode: _focusNode,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14.5,
+                      ),
+                      decoration: const InputDecoration(
+                        hintText: 'Ask developer anything...',
+                        hintStyle: TextStyle(
+                          color: Color(0xFF94A3B8),
+                          fontSize: 14,
+                        ),
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      onSubmitted: (_) => _sendMessage(),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+
+              // Glowing Circular Send Button
+              GestureDetector(
+                onTap: _hasText ? _sendMessage : null,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: _hasText
+                        ? const LinearGradient(
+                            colors: [Color(0xFF8B5CF6), Color(0xFF6D28D9)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          )
+                        : LinearGradient(
+                            colors: [
+                              Colors.white.withOpacity(0.12),
+                              Colors.white.withOpacity(0.06),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                    border: Border.all(
+                      color: _hasText
+                          ? Colors.white.withOpacity(0.3)
+                          : Colors.white.withOpacity(0.1),
+                      width: 1.0,
+                    ),
+                    boxShadow: _hasText
+                        ? [
+                            BoxShadow(
+                              color: const Color(0xFF8B5CF6).withOpacity(0.55),
+                              blurRadius: 12,
+                              spreadRadius: 1,
+                              offset: const Offset(0, 2),
+                            ),
+                          ]
+                        : const [],
+                  ),
+                  child: Icon(
+                    Icons.send_rounded,
+                    color: _hasText ? Colors.white : const Color(0xFF64748B),
+                    size: 20,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Frosted Glass Date Header Widget ────────────────────────────────────────
   Widget _buildDateHeader(int timestamp) {
     final date = DateTime.fromMillisecondsSinceEpoch(timestamp);
     final now = DateTime.now();
@@ -737,21 +868,30 @@ class _DeveloperChatScreenState extends ConsumerState<DeveloperChatScreen> {
     }
 
     return Center(
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 14),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1E2230).withOpacity(0.6),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withOpacity(0.06), width: 0.8),
-        ),
-        child: Text(
-          formatted,
-          style: const TextStyle(
-            color: Color(0xFF94A3B8),
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.4,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            margin: const EdgeInsets.symmetric(vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.14),
+                width: 0.8,
+              ),
+            ),
+            child: Text(
+              formatted,
+              style: const TextStyle(
+                color: Color(0xFFCBD5E1),
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.4,
+              ),
+            ),
           ),
         ),
       ),
@@ -768,12 +908,12 @@ class _DeveloperChatScreenState extends ConsumerState<DeveloperChatScreen> {
     showDialog(
       context: context,
       builder: (_) => BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
         child: AlertDialog(
-          backgroundColor: const Color(0xFF131722),
+          backgroundColor: const Color(0xFF0D0F18).withOpacity(0.85),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-            side: BorderSide(color: Colors.white.withOpacity(0.1), width: 0.8),
+            borderRadius: BorderRadius.circular(24),
+            side: BorderSide(color: Colors.white.withOpacity(0.18), width: 1.0),
           ),
           title: const Row(
             children: [

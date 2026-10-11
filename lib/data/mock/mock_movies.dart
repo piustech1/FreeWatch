@@ -411,8 +411,35 @@ class MockData {
       translatedMovieIds: [558449, 1011985],
     ),
     Vj(
+      id: 'vj-anti',
+      name: 'VJ ANTI',
+      nickname: 'The Dynamic Master',
+      specialty: 'Action, Martial Arts & Sci-Fi',
+      imageUrl: 'assets/vjs/vj junior.png',
+      movieCount: 95,
+      translatedMovieIds: [1011985, 558449],
+    ),
+    Vj(
+      id: 'vj-mossa',
+      name: 'VJ MOSSA',
+      nickname: 'The Action Maestro',
+      specialty: 'Action, Thrillers & Suspense',
+      imageUrl: 'assets/vjs/vj mosco.jpeg',
+      movieCount: 84,
+      translatedMovieIds: [71446, 533535],
+    ),
+    Vj(
+      id: 'vj-chris-sweet',
+      name: 'VJ CHRIS SWEET',
+      nickname: 'The Sweet Flow',
+      specialty: 'Drama, Action & Romance',
+      imageUrl: 'assets/vjs/vj mark.jpeg',
+      movieCount: 77,
+      translatedMovieIds: [1125510, 1241982],
+    ),
+    Vj(
       id: 'vj-mosco',
-      name: 'VJ MOSCO',
+      name: 'VJ MOSKO',
       nickname: 'Speed Master',
       specialty: 'Action, Heist & Suspense',
       imageUrl: 'assets/vjs/vj mosco.jpeg',
@@ -448,7 +475,7 @@ class MockData {
     ),
     Vj(
       id: 'vj-tonny',
-      name: 'VJ TONNY',
+      name: 'VJ TONY',
       nickname: 'The Flow Master',
       specialty: 'Action, Comedy & Series',
       imageUrl: 'assets/vjs/vj tonny.png',
@@ -488,7 +515,14 @@ class MockData {
 
   /// Strictly returns only movies translated by the specified VJ.
   static List<Movie> getMoviesByVj(String vjId) {
-    final vj = vjs.firstWhere((v) => v.id == vjId, orElse: () => vjs.first);
+    final cleanId = vjId.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+    final vj = vjs.firstWhere(
+      (v) => v.id.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '') == cleanId ||
+             v.name.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '') == cleanId ||
+             v.name.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '').contains(cleanId) ||
+             cleanId.contains(v.id.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '')),
+      orElse: () => vjs.first,
+    );
     final all = getAllMovies();
     return all.where((m) => vj.translatedMovieIds.contains(m.id)).toList();
   }

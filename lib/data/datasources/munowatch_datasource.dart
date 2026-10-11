@@ -205,7 +205,13 @@ class MunowatchDatasource {
         try {
           final results = await searchMovies(query);
           for (final m in results) {
-            if ((m.isTv || m.seriesCode != null) && seenIds.add(m.id)) {
+            final isRealSeries = m.isTv ||
+                (m.seriesCode != null && m.seriesCode!.isNotEmpty && m.seriesCode != '0') ||
+                m.title.toLowerCase().contains('season') ||
+                m.title.toLowerCase().contains('series') ||
+                m.title.toLowerCase().contains('eps ') ||
+                RegExp(r'\b(?:s\d{1,2}|ep?\s*\d+)\b', caseSensitive: false).hasMatch(m.title);
+            if (isRealSeries && seenIds.add(m.id)) {
               series.add(m.copyWith(isTv: true));
             }
           }
@@ -219,7 +225,16 @@ class MunowatchDatasource {
     // Search specifically for series if none on dashboard
     try {
       final searchSeries = await searchMovies('season');
-      if (searchSeries.isNotEmpty) return searchSeries.map((s) => s.copyWith(isTv: true)).toList();
+      for (final s in searchSeries) {
+        final isRealSeries = s.isTv ||
+            (s.seriesCode != null && s.seriesCode!.isNotEmpty && s.seriesCode != '0') ||
+            s.title.toLowerCase().contains('season') ||
+            s.title.toLowerCase().contains('series');
+        if (isRealSeries && seenIds.add(s.id)) {
+          series.add(s.copyWith(isTv: true));
+        }
+      }
+      if (series.isNotEmpty) return series;
     } catch (_) {}
 
     return [];
@@ -351,6 +366,10 @@ class MunowatchDatasource {
         } else {
           map['playingurl'] = null;
         }
+        final rawSeriesCode = (map['series_code'] ?? map['seriesCode'])?.toString().trim();
+        if (rawSeriesCode != null && rawSeriesCode.isNotEmpty && rawSeriesCode != '0') {
+          map['series_code'] = rawSeriesCode;
+        }
         return map;
       }
     } catch (e) {
@@ -385,6 +404,10 @@ class MunowatchDatasource {
           } catch (_) {
             map['playingurl'] = null;
           }
+        }
+        final rawSeriesCode = (map['series_code'] ?? map['seriesCode'])?.toString().trim();
+        if (rawSeriesCode != null && rawSeriesCode.isNotEmpty && rawSeriesCode != '0') {
+          map['series_code'] = rawSeriesCode;
         }
         return map;
       }
@@ -496,15 +519,13 @@ class MunowatchDatasource {
     }
 
     final String? seriesCode = (json['series_code'] ?? json['seriesCode'])?.toString().trim();
-    final int categoryId = json['category_id'] is int
-        ? json['category_id'] as int
-        : (int.tryParse(json['category_id']?.toString() ?? '') ?? 0);
 
-    final bool isTvShow = categoryId == 5 ||
+    final bool isTvShow = (category.toLowerCase().contains('series')) ||
         (seriesCode != null && seriesCode.isNotEmpty && seriesCode != '0' && seriesCode != json['id']?.toString()) ||
         cleanTitle.toLowerCase().contains('season') ||
         cleanTitle.toLowerCase().contains('series') ||
-        cleanTitle.toLowerCase().contains('eps ');
+        cleanTitle.toLowerCase().contains('eps ') ||
+        RegExp(r'\b(?:s\d{1,2}|ep?\s*\d+)\b', caseSensitive: false).hasMatch(cleanTitle);
 
     return Movie(
       id: id,

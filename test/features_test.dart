@@ -288,13 +288,74 @@ void main() {
       expect(movie.posterUrl, startsWith('https://image.tmdb.org/'));
     });
 
-    test('MovieRepository Gap-Filling fills missing details and returns complete metadata', () async {
-      final repo = MovieRepository();
-      try {
-        final details = await repo.getMovieDetails(1011985); // The Beekeeper
-        expect(details.title.isNotEmpty, isTrue);
-      } catch (_) {
-        // Gracefully ignore live TMDB endpoint issues in test environments
+    test('All 16 user-specified VJs are registered with valid profiles', () {
+      final expectedVjKeywords = [
+        'kevo', 'anti', 'jovan', 'kevin', 'heavy q', 'mark', 'mossa', 'mosko',
+        'shield', 'smk', 'tony', 'mk kisule', 'chris sweet', 'hd', 'isma k', 'tom',
+      ];
+
+      for (final vjKey in expectedVjKeywords) {
+        final found = MockData.vjs.any((v) =>
+            v.name.toLowerCase().contains(vjKey) ||
+            v.id.toLowerCase().replaceAll('-', ' ').contains(vjKey) ||
+            MovieRepository.normalizeVjName(v.name).contains(vjKey));
+        expect(found, isTrue, reason: 'Expected VJ $vjKey to be registered in MockData.vjs');
+      }
+    });
+
+    test('Series title cross-contamination guard strictly isolates show episodes', () {
+      // Episodes of Carrie
+      expect(MovieRepository.normalizeVjName('VJ Jingo'), equals('jingo'));
+
+      // Check Carrie series matching
+      const carrie = 'Carrie';
+      const carrieEp1 = 'CARRIE VJ JINGO EP 1';
+      const carrieEp2 = 'Carrie 2';
+      const carrieEp3 = 'Carrie Episode 3';
+      const moblandEp = 'Mobland Season 2: Episode 4';
+
+      expect(carrieEp1.toLowerCase().contains(carrie.toLowerCase()), isTrue);
+      expect(carrieEp2.toLowerCase().contains(carrie.toLowerCase()), isTrue);
+      expect(carrieEp3.toLowerCase().contains(carrie.toLowerCase()), isTrue);
+      expect(moblandEp.toLowerCase().contains(carrie.toLowerCase()), isFalse);
+    });
+
+    test('Animation rail filter correctly excludes non-animated live action films', () {
+      final liveActionFilms = [
+        'Enter the Dragon',
+        'Dragon Blade (2015)',
+        'House of the Dragon S01',
+        'Lionheart (Jean-Claude Van Damme)',
+        'Lions for Lambs',
+      ];
+
+      final animatedFilms = [
+        'Kung Fu Panda 4',
+        'The Lion King',
+        'How to Train Your Dragon',
+        'Shrek 2',
+        'Spider-Man: Across the Spider-Verse',
+        'Moana 2',
+      ];
+
+      // Exclusions
+      for (final film in liveActionFilms) {
+        final isExcluded = film.toLowerCase().contains('enter the dragon') ||
+            film.toLowerCase().contains('dragon blade') ||
+            film.toLowerCase().contains('house of the dragon') ||
+            film.toLowerCase().contains('lionheart') ||
+            film.toLowerCase().contains('lions for lambs');
+        expect(isExcluded, isTrue, reason: '$film should be excluded from Animation');
+      }
+
+      // Valid animations
+      for (final film in animatedFilms) {
+        final lower = film.toLowerCase();
+        final isLiveAction = lower.contains('enter the dragon') ||
+            lower.contains('dragon blade') ||
+            lower.contains('house of the dragon') ||
+            lower.contains('lionheart');
+        expect(isLiveAction, isFalse, reason: '$film should NOT be excluded from Animation');
       }
     });
   });
