@@ -17,7 +17,12 @@ class DownloadedMovie {
 
   final String? localFilePath;
   final bool isDownloading;
+  final bool isPaused;
+  final bool isFailed;
   final double downloadProgress;
+  final int downloadedBytes;
+  final int totalBytes;
+  final String? failureReason;
 
   const DownloadedMovie({
     required this.id,
@@ -34,7 +39,12 @@ class DownloadedMovie {
         'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
     this.localFilePath,
     this.isDownloading = false,
+    this.isPaused = false,
+    this.isFailed = false,
     this.downloadProgress = 1.0,
+    this.downloadedBytes = 0,
+    this.totalBytes = 0,
+    this.failureReason,
   });
 
   DownloadedMovie copyWith({
@@ -51,7 +61,12 @@ class DownloadedMovie {
     String? videoUrl,
     String? localFilePath,
     bool? isDownloading,
+    bool? isPaused,
+    bool? isFailed,
     double? downloadProgress,
+    int? downloadedBytes,
+    int? totalBytes,
+    String? failureReason,
   }) {
     return DownloadedMovie(
       id: id ?? this.id,
@@ -67,7 +82,12 @@ class DownloadedMovie {
       videoUrl: videoUrl ?? this.videoUrl,
       localFilePath: localFilePath ?? this.localFilePath,
       isDownloading: isDownloading ?? this.isDownloading,
+      isPaused: isPaused ?? this.isPaused,
+      isFailed: isFailed ?? this.isFailed,
       downloadProgress: downloadProgress ?? this.downloadProgress,
+      downloadedBytes: downloadedBytes ?? this.downloadedBytes,
+      totalBytes: totalBytes ?? this.totalBytes,
+      failureReason: failureReason ?? this.failureReason,
     );
   }
 
@@ -107,7 +127,12 @@ class DownloadedMovie {
     String? videoUrl,
     String? localFilePath,
     bool isDownloading = false,
+    bool isPaused = false,
+    bool isFailed = false,
     double downloadProgress = 0.0,
+    int downloadedBytes = 0,
+    int totalBytes = 0,
+    String? failureReason,
   }) {
     final computedSize = fileSizeMb ?? (700 + (movie.id % 800));
     return DownloadedMovie(
@@ -126,7 +151,12 @@ class DownloadedMovie {
           'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
       localFilePath: localFilePath,
       isDownloading: isDownloading,
+      isPaused: isPaused,
+      isFailed: isFailed,
       downloadProgress: downloadProgress,
+      downloadedBytes: downloadedBytes,
+      totalBytes: totalBytes,
+      failureReason: failureReason,
     );
   }
 
@@ -148,8 +178,13 @@ class DownloadedMovie {
           'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
       localFilePath: json['local_file_path'] as String?,
       isDownloading: json['is_downloading'] as bool? ?? false,
+      isPaused: json['is_paused'] as bool? ?? false,
+      isFailed: json['is_failed'] as bool? ?? false,
       downloadProgress:
           (json['download_progress'] as num?)?.toDouble() ?? 1.0,
+      downloadedBytes: json['downloaded_bytes'] as int? ?? 0,
+      totalBytes: json['total_bytes'] as int? ?? 0,
+      failureReason: json['failure_reason'] as String?,
     );
   }
 
@@ -167,7 +202,12 @@ class DownloadedMovie {
         'video_url': videoUrl,
         'local_file_path': localFilePath,
         'is_downloading': isDownloading,
+        'is_paused': isPaused,
+        'is_failed': isFailed,
         'download_progress': downloadProgress,
+        'downloaded_bytes': downloadedBytes,
+        'total_bytes': totalBytes,
+        'failure_reason': failureReason,
       };
 
   @override

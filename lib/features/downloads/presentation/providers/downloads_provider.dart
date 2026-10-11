@@ -26,8 +26,16 @@ class DownloadsNotifier extends StateNotifier<List<DownloadedMovie>> {
         final List<dynamic> decoded = jsonDecode(savedJson) as List<dynamic>;
         final items = decoded
             .map((e) => DownloadedMovie.fromJson(e as Map<String, dynamic>))
-            // Reset any item that was stuck in downloading state across app restarts
-            .map((e) => e.isDownloading ? e.copyWith(isDownloading: false) : e)
+            // Reset any item that was stuck in downloading state across app restarts to paused
+            .map((e) {
+              if (e.isDownloading) {
+                return e.copyWith(
+                  isDownloading: false,
+                  isPaused: true,
+                );
+              }
+              return e;
+            })
             .toList();
         state = items;
         return;
@@ -42,7 +50,13 @@ class DownloadsNotifier extends StateNotifier<List<DownloadedMovie>> {
   Future<void> _persistDownloads(List<DownloadedMovie> list) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final toSave = list.where((m) => !m.isDownloading).toList();
+      // Persist all items; if actively downloading, save as paused so app kill won't lose them
+      final toSave = list.map((m) {
+        if (m.isDownloading) {
+          return m.copyWith(isDownloading: false, isPaused: true);
+        }
+        return m;
+      }).toList();
       final encoded = jsonEncode(toSave.map((m) => m.toJson()).toList());
       await prefs.setString(_prefKeyDownloadedMovies, encoded);
     } catch (e) {
@@ -51,11 +65,20 @@ class DownloadsNotifier extends StateNotifier<List<DownloadedMovie>> {
   }
 
   bool isDownloaded(int movieId) {
-    return state.any((m) => m.id == movieId && !m.isDownloading && (m.localFilePath != null && File(m.localFilePath!).existsSync()));
+    return state.any((m) =>
+        m.id == movieId &&
+        !m.isDownloading &&
+        !m.isPaused &&
+        m.downloadProgress >= 1.0 &&
+        (m.localFilePath != null && File(m.localFilePath!).existsSync()));
   }
 
   bool isDownloading(int movieId) {
     return state.any((m) => m.id == movieId && m.isDownloading);
+  }
+
+  bool isPaused(int movieId) {
+    return state.any((m) => m.id == movieId && (m.isPaused || m.isFailed));
   }
 
   DownloadedMovie? getDownloadedMovie(int movieId) {
@@ -78,19 +101,65 @@ class DownloadsNotifier extends StateNotifier<List<DownloadedMovie>> {
         : 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
     final targetUrl = rawUrl.trim().replaceAll(' ', '%20');
 
-    final initialItem = DownloadedMovie.fromMovie(
-      movie,
-      vjName: vjName ?? movie.vjName ?? 'VJ',
-      videoUrl: targetUrl,
-      isDownloading: true,
-      downloadProgress: 0.05,
-    );
+    final existing = getDownloadedMovie(movie.id);
+
+    final initialItem = existing?.copyWith(
+          isDownloading: true,
+          isPaused: false,
+          isFailed: false,
+          videoUrl: targetUrl,
+        ) ??
+        DownloadedMovie.fromMovie(
+          movie,
+          vjName: vjName ?? movie.vjName ?? 'VJ',
+          videoUrl: targetUrl,
+          isDownloading: true,
+          isPaused: false,
+          isFailed: false,
+          downloadProgress: 0.05,
+        );
 
     // Add or update downloading item in state
     state = [initialItem, ...state.where((m) => m.id != movie.id)];
+    await _persistDownloads(state);
 
+    _executeDownload(initialItem);
+  }
+
+  Future<void> resumeDownload(int movieId) async {
+    final item = getDownloadedMovie(movieId);
+    if (item == null || item.isDownloading) return;
+
+    final activeItem = item.copyWith(
+      isDownloading: true,
+      isPaused: false,
+      isFailed: false,
+    );
+    state = state.map((m) => m.id == movieId ? activeItem : m).toList();
+    await _persistDownloads(state);
+
+    _executeDownload(activeItem);
+  }
+
+  Future<void> pauseDownload(int movieId) async {
+    final token = _cancelTokens[movieId];
+    if (token != null && !token.isCancelled) {
+      token.cancel('User paused download');
+    }
+    _cancelTokens.remove(movieId);
+
+    state = state.map((m) {
+      if (m.id == movieId) {
+        return m.copyWith(isDownloading: false, isPaused: true);
+      }
+      return m;
+    }).toList();
+    await _persistDownloads(state);
+  }
+
+  Future<void> _executeDownload(DownloadedMovie item) async {
     final cancelToken = CancelToken();
-    _cancelTokens[movie.id] = cancelToken;
+    _cancelTokens[item.id] = cancelToken;
 
     try {
       final dir = await getApplicationDocumentsDirectory();
@@ -99,7 +168,13 @@ class DownloadsNotifier extends StateNotifier<List<DownloadedMovie>> {
         await moviesDir.create(recursive: true);
       }
 
-      final filePath = '${moviesDir.path}/${movie.id}.mp4';
+      final filePath = '${moviesDir.path}/${item.id}.mp4';
+      final file = File(filePath);
+
+      int existingBytes = 0;
+      if (await file.exists()) {
+        existingBytes = await file.length();
+      }
 
       final dio = Dio(
         BaseOptions(
@@ -111,21 +186,27 @@ class DownloadsNotifier extends StateNotifier<List<DownloadedMovie>> {
       DateTime lastUiUpdate = DateTime.now();
 
       await dio.download(
-        targetUrl,
+        item.videoUrl,
         filePath,
         cancelToken: cancelToken,
+        deleteOnError: false, // KEEP partial file for resuming!
         onReceiveProgress: (received, total) {
           if (total > 0) {
             final now = DateTime.now();
-            // Throttle UI updates to once every 250ms to keep UI silky smooth
+            final actualReceived = existingBytes + received;
+            final actualTotal = existingBytes + total;
+            final progress = (actualReceived / actualTotal).clamp(0.0, 1.0);
+
             if (now.difference(lastUiUpdate).inMilliseconds > 250 || received == total) {
               lastUiUpdate = now;
-              final progress = (received / total).clamp(0.0, 1.0);
               state = state.map((m) {
-                if (m.id == movie.id) {
+                if (m.id == item.id) {
                   return m.copyWith(
                     downloadProgress: progress,
+                    downloadedBytes: actualReceived,
+                    totalBytes: actualTotal,
                     isDownloading: received < total,
+                    isPaused: false,
                   );
                 }
                 return m;
@@ -137,7 +218,7 @@ class DownloadsNotifier extends StateNotifier<List<DownloadedMovie>> {
 
       // Verify file and size
       final downloadedFile = File(filePath);
-      int sizeMb = initialItem.fileSizeMb;
+      int sizeMb = item.fileSizeMb;
       if (await downloadedFile.exists()) {
         final bytes = await downloadedFile.length();
         if (bytes > 0) {
@@ -146,54 +227,55 @@ class DownloadsNotifier extends StateNotifier<List<DownloadedMovie>> {
         }
       }
 
-      final completedItem = initialItem.copyWith(
+      final completedItem = item.copyWith(
         localFilePath: filePath,
         isDownloading: false,
+        isPaused: false,
+        isFailed: false,
         downloadProgress: 1.0,
         fileSizeMb: sizeMb,
       );
 
-      final updated = [
+      state = [
         completedItem,
-        ...state.where((m) => m.id != movie.id),
+        ...state.where((m) => m.id != item.id),
       ];
-      state = updated;
-      await _persistDownloads(updated);
+      await _persistDownloads(state);
     } catch (e) {
-      debugPrint('Download error for movie ${movie.id}: $e');
-      // If cancelled or failed, remove from active state
-      state = state.where((m) => m.id != movie.id).toList();
-      _cancelTokens.remove(movie.id);
+      debugPrint('Download interrupted for movie ${item.id}: $e');
+      // DO NOT REMOVE FROM STATE! Mark as paused or interrupted with its saved progress
+      state = state.map((m) {
+        if (m.id == item.id) {
+          return m.copyWith(
+            isDownloading: false,
+            isPaused: true,
+            isFailed: cancelToken.isCancelled ? false : true,
+            failureReason: cancelToken.isCancelled ? null : 'Network interrupted',
+          );
+        }
+        return m;
+      }).toList();
+      await _persistDownloads(state);
     } finally {
-      _cancelTokens.remove(movie.id);
+      _cancelTokens.remove(item.id);
     }
   }
 
   Future<void> cancelDownload(int movieId) async {
+    pauseDownload(movieId);
+  }
+
+  Future<void> removeDownload(int movieId) async {
     final token = _cancelTokens[movieId];
     if (token != null && !token.isCancelled) {
       token.cancel('User canceled download');
     }
     _cancelTokens.remove(movieId);
-    state = state.where((m) => m.id != movieId).toList();
-  }
 
-  Future<void> removeDownload(int movieId) async {
-    cancelDownload(movieId);
-    final target = state.firstWhere(
-      (m) => m.id == movieId,
-      orElse: () => DownloadedMovie(
-        id: -1,
-        title: '',
-        voteAverage: 0,
-        fileSizeMb: 0,
-        downloadedAt: DateTime.now(),
-      ),
-    );
-
-    if (target.localFilePath != null) {
+    final target = getDownloadedMovie(movieId);
+    if (target?.localFilePath != null) {
       try {
-        final f = File(target.localFilePath!);
+        final f = File(target!.localFilePath!);
         if (await f.exists()) {
           await f.delete();
         }
@@ -208,6 +290,11 @@ class DownloadsNotifier extends StateNotifier<List<DownloadedMovie>> {
   }
 
   Future<void> clearAllDownloads() async {
+    for (final token in _cancelTokens.values) {
+      if (!token.isCancelled) token.cancel();
+    }
+    _cancelTokens.clear();
+
     for (final m in state) {
       if (m.localFilePath != null) {
         try {

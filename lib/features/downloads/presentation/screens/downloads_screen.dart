@@ -330,11 +330,23 @@ class DownloadsScreen extends ConsumerWidget {
                                   ),
                                 ),
                               )
-                            : const Icon(
-                                Icons.play_arrow_rounded,
-                                color: Colors.white,
-                                size: 18,
-                              ),
+                            : (item.isPaused || item.isFailed || item.downloadProgress < 1.0)
+                                ? GestureDetector(
+                                    onTap: () {
+                                      ref.read(downloadsProvider.notifier).resumeDownload(item.id);
+                                      AppToast.show(context, 'Resuming download for "${item.title}"', isSuccess: true);
+                                    },
+                                    child: const Icon(
+                                      Icons.refresh_rounded,
+                                      color: Color(0xFFF59E0B),
+                                      size: 18,
+                                    ),
+                                  )
+                                : const Icon(
+                                    Icons.play_arrow_rounded,
+                                    color: Colors.white,
+                                    size: 18,
+                                  ),
                       ),
                     ],
                   ),
@@ -416,6 +428,35 @@ class DownloadsScreen extends ConsumerWidget {
                               fontWeight: FontWeight.w700,
                             ),
                           ),
+                        ] else if (item.isPaused || item.isFailed || item.downloadProgress < 1.0) ...[
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(2),
+                            child: LinearProgressIndicator(
+                              value: item.downloadProgress,
+                              minHeight: 4,
+                              backgroundColor: Colors.white.withOpacity(0.12),
+                              valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFF59E0B)),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.pause_circle_filled_rounded,
+                                color: Color(0xFFF59E0B),
+                                size: 12,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Paused ${(item.downloadProgress * 100).toInt()}% • Tap to Resume',
+                                style: const TextStyle(
+                                  color: Color(0xFFF59E0B),
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
                         ] else ...[
                           Row(
                             children: [
@@ -448,23 +489,73 @@ class DownloadsScreen extends ConsumerWidget {
                     ),
                   ),
 
-                  // Delete / Cancel Action Button
+                  // Actions: Pause / Resume + Delete
+                  if (item.isDownloading)
+                    GestureDetector(
+                      onTap: () {
+                        ref.read(downloadsProvider.notifier).pauseDownload(item.id);
+                        AppToast.show(context, 'Paused download for "${item.title}"');
+                      },
+                      behavior: HitTestBehavior.opaque,
+                      child: Padding(
+                        padding: const EdgeInsets.all(6),
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.08),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.pause_rounded,
+                            color: Colors.white,
+                            size: 16,
+                          ),
+                        ),
+                      ),
+                    )
+                  else if (item.isPaused || item.isFailed || item.downloadProgress < 1.0)
+                    GestureDetector(
+                      onTap: () {
+                        ref.read(downloadsProvider.notifier).resumeDownload(item.id);
+                        AppToast.show(context, 'Resuming download for "${item.title}"', isSuccess: true);
+                      },
+                      behavior: HitTestBehavior.opaque,
+                      child: Padding(
+                        padding: const EdgeInsets.all(6),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF22C55E).withOpacity(0.20),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: const Color(0xFF22C55E).withOpacity(0.45), width: 0.8),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.play_arrow_rounded, color: Color(0xFF22C55E), size: 14),
+                              SizedBox(width: 2),
+                              Text(
+                                'Resume',
+                                style: TextStyle(
+                                  color: Color(0xFF22C55E),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+
+                  // Delete Action Button
                   GestureDetector(
-                    onTap: () {
-                      if (item.isDownloading) {
-                        ref.read(downloadsProvider.notifier).cancelDownload(item.id);
-                        AppToast.show(context, 'Canceled download for "${item.title}"');
-                      } else {
-                        _confirmDelete(context, ref, item);
-                      }
-                    },
+                    onTap: () => _confirmDelete(context, ref, item),
                     behavior: HitTestBehavior.opaque,
                     child: Padding(
                       padding: const EdgeInsets.all(8),
                       child: Icon(
-                        item.isDownloading
-                            ? Icons.close_rounded
-                            : Icons.delete_outline_rounded,
+                        Icons.delete_outline_rounded,
                         color: Colors.white.withOpacity(0.45),
                         size: 20,
                       ),

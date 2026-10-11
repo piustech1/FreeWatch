@@ -9,6 +9,7 @@ class NotificationItem {
   final IconData icon;
   final Color iconColor;
   final Movie? linkedMovie;
+  final String? imageUrl;
   final bool isRead;
 
   const NotificationItem({
@@ -19,6 +20,7 @@ class NotificationItem {
     required this.icon,
     required this.iconColor,
     this.linkedMovie,
+    this.imageUrl,
     this.isRead = false,
   });
 
@@ -30,6 +32,7 @@ class NotificationItem {
     IconData? icon,
     Color? iconColor,
     Movie? linkedMovie,
+    String? imageUrl,
     bool? isRead,
   }) {
     return NotificationItem(
@@ -40,7 +43,37 @@ class NotificationItem {
       icon: icon ?? this.icon,
       iconColor: iconColor ?? this.iconColor,
       linkedMovie: linkedMovie ?? this.linkedMovie,
+      imageUrl: imageUrl ?? this.imageUrl,
       isRead: isRead ?? this.isRead,
     );
   }
+
+  factory NotificationItem.fromJson(Map<String, dynamic> json) {
+    return NotificationItem(
+      id: json['id'] as String? ?? 'notif_${DateTime.now().millisecondsSinceEpoch}',
+      section: json['section'] as String? ?? 'Today',
+      message: json['message'] as String? ?? '',
+      time: json['time'] as String? ?? 'Just now',
+      icon: Icons.movie_filter_rounded,
+      iconColor: json['iconColor'] != null
+          ? Color(json['iconColor'] as int)
+          : const Color(0xFFC084FC),
+      linkedMovie: json['linkedMovie'] != null
+          ? Movie.fromJson(Map<String, dynamic>.from(json['linkedMovie'] as Map))
+          : null,
+      imageUrl: json['imageUrl'] as String?,
+      isRead: json['isRead'] as bool? ?? false,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'section': section,
+        'message': message,
+        'time': time,
+        'iconColor': iconColor.value,
+        if (linkedMovie != null) 'linkedMovie': linkedMovie!.toJson(),
+        if (imageUrl != null) 'imageUrl': imageUrl,
+        'isRead': isRead,
+      };
 }

@@ -1,5 +1,7 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shimmer/shimmer.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../home/providers/home_providers.dart';
 import '../../../home/widgets/floating_nav_bar.dart';
@@ -225,24 +227,71 @@ class NotificationsScreen extends ConsumerWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // 1. Squircle Icon Container
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF13151E),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.08),
-                    width: 0.8,
-                  ),
-                ),
-                alignment: Alignment.center,
-                child: Icon(
-                  item.icon,
-                  color: item.iconColor,
-                  size: 24,
-                ),
+              // 1. Poster Thumbnail or Squircle Icon Container
+              Builder(
+                builder: (context) {
+                  final poster = item.imageUrl ?? item.linkedMovie?.posterUrl;
+                  if (poster != null && poster.isNotEmpty) {
+                    return Container(
+                      width: 52,
+                      height: 68,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.12),
+                          width: 0.8,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.35),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: CachedNetworkImage(
+                          imageUrl: poster,
+                          fit: BoxFit.cover,
+                          placeholder: (_, __) => Shimmer.fromColors(
+                            baseColor: const Color(0xFF1E222D),
+                            highlightColor: const Color(0xFF2C3242),
+                            child: Container(color: const Color(0xFF1E222D)),
+                          ),
+                          errorWidget: (_, __, ___) => Container(
+                            color: const Color(0xFF13151E),
+                            alignment: Alignment.center,
+                            child: Icon(
+                              item.icon,
+                              color: item.iconColor,
+                              size: 24,
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+
+                  return Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF13151E),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.08),
+                        width: 0.8,
+                      ),
+                    ),
+                    alignment: Alignment.center,
+                    child: Icon(
+                      item.icon,
+                      color: item.iconColor,
+                      size: 24,
+                    ),
+                  );
+                },
               ),
 
               const SizedBox(width: 14),

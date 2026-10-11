@@ -19,6 +19,8 @@ class MovieRepository {
   })  : _datasource = datasource ?? TmdbDatasource(),
         _munowatch = munowatchDatasource ?? MunowatchDatasource();
 
+  final Map<String, List<Movie>> _vjMoviesCache = {};
+
   bool get _hasCustomApiKey =>
       ApiConstants.tmdbApiKey != 'YOUR_TMDB_API_KEY' &&
       ApiConstants.tmdbApiKey.trim().isNotEmpty;
@@ -305,6 +307,12 @@ class MovieRepository {
     final String rawName = vjOrId is Vj ? vjOrId.name : vjOrId.toString();
     final String vjId = vjOrId is Vj ? vjOrId.id : vjOrId.toString();
     final cleanVjTarget = normalizeVjName(rawName);
+
+    // Fast-path: Check in-memory VJ cache
+    if (_vjMoviesCache.containsKey(cleanVjTarget) && _vjMoviesCache[cleanVjTarget]!.isNotEmpty) {
+      return _vjMoviesCache[cleanVjTarget]!;
+    }
+
     final List<Movie> matching = [];
     final Set<int> seenIds = {};
 
@@ -358,25 +366,30 @@ class MovieRepository {
       } catch (_) {}
     }
 
-    // Search live MunoWatch API using multiple query variations (e.g. "VJ Isma", "Isma")
+    // Search live MunoWatch API using parallel queries for speed
     if (matching.length < 20) {
       final searchQueries = [
         rawName,
         cleanVjTarget,
         if (cleanVjTarget.contains(' ')) cleanVjTarget.split(' ').first,
-      ];
-      for (final q in searchQueries) {
-        if (q.trim().isEmpty) continue;
-        try {
-          final searchResults = await _munowatch.searchMovies(q.trim());
-          for (final m in searchResults) {
+      ].where((q) => q.trim().isNotEmpty).toSet().toList();
+
+      try {
+        final searchFutures = searchQueries.map(
+          (q) => _munowatch.searchMovies(q.trim()).timeout(
+                const Duration(milliseconds: 3500),
+                onTimeout: () => [],
+              ),
+        );
+        final resultsList = await Future.wait(searchFutures);
+        for (final results in resultsList) {
+          for (final m in results) {
             if (seenIds.add(m.id)) {
               matching.add(m.copyWith(vjName: rawName));
             }
           }
-          if (matching.length >= 25) break;
-        } catch (_) {}
-      }
+        }
+      } catch (_) {}
     }
 
     // Fallback: If still empty, ensure this VJ screen has playable translated releases
@@ -389,6 +402,10 @@ class MovieRepository {
           }
         }
       } catch (_) {}
+    }
+
+    if (matching.isNotEmpty) {
+      _vjMoviesCache[cleanVjTarget] = matching;
     }
 
     return matching;
@@ -1006,29 +1023,72 @@ class MovieRepository {
     // For season 1 (or fallback), use the series movie tvId
     startEpId ??= (tvId > 0 ? tvId : null);
 
-    // 2. Probe sequential video IDs from MunoWatch /api/stream starting at startEpId
+    // 2. If seriesCode is available, fetch authentic episodes directly from MunoWatch /series/$code
+    final Map<int, TvEpisodeData> discoveredEpisodes = {};
+
+    if (seriesCode != null && seriesCode.isNotEmpty && seriesCode != '0') {
+      try {
+        final munoEps = await _munowatch.getSeriesEpisodes(seriesCode);
+        for (int i = 0; i < munoEps.length; i++) {
+          final epData = munoEps[i];
+          final epTitle = (epData['title'] ?? 'Episode ${i + 1}').toString();
+          final epPlayingUrl = (epData['playingurl'] ?? epData['playingUrl'])?.toString().trim();
+          final epId = epData['id'] is int
+              ? epData['id'] as int
+              : (int.tryParse(epData['id']?.toString() ?? '') ?? (startEpId != null ? startEpId + i : i + 1));
+
+          int epNum = 0;
+          if (epData['episode'] != null) {
+            epNum = int.tryParse(epData['episode'].toString()) ?? 0;
+          }
+          if (epNum == 0) {
+            final match = RegExp(r'(?:episode|episodes|eps|ep|e)\.?\s*0*(\d+)', caseSensitive: false)
+                .firstMatch(epTitle);
+            if (match != null) {
+              epNum = int.tryParse(match.group(1) ?? '') ?? 0;
+            }
+          }
+          if (epNum == 0) {
+            epNum = i + 1;
+          }
+
+          discoveredEpisodes[epNum] = TvEpisodeData(
+            id: epId,
+            episodeNumber: epNum,
+            seasonNumber: seasonNumber,
+            name: epTitle,
+            overview: epData['description']?.toString() ?? 'Official Luganda translated episode release',
+            runtime: 45,
+            stillPath: epData['image']?.toString(),
+            voteAverage: 8.5,
+            videoUrl: (epPlayingUrl != null && epPlayingUrl.startsWith('http')) ? epPlayingUrl : null,
+          );
+        }
+      } catch (_) {}
+    }
+
+    // 3. Probe sequential video IDs from MunoWatch /api/stream starting at startEpId (up to 24 candidates)
     if (startEpId != null && startEpId > 0) {
       try {
-        final candidateIds = List.generate(12, (i) => startEpId! + i);
+        final candidateIds = List.generate(24, (i) => startEpId! + i);
         final streamDetailsList = await Future.wait(
           candidateIds.map((id) => _munowatch.getStreamDetails(id)),
         );
 
-        final List<TvEpisodeData> probedEpisodes = [];
         int consecutiveMismatches = 0;
 
         for (int i = 0; i < candidateIds.length; i++) {
           final detail = streamDetailsList[i];
           if (detail == null) {
             consecutiveMismatches++;
-            if (consecutiveMismatches >= 2) break;
+            if (consecutiveMismatches >= 5) break;
             continue;
           }
 
           final rawPlayingUrl = (detail['playingurl'] ?? detail['playingUrl'])?.toString().trim();
           if (rawPlayingUrl == null || !rawPlayingUrl.startsWith('http')) {
             consecutiveMismatches++;
-            if (consecutiveMismatches >= 2) break;
+            if (consecutiveMismatches >= 5) break;
             continue;
           }
 
@@ -1045,7 +1105,7 @@ class MovieRepository {
 
           if (!belongsToSeries && i > 0) {
             consecutiveMismatches++;
-            if (consecutiveMismatches >= 2) break;
+            if (consecutiveMismatches >= 5) break;
             continue;
           }
 
@@ -1078,14 +1138,10 @@ class MovieRepository {
             epNum = i + 1;
           }
 
-          // Skip duplicate stream if already added
-          if (probedEpisodes.any((e) => e.videoUrl == rawPlayingUrl)) {
-            continue;
-          }
-
-          // If episode number is already used, assign next sequential available number
-          if (probedEpisodes.any((e) => e.episodeNumber == epNum)) {
-            final usedNums = probedEpisodes.map((e) => e.episodeNumber).toSet();
+          // If episode number is already used with different URL, assign next sequential available number
+          if (discoveredEpisodes.containsKey(epNum) &&
+              discoveredEpisodes[epNum]!.videoUrl != rawPlayingUrl) {
+            final usedNums = discoveredEpisodes.keys.toSet();
             int nextUnused = 1;
             while (usedNums.contains(nextUnused)) {
               nextUnused++;
@@ -1110,7 +1166,7 @@ class MovieRepository {
             ),
           );
 
-          probedEpisodes.add(TvEpisodeData(
+          discoveredEpisodes[epNum] = TvEpisodeData(
             id: currentEpId,
             episodeNumber: epNum,
             seasonNumber: seasonNumber,
@@ -1122,27 +1178,16 @@ class MovieRepository {
             stillPath: tmdbEp.stillPath ?? detail['image']?.toString(),
             voteAverage: tmdbEp.voteAverage > 0 ? tmdbEp.voteAverage : 8.5,
             videoUrl: rawPlayingUrl,
-          ));
-        }
-
-        if (probedEpisodes.isNotEmpty) {
-          final Map<int, TvEpisodeData> uniqueMap = {};
-          for (final ep in probedEpisodes) {
-            uniqueMap.putIfAbsent(ep.episodeNumber, () => ep);
-          }
-          final uniqueList = uniqueMap.values.toList()
-            ..sort((a, b) => a.episodeNumber.compareTo(b.episodeNumber));
-          return uniqueList;
+          );
         }
       } catch (_) {}
     }
 
-    // 3. Fallback: Search MunoWatch for matching season episodes and resolve their stream URLs
-    final Map<int, String> streamUrlMap = {};
-    final Map<int, int> streamIdMap = {};
+    // 4. Search MunoWatch across all query variations to discover any remaining episodes
     try {
       final queries = [
         if (cleanTitle.isNotEmpty) '$cleanTitle Season $seasonNumber',
+        if (cleanTitle.isNotEmpty) '$cleanTitle S0$seasonNumber',
         if (cleanTitle.isNotEmpty) cleanTitle,
         'Season $seasonNumber',
       ];
@@ -1158,59 +1203,49 @@ class MovieRepository {
               .firstMatch(cleanTitleLower);
           if (match != null) {
             final epNum = int.tryParse(match.group(1) ?? '');
-            if (epNum != null && !streamUrlMap.containsKey(epNum)) {
-              streamIdMap[epNum] = m.id;
+            if (epNum != null && !discoveredEpisodes.containsKey(epNum)) {
               final streamData = await _munowatch.getStreamDetails(m.id);
               final playingUrl = (streamData?['playingurl'] ?? streamData?['playingUrl'])?.toString().trim();
-              if (playingUrl != null && playingUrl.startsWith('http')) {
-                streamUrlMap[epNum] = playingUrl;
-              }
+              discoveredEpisodes[epNum] = TvEpisodeData(
+                id: m.id,
+                episodeNumber: epNum,
+                seasonNumber: seasonNumber,
+                name: m.title,
+                overview: m.overview ?? 'Official Luganda translated episode release',
+                runtime: 45,
+                stillPath: m.posterPath,
+                voteAverage: 8.5,
+                videoUrl: (playingUrl != null && playingUrl.startsWith('http')) ? playingUrl : m.videoUrl,
+              );
             }
           }
         }
-        if (streamUrlMap.isNotEmpty) break;
       }
     } catch (_) {}
 
-    // 4. Merge TMDB official episodes with MunoWatch streams
+    // 5. Merge with TMDB official episodes if present
     if (officialEpisodes.isNotEmpty) {
       return officialEpisodes.map((ep) {
-        final stream = streamUrlMap[ep.episodeNumber];
-        final mappedId = streamIdMap[ep.episodeNumber] ?? ep.id;
+        final discovered = discoveredEpisodes[ep.episodeNumber];
         return TvEpisodeData(
-          id: mappedId,
+          id: discovered?.id ?? (startEpId != null ? startEpId + ep.episodeNumber - 1 : ep.id),
           episodeNumber: ep.episodeNumber,
           seasonNumber: seasonNumber,
           name: ep.name,
           overview: ep.overview,
-          runtime: ep.runtime,
-          stillPath: ep.stillPath,
+          runtime: ep.runtime > 0 ? ep.runtime : 45,
+          stillPath: ep.stillPath ?? discovered?.stillPath,
           voteAverage: ep.voteAverage,
-          videoUrl: stream ?? ep.videoUrl,
+          videoUrl: discovered?.videoUrl ?? ep.videoUrl,
         );
       }).toList();
     }
 
-    // Fallback: Build from MunoWatch search results
-    if (streamUrlMap.isNotEmpty) {
-      final List<TvEpisodeData> eps = [];
-      final sortedEpNums = streamUrlMap.keys.toList()..sort();
-      for (final epNum in sortedEpNums) {
-        eps.add(
-          TvEpisodeData(
-            id: streamIdMap[epNum] ?? epNum,
-            episodeNumber: epNum,
-            seasonNumber: seasonNumber,
-            name: 'Episode $epNum',
-            overview: 'Official Luganda translated episode release',
-            runtime: 48,
-            stillPath: null,
-            voteAverage: 8.4,
-            videoUrl: streamUrlMap[epNum],
-          ),
-        );
-      }
-      return eps;
+    // 6. Return all discovered episodes sorted sequentially
+    if (discoveredEpisodes.isNotEmpty) {
+      final sortedList = discoveredEpisodes.values.toList()
+        ..sort((a, b) => a.episodeNumber.compareTo(b.episodeNumber));
+      return sortedList;
     }
 
     return [];

@@ -20,6 +20,7 @@ import '../../../movie_detail/presentation/screens/movie_detail_screen.dart';
 import '../../../movie_grid/presentation/screens/movie_grid_screen.dart';
 import '../providers/user_profile_provider.dart';
 import '../providers/watch_history_provider.dart';
+import '../../../chat/presentation/screens/developer_chat_screen.dart';
 
 /// Pure iOS Glassmorphic Profile Screen:
 /// - Pitch black background (AppColors.background)
@@ -203,6 +204,25 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ),
                   _buildGlassSettingsContainer([
                     _buildSettingsTile(
+                      icon: Icons.forum_rounded,
+                      iconColor: const Color(0xFF8B5CF6),
+                      title: 'Talk to Developer',
+                      subtitle: 'Direct chat with the developer & support',
+                      trailing: const Icon(
+                        Icons.chevron_right_rounded,
+                        color: Color(0xFF8E92A4),
+                        size: 20,
+                      ),
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const DeveloperChatScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    _buildSettingsDivider(),
+                    _buildSettingsTile(
                       icon: Icons.cleaning_services_rounded,
                       iconColor: const Color(0xFF34D399),
                       title: 'Clear Cache',
@@ -236,7 +256,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       icon: Icons.info_rounded,
                       iconColor: const Color(0xFF38BDF8),
                       title: 'App Version',
-                      subtitle: 'FreeWatch v1.0.39 (Build 40)',
+                      subtitle: 'FreeWatch v1.0.49 (Build 50)',
                       trailing: null,
                       onTap: null,
                     ),
