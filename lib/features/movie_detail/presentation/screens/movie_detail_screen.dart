@@ -2023,7 +2023,9 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
 
     final VideoPlayerController controller = hasLocalFile
         ? VideoPlayerController.file(File(localFilePath))
-        : VideoPlayerController.networkUrl(Uri.parse(resolvedUrl!));
+        : VideoPlayerController.networkUrl(
+            Uri.parse(Uri.encodeFull(resolvedUrl!.trim())),
+          );
 
     _videoPlayerController = controller;
 

@@ -34,26 +34,26 @@ void main() {
       expect(seriesMatch.pathParameters['series_code'], equals('SR_EP_50'));
     });
 
-    test('MunowatchDatasource helper methods construct valid MumoWatch URLs', () {
+    test('MunowatchDatasource helper methods construct valid MunoWatch URLs', () {
       expect(
         MunowatchDatasource.dashboardWebUrl(),
-        equals('https://mumowatch.ai.studio/dashboard'),
+        equals('https://munowatch.ai.studio/dashboard'),
       );
       expect(
         MunowatchDatasource.movieWebUrl(10000),
-        equals('https://mumowatch.ai.studio/movie/10000'),
+        equals('https://munowatch.ai.studio/movie/10000'),
       );
       expect(
         MunowatchDatasource.moviePlayWebUrl(10000),
-        equals('https://mumowatch.ai.studio/movie/10000/play'),
+        equals('https://munowatch.ai.studio/movie/10000/play'),
       );
       expect(
         MunowatchDatasource.moviePlayQueryWebUrl(id: 10000),
-        equals('https://mumowatch.ai.studio/movie/play?id=10000'),
+        equals('https://munowatch.ai.studio/movie/play?id=10000'),
       );
       expect(
         MunowatchDatasource.seriesWebUrl('SR_EP_50'),
-        equals('https://mumowatch.ai.studio/series/SR_EP_50'),
+        equals('https://munowatch.ai.studio/series/SR_EP_50'),
       );
     });
   });
