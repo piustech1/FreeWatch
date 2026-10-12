@@ -1,0 +1,12 @@
+{
+  "name": "freewatch-fcm-daemon",
+  "version": "1.0.0",
+  "description": "FreeWatch automated background FCM notification daemon (Iris Architecture)",
+  "main": "fcm_daemon.js",
+  "scripts": {
+    "start": "node fcm_daemon.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.0.0"
+  }
+}

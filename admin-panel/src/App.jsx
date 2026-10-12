@@ -226,7 +226,7 @@ export default function App() {
       }
     }
 
-    // 2. Safe Database History logging (wrapped so RTDB permission rules never block push dispatch)
+    // 2. Safe Database History logging & Trigger Daemon
     try {
       const historyRef = ref(rtdb, 'push_notifications/history');
       const newPushRef = push(historyRef);
@@ -243,25 +243,41 @@ export default function App() {
 
       await set(newPushRef, pushRecord);
 
+      // Writes to global_alerts/latest - immediately detected by background FCM Daemon!
       const alertsRef = ref(rtdb, 'global_alerts/latest');
       await set(alertsRef, {
         ...pushRecord,
         active: true
       });
+
+      // 3. Also trigger Vercel Serverless Function if hosted online
+      try {
+        const pushRes = await fetch('/api/send-push', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            topic: notifTarget,
+            title: notifTitle,
+            body: notifBody,
+            imageUrl: notifImageUrl,
+            movieId: notifMovieId
+          })
+        });
+        const pushData = await pushRes.json();
+        if (pushData && pushData.success) {
+          directFcmOk = true;
+        }
+      } catch (_) {}
     } catch (dbErr) {
-      console.warn("Database history logging notice (RTDB permission rules restriction):", dbErr);
+      console.warn("Database history logging notice:", dbErr);
     }
 
     setIsSendingNotif(false);
 
     if (directFcmOk) {
-      setNotifSuccess(`Broadcast sent to Google FCM for topic '${notifTarget}'!`);
-    } else if (fcmErrorDetails) {
-      alert(`Google FCM Response: ${fcmErrorDetails}\n\nNote: If using Server Key, verify that Cloud Messaging API (Legacy) is Enabled in Firebase Console > Project Settings > Cloud Messaging.`);
-    } else if (!serverKey.trim()) {
-      setNotifSuccess(`Notification logged! (Tip: Enter your FCM Legacy Server Key or send from Firebase Console for live push).`);
+      setNotifSuccess(`Broadcast sent via FCM HTTP v1 to topic '${notifTarget}'!`);
     } else {
-      setNotifSuccess(`Dispatched to topic '${notifTarget}'!`);
+      setNotifSuccess(`Dispatched! Published to Realtime Database & sent to automated FCM daemon.`);
     }
 
     setTimeout(() => setNotifSuccess(''), 6000);
