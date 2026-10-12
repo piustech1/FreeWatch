@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getDatabase } from 'firebase/database';
-import { getAuth } from 'firebase/auth';
+import { getAuth, signInAnonymously } from 'firebase/auth';
 
 // Official FreeWatch Firebase Web Configuration
 export const firebaseConfig = {
@@ -20,4 +20,5 @@ export const VAPID_KEY = "BM1p9rgWrqZ8mT1a6KwcV3fA0H42BoHQKGu9Gb-X0IbgkITyBMgJHU
 const app = initializeApp(firebaseConfig);
 export const rtdb = getDatabase(app);
 export const auth = getAuth(app);
+export { signInAnonymously };
 export default app;

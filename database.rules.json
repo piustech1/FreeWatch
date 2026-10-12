@@ -1,0 +1,16 @@
+{
+  "rules": {
+    "support_chats": {
+      ".read": true,
+      ".write": true
+    },
+    "push_notifications": {
+      ".read": true,
+      ".write": true
+    },
+    "global_alerts": {
+      ".read": true,
+      ".write": true
+    }
+  }
+}

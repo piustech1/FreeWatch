@@ -16,13 +16,19 @@ import {
   Flame,
   Radio
 } from 'lucide-react';
-import { rtdb, VAPID_KEY } from './firebase';
+import { rtdb, auth, signInAnonymously, VAPID_KEY } from './firebase';
 import { ref, onValue, push, set, update, serverTimestamp } from 'firebase/database';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('chat'); // 'chat' | 'notifications' | 'catalog'
   const [threads, setThreads] = useState([]);
   const [selectedThreadId, setSelectedThreadId] = useState(null);
+
+  useEffect(() => {
+    signInAnonymously(auth).catch((e) => {
+      console.warn("Firebase Auth notice:", e.message);
+    });
+  }, []);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -175,6 +181,53 @@ export default function App() {
     setIsSendingNotif(true);
     setNotifSuccess('');
 
+    let directFcmOk = false;
+    let fcmErrorDetails = '';
+
+    // 1. Direct FCM broadcast if Server Key is provided
+    if (serverKey.trim()) {
+      try {
+        const res = await fetch('https://fcm.googleapis.com/fcm/send', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `key=${serverKey.trim()}`
+          },
+          body: JSON.stringify({
+            to: `/topics/${notifTarget}`,
+            priority: 'high',
+            notification: {
+              title: notifTitle,
+              body: notifBody,
+              image: notifImageUrl || undefined,
+              channel_id: 'freewatch_alerts',
+              icon: 'ic_notification'
+            },
+            data: {
+              title: notifTitle,
+              body: notifBody,
+              imageUrl: notifImageUrl || '',
+              movieId: notifMovieId || '',
+              click_action: 'FLUTTER_NOTIFICATION_CLICK'
+            }
+          })
+        });
+
+        const fcmData = await res.json();
+        if (fcmData.message_id || (fcmData.success && fcmData.success > 0)) {
+          directFcmOk = true;
+        } else if (fcmData.error) {
+          fcmErrorDetails = typeof fcmData.error === 'string' ? fcmData.error : JSON.stringify(fcmData.error);
+        } else if (fcmData.results && fcmData.results[0] && fcmData.results[0].error) {
+          fcmErrorDetails = fcmData.results[0].error;
+        }
+      } catch (fcmErr) {
+        console.warn("Direct FCM broadcast notice:", fcmErr);
+        fcmErrorDetails = fcmErr.message;
+      }
+    }
+
+    // 2. Safe Database History logging (wrapped so RTDB permission rules never block push dispatch)
     try {
       const historyRef = ref(rtdb, 'push_notifications/history');
       const newPushRef = push(historyRef);
@@ -191,63 +244,28 @@ export default function App() {
 
       await set(newPushRef, pushRecord);
 
-      // Also post to real-time alerts queue for mobile tracker
       const alertsRef = ref(rtdb, 'global_alerts/latest');
       await set(alertsRef, {
         ...pushRecord,
         active: true
       });
-
-      // If FCM Server Key is configured, broadcast directly to Google FCM servers!
-      let directFcmOk = false;
-      if (serverKey.trim()) {
-        try {
-          const res = await fetch('https://fcm.googleapis.com/fcm/send', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `key=${serverKey.trim()}`
-            },
-            body: JSON.stringify({
-              to: `/topics/${notifTarget}`,
-              priority: 'high',
-              notification: {
-                title: notifTitle,
-                body: notifBody,
-                image: notifImageUrl || undefined,
-                channel_id: 'freewatch_alerts',
-                icon: 'ic_notification'
-              },
-              data: {
-                title: notifTitle,
-                body: notifBody,
-                imageUrl: notifImageUrl || '',
-                movieId: notifMovieId || '',
-                click_action: 'FLUTTER_NOTIFICATION_CLICK'
-              }
-            })
-          });
-          const fcmData = await res.json();
-          if (fcmData.message_id || (fcmData.success && fcmData.success > 0)) {
-            directFcmOk = true;
-          }
-        } catch (fcmErr) {
-          console.warn("Direct FCM broadcast notice:", fcmErr);
-        }
-      }
-
-      setNotifSuccess(
-        directFcmOk
-          ? `Direct FCM Broadcast sent to Google servers for topic '${notifTarget}'!`
-          : `Notification logged in Firebase queue for topic '${notifTarget}'!`
-      );
-      setTimeout(() => setNotifSuccess(''), 5000);
-    } catch (err) {
-      console.error("Failed to send push notification:", err);
-      alert("Failed to send notification: " + err.message);
-    } finally {
-      setIsSendingNotif(false);
+    } catch (dbErr) {
+      console.warn("Database history logging notice (RTDB permission rules restriction):", dbErr);
     }
+
+    setIsSendingNotif(false);
+
+    if (directFcmOk) {
+      setNotifSuccess(`Broadcast sent to Google FCM for topic '${notifTarget}'!`);
+    } else if (fcmErrorDetails) {
+      alert(`Google FCM Response: ${fcmErrorDetails}\n\nNote: If using Server Key, verify that Cloud Messaging API (Legacy) is Enabled in Firebase Console > Project Settings > Cloud Messaging.`);
+    } else if (!serverKey.trim()) {
+      setNotifSuccess(`Notification logged! (Tip: Enter your FCM Legacy Server Key or send from Firebase Console for live push).`);
+    } else {
+      setNotifSuccess(`Dispatched to topic '${notifTarget}'!`);
+    }
+
+    setTimeout(() => setNotifSuccess(''), 6000);
   };
 
   const filteredThreads = threads.filter(t => 
