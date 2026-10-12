@@ -113,7 +113,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
             : 'VJ ${rawName.toUpperCase()}',
         nickname: rawName,
         specialty: 'Luganda Dubbing',
-        imageUrl: 'assets/vjs/vj_junior.png',
+        imageUrl: 'assets/vjs/vj_universal.png',
         movieCount: 0,
         translatedMovieIds: const [],
       ),
@@ -441,7 +441,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                 const SizedBox(height: 18),
 
                 // King Action Row: Wide White Play/Resume button + Add to Watchlist (+) + Download (⬇)
-                _buildKingActionRow(isSeries: isSeries, isFav: isFav),
+                _buildKingActionRow(isSeries: isSeries, isFav: isFav, assignedVj: assignedVj),
               ],
             ),
           ),
@@ -745,10 +745,11 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
     );
   }
 
-  // ── King Action Row: Vibrant Green Play Button + Solid Favorites & Downloads ─
+  // ── King Action Row: Vibrant Green Play Button + Next Episode (Series) + Solid Favorites & Downloads ─
   Widget _buildKingActionRow({
     required bool isSeries,
     required bool isFav,
+    Vj? assignedVj,
   }) {
     final movie = widget.movie;
     final isDownloaded = ref.watch(downloadsProvider.notifier).isDownloaded(movie.id);
@@ -760,7 +761,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
         ? (isCurrentlyPlaying ? 'PAUSE' : 'PLAY')
         : (effectiveProgress != null && effectiveProgress > 0.01
             ? 'RESUME (${(effectiveProgress * 100).toInt()}%)'
-            : (isSeries ? 'RESUME' : 'PLAY'));
+            : (isSeries ? 'PLAY' : 'PLAY'));
 
     return Row(
       children: [
@@ -804,6 +805,50 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
             ),
           ),
         ),
+
+        // Dedicated Next Episode sequential button for Series
+        if (isSeries) ...[
+          const SizedBox(width: 10),
+          GestureDetector(
+            onTap: () => _handleNextEpisodeSequential(assignedVj),
+            child: Container(
+              height: 50,
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1E212B),
+                borderRadius: BorderRadius.circular(25),
+                border: Border.all(
+                  color: const Color(0xFF22C55E).withOpacity(0.70),
+                  width: 1.4,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF22C55E).withOpacity(0.25),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.skip_next_rounded, color: Color(0xFF22C55E), size: 22),
+                  const SizedBox(width: 5),
+                  Text(
+                    _currentPlayingEpisodeNumber == null
+                        ? 'Next Ep'
+                        : 'Ep ${(_currentPlayingEpisodeNumber ?? 0) + 1}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
         const SizedBox(width: 12),
 
         // Add to Watchlist / Favorites Button with AnimatedScale click bounce
@@ -879,6 +924,84 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
         ),
       ],
     );
+  }
+
+  /// Sequential Episode resolver: advances episode sequentially using cached list
+  /// or directly queries server search engine fallback without skipping!
+  Future<void> _handleNextEpisodeSequential(Vj? assignedVj) async {
+    final vj = assignedVj ?? _resolveAssignedVj(widget.movie.vjName);
+    final int nextEpNum = (_currentPlayingEpisodeNumber ?? 0) + 1;
+
+    // 1. Check if we have loaded episodes from provider
+    final seriesCode = widget.movie.seriesCode;
+    final episodesAsync = ref.read(
+      tvSeasonEpisodesProvider(
+        TvSeasonParam(
+          tvId: widget.movie.id,
+          seasonNumber: _selectedSeason,
+          seriesTitle: widget.movie.title,
+          seriesCode: seriesCode,
+        ),
+      ),
+    );
+
+    final episodes = episodesAsync.valueOrNull ?? [];
+    if (episodes.isNotEmpty) {
+      final ep = episodes.where((e) => e.episodeNumber == nextEpNum).firstOrNull;
+      if (ep != null) {
+        await _playEpisode(
+          context,
+          ep.name,
+          'EP ${ep.episodeNumber}',
+          vj,
+          episodeVideoUrl: ep.videoUrl,
+          episodeNumber: ep.episodeNumber,
+          episodeId: ep.id,
+        );
+        return;
+      }
+    }
+
+    // 2. Direct server fallback: Query MunoWatch search engine sequentially
+    AppToast.show(
+      context,
+      'Searching server for Season $_selectedSeason Episode $nextEpNum...',
+      isSuccess: true,
+    );
+
+    try {
+      final resolvedUrl = await ref.read(movieRepositoryProvider).resolveEpisodeStreamUrl(
+        widget.movie.title,
+        _selectedSeason,
+        nextEpNum,
+      );
+
+      if (!mounted) return;
+
+      if (resolvedUrl != null && resolvedUrl.isNotEmpty) {
+        await _playEpisode(
+          context,
+          '${widget.movie.title} - Episode $nextEpNum',
+          'EP $nextEpNum',
+          vj,
+          episodeVideoUrl: resolvedUrl,
+          episodeNumber: nextEpNum,
+        );
+      } else {
+        AppToast.show(
+          context,
+          'Episode $nextEpNum for Season $_selectedSeason is coming soon on FreeWatch!',
+          isSuccess: false,
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      AppToast.show(
+        context,
+        'Could not load Episode $nextEpNum at this time.',
+        isSuccess: false,
+      );
+    }
   }
 
   // ── Lower Body: Seasons/Episodes (if series), Cast, Glass Synopsis Card, Related
@@ -1166,12 +1289,47 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
 
               if (dedupedEpisodes.isEmpty) {
                 return Center(
-                  child: Text(
-                    'No episodes available for Season $_selectedSeason',
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.6),
-                      fontSize: 13,
-                    ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'No episode list available for Season $_selectedSeason',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.6),
+                          fontSize: 13,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      GestureDetector(
+                        onTap: () => _handleNextEpisodeSequential(assignedVj),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF22C55E).withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: const Color(0xFF22C55E).withOpacity(0.60),
+                              width: 1,
+                            ),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.play_circle_fill_rounded, color: Color(0xFF22C55E), size: 18),
+                              SizedBox(width: 6),
+                              Text(
+                                'Stream Episode 1 via Server',
+                                style: TextStyle(
+                                  color: Color(0xFF22C55E),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 );
               }
@@ -2178,7 +2336,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                         ),
                       ],
                       const SizedBox(height: 18),
-                      _buildKingActionRow(isSeries: isSeries, isFav: isFav),
+                      _buildKingActionRow(isSeries: isSeries, isFav: isFav, assignedVj: assignedVj),
                     ],
                   ),
                 ),
@@ -2721,7 +2879,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                 ],
               ),
               const SizedBox(height: 18),
-              _buildKingActionRow(isSeries: isSeries, isFav: isFav),
+              _buildKingActionRow(isSeries: isSeries, isFav: isFav, assignedVj: assignedVj),
             ],
           ),
         ),
@@ -2945,7 +3103,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                 ],
               ),
               const SizedBox(height: 18),
-              _buildKingActionRow(isSeries: isSeries, isFav: isFav),
+              _buildKingActionRow(isSeries: isSeries, isFav: isFav, assignedVj: assignedVj),
             ],
           ),
         ),

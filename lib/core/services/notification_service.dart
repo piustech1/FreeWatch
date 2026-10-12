@@ -3,6 +3,36 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import '../../firebase_options.dart';
+
+/// Top-level background message handler required by FirebaseMessaging on Android/iOS
+@pragma('vm:entry-point')
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (_) {}
+
+  debugPrint('FCM background message received: ${message.messageId}');
+  final notification = message.notification;
+  final data = message.data;
+
+  final title = notification?.title ?? data['title'] ?? 'FreeWatch New Release';
+  final body = notification?.body ?? data['body'] ?? 'Watch the latest translated releases now!';
+  final imageUrl = data['imageUrl'] ?? data['image'] ?? notification?.android?.imageUrl;
+  final payload = data['movieId'] ?? data['payload'];
+
+  await NotificationService().showMovieNotification(
+    id: message.messageId.hashCode,
+    title: title,
+    body: body,
+    imageUrl: imageUrl,
+    payload: payload,
+  );
+}
 
 /// Central Notification Service managing OS-level device notifications
 /// with rich BigPicture support for movie posters and backdrops.
@@ -59,6 +89,45 @@ class NotificationService {
         );
         await androidPlatform.requestNotificationsPermission();
       }
+
+      // Explicitly prompt user for OS-level notification permissions via Firebase Messaging
+      final messaging = FirebaseMessaging.instance;
+      final settings = await messaging.requestPermission(
+        alert: true,
+        announcement: false,
+        badge: true,
+        carPlay: false,
+        criticalAlert: false,
+        provisional: false,
+        sound: true,
+      );
+      debugPrint('FCM user granted notification permission: ${settings.authorizationStatus}');
+
+      // Subscribe to global FreeWatch broadcast topics for real-time cloud push alerts
+      try {
+        await messaging.subscribeToTopic('all_users');
+        await messaging.subscribeToTopic('new_releases');
+        debugPrint('Subscribed to FCM topics: all_users, new_releases');
+      } catch (e) {
+        debugPrint('FCM topic subscription notice: $e');
+      }
+
+      // Foreground message listener for real-time alerts while app is open
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        debugPrint('FCM foreground message received: ${message.messageId}');
+        final notification = message.notification;
+        final data = message.data;
+        final title = notification?.title ?? data['title'] ?? 'FreeWatch New Release';
+        final body = notification?.body ?? data['body'] ?? 'Watch the latest releases now!';
+        final imageUrl = data['imageUrl'] ?? data['image'] ?? notification?.android?.imageUrl;
+        showMovieNotification(
+          id: message.messageId.hashCode,
+          title: title,
+          body: body,
+          imageUrl: imageUrl,
+          payload: data['movieId'] ?? data['payload'],
+        );
+      });
 
       // Schedule OS-level recurring alerts that trigger even when the app is closed
       await scheduleRecurringAlerts();

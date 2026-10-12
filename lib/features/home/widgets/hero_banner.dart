@@ -198,7 +198,7 @@ class _HeroBannerState extends ConsumerState<HeroBanner>
                   : 'VJ ${vjName.toUpperCase()}',
               nickname: vjName,
               specialty: 'Luganda Dubbing',
-              imageUrl: 'assets/vjs/vj_junior.png',
+              imageUrl: 'assets/vjs/vj_universal.png',
               movieCount: 0,
               translatedMovieIds: const [],
             ),

@@ -252,7 +252,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       icon: Icons.info_rounded,
                       iconColor: const Color(0xFF38BDF8),
                       title: 'App Version',
-                      subtitle: 'FreeWatch v1.0.54 (Build 55)',
+                      subtitle: 'FreeWatch v1.0.55 (Build 56)',
                       trailing: null,
                       onTap: null,
                     ),
@@ -527,14 +527,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           const SizedBox(width: 12),
           GestureDetector(
             onTap: () async {
-              final uri = Uri.parse('https://www.tiktok.com/@freewatch');
+              final uri = Uri.parse(ApiConstants.tiktokUrl);
               try {
                 await launchUrl(uri, mode: LaunchMode.externalApplication);
               } catch (_) {
                 if (context.mounted) {
                   AppToast.show(
                     context,
-                    'Opening @freewatch on TikTok...',
+                    'Opening FreeWatch on TikTok...',
                     isSuccess: false,
                   );
                 }
