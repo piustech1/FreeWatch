@@ -34,6 +34,7 @@ export default function App() {
   const [notifBody, setNotifBody] = useState('New translated blockbuster is now streaming in Full HD! Tap to watch now.');
   const [notifImageUrl, setNotifImageUrl] = useState('');
   const [notifMovieId, setNotifMovieId] = useState('');
+  const [serverKey, setServerKey] = useState(() => localStorage.getItem('freewatch_fcm_server_key') || '');
   const [dispatchedNotifs, setDispatchedNotifs] = useState([]);
   const [isSendingNotif, setIsSendingNotif] = useState(false);
   const [notifSuccess, setNotifSuccess] = useState('');
@@ -197,7 +198,49 @@ export default function App() {
         active: true
       });
 
-      setNotifSuccess(`Notification dispatched successfully to topic '${notifTarget}'!`);
+      // If FCM Server Key is configured, broadcast directly to Google FCM servers!
+      let directFcmOk = false;
+      if (serverKey.trim()) {
+        try {
+          const res = await fetch('https://fcm.googleapis.com/fcm/send', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `key=${serverKey.trim()}`
+            },
+            body: JSON.stringify({
+              to: `/topics/${notifTarget}`,
+              priority: 'high',
+              notification: {
+                title: notifTitle,
+                body: notifBody,
+                image: notifImageUrl || undefined,
+                channel_id: 'freewatch_alerts',
+                icon: 'ic_notification'
+              },
+              data: {
+                title: notifTitle,
+                body: notifBody,
+                imageUrl: notifImageUrl || '',
+                movieId: notifMovieId || '',
+                click_action: 'FLUTTER_NOTIFICATION_CLICK'
+              }
+            })
+          });
+          const fcmData = await res.json();
+          if (fcmData.message_id || (fcmData.success && fcmData.success > 0)) {
+            directFcmOk = true;
+          }
+        } catch (fcmErr) {
+          console.warn("Direct FCM broadcast notice:", fcmErr);
+        }
+      }
+
+      setNotifSuccess(
+        directFcmOk
+          ? `Direct FCM Broadcast sent to Google servers for topic '${notifTarget}'!`
+          : `Notification logged in Firebase queue for topic '${notifTarget}'!`
+      );
       setTimeout(() => setNotifSuccess(''), 5000);
     } catch (err) {
       console.error("Failed to send push notification:", err);
@@ -587,6 +630,30 @@ export default function App() {
                         className="w-full bg-[#171D2B] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#00E676]"
                       />
                     </div>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                        Firebase Cloud Messaging Server Key (Optional)
+                      </label>
+                      <span className="text-[11px] text-slate-500">
+                        Firebase Console &gt; Project Settings &gt; Cloud Messaging
+                      </span>
+                    </div>
+                    <input
+                      type="password"
+                      value={serverKey}
+                      onChange={(e) => {
+                        setServerKey(e.target.value);
+                        localStorage.setItem('freewatch_fcm_server_key', e.target.value);
+                      }}
+                      placeholder="Paste your Firebase Legacy Server Key (AAAA...)"
+                      className="w-full bg-[#171D2B] border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-[#00E676] font-mono"
+                    />
+                    <p className="text-[11px] text-slate-500 mt-1">
+                      Stored securely in your local browser. Allows 1-click cloud push broadcasting to closed phones directly from this console.
+                    </p>
                   </div>
 
                   <button
