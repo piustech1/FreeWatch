@@ -51,6 +51,7 @@ export default function App() {
   useEffect(() => {
     const chatsRef = ref(rtdb, 'support_chats');
     const unsubscribe = onValue(chatsRef, (snapshot) => {
+      setDbConnected(true);
       const data = snapshot.val();
       if (!data) {
         setThreads([]);
@@ -79,16 +80,14 @@ export default function App() {
       setThreads(parsedThreads);
 
       // Auto-select first thread if none selected
-      if (!selectedThreadId && parsedThreads.length > 0) {
-        setSelectedThreadId(parsedThreads[0].id);
-      }
+      setSelectedThreadId((prev) => prev || (parsedThreads.length > 0 ? parsedThreads[0].id : null));
     }, (error) => {
       console.error("Firebase RTDB error:", error);
       setDbConnected(false);
     });
 
     return () => unsubscribe();
-  }, [selectedThreadId]);
+  }, []);
 
   // Listen to messages for active selected thread
   useEffect(() => {
@@ -571,6 +570,36 @@ export default function App() {
               <p className="text-slate-400 text-sm mt-1">
                 Broadcast real-time push alerts to all installed FreeWatch mobile devices with custom titles, movie banners, and deep links.
               </p>
+            </div>
+
+            {/* Official FCM HTTP v1 Guidance Banner */}
+            <div className="bg-gradient-to-r from-emerald-950/40 via-[#111622] to-slate-900 border border-[#00E676]/30 rounded-2xl p-5 shadow-lg">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center space-x-2">
+                    <Sparkles className="w-5 h-5 text-[#00E676]" />
+                    <span className="font-bold text-white text-sm">Official & Free 1-Click Broadcast via Firebase Console</span>
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed max-w-2xl">
+                    Google has migrated to <b>Firebase Cloud Messaging (HTTP v1)</b>.
+                    <span className="text-emerald-400 font-semibold"> You do NOT need to enter a credit card or start any $300 Google Cloud trial.</span> It is 100% free forever.
+                  </p>
+                  <ol className="text-xs text-slate-400 list-decimal list-inside space-y-0.5 pt-1">
+                    <li>Open Firebase Console Messaging below</li>
+                    <li>Select Target: <b>Topic</b> &rarr; enter <code className="text-[#00E676] bg-black/40 px-1 py-0.5 rounded">all_users</code></li>
+                    <li>Write your title/message &amp; click <b>Publish</b>!</li>
+                  </ol>
+                </div>
+                <a
+                  href="https://console.firebase.google.com/project/freewatch-a0bc7/notification"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="bg-[#00E676] hover:bg-[#00c864] text-black font-extrabold px-5 py-3 rounded-xl flex items-center justify-center space-x-2 text-xs flex-shrink-0 transition-all shadow-lg shadow-[#00E676]/20"
+                >
+                  <span>Open Firebase Messaging</span>
+                  <ExternalLink className="w-4 h-4" />
+                </a>
+              </div>
             </div>
 
             {notifSuccess && (
