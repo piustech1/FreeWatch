@@ -378,9 +378,30 @@ export default function App() {
 
               {/* Threads Scroll List */}
               <div className="flex-1 overflow-y-auto divide-y divide-white/5">
+                {!dbConnected && (
+                  <div className="p-4 bg-amber-500/10 border-b border-amber-500/20 text-xs text-amber-200 space-y-2">
+                    <p className="font-bold flex items-center space-x-1">
+                      <span>⚠️ Database Rules Locked:</span>
+                    </p>
+                    <p className="text-[11px] text-amber-300/80 leading-relaxed">
+                      Firebase rejected reading messages with <b>Permission Denied</b>. In Firebase Console, go to <b>Realtime Database ➔ Rules</b> and set <code>.read</code> and <code>.write</code> to <code>true</code>.
+                    </p>
+                    <a
+                      href="https://console.firebase.google.com/project/freewatch-a0bc7/database/freewatch-a0bc7-default-rtdb/rules"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-block bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 px-2.5 py-1 rounded text-[11px] font-bold transition-colors"
+                    >
+                      Open Rules in Firebase &rarr;
+                    </a>
+                  </div>
+                )}
                 {filteredThreads.length === 0 ? (
-                  <div className="p-8 text-center text-slate-500 text-sm">
-                    No active user chats found.
+                  <div className="p-8 text-center text-slate-500 text-sm space-y-2">
+                    <p className="font-semibold text-slate-400">No active user chats loaded.</p>
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                      If users sent messages in the app, ensure your Firebase Realtime Database rules allow read/write so messages can sync.
+                    </p>
                   </div>
                 ) : (
                   filteredThreads.map((thread) => {
