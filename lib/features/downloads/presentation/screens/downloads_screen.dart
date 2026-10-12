@@ -13,8 +13,21 @@ import '../../../home/providers/home_providers.dart';
 import '../../../movie_detail/presentation/screens/movie_detail_screen.dart';
 import '../providers/downloads_provider.dart';
 
-class DownloadsScreen extends ConsumerWidget {
+class DownloadsScreen extends ConsumerStatefulWidget {
   const DownloadsScreen({super.key});
+
+  @override
+  ConsumerState<DownloadsScreen> createState() => _DownloadsScreenState();
+}
+
+class _DownloadsScreenState extends ConsumerState<DownloadsScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(downloadsProvider.notifier).reloadDownloads();
+    });
+  }
 
   void _openMovieDetail(BuildContext context, DownloadedMovie item) {
     Navigator.of(context).push(
@@ -24,7 +37,7 @@ class DownloadsScreen extends ConsumerWidget {
     );
   }
 
-  void _confirmDelete(BuildContext context, WidgetRef ref, DownloadedMovie item) {
+  void _confirmDelete(BuildContext context, DownloadedMovie item) {
     GlassDialog.show(
       context,
       title: 'Delete Download?',
@@ -42,7 +55,7 @@ class DownloadsScreen extends ConsumerWidget {
     );
   }
 
-  void _confirmClearAll(BuildContext context, WidgetRef ref) {
+  void _confirmClearAll(BuildContext context) {
     GlassDialog.show(
       context,
       title: 'Clear All Downloads?',
@@ -61,9 +74,8 @@ class DownloadsScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final downloads = ref.watch(downloadsProvider);
-    final notifier = ref.read(downloadsProvider.notifier);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -74,12 +86,8 @@ class DownloadsScreen extends ConsumerWidget {
             ? _buildEmptyState(context, ref)
             : ListView(
                 physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(18, 14, 18, 110),
+                padding: const EdgeInsets.fromLTRB(18, 16, 18, 110),
                 children: [
-                  // ── Storage Overview Card ─────────────────────────────────
-                  _buildStorageCard(context, ref, downloads.length, notifier.formattedTotalStorage),
-
-                  const SizedBox(height: 18),
 
                   // ── Section Title & Clear All ─────────────────────────────
                   Row(
@@ -105,7 +113,7 @@ class DownloadsScreen extends ConsumerWidget {
                         ],
                       ),
                       GestureDetector(
-                        onTap: () => _confirmClearAll(context, ref),
+                        onTap: () => _confirmClearAll(context),
                         child: Text(
                           'Clear All',
                           style: TextStyle(
@@ -122,151 +130,20 @@ class DownloadsScreen extends ConsumerWidget {
 
                   // ── Downloaded Movies List ────────────────────────────────
                   ...downloads.map(
-                    (item) => _buildDownloadItemCard(context, ref, item),
+                    (item) => _buildDownloadItemCard(context, item),
                   ),
                 ],
               ),
-      ),
-    );
-  }
-
-  Widget _buildStorageCard(
-    BuildContext context,
-    WidgetRef ref,
-    int count,
-    String totalStorage,
-  ) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-        child: Container(
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.06),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: Colors.white.withOpacity(0.12),
-              width: 1.0,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.35),
-                blurRadius: 18,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 38,
-                        height: 38,
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.18),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          IconlyBold.download,
-                          color: AppColors.primary,
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Offline Storage',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '$count ${count == 1 ? "movie" : "movies"} available offline',
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.65),
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.14),
-                        width: 0.8,
-                      ),
-                    ),
-                    child: Text(
-                      totalStorage,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: 0.35,
-                  minHeight: 5,
-                  backgroundColor: Colors.white.withOpacity(0.10),
-                  valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
-                ),
-              ),
-              const SizedBox(height: 6),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Stored on Internal Device',
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.50),
-                      fontSize: 11,
-                    ),
-                  ),
-                  Text(
-                    'Retained until deleted',
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.50),
-                      fontSize: 11,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
 
   Widget _buildDownloadItemCard(
     BuildContext context,
-    WidgetRef ref,
     DownloadedMovie item,
   ) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.only(bottom: 12),
       child: GestureDetector(
         onTap: item.isDownloading ? null : () => _openMovieDetail(context, item),
         behavior: HitTestBehavior.opaque,
@@ -275,15 +152,11 @@ class DownloadsScreen extends ConsumerWidget {
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
             child: Container(
-              height: 104,
-              padding: const EdgeInsets.all(10),
+              height: 94,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.06),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.10),
-                  width: 0.8,
-                ),
               ),
               child: Row(
                 children: [
@@ -294,8 +167,8 @@ class DownloadsScreen extends ConsumerWidget {
                       ClipRRect(
                         borderRadius: BorderRadius.circular(10),
                         child: SizedBox(
-                          width: 64,
-                          height: 84,
+                          width: 56,
+                          height: 74,
                           child: CachedNetworkImage(
                             imageUrl: item.posterUrl,
                             fit: BoxFit.cover,
@@ -317,7 +190,6 @@ class DownloadsScreen extends ConsumerWidget {
                         decoration: BoxDecoration(
                           color: Colors.black.withOpacity(0.65),
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white.withOpacity(0.35), width: 0.8),
                         ),
                         child: item.isDownloading
                             ? const Center(
@@ -370,45 +242,7 @@ class DownloadsScreen extends ConsumerWidget {
                             letterSpacing: -0.2,
                           ),
                         ),
-                        const SizedBox(height: 5),
-                        Row(
-                          children: [
-                            if (item.vjName != null && item.vjName!.isNotEmpty) ...[
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF7C3AED).withOpacity(0.30),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  item.vjName!,
-                                  style: const TextStyle(
-                                    color: Color(0xFFC084FC),
-                                    fontSize: 9.5,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                            ],
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF222838),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                item.quality,
-                                style: TextStyle(
-                                  color: Colors.white.withOpacity(0.70),
-                                  fontSize: 9.5,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 8),
                         if (item.isDownloading) ...[
                           ClipRRect(
                             borderRadius: BorderRadius.circular(2),
@@ -550,7 +384,7 @@ class DownloadsScreen extends ConsumerWidget {
 
                   // Delete Action Button
                   GestureDetector(
-                    onTap: () => _confirmDelete(context, ref, item),
+                    onTap: () => _confirmDelete(context, item),
                     behavior: HitTestBehavior.opaque,
                     child: Padding(
                       padding: const EdgeInsets.all(8),

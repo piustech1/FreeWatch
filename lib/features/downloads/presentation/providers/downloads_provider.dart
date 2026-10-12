@@ -47,6 +47,9 @@ class DownloadsNotifier extends StateNotifier<List<DownloadedMovie>> {
     state = [];
   }
 
+  /// Manually re-sync downloads list from local disk/storage
+  Future<void> reloadDownloads() => _loadDownloads();
+
   Future<void> _persistDownloads(List<DownloadedMovie> list) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -184,6 +187,7 @@ class DownloadsNotifier extends StateNotifier<List<DownloadedMovie>> {
       );
 
       DateTime lastUiUpdate = DateTime.now();
+      DateTime lastPersist = DateTime.now();
 
       await dio.download(
         item.videoUrl,
@@ -207,10 +211,17 @@ class DownloadsNotifier extends StateNotifier<List<DownloadedMovie>> {
                     totalBytes: actualTotal,
                     isDownloading: received < total,
                     isPaused: false,
+                    localFilePath: filePath,
                   );
                 }
                 return m;
               }).toList();
+
+              // Periodically flush state to SharedPreferences so unexpected app kill or logout preserves progress
+              if (now.difference(lastPersist).inSeconds >= 5) {
+                lastPersist = now;
+                _persistDownloads(state);
+              }
             }
           }
         },

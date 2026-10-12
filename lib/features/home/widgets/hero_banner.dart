@@ -85,7 +85,13 @@ class _HeroBannerState extends ConsumerState<HeroBanner>
 
   void _prefetchLogos() {
     for (final movie in _movies) {
-      ref.read(movieLogoProvider(movie.id).future).then((logoUrl) {
+      ref
+          .read(movieLogoProvider(MovieLogoParam(
+            movieId: movie.id,
+            title: movie.title,
+            isTv: movie.isTv,
+          )).future)
+          .then((logoUrl) {
         if (logoUrl != null && mounted) {
           precacheImage(CachedNetworkImageProvider(logoUrl), context);
         }
@@ -931,8 +937,11 @@ class _MovieLogoWidget extends ConsumerWidget {
       );
     }
 
-    // 2. TMDB fallback logo
-    final logoAsync = ref.watch(movieLogoProvider(movie.id));
+    final logoAsync = ref.watch(movieLogoProvider(MovieLogoParam(
+      movieId: movie.id,
+      title: movie.title,
+      isTv: movie.isTv,
+    )));
 
     return Align(
       alignment: Alignment.centerLeft,

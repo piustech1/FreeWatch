@@ -525,8 +525,20 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
   Widget _buildTitleAndVjRow({
     required String title,
     required Vj assignedVj,
+    int? movieId,
+    bool isTv = false,
   }) {
-    final logoAsync = ref.watch(movieLogoProvider(widget.movie.id));
+    final effectiveMovieId = movieId ?? widget.movie.id;
+    final effectiveTitle = title.isNotEmpty ? title : widget.movie.title;
+    final logoAsync = ref.watch(
+      movieLogoProvider(
+        MovieLogoParam(
+          movieId: effectiveMovieId,
+          title: effectiveTitle,
+          isTv: isTv || widget.movie.isTv,
+        ),
+      ),
+    );
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -1639,6 +1651,12 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
 
   // ── Collapsible Synopsis in Thin Transparent Glassmorphic Card ─────────────
   Widget _buildCollapsibleSynopsis(String overview) {
+    final cleanOverview = overview.trim();
+    if (cleanOverview.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    final canExpand = cleanOverview.length > 130;
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
       child: BackdropFilter(
@@ -1666,7 +1684,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
             children: [
               AnimatedCrossFade(
                 firstChild: Text(
-                  overview,
+                  cleanOverview,
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -1677,7 +1695,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                   ),
                 ),
                 secondChild: Text(
-                  overview,
+                  cleanOverview,
                   style: const TextStyle(
                     color: Color(0xFFC4C7D0),
                     fontSize: 13.5,
@@ -1685,47 +1703,49 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
                     fontWeight: FontWeight.w400,
                   ),
                 ),
-                crossFadeState: _isSynopsisExpanded
+                crossFadeState: (_isSynopsisExpanded && canExpand)
                     ? CrossFadeState.showSecond
                     : CrossFadeState.showFirst,
                 duration: const Duration(milliseconds: 250),
               ),
-              const SizedBox(height: 10),
-              GestureDetector(
-                onTap: () => setState(() => _isSynopsisExpanded = !_isSynopsisExpanded),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.14),
-                      width: 0.8,
+              if (canExpand) ...[
+                const SizedBox(height: 10),
+                GestureDetector(
+                  onTap: () => setState(() => _isSynopsisExpanded = !_isSynopsisExpanded),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.14),
+                        width: 0.8,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _isSynopsisExpanded ? 'Show less' : 'Read more',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(
+                          _isSynopsisExpanded
+                              ? Icons.keyboard_arrow_up_rounded
+                              : Icons.keyboard_arrow_down_rounded,
+                          color: Colors.white70,
+                          size: 16,
+                        ),
+                      ],
                     ),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        _isSynopsisExpanded ? 'Show less' : 'Read more',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Icon(
-                        _isSynopsisExpanded
-                            ? Icons.keyboard_arrow_up_rounded
-                            : Icons.keyboard_arrow_down_rounded,
-                        color: Colors.white70,
-                        size: 16,
-                      ),
-                    ],
-                  ),
                 ),
-              ),
+              ],
             ],
           ),
         ),

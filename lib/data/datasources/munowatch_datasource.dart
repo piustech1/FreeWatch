@@ -181,7 +181,11 @@ class MunowatchDatasource {
   /// Returns series and episodic releases from MunoWatch
   Future<List<Movie>> getSeriesMovies() async {
     final all = await getAllMovies();
-    final List<Movie> series = all.where((m) => m.isTv).toList();
+    final List<Movie> series = all.where((m) {
+      if (!m.isTv) return false;
+      final t = m.title.toLowerCase();
+      return !t.contains('mob land') && !t.contains('mobland');
+    }).toList();
     final Set<int> seenIds = series.map((s) => s.id).toSet();
 
     // Query top known Luganda translated series directly from MunoWatch API
@@ -205,11 +209,13 @@ class MunowatchDatasource {
         try {
           final results = await searchMovies(query);
           for (final m in results) {
+            final t = m.title.toLowerCase();
+            if (t.contains('mob land') || t.contains('mobland')) continue;
             final isRealSeries = m.isTv ||
                 (m.seriesCode != null && m.seriesCode!.isNotEmpty && m.seriesCode != '0') ||
-                m.title.toLowerCase().contains('season') ||
-                m.title.toLowerCase().contains('series') ||
-                m.title.toLowerCase().contains('eps ') ||
+                t.contains('season') ||
+                t.contains('series') ||
+                t.contains('eps ') ||
                 RegExp(r'\b(?:s\d{1,2}|ep?\s*\d+)\b', caseSensitive: false).hasMatch(m.title);
             if (isRealSeries && seenIds.add(m.id)) {
               series.add(m.copyWith(isTv: true));
@@ -226,10 +232,12 @@ class MunowatchDatasource {
     try {
       final searchSeries = await searchMovies('season');
       for (final s in searchSeries) {
+        final t = s.title.toLowerCase();
+        if (t.contains('mob land') || t.contains('mobland')) continue;
         final isRealSeries = s.isTv ||
             (s.seriesCode != null && s.seriesCode!.isNotEmpty && s.seriesCode != '0') ||
-            s.title.toLowerCase().contains('season') ||
-            s.title.toLowerCase().contains('series');
+            t.contains('season') ||
+            t.contains('series');
         if (isRealSeries && seenIds.add(s.id)) {
           series.add(s.copyWith(isTv: true));
         }

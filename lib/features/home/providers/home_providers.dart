@@ -53,8 +53,36 @@ final nowPlayingMoviesProvider = FutureProvider<List<Movie>>((ref) async {
 
 // ── Movie Logo provider ───────────────────────────────────────────────────
 
-final movieLogoProvider = FutureProvider.family<String?, int>((ref, movieId) async {
-  return ref.watch(movieRepositoryProvider).getMovieLogo(movieId);
+class MovieLogoParam {
+  final int movieId;
+  final String? title;
+  final bool isTv;
+
+  const MovieLogoParam({
+    required this.movieId,
+    this.title,
+    this.isTv = false,
+  });
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is MovieLogoParam &&
+          runtimeType == other.runtimeType &&
+          movieId == other.movieId &&
+          title == other.title &&
+          isTv == other.isTv;
+
+  @override
+  int get hashCode => movieId.hashCode ^ (title?.hashCode ?? 0) ^ isTv.hashCode;
+}
+
+final movieLogoProvider = FutureProvider.family<String?, MovieLogoParam>((ref, param) async {
+  return ref.watch(movieRepositoryProvider).getMovieLogo(
+        param.movieId,
+        title: param.title,
+        isTv: param.isTv,
+      );
 });
 
 // ── Specific named sections as requested by user ──────────────────────────

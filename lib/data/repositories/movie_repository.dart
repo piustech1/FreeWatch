@@ -104,7 +104,11 @@ class MovieRepository {
     try {
       final series = await _munowatch.getSeriesMovies();
       if (series.isNotEmpty) {
-        return _paginate(series, page, pageSize: 25);
+        final filtered = series.where((m) {
+          final t = m.title.toLowerCase();
+          return !t.contains('mob land') && !t.contains('mobland');
+        }).toList();
+        return _paginate(filtered, page, pageSize: 25);
       }
     } catch (_) {}
 
@@ -751,7 +755,12 @@ class MovieRepository {
   Future<List<Movie>> getAllSeriesList() async {
     try {
       final series = await _munowatch.getSeriesMovies();
-      if (series.isNotEmpty) return series;
+      if (series.isNotEmpty) {
+        return series.where((m) {
+          final t = m.title.toLowerCase();
+          return !t.contains('mob land') && !t.contains('mobland');
+        }).toList();
+      }
     } catch (_) {}
     return getSeries(page: 1);
   }
@@ -977,8 +986,16 @@ class MovieRepository {
           if (tmdbMeta['backdrop_path'] != null && (resolvedBackdrop == null || resolvedBackdrop.isEmpty)) {
             resolvedBackdrop = tmdbMeta['backdrop_path'].toString();
           }
-          if (tmdbMeta['overview'] != null && (resolvedOverview == null || resolvedOverview.isEmpty)) {
-            resolvedOverview = tmdbMeta['overview'].toString();
+          if (tmdbMeta['overview'] != null) {
+            final tmdbOverview = tmdbMeta['overview'].toString().trim();
+            if (tmdbOverview.isNotEmpty &&
+                (resolvedOverview == null ||
+                    resolvedOverview.isEmpty ||
+                    resolvedOverview.endsWith('...') ||
+                    resolvedOverview.endsWith('…') ||
+                    tmdbOverview.length > resolvedOverview.length)) {
+              resolvedOverview = tmdbOverview;
+            }
           }
           if (tmdbMeta['genre_ids'] is List && (tmdbMeta['genre_ids'] as List).isNotEmpty) {
             tmdbGenreIds = List<int>.from(tmdbMeta['genre_ids'] as List);
@@ -1474,13 +1491,31 @@ class MovieRepository {
   }
 
   // ── 13. Movie Logo ──────────────────────────────────────────────────────────
-  Future<String?> getMovieLogo(int movieId) async {
+  Future<String?> getMovieLogo(
+    int movieId, {
+    String? title,
+    bool isTv = false,
+  }) async {
     if (!_hasCustomApiKey) return null;
     try {
-      return await _datasource.getMovieLogo(movieId);
-    } catch (_) {
-      return null;
-    }
+      String? cleanTitle = title != null && title.isNotEmpty ? _cleanTitleForTmdb(title) : null;
+      if (cleanTitle == null || cleanTitle.isEmpty) {
+        final found = await _munowatch.findMovie(movieId);
+        if (found != null && found.title.isNotEmpty) {
+          cleanTitle = _cleanTitleForTmdb(found.title);
+          isTv = found.isTv;
+        }
+      }
+      if (cleanTitle == null || cleanTitle.isEmpty) return null;
+
+      // Sourced from TMDB: Search genuine TMDB item first to get real TMDB ID
+      final tmdbMeta = await _findTmdbMetadata(cleanTitle, isTv: isTv);
+      final realTmdbId = tmdbMeta?['id'] as int?;
+      if (realTmdbId != null) {
+        return await _datasource.getMovieLogo(realTmdbId);
+      }
+    } catch (_) {}
+    return null;
   }
 
   // ── Helper: Map Genre ID to name ───────────────────────────────────────────
