@@ -1,0 +1,11 @@
+{
+  "name": "freewatch-root",
+  "version": "1.0.55",
+  "private": true,
+  "description": "FreeWatch root workspace - delegates web deployment to admin-panel",
+  "scripts": {
+    "build": "cd admin-panel && npm install && npm run build",
+    "dev": "cd admin-panel && npm run dev",
+    "start": "cd admin-panel && npm run preview"
+  }
+}

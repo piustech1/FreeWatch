@@ -16,7 +16,7 @@ import {
   Flame,
   Radio
 } from 'lucide-react';
-import { rtdb } from './firebase';
+import { rtdb, VAPID_KEY } from './firebase';
 import { ref, onValue, push, set, update, serverTimestamp } from 'firebase/database';
 
 export default function App() {
@@ -654,6 +654,12 @@ export default function App() {
                     <p className="text-[11px] text-slate-500 mt-1">
                       Stored securely in your local browser. Allows 1-click cloud push broadcasting to closed phones directly from this console.
                     </p>
+                    <div className="mt-2.5 p-2.5 bg-black/40 border border-white/5 rounded-xl flex items-center justify-between text-[11px]">
+                      <span className="text-slate-400 font-semibold">Web Push Certificate (VAPID):</span>
+                      <span className="font-mono text-[#00E676] truncate max-w-[280px]" title={VAPID_KEY}>
+                        {VAPID_KEY}
+                      </span>
+                    </div>
                   </div>
 
                   <button
