@@ -230,14 +230,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       trailing: GestureDetector(
                         onTap: _clearCache,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
                             color: AppColors.accent.withOpacity(0.18),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: AppColors.accent.withOpacity(0.40),
-                              width: 0.8,
-                            ),
                           ),
                           child: const Text(
                             'Clear',
@@ -256,7 +252,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       icon: Icons.info_rounded,
                       iconColor: const Color(0xFF38BDF8),
                       title: 'App Version',
-                      subtitle: 'FreeWatch v1.0.49 (Build 50)',
+                      subtitle: 'FreeWatch v1.0.54 (Build 55)',
                       trailing: null,
                       onTap: null,
                     ),
@@ -346,23 +342,24 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   // ── Dual Inline Stat Card (Watched & Downloaded) ───────────────────────────
   Widget _buildDualInlineStatCard(UserProfile profile) {
+    final watchHistory = ref.watch(watchHistoryProvider);
+    final watchedCount = watchHistory.length;
+
     final downloads = ref.watch(downloadsProvider);
-    final downloadCount = downloads.isNotEmpty ? downloads.length : profile.totalDownloads;
+    final completedDownloadCount = downloads
+        .where((d) => !d.isDownloading && !d.isFailed && d.downloadProgress >= 1.0)
+        .length;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(18),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.04),
+              color: Colors.white.withOpacity(0.06),
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: Colors.white.withOpacity(0.12),
-                width: 0.8,
-              ),
             ),
             child: Row(
               children: [
@@ -394,7 +391,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                '${profile.moviesWatched} Movies',
+                                '$watchedCount Movies',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
@@ -425,7 +422,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 Container(
                   width: 1,
                   height: 44,
-                  color: Colors.white.withOpacity(0.10),
+                  color: Colors.white.withOpacity(0.08),
                 ),
 
                 // Right: Downloaded (Orange Gradient Accent) -> Navigates to Downloads tab (index 3)
@@ -459,7 +456,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  '$downloadCount Movies',
+                                  '$completedDownloadCount Movies',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
@@ -808,15 +805,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     return ClipRRect(
       borderRadius: BorderRadius.circular(22),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.05),
+            color: Colors.white.withOpacity(0.06),
             borderRadius: BorderRadius.circular(22),
-            border: Border.all(
-              color: Colors.white.withOpacity(0.10),
-              width: 0.8,
-            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.20),
+                blurRadius: 18,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
           child: Column(children: children),
         ),
@@ -844,15 +844,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }) {
     return ListTile(
       leading: Container(
-        width: 34,
-        height: 34,
+        width: 36,
+        height: 36,
         decoration: BoxDecoration(
-          color: iconColor.withOpacity(0.16),
+          color: iconColor.withOpacity(0.18),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: iconColor.withOpacity(0.30),
-            width: 0.8,
-          ),
         ),
         child: Icon(icon, color: iconColor, size: 19),
       ),

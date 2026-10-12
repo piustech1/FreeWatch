@@ -38,4 +38,7 @@ class ApiConstants {
   static const String popularTv = '/tv/popular';
   static const String topRatedTv = '/tv/top_rated';
   static const String trendingTv = '/trending/tv/week';
+
+  // Community Links
+  static const String tiktokUrl = 'https://www.tiktok.com/@freewatch';
 }

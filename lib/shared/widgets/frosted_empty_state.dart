@@ -35,13 +35,16 @@ class FrostedEmptyState extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 38),
               decoration: BoxDecoration(
-                // Purely frosted and transparent without hard outline colors
-                color: Colors.white.withOpacity(0.03),
+                // Purely frosted and transparent liquid glass without hard outline borders
+                color: Colors.white.withOpacity(0.05),
                 borderRadius: BorderRadius.circular(28),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.06),
-                  width: 0.8,
-                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.20),
+                    blurRadius: 20,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,

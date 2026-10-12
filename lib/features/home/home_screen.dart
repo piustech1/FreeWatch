@@ -18,6 +18,7 @@ import '../favorites/presentation/screens/favorites_screen.dart';
 import '../downloads/presentation/screens/downloads_screen.dart';
 import '../profile/presentation/screens/profile_screen.dart';
 import '../notifications/presentation/screens/notifications_screen.dart';
+import '../../shared/widgets/tiktok_promo_modal.dart';
 
 /// Main Application Shell & Home Screen with persistent top bar across all tabs
 class HomeScreen extends ConsumerStatefulWidget {
@@ -28,6 +29,12 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    TiktokPromoModal.showOncePerSession(context);
+  }
+
   void _openMovieDetail(Movie movie) {
     Navigator.of(context).push(
       MaterialPageRoute(

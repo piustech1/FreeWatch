@@ -25,6 +25,7 @@ import '../../../profile/presentation/providers/watch_history_provider.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../../../shared/widgets/app_toast.dart';
+import '../../../../shared/widgets/tiktok_promo_modal.dart';
 import '../providers/movie_detail_providers.dart';
 
 /// Premium iOS Glassmorphic Movie Details Screen:
@@ -65,6 +66,10 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
   bool _isFullscreen = false;
   int? _currentPlayingEpisodeNumber;
   String? _currentPlayingEpisodeTitle;
+  bool _hasShownPreRollPromo = false;
+  bool _hasShownIntermission50 = false;
+  bool _hasShownIntermission75 = false;
+  bool _isIntermissionActive = false;
 
   @override
   void initState() {
@@ -2226,6 +2231,17 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
       return;
     }
 
+    // Pre-roll TikTok promo modal prior to video playback
+    if (!_hasShownPreRollPromo && mounted) {
+      _hasShownPreRollPromo = true;
+      await TiktokPromoModal.show(context);
+      if (!mounted) return;
+    }
+
+    _hasShownIntermission50 = false;
+    _hasShownIntermission75 = false;
+    _isIntermissionActive = false;
+
     if (mounted) {
       setState(() {
         _isInitializingVideo = true;
@@ -2306,6 +2322,35 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
             progress,
             position.inSeconds,
           );
+
+          // Mid-movie intermission: pause playback and show promo banner at 50% and 75%
+          if (controller.value.isPlaying && !_isIntermissionActive && duration.inSeconds >= 30) {
+            if (!_hasShownIntermission50 && progress >= 0.50 && progress < 0.70) {
+              _hasShownIntermission50 = true;
+              _isIntermissionActive = true;
+              controller.pause();
+              TiktokPromoModal.show(context, onDismiss: () {
+                _isIntermissionActive = false;
+                if (mounted && _videoPlayerController != null) {
+                  _videoPlayerController!.play();
+                  setState(() {});
+                }
+              });
+              setState(() {});
+            } else if (!_hasShownIntermission75 && progress >= 0.75 && progress < 0.95) {
+              _hasShownIntermission75 = true;
+              _isIntermissionActive = true;
+              controller.pause();
+              TiktokPromoModal.show(context, onDismiss: () {
+                _isIntermissionActive = false;
+                if (mounted && _videoPlayerController != null) {
+                  _videoPlayerController!.play();
+                  setState(() {});
+                }
+              });
+              setState(() {});
+            }
+          }
         }
       }
     });

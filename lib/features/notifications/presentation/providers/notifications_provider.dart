@@ -1,8 +1,6 @@
 import 'dart:convert';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../../../data/mock/mock_movies.dart';
 import '../../data/models/notification_item.dart';
 
 const String _prefKeyNotifications = 'freewatch_user_notifications_v1';
@@ -30,43 +28,19 @@ class NotificationsNotifier extends StateNotifier<List<NotificationItem>> {
         final List<dynamic> list = jsonDecode(savedJson) as List<dynamic>;
         final items = list
             .map((e) => NotificationItem.fromJson(e as Map<String, dynamic>))
+            // Remove mock-up seed notifications completely
+            .where((n) => !n.id.startsWith('seed_') &&
+                !n.message.contains('The Beekeeper') &&
+                !n.message.contains('Deadpool & Wolverine'))
             .toList();
-        if (items.isNotEmpty) {
-          state = items;
-          return;
-        }
+        state = items;
+        _persistNotifications(state);
+        return;
       }
     } catch (_) {}
 
-    // Initial seed notifications with rich posters from catalog
-    final beekeeper = MockData.trendingMovies.firstWhere((m) => m.id == 1011985);
-    final deadpool = MockData.trendingMovies.firstWhere((m) => m.id == 533535);
-
-    state = [
-      NotificationItem(
-        id: 'seed_1011985',
-        section: 'Today',
-        message: 'New Release: The Beekeeper translated by VJ Kevin is now streaming in 1080p Full HD!',
-        time: '2h ago',
-        icon: Icons.movie_filter_rounded,
-        iconColor: const Color(0xFFC084FC),
-        linkedMovie: beekeeper,
-        imageUrl: beekeeper.posterUrl,
-        isRead: false,
-      ),
-      NotificationItem(
-        id: 'seed_533535',
-        section: 'This week',
-        message: 'Trending: Deadpool & Wolverine translated by VJ Junior is now available in Luganda voiceover!',
-        time: '1d ago',
-        icon: Icons.local_fire_department_rounded,
-        iconColor: const Color(0xFFEF4444),
-        linkedMovie: deadpool,
-        imageUrl: deadpool.posterUrl,
-        isRead: false,
-      ),
-    ];
-    _persistNotifications(state);
+    // Only genuine dynamic notifications are kept - default to empty state
+    state = [];
   }
 
   Future<void> _persistNotifications(List<NotificationItem> items) async {

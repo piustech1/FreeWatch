@@ -13,6 +13,7 @@ import '../../../notifications/presentation/screens/notifications_screen.dart';
 import '../../../profile/presentation/providers/user_profile_provider.dart';
 import '../../domain/models/chat_message.dart';
 import '../providers/chat_provider.dart';
+import '../widgets/chat_wallpaper_painter.dart';
 
 class DeveloperChatScreen extends ConsumerStatefulWidget {
   const DeveloperChatScreen({super.key});
@@ -139,47 +140,63 @@ class _DeveloperChatScreenState extends ConsumerState<DeveloperChatScreen> {
             // ── iOS Liquid Frosted Glass Admin Subheader ──────────────
             _buildAdminGlassHeader(context),
 
-            // ── Chat messages list ────────────────────────────────────
+            // ── Chat Body with Wallpaper Background ───────────────────
             Expanded(
-              child: chatState.isLoading && chatState.messages.isEmpty
-                  ? const Center(
-                      child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF8B5CF6)),
-                      ),
-                    )
-                  : ListView.builder(
-                      controller: _scrollController,
-                      physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      itemCount: chatState.messages.length,
-                      itemBuilder: (context, index) {
-                        final msg = chatState.messages[index];
-                        final showDateHeader = index == 0 ||
-                            _isDifferentDay(
-                              msg.timestamp,
-                              chatState.messages[index - 1].timestamp,
-                            );
-
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            if (showDateHeader) _buildDateHeader(msg.timestamp),
-                            _buildSwipeableMessage(
-                              message: msg,
-                              userAvatar: userAvatar,
-                              userName: userProfile.name,
-                            ),
-                          ],
-                        );
-                      },
+              child: Stack(
+                children: [
+                  const Positioned.fill(
+                    child: CustomPaint(
+                      painter: ChatWallpaperPainter(),
                     ),
+                  ),
+                  Column(
+                    children: [
+                      // Chat messages list
+                      Expanded(
+                        child: chatState.isLoading && chatState.messages.isEmpty
+                            ? const Center(
+                                child: CircularProgressIndicator(
+                                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00E676)),
+                                ),
+                              )
+                            : ListView.builder(
+                                controller: _scrollController,
+                                physics: const BouncingScrollPhysics(),
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                itemCount: chatState.messages.length,
+                                itemBuilder: (context, index) {
+                                  final msg = chatState.messages[index];
+                                  final showDateHeader = index == 0 ||
+                                      _isDifferentDay(
+                                        msg.timestamp,
+                                        chatState.messages[index - 1].timestamp,
+                                      );
+
+                                  return Column(
+                                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                                    children: [
+                                      if (showDateHeader) _buildDateHeader(msg.timestamp),
+                                      _buildSwipeableMessage(
+                                        message: msg,
+                                        userAvatar: userAvatar,
+                                        userName: userProfile.name,
+                                      ),
+                                    ],
+                                  );
+                                },
+                              ),
+                      ),
+
+                      // Active Reply Banner (when replying to a message)
+                      if (_replyingTo != null) _buildReplyPreviewBanner(_replyingTo!),
+
+                      // Floating Liquid Glass Input Dock
+                      _buildInputBar(),
+                    ],
+                  ),
+                ],
+              ),
             ),
-
-            // Active Reply Banner (when replying to a message)
-            if (_replyingTo != null) _buildReplyPreviewBanner(_replyingTo!),
-
-            // Floating Liquid Glass Input Dock
-            _buildInputBar(),
           ],
         ),
       ),
@@ -193,27 +210,23 @@ class _DeveloperChatScreenState extends ConsumerState<DeveloperChatScreen> {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(20),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.06),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: Colors.white.withOpacity(0.14),
-                width: 1.0,
-              ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.20),
-                  blurRadius: 16,
+                  color: Colors.black.withOpacity(0.25),
+                  blurRadius: 18,
                   offset: const Offset(0, 4),
                 ),
               ],
             ),
             child: Row(
               children: [
-                // iOS Frosted Glass Back Button
+                // iOS Frosted Glass Back Button (borderless)
                 GestureDetector(
                   onTap: () => Navigator.of(context).pop(),
                   behavior: HitTestBehavior.opaque,
@@ -223,10 +236,6 @@ class _DeveloperChatScreenState extends ConsumerState<DeveloperChatScreen> {
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.08),
                       shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.18),
-                        width: 0.8,
-                      ),
                     ),
                     child: const Icon(
                       Icons.arrow_back_ios_new_rounded,
@@ -246,14 +255,10 @@ class _DeveloperChatScreenState extends ConsumerState<DeveloperChatScreen> {
                       height: 44,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        border: Border.all(
-                          color: const Color(0xFF8B5CF6).withOpacity(0.8),
-                          width: 2.0,
-                        ),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF8B5CF6).withOpacity(0.40),
-                            blurRadius: 12,
+                            color: const Color(0xFF00E676).withOpacity(0.30),
+                            blurRadius: 10,
                             spreadRadius: 1,
                           ),
                         ],
@@ -263,7 +268,7 @@ class _DeveloperChatScreenState extends ConsumerState<DeveloperChatScreen> {
                           'assets/images/admin_avatar.jpg',
                           fit: BoxFit.cover,
                           errorBuilder: (_, __, ___) => Container(
-                            color: const Color(0xFF6D28D9),
+                            color: const Color(0xFF142E21),
                             alignment: Alignment.center,
                             child: const Icon(
                               Icons.support_agent_rounded,
@@ -281,7 +286,7 @@ class _DeveloperChatScreenState extends ConsumerState<DeveloperChatScreen> {
                         width: 13,
                         height: 13,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF10B981),
+                          color: const Color(0xFF00E676),
                           shape: BoxShape.circle,
                           border: Border.all(
                             color: Colors.black,
@@ -289,8 +294,9 @@ class _DeveloperChatScreenState extends ConsumerState<DeveloperChatScreen> {
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF10B981).withOpacity(0.9),
-                              blurRadius: 6,
+                              color: const Color(0xFF00E676).withOpacity(0.95),
+                              blurRadius: 7,
+                              spreadRadius: 1,
                             ),
                           ],
                         ),
@@ -331,11 +337,18 @@ class _DeveloperChatScreenState extends ConsumerState<DeveloperChatScreen> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Container(
-                            width: 6,
-                            height: 6,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFF10B981),
+                            width: 7,
+                            height: 7,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF00E676),
                               shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF00E676).withOpacity(0.9),
+                                  blurRadius: 5,
+                                  spreadRadius: 1,
+                                ),
+                              ],
                             ),
                           ),
                           const SizedBox(width: 6),
@@ -353,7 +366,7 @@ class _DeveloperChatScreenState extends ConsumerState<DeveloperChatScreen> {
                   ),
                 ),
 
-                // Info Action Button
+                // Info Action Button (borderless)
                 GestureDetector(
                   onTap: () => _showSupportInfo(context),
                   behavior: HitTestBehavior.opaque,
@@ -363,10 +376,6 @@ class _DeveloperChatScreenState extends ConsumerState<DeveloperChatScreen> {
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.08),
                       shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.18),
-                        width: 0.8,
-                      ),
                     ),
                     child: const Icon(
                       Icons.info_outline_rounded,
@@ -438,12 +447,12 @@ class _DeveloperChatScreenState extends ConsumerState<DeveloperChatScreen> {
         width: 32,
         height: 32,
         decoration: BoxDecoration(
-          color: const Color(0xFF8B5CF6).withOpacity(0.2),
+          color: const Color(0xFF00E676).withOpacity(0.18),
           shape: BoxShape.circle,
         ),
         child: const Icon(
           Icons.reply_rounded,
-          color: Color(0xFFA78BFA),
+          color: Color(0xFF00E676),
           size: 18,
         ),
       ),
@@ -464,20 +473,20 @@ class _DeveloperChatScreenState extends ConsumerState<DeveloperChatScreen> {
         bottomRight: Radius.circular(isUser ? 4 : 20),
       ),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
         child: Container(
           constraints: const BoxConstraints(maxWidth: 290),
           padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 11),
           decoration: BoxDecoration(
             gradient: isUser
                 ? const LinearGradient(
-                    colors: [Color(0xFF8B5CF6), Color(0xFF6D28D9)],
+                    colors: [Color(0xFF059669), Color(0xFF047857)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   )
                 : LinearGradient(
                     colors: [
-                      Colors.white.withOpacity(0.10),
+                      Colors.white.withOpacity(0.09),
                       Colors.white.withOpacity(0.05),
                     ],
                     begin: Alignment.topLeft,
@@ -489,16 +498,10 @@ class _DeveloperChatScreenState extends ConsumerState<DeveloperChatScreen> {
               bottomLeft: Radius.circular(isUser ? 20 : 4),
               bottomRight: Radius.circular(isUser ? 4 : 20),
             ),
-            border: Border.all(
-              color: isUser
-                  ? Colors.white.withOpacity(0.28)
-                  : Colors.white.withOpacity(0.16),
-              width: 1.0,
-            ),
             boxShadow: [
               BoxShadow(
                 color: isUser
-                    ? const Color(0xFF8B5CF6).withOpacity(0.35)
+                    ? const Color(0xFF059669).withOpacity(0.35)
                     : Colors.black.withOpacity(0.25),
                 blurRadius: 14,
                 offset: const Offset(0, 4),
@@ -537,7 +540,7 @@ class _DeveloperChatScreenState extends ConsumerState<DeveloperChatScreen> {
                     timeStr,
                     style: TextStyle(
                       color: isUser
-                          ? Colors.white.withOpacity(0.75)
+                          ? Colors.white.withOpacity(0.80)
                           : const Color(0xFFCBD5E1).withOpacity(0.75),
                       fontSize: 10.5,
                       fontWeight: FontWeight.w400,
@@ -547,8 +550,8 @@ class _DeveloperChatScreenState extends ConsumerState<DeveloperChatScreen> {
                     const SizedBox(width: 4),
                     Icon(
                       Icons.done_all_rounded,
-                      color: Colors.white.withOpacity(0.9),
-                      size: 13,
+                      color: Colors.white.withOpacity(0.95),
+                      size: 14,
                     ),
                   ],
                 ],
@@ -571,12 +574,12 @@ class _DeveloperChatScreenState extends ConsumerState<DeveloperChatScreen> {
       padding: const EdgeInsets.fromLTRB(10, 6, 10, 6),
       decoration: BoxDecoration(
         color: isUser
-            ? Colors.black.withOpacity(0.25)
+            ? Colors.black.withOpacity(0.22)
             : Colors.white.withOpacity(0.08),
         borderRadius: BorderRadius.circular(10),
         border: Border(
           left: BorderSide(
-            color: isUser ? Colors.white.withOpacity(0.9) : const Color(0xFF8B5CF6),
+            color: isUser ? const Color(0xFF34D399) : const Color(0xFF00E676),
             width: 3.5,
           ),
         ),
@@ -587,7 +590,7 @@ class _DeveloperChatScreenState extends ConsumerState<DeveloperChatScreen> {
           Text(
             senderName,
             style: TextStyle(
-              color: isUser ? const Color(0xFFF3E8FF) : const Color(0xFFA78BFA),
+              color: isUser ? const Color(0xFFA7F3D0) : const Color(0xFF00E676),
               fontSize: 11.5,
               fontWeight: FontWeight.w700,
             ),
@@ -615,13 +618,9 @@ class _DeveloperChatScreenState extends ConsumerState<DeveloperChatScreen> {
       height: 32,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(
-          color: const Color(0xFF8B5CF6).withOpacity(0.6),
-          width: 1.2,
-        ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF8B5CF6).withOpacity(0.3),
+            color: const Color(0xFF00E676).withOpacity(0.25),
             blurRadius: 6,
           ),
         ],
@@ -631,7 +630,7 @@ class _DeveloperChatScreenState extends ConsumerState<DeveloperChatScreen> {
           'assets/images/admin_avatar.jpg',
           fit: BoxFit.cover,
           errorBuilder: (_, __, ___) => Container(
-            color: const Color(0xFF6D28D9),
+            color: const Color(0xFF142E21),
             alignment: Alignment.center,
             child: const Icon(Icons.support_agent_rounded, color: Colors.white, size: 16),
           ),
@@ -645,9 +644,8 @@ class _DeveloperChatScreenState extends ConsumerState<DeveloperChatScreen> {
     return Container(
       width: 32,
       height: 32,
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(color: const Color(0xFF8B5CF6).withOpacity(0.6), width: 1.2),
       ),
       child: ClipOval(
         child: userAvatar.assetPath.endsWith('.svg')
@@ -656,7 +654,7 @@ class _DeveloperChatScreenState extends ConsumerState<DeveloperChatScreen> {
                 userAvatar.assetPath,
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => Container(
-                  color: const Color(0xFF6D28D9),
+                  color: const Color(0xFF059669),
                   alignment: Alignment.center,
                   child: Text(
                     userName.isNotEmpty ? userName[0].toUpperCase() : 'U',
@@ -681,9 +679,6 @@ class _DeveloperChatScreenState extends ConsumerState<DeveloperChatScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.06),
-            border: Border(
-              top: BorderSide(color: Colors.white.withOpacity(0.12), width: 1.0),
-            ),
           ),
           child: Row(
             children: [
@@ -691,12 +686,12 @@ class _DeveloperChatScreenState extends ConsumerState<DeveloperChatScreen> {
                 width: 3.5,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF8B5CF6),
+                  color: const Color(0xFF00E676),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
               const SizedBox(width: 10),
-              const Icon(Icons.reply_rounded, color: Color(0xFFA78BFA), size: 20),
+              const Icon(Icons.reply_rounded, color: Color(0xFF00E676), size: 20),
               const SizedBox(width: 8),
               Expanded(
                 child: Column(
@@ -706,7 +701,7 @@ class _DeveloperChatScreenState extends ConsumerState<DeveloperChatScreen> {
                     Text(
                       'Replying to ${replyingTo.senderName}',
                       style: const TextStyle(
-                        color: Color(0xFFA78BFA),
+                        color: Color(0xFF00E676),
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
                       ),
@@ -745,10 +740,7 @@ class _DeveloperChatScreenState extends ConsumerState<DeveloperChatScreen> {
         child: Container(
           padding: const EdgeInsets.fromLTRB(14, 10, 14, 16),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.05),
-            border: Border(
-              top: BorderSide(color: Colors.white.withOpacity(0.12), width: 1.0),
-            ),
+            color: Colors.white.withOpacity(0.04),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.25),
@@ -759,7 +751,7 @@ class _DeveloperChatScreenState extends ConsumerState<DeveloperChatScreen> {
           ),
           child: Row(
             children: [
-              // Text Input Box with iOS frosted glass
+              // Text Input Box with borderless iOS frosted glass capsule
               Expanded(
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(24),
@@ -768,10 +760,6 @@ class _DeveloperChatScreenState extends ConsumerState<DeveloperChatScreen> {
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.08),
                       borderRadius: BorderRadius.circular(24),
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.16),
-                        width: 1.0,
-                      ),
                     ),
                     child: TextField(
                       controller: _textController,
@@ -808,7 +796,7 @@ class _DeveloperChatScreenState extends ConsumerState<DeveloperChatScreen> {
                     shape: BoxShape.circle,
                     gradient: _hasText
                         ? const LinearGradient(
-                            colors: [Color(0xFF8B5CF6), Color(0xFF6D28D9)],
+                            colors: [Color(0xFF00E676), Color(0xFF00B050)],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           )
@@ -820,17 +808,11 @@ class _DeveloperChatScreenState extends ConsumerState<DeveloperChatScreen> {
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
-                    border: Border.all(
-                      color: _hasText
-                          ? Colors.white.withOpacity(0.3)
-                          : Colors.white.withOpacity(0.1),
-                      width: 1.0,
-                    ),
                     boxShadow: _hasText
                         ? [
                             BoxShadow(
-                              color: const Color(0xFF8B5CF6).withOpacity(0.55),
-                              blurRadius: 12,
+                              color: const Color(0xFF00E676).withOpacity(0.55),
+                              blurRadius: 14,
                               spreadRadius: 1,
                               offset: const Offset(0, 2),
                             ),
@@ -839,7 +821,7 @@ class _DeveloperChatScreenState extends ConsumerState<DeveloperChatScreen> {
                   ),
                   child: Icon(
                     Icons.send_rounded,
-                    color: _hasText ? Colors.white : const Color(0xFF64748B),
+                    color: _hasText ? Colors.black : const Color(0xFF64748B),
                     size: 20,
                   ),
                 ),
@@ -871,17 +853,13 @@ class _DeveloperChatScreenState extends ConsumerState<DeveloperChatScreen> {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
           child: Container(
             margin: const EdgeInsets.symmetric(vertical: 14),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.08),
+              color: Colors.white.withOpacity(0.06),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: Colors.white.withOpacity(0.14),
-                width: 0.8,
-              ),
             ),
             child: Text(
               formatted,
@@ -913,11 +891,10 @@ class _DeveloperChatScreenState extends ConsumerState<DeveloperChatScreen> {
           backgroundColor: const Color(0xFF0D0F18).withOpacity(0.85),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
-            side: BorderSide(color: Colors.white.withOpacity(0.18), width: 1.0),
           ),
           title: const Row(
             children: [
-              Icon(Icons.shield_rounded, color: Color(0xFF8B5CF6), size: 22),
+              Icon(Icons.shield_rounded, color: Color(0xFF00E676), size: 22),
               SizedBox(width: 8),
               Text(
                 'FreeWatch Developer Support',
@@ -932,7 +909,7 @@ class _DeveloperChatScreenState extends ConsumerState<DeveloperChatScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Got it', style: TextStyle(color: Color(0xFF8B5CF6), fontWeight: FontWeight.bold)),
+              child: const Text('Got it', style: TextStyle(color: Color(0xFF00E676), fontWeight: FontWeight.bold)),
             ),
           ],
         ),

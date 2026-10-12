@@ -24,7 +24,7 @@ class NotificationService {
   Future<void> initialize({void Function(NotificationResponse)? onNotificationTap}) async {
     if (_isInitialized) return;
 
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings('@drawable/ic_notification');
     const darwinSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
@@ -59,6 +59,9 @@ class NotificationService {
         );
         await androidPlatform.requestNotificationsPermission();
       }
+
+      // Schedule OS-level recurring alerts that trigger even when the app is closed
+      await scheduleRecurringAlerts();
 
       _isInitialized = true;
     } catch (e) {
@@ -134,7 +137,7 @@ class NotificationService {
         priority: Priority.high,
         styleInformation: styleInformation,
         color: const Color(0xFF00E676),
-        icon: '@mipmap/ic_launcher',
+        icon: '@drawable/ic_notification',
         enableVibration: true,
         playSound: true,
       );
@@ -163,6 +166,51 @@ class NotificationService {
       );
     } catch (e) {
       debugPrint('Failed to show movie notification: $e');
+    }
+  }
+
+  /// Schedules daily OS-level release alerts that fire even when the app is
+  /// completely closed, killed from recents, or the device was restarted.
+  Future<void> scheduleRecurringAlerts() async {
+    try {
+      const androidDetails = AndroidNotificationDetails(
+        channelId,
+        channelName,
+        channelDescription: channelDescription,
+        importance: Importance.max,
+        priority: Priority.high,
+        color: Color(0xFF00E676),
+        icon: '@drawable/ic_notification',
+        enableVibration: true,
+        playSound: true,
+      );
+
+      const darwinDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      );
+
+      const platformDetails = NotificationDetails(
+        android: androidDetails,
+        iOS: darwinDetails,
+        macOS: darwinDetails,
+      );
+
+      // Cancel previous periodic alert to avoid stacking
+      await _notificationsPlugin.cancel(77701);
+
+      // Schedule recurring daily alert via OS AlarmManager
+      await _notificationsPlugin.periodicallyShow(
+        77701,
+        '🎬 Trending on FreeWatch',
+        'New Luganda translated movies & series are now streaming for free! Tap to explore today\'s top releases.',
+        RepeatInterval.daily,
+        platformDetails,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      );
+    } catch (e) {
+      debugPrint('scheduleRecurringAlerts error: $e');
     }
   }
 }
