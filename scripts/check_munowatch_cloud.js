@@ -9,9 +9,15 @@ function getFirebaseAdmin() {
 
   let serviceAccount = null;
   if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    const raw = process.env.FIREBASE_SERVICE_ACCOUNT.trim();
     try {
-      serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-    } catch (_) {}
+      serviceAccount = JSON.parse(raw);
+    } catch (_) {
+      try {
+        const decoded = Buffer.from(raw, 'base64').toString('utf8');
+        serviceAccount = JSON.parse(decoded);
+      } catch (_) {}
+    }
   }
 
   if (!serviceAccount) {
@@ -29,7 +35,9 @@ function getFirebaseAdmin() {
   }
 
   if (!serviceAccount) {
-    throw new Error('service-account.json not found in environment or disk');
+    console.log('ℹ️ [Notice] Firebase Service Account not configured in GitHub Secrets or environment.');
+    console.log('👉 To enable 24/7 cloud broadcasting from GitHub Actions, add FIREBASE_SERVICE_ACCOUNT in GitHub Settings > Secrets > Actions.');
+    return null;
   }
 
   return admin.initializeApp({
@@ -40,6 +48,10 @@ function getFirebaseAdmin() {
 
 async function run() {
   const app = getFirebaseAdmin();
+  if (!app) {
+    console.log('⏩ Skipping poller run safely without errors.');
+    return;
+  }
   console.log('☁️ FreeWatch Cloud MunoWatch Checker started.');
 
   // 1. Fetch current MunoWatch dashboard
