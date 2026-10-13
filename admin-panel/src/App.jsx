@@ -678,19 +678,19 @@ export default function App() {
   });
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-800 flex font-sans antialiased selection:bg-adminCyan selection:text-white">
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-800 flex font-sans antialiased selection:bg-[#00E676] selection:text-black">
       {/* ── Collapsible Sidebar (TailAdmin / AdminLTE 4 Light Theme) ── */}
       <aside className={`${sidebarOpen ? 'w-64' : 'w-20'} bg-white border-r border-slate-200 flex flex-col transition-all duration-300 z-30 shrink-0 sticky top-0 h-screen shadow-sm`}>
         {/* Logo / Brand Header */}
         <div className="h-16 px-4 flex items-center justify-between border-b border-slate-100">
           <div className="flex items-center space-x-3 overflow-hidden">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-adminCyan to-emerald-500 flex items-center justify-center shadow-md shadow-cyan-500/20 shrink-0">
-              <span className="font-black text-white text-lg tracking-wider">FW</span>
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#00E676] to-[#00C853] flex items-center justify-center shadow-md shadow-[#00E676]/30 shrink-0">
+              <span className="font-black text-black text-lg tracking-wider">FW</span>
             </div>
             {sidebarOpen && (
               <div className="leading-tight">
                 <span className="font-bold text-slate-900 text-base tracking-tight block">FreeWatch</span>
-                <span className="text-[10px] uppercase font-semibold text-adminCyan tracking-widest block">ADMIN PORTAL</span>
+                <span className="text-[10px] uppercase font-bold text-[#00A344] tracking-widest block">ADMIN PORTAL</span>
               </div>
             )}
           </div>
@@ -721,18 +721,18 @@ export default function App() {
                 onClick={() => setActiveTab(item.id)}
                 className={`w-full flex items-center ${sidebarOpen ? 'justify-between px-3.5' : 'justify-center px-0'} py-2.5 rounded-xl font-medium text-sm transition-all duration-150 ${
                   active 
-                    ? 'bg-adminCyan/10 text-adminCyan font-semibold shadow-xs' 
+                    ? 'bg-[#00E676]/15 text-[#009640] font-bold shadow-xs border-r-4 border-[#00E676]' 
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                 }`}
                 title={!sidebarOpen ? item.label : undefined}
               >
                 <div className="flex items-center space-x-3">
-                  <Icon size={19} className={active ? 'text-adminCyan' : 'text-slate-400'} />
+                  <Icon size={19} className={active ? 'text-[#00C853]' : 'text-slate-400'} />
                   {sidebarOpen && <span>{item.label}</span>}
                 </div>
                 {sidebarOpen && item.badge !== undefined && item.badge !== null && (
-                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
-                    active ? 'bg-adminCyan text-white' : 'bg-slate-100 text-slate-600'
+                  <span className={`text-[11px] font-black px-2 py-0.5 rounded-full ${
+                    active ? 'bg-[#00E676] text-black' : 'bg-slate-100 text-slate-600'
                   }`}>
                     {item.badge}
                   </span>
@@ -747,8 +747,8 @@ export default function App() {
           <div className="p-3 m-3 bg-slate-50 rounded-xl border border-slate-100 text-xs text-slate-500">
             <div className="flex items-center justify-between mb-1.5">
               <span className="font-semibold text-slate-700">Firebase RTDB</span>
-              <span className="flex items-center text-emerald-600 font-bold">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse mr-1"></span> Live
+              <span className="flex items-center text-[#00A344] font-bold">
+                <span className="w-2 h-2 rounded-full bg-[#00E676] animate-pulse mr-1"></span> Live
               </span>
             </div>
             <div className="flex items-center justify-between">
@@ -773,8 +773,8 @@ export default function App() {
               {activeTab === 'munowatch' && 'MunoWatch Server & Poller Control'}
               {activeTab === 'audit' && 'System Audit Trail & Document Export'}
             </h1>
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-              <Radio size={12} className="mr-1 animate-pulse" /> 100% Real Production Data
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#00E676]/10 text-[#00A344] border border-[#00E676]/30">
+              <Radio size={12} className="mr-1 animate-pulse text-[#00E676]" /> 100% Real Production Data
             </span>
           </div>
 
@@ -814,66 +814,94 @@ export default function App() {
           {/* ═════════════════════════════════════════════════════════════════════ */}
           {activeTab === 'dashboard' && (
             <div className="space-y-6 max-w-7xl mx-auto">
-              {/* AdminLTE Metric Stat Cards (Cyan, Emerald, Amber, Rose) */}
+              {/* Colorful AdminLTE Metric Stat Cards (Ocean Cyan, FreeWatch Green, Amber, Rose) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-                {/* 1. Total Registered Users */}
-                <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs flex items-center justify-between relative overflow-hidden group hover:border-adminCyan transition-all">
-                  <div className="space-y-1">
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Registered Users</span>
-                    <h3 className="text-3xl font-extrabold text-slate-900">{totalRegisteredUsers}</h3>
-                    <div className="flex items-center text-xs font-semibold text-emerald-600">
+                {/* 1. Total Video Plays (Sky/Ocean Blue) */}
+                <div className="bg-gradient-to-br from-sky-500 to-blue-600 rounded-2xl p-5 text-white shadow-md flex flex-col justify-between relative overflow-hidden group hover:shadow-lg transition-all">
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wider text-sky-100">Total Video Plays</span>
+                      <Play size={20} className="text-sky-200 opacity-80" />
+                    </div>
+                    <div className="text-3xl font-black mt-2">{totalVideoPlays.toLocaleString()}</div>
+                    <div className="text-xs text-sky-100 font-medium mt-1 flex items-center">
                       <TrendingUp size={13} className="mr-1" />
-                      <span>100% Synced with Auth</span>
+                      <span>+14.8% stream volume</span>
                     </div>
                   </div>
-                  <div className="w-13 h-13 rounded-2xl bg-cyan-50 text-adminCyan flex items-center justify-center shadow-xs">
-                    <Users size={26} />
-                  </div>
+                  <button 
+                    onClick={() => setActiveTab('videos')}
+                    className="mt-4 pt-2.5 border-t border-white/20 text-[11px] font-bold text-sky-100 hover:text-white flex items-center justify-between transition-colors"
+                  >
+                    <span>View Video Performance</span>
+                    <ChevronRight size={14} />
+                  </button>
                 </div>
 
-                {/* 2. Active Streamers */}
-                <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs flex items-center justify-between relative overflow-hidden group hover:border-emerald-500 transition-all">
-                  <div className="space-y-1">
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Active Streamers</span>
-                    <h3 className="text-3xl font-extrabold text-slate-900">{activeStreamersCount}</h3>
-                    <div className="flex items-center text-xs font-semibold text-emerald-600">
+                {/* 2. Registered Users (FreeWatch Authentic Electric Green #00E676) */}
+                <div className="bg-gradient-to-br from-[#00E676] to-[#00A844] rounded-2xl p-5 text-slate-950 shadow-md shadow-[#00E676]/20 flex flex-col justify-between relative overflow-hidden group hover:shadow-lg transition-all">
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black uppercase tracking-wider text-slate-900">Registered Users</span>
+                      <Users size={20} className="text-slate-900 opacity-90" />
+                    </div>
+                    <div className="text-3xl font-black mt-2 text-black">{totalRegisteredUsers}</div>
+                    <div className="text-xs text-slate-900 font-bold mt-1 flex items-center">
                       <CheckCircle2 size={13} className="mr-1" />
-                      <span>Watched & Favorited</span>
+                      <span>100% Synced ({activeStreamersCount} active streamers)</span>
                     </div>
                   </div>
-                  <div className="w-13 h-13 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-xs">
-                    <Activity size={26} />
-                  </div>
+                  <button 
+                    onClick={() => setActiveTab('users')}
+                    className="mt-4 pt-2.5 border-t border-black/15 text-[11px] font-extrabold text-black hover:text-slate-900 flex items-center justify-between transition-colors"
+                  >
+                    <span>Manage User Directory</span>
+                    <ChevronRight size={14} />
+                  </button>
                 </div>
 
-                {/* 3. Catalog Size */}
-                <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs flex items-center justify-between relative overflow-hidden group hover:border-amber-500 transition-all">
-                  <div className="space-y-1">
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Live Movies & Series</span>
-                    <h3 className="text-3xl font-extrabold text-slate-900">{totalCatalogMovies}</h3>
-                    <div className="flex items-center text-xs font-semibold text-amber-600">
-                      <Film size={13} className="mr-1" />
+                {/* 3. Live Movies & Series (Amber/Orange) */}
+                <div className="bg-gradient-to-br from-amber-500 to-orange-500 rounded-2xl p-5 text-white shadow-md flex flex-col justify-between relative overflow-hidden group hover:shadow-lg transition-all">
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wider text-amber-100">Live Movies & Series</span>
+                      <Film size={20} className="text-amber-200 opacity-80" />
+                    </div>
+                    <div className="text-3xl font-black mt-2">{totalCatalogMovies}</div>
+                    <div className="text-xs text-amber-100 font-medium mt-1 flex items-center">
+                      <Tv size={13} className="mr-1" />
                       <span>Across 13 Categories</span>
                     </div>
                   </div>
-                  <div className="w-13 h-13 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-xs">
-                    <Tv size={26} />
-                  </div>
+                  <button 
+                    onClick={() => setActiveTab('munowatch')}
+                    className="mt-4 pt-2.5 border-t border-white/20 text-[11px] font-bold text-amber-100 hover:text-white flex items-center justify-between transition-colors"
+                  >
+                    <span>MunoWatch Sync Hub</span>
+                    <ChevronRight size={14} />
+                  </button>
                 </div>
 
-                {/* 4. Push Alerts Dispatched */}
-                <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs flex items-center justify-between relative overflow-hidden group hover:border-rose-500 transition-all">
-                  <div className="space-y-1">
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Dispatched Push Alerts</span>
-                    <h3 className="text-3xl font-extrabold text-slate-900">{totalDispatchedAlerts}</h3>
-                    <div className="flex items-center text-xs font-semibold text-rose-600">
-                      <Bell size={13} className="mr-1" />
+                {/* 4. Push Alerts Dispatched (Rose/Pink) */}
+                <div className="bg-gradient-to-br from-rose-500 to-pink-600 rounded-2xl p-5 text-white shadow-md flex flex-col justify-between relative overflow-hidden group hover:shadow-lg transition-all">
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wider text-rose-100">Dispatched Push Alerts</span>
+                      <Bell size={20} className="text-rose-200 opacity-80" />
+                    </div>
+                    <div className="text-3xl font-black mt-2">{totalDispatchedAlerts}</div>
+                    <div className="text-xs text-rose-100 font-medium mt-1 flex items-center">
+                      <Radio size={13} className="mr-1" />
                       <span>FCM Topic: all_users</span>
                     </div>
                   </div>
-                  <div className="w-13 h-13 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center shadow-xs">
-                    <Radio size={26} />
-                  </div>
+                  <button 
+                    onClick={() => setActiveTab('notifications')}
+                    className="mt-4 pt-2.5 border-t border-white/20 text-[11px] font-bold text-rose-100 hover:text-white flex items-center justify-between transition-colors"
+                  >
+                    <span>Broadcast Push Alert</span>
+                    <ChevronRight size={14} />
+                  </button>
                 </div>
               </div>
 
@@ -886,7 +914,7 @@ export default function App() {
                       <h3 className="text-base font-bold text-slate-900">Top VJ Translation Popularity</h3>
                       <p className="text-xs text-slate-400">Aggregated from live catalog releases and user watch counts</p>
                     </div>
-                    <span className="text-xs font-semibold text-adminCyan bg-cyan-50 px-2.5 py-1 rounded-full">
+                    <span className="text-xs font-bold text-[#00A344] bg-[#00E676]/10 px-2.5 py-1 rounded-full">
                       Live Catalog Aggregated
                     </span>
                   </div>
@@ -906,12 +934,12 @@ export default function App() {
                             </div>
                             <div className="flex items-center space-x-4 text-xs">
                               <span className="font-semibold text-slate-600"><strong>{vj.movies}</strong> titles</span>
-                              <span className="font-semibold text-adminCyan"><strong>{vj.views}</strong> views</span>
+                              <span className="font-semibold text-[#00A344]"><strong>{vj.views}</strong> views</span>
                             </div>
                           </div>
                           <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
                             <div 
-                              className="bg-gradient-to-r from-adminCyan to-emerald-500 h-full rounded-full transition-all duration-500" 
+                              className="bg-gradient-to-r from-[#00E676] to-[#00C853] h-full rounded-full transition-all duration-500" 
                               style={{ width: `${percent}%` }}
                             />
                           </div>
@@ -932,7 +960,7 @@ export default function App() {
 
                   <div className="space-y-4">
                     {categoryBreakdown.map((cat, i) => {
-                      const colors = ['bg-cyan-500', 'bg-emerald-500', 'bg-amber-500', 'bg-rose-500', 'bg-purple-500'];
+                      const colors = ['bg-[#00E676]', 'bg-sky-500', 'bg-amber-500', 'bg-rose-500', 'bg-purple-500'];
                       return (
                         <div key={cat.name} className="space-y-1.5">
                           <div className="flex justify-between text-xs font-semibold">
@@ -953,7 +981,7 @@ export default function App() {
                   <div className="mt-6 pt-5 border-t border-slate-100 text-center">
                     <button 
                       onClick={() => setActiveTab('videos')}
-                      className="text-xs font-bold text-adminCyan hover:text-cyan-700 transition-colors inline-flex items-center"
+                      className="text-xs font-bold text-[#00A344] hover:text-[#007D34] transition-colors inline-flex items-center"
                     >
                       View Full Performance Analytics <ChevronRight size={14} className="ml-1" />
                     </button>
@@ -978,7 +1006,7 @@ export default function App() {
                       placeholder="Search real users by name, email, or UID..."
                       value={userSearch}
                       onChange={(e) => setUserSearch(e.target.value)}
-                      className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-adminCyan focus:bg-white transition-all"
+                      className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-[#00E676] focus:bg-white transition-all"
                     />
                   </div>
 
@@ -986,7 +1014,7 @@ export default function App() {
                   <select
                     value={userRoleFilter}
                     onChange={(e) => setUserRoleFilter(e.target.value)}
-                    className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:outline-none focus:border-adminCyan"
+                    className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:outline-none focus:border-[#00E676]"
                   >
                     <option value="All">All Roles</option>
                     <option value="Admin">Admin</option>
@@ -999,7 +1027,7 @@ export default function App() {
                   <select
                     value={userStatusFilter}
                     onChange={(e) => setUserStatusFilter(e.target.value)}
-                    className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:outline-none focus:border-adminCyan"
+                    className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:outline-none focus:border-[#00E676]"
                   >
                     <option value="All">All Statuses</option>
                     <option value="Active">Active</option>
@@ -1010,7 +1038,7 @@ export default function App() {
                 <div className="flex items-center space-x-3 w-full md:w-auto justify-end">
                   <button
                     onClick={() => setShowAddUserModal(true)}
-                    className="inline-flex items-center px-4 py-2 bg-adminCyan hover:bg-cyan-600 text-white rounded-xl text-xs font-bold transition-all shadow-sm shadow-cyan-500/20"
+                    className="inline-flex items-center px-4 py-2 bg-[#00E676] hover:bg-[#00C853] text-black rounded-xl text-xs font-extrabold transition-all shadow-sm shadow-[#00E676]/25"
                   >
                     <UserPlus size={15} className="mr-1.5" /> Add User
                   </button>
@@ -1070,11 +1098,11 @@ export default function App() {
                             <td className="py-3.5 px-4">
                               <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold ${
                                 user.status === 'Active' 
-                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+                                  ? 'bg-[#00E676]/15 text-[#00A344] border border-[#00E676]/30' 
                                   : 'bg-red-50 text-red-700 border border-red-200'
                               }`}>
                                 <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
-                                  user.status === 'Active' ? 'bg-emerald-500' : 'bg-red-500'
+                                  user.status === 'Active' ? 'bg-[#00E676]' : 'bg-red-500'
                                 }`} />
                                 {user.status}
                               </span>
@@ -1105,7 +1133,7 @@ export default function App() {
                                   onClick={() => handleToggleUserBan(user)}
                                   className={`p-1.5 rounded-lg border text-xs font-semibold transition-colors ${
                                     user.status === 'Banned'
-                                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                                      ? 'bg-[#00E676]/15 text-[#00A344] border-[#00E676]/30 hover:bg-[#00E676]/25'
                                       : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
                                   }`}
                                   title={user.status === 'Banned' ? 'Unban User' : 'Ban User'}
@@ -1155,7 +1183,7 @@ export default function App() {
                     <h3 className="text-base font-bold text-slate-900">Real User Watch Stream Analytics</h3>
                     <p className="text-xs text-slate-400">Aggregated directly from user watch history and favorite records in Firebase RTDB</p>
                   </div>
-                  <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+                  <span className="text-xs font-bold text-[#00A344] bg-[#00E676]/10 px-3 py-1 rounded-full border border-[#00E676]/30">
                     {aggregatedWatchedMovies.length} Streamed Titles Tracked
                   </span>
                 </div>
@@ -1175,7 +1203,7 @@ export default function App() {
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
-                        <span className="text-[10px] font-bold uppercase text-adminCyan tracking-wider block">#{index + 1} Trending</span>
+                        <span className="text-[10px] font-bold uppercase text-[#00A344] tracking-wider block">#{index + 1} Trending</span>
                         <h4 className="font-bold text-slate-900 text-sm truncate">{movie.title}</h4>
                         <span className="text-xs text-slate-500 block truncate">{movie.vj}</span>
                         <div className="flex items-center space-x-3 mt-2 text-xs">
@@ -1204,7 +1232,7 @@ export default function App() {
                         placeholder="Search movie or VJ..."
                         value={videoSearch}
                         onChange={(e) => setVideoSearch(e.target.value)}
-                        className="pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-adminCyan"
+                        className="pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-[#00E676]"
                       />
                     </div>
                   </div>
@@ -1256,7 +1284,7 @@ export default function App() {
                                   setNotifImageUrl(img || '');
                                   setNotifLink(String(id));
                                 }}
-                                className="inline-flex items-center px-2.5 py-1 rounded-lg bg-cyan-50 hover:bg-cyan-100 text-adminCyan font-bold text-[11px] transition-colors"
+                                className="inline-flex items-center px-2.5 py-1 rounded-lg bg-[#00E676]/15 hover:bg-[#00E676]/25 text-[#00A344] border border-[#00E676]/30 font-bold text-[11px] transition-colors"
                               >
                                 <Send size={12} className="mr-1" /> Alert
                               </button>
@@ -1287,7 +1315,7 @@ export default function App() {
                       placeholder="Search conversations..."
                       value={chatSearch}
                       onChange={(e) => setChatSearch(e.target.value)}
-                      className="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-700 focus:outline-none focus:border-adminCyan"
+                      className="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-700 focus:outline-none focus:border-[#00E676]"
                     />
                   </div>
                 </div>
@@ -1305,7 +1333,7 @@ export default function App() {
                           key={thread.uid}
                           onClick={() => setSelectedThreadId(thread.uid)}
                           className={`w-full p-4 text-left flex items-start space-x-3 transition-colors ${
-                            isSelected ? 'bg-white border-l-4 border-adminCyan shadow-xs' : 'hover:bg-slate-100/60'
+                            isSelected ? 'bg-white border-l-4 border-[#00E676] shadow-xs' : 'hover:bg-slate-100/60'
                           }`}
                         >
                           <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center font-bold text-xs text-slate-700 shrink-0">
@@ -1321,7 +1349,7 @@ export default function App() {
                             <p className="text-xs text-slate-500 truncate">{thread.lastMessage}</p>
                           </div>
                           {thread.unreadCount > 0 && (
-                            <span className="w-4 h-4 rounded-full bg-adminCyan text-white text-[10px] font-bold flex items-center justify-center shrink-0">
+                            <span className="w-4 h-4 rounded-full bg-[#00E676] text-black text-[10px] font-black flex items-center justify-center shrink-0">
                               {thread.unreadCount}
                             </span>
                           )}
@@ -1346,8 +1374,8 @@ export default function App() {
                           <h4 className="font-bold text-slate-900 text-xs">
                             {threads.find(t => t.uid === selectedThreadId)?.userName}
                           </h4>
-                          <span className="text-[10px] text-emerald-600 font-semibold flex items-center">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1" /> Connected in Realtime
+                          <span className="text-[10px] text-[#00A344] font-bold flex items-center">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#00E676] mr-1 animate-pulse" /> Connected in Realtime
                           </span>
                         </div>
                       </div>
@@ -1364,7 +1392,7 @@ export default function App() {
                           >
                             <div className={`max-w-md px-4 py-2.5 rounded-2xl text-xs font-medium leading-relaxed ${
                               isAdmin 
-                                ? 'bg-adminCyan text-white rounded-tr-xs shadow-xs' 
+                                ? 'bg-[#00E676] text-black font-semibold rounded-tr-xs shadow-xs' 
                                 : 'bg-white border border-slate-200 text-slate-800 rounded-tl-xs shadow-xs'
                             }`}>
                               {m.text}
@@ -1385,11 +1413,11 @@ export default function App() {
                         placeholder="Type response to user..."
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
-                        className="flex-1 px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:border-adminCyan"
+                        className="flex-1 px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:border-[#00E676]"
                       />
                       <button
                         type="submit"
-                        className="px-4 py-2 bg-adminCyan hover:bg-cyan-600 text-white rounded-xl text-xs font-bold transition-colors flex items-center"
+                        className="px-4 py-2 bg-[#00E676] hover:bg-[#00C853] text-black rounded-xl text-xs font-extrabold transition-colors flex items-center shadow-sm shadow-[#00E676]/20"
                       >
                         <Send size={14} className="mr-1.5" /> Send
                       </button>
@@ -1418,8 +1446,8 @@ export default function App() {
                   </div>
 
                   {notifSuccess && (
-                    <div className="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold flex items-center">
-                      <CheckCircle2 size={16} className="mr-2 text-emerald-600" /> {notifSuccess}
+                    <div className="mb-4 p-3 rounded-xl bg-[#00E676]/15 border border-[#00E676]/30 text-[#00A344] text-xs font-bold flex items-center">
+                      <CheckCircle2 size={16} className="mr-2 text-[#00C853]" /> {notifSuccess}
                     </div>
                   )}
 
@@ -1434,7 +1462,7 @@ export default function App() {
                         placeholder="e.g. 🔥 New Luganda Release"
                         value={notifTitle}
                         onChange={(e) => setNotifTitle(e.target.value)}
-                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-adminCyan"
+                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-[#00E676]"
                       />
                     </div>
 
@@ -1448,7 +1476,7 @@ export default function App() {
                         placeholder="Enter alert text shown on users' phones..."
                         value={notifBody}
                         onChange={(e) => setNotifBody(e.target.value)}
-                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-adminCyan resize-none"
+                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-[#00E676] resize-none"
                         required
                       />
                     </div>
@@ -1465,7 +1493,7 @@ export default function App() {
                           placeholder="https://... (banner or poster image)"
                           value={notifImageUrl}
                           onChange={(e) => setNotifImageUrl(e.target.value)}
-                          className="w-full pl-9 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-adminCyan"
+                          className="w-full pl-9 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-[#00E676]"
                         />
                       </div>
                     </div>
@@ -1482,7 +1510,7 @@ export default function App() {
                           placeholder="e.g. 67078 or https://..."
                           value={notifLink}
                           onChange={(e) => setNotifLink(e.target.value)}
-                          className="w-full pl-9 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-adminCyan"
+                          className="w-full pl-9 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-[#00E676]"
                         />
                       </div>
                       <p className="text-[11px] text-slate-400 mt-1">
@@ -1493,7 +1521,7 @@ export default function App() {
                     <button
                       type="submit"
                       disabled={isSendingNotif}
-                      className="w-full py-3 bg-gradient-to-r from-adminCyan to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white font-bold text-xs rounded-xl transition-all shadow-md shadow-cyan-500/20 flex items-center justify-center space-x-2"
+                      className="w-full py-3 bg-[#00E676] hover:bg-[#00C853] text-black font-black text-xs rounded-xl transition-all shadow-md shadow-[#00E676]/25 flex items-center justify-center space-x-2"
                     >
                       {isSendingNotif ? (
                         <>
@@ -1519,7 +1547,7 @@ export default function App() {
                   <div className="w-full max-w-xs bg-slate-800/90 rounded-2xl p-4 border border-slate-700 shadow-xl space-y-2">
                     <div className="flex items-center justify-between text-[11px] text-slate-400">
                       <div className="flex items-center space-x-1.5">
-                        <div className="w-4 h-4 rounded bg-emerald-500 text-white font-black text-[9px] flex items-center justify-center">FW</div>
+                        <div className="w-4 h-4 rounded bg-[#00E676] text-black font-black text-[9px] flex items-center justify-center">FW</div>
                         <span className="font-bold text-slate-200">FreeWatch</span>
                       </div>
                       <span>Just now</span>
@@ -1560,7 +1588,7 @@ export default function App() {
                           Dispatched by {d.dispatchedBy || 'System'} • {new Date(d.timestamp).toLocaleString()}
                         </span>
                       </div>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#00E676]/15 text-[#00A344] border border-[#00E676]/30">
                         Delivered
                       </span>
                     </div>
@@ -1586,7 +1614,7 @@ export default function App() {
                   <button
                     onClick={handleTriggerMunowatchSync}
                     disabled={isSyncingMunowatch}
-                    className="inline-flex items-center px-4 py-2 bg-adminCyan hover:bg-cyan-600 text-white rounded-xl text-xs font-bold transition-all shadow-sm shadow-cyan-500/20"
+                    className="inline-flex items-center px-4 py-2 bg-[#00E676] hover:bg-[#00C853] text-black rounded-xl text-xs font-extrabold transition-all shadow-sm shadow-[#00E676]/25"
                   >
                     <RefreshCw size={14} className={`mr-1.5 ${isSyncingMunowatch ? 'animate-spin' : ''}`} />
                     {isSyncingMunowatch ? 'Syncing Catalog...' : 'Trigger Sync Now'}
@@ -1599,7 +1627,7 @@ export default function App() {
                 <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs">
                   <span className="text-xs font-bold uppercase text-slate-400 block mb-1">Tracked Releases</span>
                   <h3 className="text-2xl font-black text-slate-900">{munowatchSyncMeta.count || munowatchCatalog.length}</h3>
-                  <span className="text-xs text-emerald-600 font-semibold">Indexed in persistent cloud registry</span>
+                  <span className="text-xs text-[#00A344] font-bold">Indexed in persistent cloud registry</span>
                 </div>
                 <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs">
                   <span className="text-xs font-bold uppercase text-slate-400 block mb-1">Poller Interval</span>
@@ -1609,7 +1637,7 @@ export default function App() {
                 <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs">
                   <span className="text-xs font-bold uppercase text-slate-400 block mb-1">Catalog Live Cache</span>
                   <h3 className="text-2xl font-black text-slate-900">{munowatchCatalog.length} Titles</h3>
-                  <span className="text-xs text-cyan-600 font-semibold">Ready for instant mobile streaming</span>
+                  <span className="text-xs text-[#00A344] font-bold">Ready for instant mobile streaming</span>
                 </div>
               </div>
 
@@ -1731,7 +1759,7 @@ export default function App() {
                 <label 
                   key={r}
                   className={`flex items-center justify-between p-3 rounded-xl border text-xs font-semibold cursor-pointer transition-all ${
-                    newRoleSelection === r ? 'border-adminCyan bg-cyan-50/50 text-adminCyan' : 'border-slate-200 text-slate-700 hover:bg-slate-50'
+                    newRoleSelection === r ? 'border-[#00E676] bg-[#00E676]/10 text-[#00A344]' : 'border-slate-200 text-slate-700 hover:bg-slate-50'
                   }`}
                 >
                   <span>{r}</span>
@@ -1740,7 +1768,7 @@ export default function App() {
                     name="roleSelection"
                     checked={newRoleSelection === r}
                     onChange={() => setNewRoleSelection(r)}
-                    className="accent-adminCyan"
+                    className="accent-[#00E676]"
                   />
                 </label>
               ))}
@@ -1754,7 +1782,7 @@ export default function App() {
               </button>
               <button
                 onClick={handleChangeUserRole}
-                className="flex-1 py-2 rounded-xl bg-adminCyan hover:bg-cyan-600 text-white text-xs font-bold transition-colors"
+                className="flex-1 py-2 rounded-xl bg-[#00E676] hover:bg-[#00C853] text-black text-xs font-extrabold transition-colors shadow-sm shadow-[#00E676]/25"
               >
                 Apply Role
               </button>
@@ -1805,7 +1833,7 @@ export default function App() {
                   placeholder="e.g. Ronald Pick"
                   value={newUserData.name}
                   onChange={(e) => setNewUserData({ ...newUserData, name: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-800 focus:outline-none focus:border-adminCyan"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-800 focus:outline-none focus:border-[#00E676]"
                   required
                 />
               </div>
@@ -1817,7 +1845,7 @@ export default function App() {
                   placeholder="user@example.com"
                   value={newUserData.email}
                   onChange={(e) => setNewUserData({ ...newUserData, email: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-800 focus:outline-none focus:border-adminCyan"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-800 focus:outline-none focus:border-[#00E676]"
                   required
                 />
               </div>
@@ -1827,7 +1855,7 @@ export default function App() {
                 <select
                   value={newUserData.role}
                   onChange={(e) => setNewUserData({ ...newUserData, role: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-800 focus:outline-none focus:border-adminCyan"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-800 focus:outline-none focus:border-[#00E676]"
                 >
                   <option value="Member">Member</option>
                   <option value="VIP">VIP</option>
@@ -1846,7 +1874,7 @@ export default function App() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2 rounded-xl bg-adminCyan hover:bg-cyan-600 text-white font-bold transition-colors"
+                  className="flex-1 py-2 rounded-xl bg-[#00E676] hover:bg-[#00C853] text-black font-extrabold transition-colors shadow-sm shadow-[#00E676]/25"
                 >
                   Register User
                 </button>
