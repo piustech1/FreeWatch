@@ -3,7 +3,17 @@
   "buildCommand": "cd admin-panel && npm install && npm run build",
   "outputDirectory": "admin-panel/dist",
   "framework": "vite",
+  "crons": [
+    {
+      "path": "/api/cron-munowatch",
+      "schedule": "*/15 * * * *"
+    }
+  ],
   "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    },
     {
       "source": "/(.*)",
       "destination": "/index.html"

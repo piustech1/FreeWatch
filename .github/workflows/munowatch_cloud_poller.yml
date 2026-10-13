@@ -1,0 +1,33 @@
+name: MunoWatch 24/7 Cloud Poller
+
+on:
+  schedule:
+    # Runs automatically every 30 minutes in GitHub's cloud
+    - cron: '*/30 * * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub UI
+
+jobs:
+  check-and-broadcast:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: 'scripts/package-lock.json'
+
+      - name: Install Daemon Dependencies
+        run: |
+          cd scripts && npm ci || npm install
+
+      - name: Check MunoWatch & Broadcast New Movies
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          node scripts/check_munowatch_cloud.js
