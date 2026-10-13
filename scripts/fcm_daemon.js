@@ -123,3 +123,181 @@ admin.database().ref('global_alerts/latest').on('value', async (snapshot) => {
     console.error('❌ Error broadcasting FCM push notification:', err);
   }
 });
+
+// ===========================================================================
+// MunoWatch Automated Server Poller (Every 15 minutes)
+// Automatically detects newly released movies/translations from MunoWatch
+// and broadcasts high-priority push notifications to ALL users even when closed!
+// ===========================================================================
+const KNOWN_MOVIES_FILE = path.resolve(__dirname, '.known_munowatch_ids.json');
+
+function loadKnownMovieIds() {
+  try {
+    if (fs.existsSync(KNOWN_MOVIES_FILE)) {
+      const data = JSON.parse(fs.readFileSync(KNOWN_MOVIES_FILE, 'utf8'));
+      if (Array.isArray(data)) {
+        return new Set(data);
+      }
+    }
+  } catch (e) {
+    console.warn('Notice loading known movie IDs:', e.message);
+  }
+  return null; // null means first run
+}
+
+function saveKnownMovieIds(idSet) {
+  try {
+    fs.writeFileSync(KNOWN_MOVIES_FILE, JSON.stringify(Array.from(idSet)), 'utf8');
+  } catch (e) {
+    console.warn('Notice saving known movie IDs:', e.message);
+  }
+}
+
+async function checkMunowatchForNewMovies() {
+  try {
+    const urls = [
+      'https://munowatch.ai.studio/api/dashboard',
+      'https://munowatch.ai.studio/dashboard',
+      'https://mumowatch.ai.studio/dashboard'
+    ];
+
+    let data = null;
+    for (const u of urls) {
+      try {
+        const res = await fetch(u, { headers: { 'User-Agent': 'FreeWatch/1.0 (Daemon)' } });
+        if (res.ok) {
+          data = await res.json();
+          if (data && (data.dashboard || data.movies)) break;
+        }
+      } catch (_) {}
+    }
+
+    if (!data) return;
+
+    // Collect all movies currently on MunoWatch
+    const allMovies = [];
+    const idMap = new Map();
+
+    if (Array.isArray(data.dashboard)) {
+      for (const cat of data.dashboard) {
+        if (Array.isArray(cat.movies)) {
+          for (const m of cat.movies) {
+            const mId = m.id || m.vid;
+            if (mId && !idMap.has(mId)) {
+              idMap.set(mId, m);
+              allMovies.push(m);
+            }
+          }
+        }
+      }
+    }
+
+    if (Array.isArray(data.movies)) {
+      for (const m of data.movies) {
+        const mId = m.id || m.vid;
+        if (mId && !idMap.has(mId)) {
+          idMap.set(mId, m);
+          allMovies.push(m);
+        }
+      }
+    }
+
+    let knownIds = loadKnownMovieIds();
+    const currentIds = new Set(allMovies.map(m => String(m.id || m.vid)));
+
+    // On initial boot, cache all existing movie IDs so we don't spam 200 alerts
+    if (!knownIds) {
+      saveKnownMovieIds(currentIds);
+      console.log(`🍿 [MunoWatch Poller] Initialized cache with ${currentIds.size} existing movies. Ready for new uploads!`);
+      return;
+    }
+
+    // Detect new movie uploads
+    const newMovies = allMovies.filter(m => !knownIds.has(String(m.id || m.vid)));
+
+    if (newMovies.length > 0) {
+      console.log(`✨ [MunoWatch Poller] Found ${newMovies.length} NEW movie(s) uploaded to MunoWatch!`);
+
+      // Update cache immediately to prevent duplicate sends
+      for (const m of newMovies) {
+        knownIds.add(String(m.id || m.vid));
+      }
+      saveKnownMovieIds(knownIds);
+
+      // Broadcast up to 3 newest releases
+      for (const movie of newMovies.slice(0, 3)) {
+        const vj = movie.vj || movie.vjName || 'Luganda Dubbed';
+        const title = movie.title || movie.name || 'New Release';
+        const body = `New Release: ${title} translated by ${vj} is now streaming on FreeWatch!`;
+        const imageUrl = movie.image || movie.poster || movie.backdrop || '';
+        const movieId = String(movie.id || movie.vid || '');
+
+        const message = {
+          topic: 'all_users',
+          notification: {
+            title,
+            body,
+          },
+          data: {
+            title,
+            body,
+            imageUrl: imageUrl || '',
+            movieId: movieId,
+            timestamp: String(Date.now()),
+            click_action: 'FLUTTER_NOTIFICATION_CLICK',
+          },
+          android: {
+            priority: 'high',
+            notification: {
+              channelId: 'freewatch_alerts',
+              priority: 'max',
+              defaultSound: true,
+              defaultVibrateTimings: true,
+              icon: 'ic_notification',
+              imageUrl: imageUrl || undefined,
+            },
+          },
+          apns: {
+            payload: {
+              aps: {
+                alert: { title, body },
+                sound: 'default',
+                'mutable-content': 1,
+              },
+            },
+            fcmOptions: {
+              image: imageUrl || undefined,
+            },
+          },
+        };
+
+        try {
+          const resp = await admin.messaging().send(message);
+          const timeStr = new Date().toLocaleTimeString();
+          console.log(`🚀 [${timeStr}] [MunoWatch Poller] Auto-broadcasted new movie: "${title}" (FCM ID: ${resp})`);
+
+          // Also record in Realtime Database history
+          admin.database().ref('push_notifications/history').push({
+            id: resp,
+            title,
+            body,
+            imageUrl,
+            movieId,
+            targetTopic: 'all_users',
+            timestamp: Date.now(),
+            dispatchedBy: 'MunoWatch Server Poller'
+          }).catch(() => {});
+        } catch (fcmErr) {
+          console.error(`❌ [MunoWatch Poller] Failed to broadcast "${title}":`, fcmErr);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('⚠️ [MunoWatch Poller] Error checking MunoWatch:', err.message);
+  }
+}
+
+// Start polling on startup after 3 seconds, then every 15 minutes
+setTimeout(checkMunowatchForNewMovies, 3000);
+setInterval(checkMunowatchForNewMovies, 15 * 60 * 1000);
+

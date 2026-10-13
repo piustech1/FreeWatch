@@ -46,3 +46,4 @@ app.*.map.json
 service-account*.json
 /scripts/node_modules/
 /scripts/*.log
+/scripts/.known_munowatch_ids.json
