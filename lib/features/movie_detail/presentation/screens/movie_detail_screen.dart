@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -64,6 +65,13 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
   bool _isPlayingVideo = false;
   bool _isInitializingVideo = false;
   bool _isFullscreen = false;
+  Timer? _landscapeControlsTimer;
+  bool _showLandscapeControls = true;
+  double _playerVolume = 1.0;
+  double _playerBrightness = 1.0;
+  bool _showVolumeHud = false;
+  bool _showBrightnessHud = false;
+  Timer? _hudDismissTimer;
   int? _currentPlayingEpisodeNumber;
   String? _currentPlayingEpisodeTitle;
   bool _hasShownPreRollPromo = false;
@@ -91,6 +99,8 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
 
   @override
   void dispose() {
+    _landscapeControlsTimer?.cancel();
+    _hudDismissTimer?.cancel();
     if (_isFullscreen) {
       SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -2572,18 +2582,46 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
     });
   }
 
+  void _startControlsTimeout() {
+    _landscapeControlsTimer?.cancel();
+    _landscapeControlsTimer = Timer(const Duration(milliseconds: 3500), () {
+      if (mounted && _isFullscreen && _showLandscapeControls) {
+        setState(() {
+          _showLandscapeControls = false;
+        });
+      }
+    });
+  }
+
+  void _toggleLandscapeControls() {
+    setState(() {
+      _showLandscapeControls = !_showLandscapeControls;
+    });
+    if (_showLandscapeControls) {
+      _startControlsTimeout();
+    } else {
+      _landscapeControlsTimer?.cancel();
+    }
+  }
+
   void _toggleFullscreen() {
     setState(() {
       _isFullscreen = !_isFullscreen;
+      if (_isFullscreen) {
+        _showLandscapeControls = true;
+      }
     });
 
     if (_isFullscreen) {
+      _startControlsTimeout();
       SystemChrome.setPreferredOrientations([
         DeviceOrientation.landscapeLeft,
         DeviceOrientation.landscapeRight,
       ]);
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     } else {
+      _landscapeControlsTimer?.cancel();
+      _hudDismissTimer?.cancel();
       SystemChrome.setPreferredOrientations([
         DeviceOrientation.portraitUp,
       ]);
@@ -3111,203 +3149,399 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
     );
   }
 
+  void _onVerticalDragUpdateLandscape(DragUpdateDetails details, double screenWidth) {
+    _startControlsTimeout();
+    final delta = -details.primaryDelta! / 150.0;
+    if (details.localPosition.dx < screenWidth / 2) {
+      // Left side: Brightness
+      setState(() {
+        _playerBrightness = (_playerBrightness + delta).clamp(0.15, 1.0);
+        _showBrightnessHud = true;
+        _showVolumeHud = false;
+      });
+    } else {
+      // Right side: Volume
+      setState(() {
+        _playerVolume = (_playerVolume + delta).clamp(0.0, 1.0);
+        _videoPlayerController?.setVolume(_playerVolume);
+        _showVolumeHud = true;
+        _showBrightnessHud = false;
+      });
+    }
+    _hudDismissTimer?.cancel();
+    _hudDismissTimer = Timer(const Duration(milliseconds: 1200), () {
+      if (mounted) {
+        setState(() {
+          _showBrightnessHud = false;
+          _showVolumeHud = false;
+        });
+      }
+    });
+  }
+
+  Widget _buildIosGestureHud({
+    required IconData icon,
+    required double value,
+    required String label,
+  }) {
+    return Container(
+      width: 58,
+      height: 140,
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.70),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withOpacity(0.20), width: 1),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: Colors.white, size: 22),
+          const SizedBox(height: 8),
+          Expanded(
+            child: Container(
+              width: 8,
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              alignment: Alignment.bottomCenter,
+              child: FractionallySizedBox(
+                heightFactor: value.clamp(0.0, 1.0),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '${(value * 100).round()}%',
+            style: const TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildLandscapeFullscreenPlayer() {
     final controller = _videoPlayerController;
     if (controller == null || !controller.value.isInitialized) {
       return const Scaffold(
         backgroundColor: Colors.black,
         body: Center(
-          child: CircularProgressIndicator(color: Color(0xFF22C55E)),
+          child: CircularProgressIndicator(color: Colors.white),
         ),
       );
     }
 
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Stack(
-        fit: StackFit.expand,
-        alignment: Alignment.center,
-        children: [
-          // Edge-to-edge video touching every screen boundary (zero black side bars)
-          SizedBox.expand(
-            child: FittedBox(
-              fit: BoxFit.cover,
-              child: SizedBox(
-                width: controller.value.size.width > 0 ? controller.value.size.width : 16,
-                height: controller.value.size.height > 0 ? controller.value.size.height : 9,
-                child: VideoPlayer(controller),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final width = constraints.maxWidth;
+          return Stack(
+            fit: StackFit.expand,
+            alignment: Alignment.center,
+            children: [
+              // Edge-to-edge video touching every screen boundary (zero black side bars)
+              SizedBox.expand(
+                child: FittedBox(
+                  fit: BoxFit.cover,
+                  child: SizedBox(
+                    width: controller.value.size.width > 0 ? controller.value.size.width : 16,
+                    height: controller.value.size.height > 0 ? controller.value.size.height : 9,
+                    child: VideoPlayer(controller),
+                  ),
+                ),
               ),
-            ),
-          ),
 
-          // Landscape Controls Overlay (Wrapped in SafeArea for notch safety)
-          Positioned.fill(
-            child: SafeArea(
-              child: Container(
-                color: Colors.black.withOpacity(0.25),
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // Top Bar
-                    Row(
-                      children: [
-                        GestureDetector(
-                          onTap: _toggleFullscreen,
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.black54,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white24, width: 0.8),
-                            ),
-                            child: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 20),
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Text(
-                            widget.movie.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF22C55E).withOpacity(0.25),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: const Color(0xFF22C55E), width: 0.8),
-                          ),
-                          child: const Text(
-                            '1080p FHD',
-                            style: TextStyle(
-                              color: Color(0xFF22C55E),
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
+              // Software Brightness Dimming Filter
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: Container(
+                    color: Colors.black.withOpacity((1.0 - _playerBrightness).clamp(0.0, 0.75)),
+                  ),
+                ),
+              ),
+
+              // Gesture Touch Layer (Tap to toggle controls, Vertical swipe for Brightness/Volume, Double tap to seek)
+              Positioned.fill(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: _toggleLandscapeControls,
+                  onDoubleTapDown: (details) {
+                    final pos = controller.value.position;
+                    if (details.localPosition.dx < width / 2) {
+                      // Double tap left: Rewind 10s
+                      controller.seekTo(pos - const Duration(seconds: 10));
+                    } else {
+                      // Double tap right: Forward 10s
+                      controller.seekTo(pos + const Duration(seconds: 10));
+                    }
+                    _startControlsTimeout();
+                    setState(() {});
+                  },
+                  onVerticalDragUpdate: (details) => _onVerticalDragUpdateLandscape(details, width),
+                  onVerticalDragEnd: (_) {
+                    _hudDismissTimer?.cancel();
+                    _hudDismissTimer = Timer(const Duration(milliseconds: 1200), () {
+                      if (mounted) {
+                        setState(() {
+                          _showBrightnessHud = false;
+                          _showVolumeHud = false;
+                        });
+                      }
+                    });
+                  },
+                  child: Container(color: Colors.transparent),
+                ),
+              ),
+
+              // iOS HUD Indicator for Brightness (Left Side)
+              if (_showBrightnessHud)
+                Positioned(
+                  left: 48,
+                  child: IgnorePointer(
+                    child: _buildIosGestureHud(
+                      icon: Icons.brightness_6_rounded,
+                      value: _playerBrightness,
+                      label: 'Brightness',
                     ),
+                  ),
+                ),
 
-                    // Center Controls: Rewind 10s, Play/Pause, Forward 10s
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        IconButton(
-                          iconSize: 36,
-                          icon: const Icon(Icons.replay_10_rounded, color: Colors.white),
-                          onPressed: () {
-                            final current = controller.value.position;
-                            controller.seekTo(current - const Duration(seconds: 10));
-                          },
+              // iOS HUD Indicator for Volume (Right Side)
+              if (_showVolumeHud)
+                Positioned(
+                  right: 48,
+                  child: IgnorePointer(
+                    child: _buildIosGestureHud(
+                      icon: _playerVolume == 0
+                          ? Icons.volume_off_rounded
+                          : (_playerVolume < 0.5 ? Icons.volume_down_rounded : Icons.volume_up_rounded),
+                      value: _playerVolume,
+                      label: 'Volume',
+                    ),
+                  ),
+                ),
+
+              // Landscape Controls Overlay (Animated Fade In/Out, iOS Native Styling)
+              Positioned.fill(
+                child: IgnorePointer(
+                  ignoring: !_showLandscapeControls,
+                  child: AnimatedOpacity(
+                    opacity: _showLandscapeControls ? 1.0 : 0.0,
+                    duration: const Duration(milliseconds: 260),
+                    child: SafeArea(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.black.withOpacity(0.60),
+                              Colors.transparent,
+                              Colors.transparent,
+                              Colors.black.withOpacity(0.65),
+                            ],
+                            stops: const [0.0, 0.22, 0.75, 1.0],
+                          ),
                         ),
-                        const SizedBox(width: 32),
-                        GestureDetector(
-                          onTap: () {
-                            if (controller.value.isPlaying) {
-                              controller.pause();
-                            } else {
-                              controller.play();
-                            }
-                            setState(() {});
-                          },
-                          child: Container(
-                            width: 64,
-                            height: 64,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF22C55E),
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFF22C55E).withOpacity(0.4),
-                                  blurRadius: 16,
-                                  offset: const Offset(0, 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            // Top Bar (Clean iOS Back Chevron, Title, and Frosted 1080p Badge)
+                            Row(
+                              children: [
+                                GestureDetector(
+                                  onTap: () {
+                                    _startControlsTimeout();
+                                    _toggleFullscreen();
+                                  },
+                                  child: Container(
+                                    width: 38,
+                                    height: 38,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.18),
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: Colors.white.withOpacity(0.25), width: 0.8),
+                                    ),
+                                    child: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 16),
+                                  ),
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Text(
+                                    widget.movie.title,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      letterSpacing: 0.2,
+                                      shadows: [
+                                        Shadow(color: Colors.black87, blurRadius: 4, offset: Offset(0, 1)),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.16),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: Colors.white.withOpacity(0.22), width: 0.8),
+                                  ),
+                                  child: const Text(
+                                    '1080p FHD',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      letterSpacing: 0.4,
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
-                            child: Icon(
-                              controller.value.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                              color: Colors.white,
-                              size: 38,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 32),
-                        IconButton(
-                          iconSize: 36,
-                          icon: const Icon(Icons.forward_10_rounded, color: Colors.white),
-                          onPressed: () {
-                            final current = controller.value.position;
-                            controller.seekTo(current + const Duration(seconds: 10));
-                          },
-                        ),
-                      ],
-                    ),
 
-                    // Bottom Bar
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        VideoProgressIndicator(
-                          controller,
-                          allowScrubbing: true,
-                          colors: const VideoProgressColors(
-                            playedColor: Color(0xFF22C55E),
-                            bufferedColor: Colors.white30,
-                            backgroundColor: Colors.white12,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            ValueListenableBuilder(
-                              valueListenable: controller,
-                              builder: (context, VideoPlayerValue value, _) {
-                                final pos = value.position;
-                                final dur = value.duration;
-                                String format(Duration d) =>
-                                    '${d.inMinutes.remainder(60).toString().padLeft(2, '0')}:${d.inSeconds.remainder(60).toString().padLeft(2, '0')}';
-                                return Text(
-                                  '${format(pos)} / ${format(dur)}',
-                                  style: const TextStyle(color: Colors.white70, fontSize: 12),
-                                );
-                              },
-                            ),
-                            GestureDetector(
-                              onTap: _toggleFullscreen,
-                              child: const Row(
-                                children: [
-                                  Icon(Icons.fullscreen_exit_rounded, color: Colors.white, size: 20),
-                                  SizedBox(width: 4),
-                                  Text(
-                                    'Exit Fullscreen',
-                                    style: TextStyle(
+                            // Center Controls: Rewind 10s, iOS Frosted Glass Play/Pause, Forward 10s
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                IconButton(
+                                  iconSize: 38,
+                                  icon: const Icon(Icons.replay_10_rounded, color: Colors.white),
+                                  onPressed: () {
+                                    _startControlsTimeout();
+                                    final current = controller.value.position;
+                                    controller.seekTo(current - const Duration(seconds: 10));
+                                  },
+                                ),
+                                const SizedBox(width: 40),
+                                GestureDetector(
+                                  onTap: () {
+                                    _startControlsTimeout();
+                                    if (controller.value.isPlaying) {
+                                      controller.pause();
+                                    } else {
+                                      controller.play();
+                                    }
+                                    setState(() {});
+                                  },
+                                  child: Container(
+                                    width: 68,
+                                    height: 68,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.22),
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: Colors.white.withOpacity(0.35), width: 1.2),
+                                    ),
+                                    child: Icon(
+                                      controller.value.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
                                       color: Colors.white,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
+                                      size: 42,
                                     ),
                                   ),
-                                ],
-                              ),
+                                ),
+                                const SizedBox(width: 40),
+                                IconButton(
+                                  iconSize: 38,
+                                  icon: const Icon(Icons.forward_10_rounded, color: Colors.white),
+                                  onPressed: () {
+                                    _startControlsTimeout();
+                                    final current = controller.value.position;
+                                    controller.seekTo(current + const Duration(seconds: 10));
+                                  },
+                                ),
+                              ],
+                            ),
+
+                            // Bottom Bar: iOS Scrubber, Timestamps & Exit Fullscreen
+                            Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                GestureDetector(
+                                  onTapDown: (_) => _startControlsTimeout(),
+                                  child: VideoProgressIndicator(
+                                    controller,
+                                    allowScrubbing: true,
+                                    padding: const EdgeInsets.symmetric(vertical: 8),
+                                    colors: const VideoProgressColors(
+                                      playedColor: Colors.white,
+                                      bufferedColor: Colors.white38,
+                                      backgroundColor: Colors.white12,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    ValueListenableBuilder(
+                                      valueListenable: controller,
+                                      builder: (context, VideoPlayerValue value, _) {
+                                        final pos = value.position;
+                                        final dur = value.duration;
+                                        String format(Duration d) =>
+                                            '${d.inMinutes.remainder(60).toString().padLeft(2, '0')}:${d.inSeconds.remainder(60).toString().padLeft(2, '0')}';
+                                        return Text(
+                                          '${format(pos)} / ${format(dur)}',
+                                          style: const TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                            letterSpacing: 0.3,
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                    GestureDetector(
+                                      onTap: () {
+                                        _startControlsTimeout();
+                                        _toggleFullscreen();
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withOpacity(0.12),
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                        child: const Row(
+                                          children: [
+                                            Icon(Icons.fullscreen_exit_rounded, color: Colors.white, size: 18),
+                                            SizedBox(width: 4),
+                                            Text(
+                                              'Exit Fullscreen',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
                           ],
                         ),
-                      ],
+                      ),
                     ),
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ),
-        ],
+            ],
+          );
+        },
       ),
     );
   }

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -5,7 +6,41 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../firebase_options.dart';
+
+Future<void> _persistToAppNotificationCenter({
+  required String id,
+  required String? title,
+  required String message,
+  String? imageUrl,
+  String? link,
+}) async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final savedJson = prefs.getString('freewatch_user_notifications_v1');
+    List<dynamic> list = [];
+    if (savedJson != null && savedJson.isNotEmpty) {
+      list = jsonDecode(savedJson) as List<dynamic>;
+    }
+    // Prevent duplicate entries
+    if (list.any((e) => e is Map && e['id'] == id)) return;
+
+    final newItem = {
+      'id': id,
+      'section': 'Today',
+      'title': title,
+      'message': message,
+      'time': 'Just now',
+      'imageUrl': imageUrl,
+      'link': link,
+      'iconColor': 0xFFC084FC,
+      'isRead': false,
+    };
+    list.insert(0, newItem);
+    await prefs.setString('freewatch_user_notifications_v1', jsonEncode(list));
+  } catch (_) {}
+}
 
 /// Top-level background message handler required by FirebaseMessaging on Android/iOS
 @pragma('vm:entry-point')
@@ -23,14 +58,23 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   final title = notification?.title ?? data['title'] ?? 'FreeWatch New Release';
   final body = notification?.body ?? data['body'] ?? 'Watch the latest translated releases now!';
   final imageUrl = data['imageUrl'] ?? data['image'] ?? notification?.android?.imageUrl;
-  final payload = data['movieId'] ?? data['payload'];
+  final link = data['link'] ?? data['url'] ?? data['movieId'] ?? data['payload'];
+
+  // Persist into user notifications feed
+  await _persistToAppNotificationCenter(
+    id: message.messageId ?? 'bg_${DateTime.now().millisecondsSinceEpoch}',
+    title: title,
+    message: body,
+    imageUrl: imageUrl,
+    link: link,
+  );
 
   await NotificationService().showMovieNotification(
     id: message.messageId.hashCode,
     title: title,
     body: body,
     imageUrl: imageUrl,
-    payload: payload,
+    payload: link,
   );
 }
 
@@ -120,12 +164,22 @@ class NotificationService {
         final title = notification?.title ?? data['title'] ?? 'FreeWatch New Release';
         final body = notification?.body ?? data['body'] ?? 'Watch the latest releases now!';
         final imageUrl = data['imageUrl'] ?? data['image'] ?? notification?.android?.imageUrl;
+        final link = data['link'] ?? data['url'] ?? data['movieId'] ?? data['payload'];
+
+        _persistToAppNotificationCenter(
+          id: message.messageId ?? 'fg_${DateTime.now().millisecondsSinceEpoch}',
+          title: title,
+          message: body,
+          imageUrl: imageUrl,
+          link: link,
+        );
+
         showMovieNotification(
           id: message.messageId.hashCode,
           title: title,
           body: body,
           imageUrl: imageUrl,
-          payload: data['movieId'] ?? data['payload'],
+          payload: link,
         );
       });
 

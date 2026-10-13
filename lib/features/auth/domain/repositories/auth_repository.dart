@@ -47,6 +47,8 @@ class AuthRepository {
         'avatar': avatarAsset,
         'createdAt': DateTime.now().toIso8601String(),
         'bio': 'Action & Sci-Fi enthusiast • FreeWatch member',
+        'role': 'Member',
+        'status': 'Active',
       }).timeout(
         const Duration(seconds: 2),
         onTimeout: () => debugPrint('RTDB profile set timed out, continuing in background'),
@@ -65,10 +67,36 @@ class AuthRepository {
   }) async {
     final cleanEmail = email.trim().toLowerCase();
     final cleanPassword = password.trim();
-    return await _firebaseAuth.signInWithEmailAndPassword(
+    final credential = await _firebaseAuth.signInWithEmailAndPassword(
       email: cleanEmail,
       password: cleanPassword,
     );
+
+    // Verify account status in Firebase RTDB
+    final user = credential.user;
+    if (user != null) {
+      try {
+        final profileSnap = await _database
+            .ref('users/${user.uid}/profile')
+            .get()
+            .timeout(const Duration(seconds: 3));
+        if (profileSnap.exists && profileSnap.value is Map) {
+          final data = Map<String, dynamic>.from(profileSnap.value as Map);
+          if (data['status'] == 'Banned') {
+            await _firebaseAuth.signOut();
+            throw FirebaseAuthException(
+              code: 'user-disabled',
+              message: 'Your account has been suspended by administration. Please contact support.',
+            );
+          }
+        }
+        _database.ref('users/${user.uid}/profile/lastLogin').set(DateTime.now().toIso8601String());
+      } catch (e) {
+        if (e is FirebaseAuthException) rethrow;
+      }
+    }
+
+    return credential;
   }
 
   /// Sign out current user

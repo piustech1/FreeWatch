@@ -35,160 +35,14 @@ import {
   Layers,
   Sparkles,
   Menu,
-  X
+  X,
+  Tv,
+  Check,
+  Link,
+  Image as ImageIcon
 } from 'lucide-react';
 import { rtdb, auth, signInAnonymously } from './firebase';
-import { ref, onValue, push, set, update } from 'firebase/database';
-
-// Initial Mock App Users to populate Directory alongside Firebase RTDB users
-const INITIAL_USERS = [
-  {
-    id: 'sD6QVqxgZkaUQPwiTxQnKNnHdGp1',
-    name: 'Admin2',
-    email: 'admin2@freewatch.ug',
-    role: 'VIP',
-    status: 'Active',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&h=120&fit=crop&crop=faces',
-    joinDate: '2026-09-15',
-    lastActive: 'Just now',
-    device: 'Android 14 (Samsung S23)',
-    lastWatchedMovie: 'Deadpool & Wolverine (VJ Junior)',
-    totalWatched: 48
-  },
-  {
-    id: 'usr_8492018392',
-    name: 'Kigozi Ronald',
-    email: 'ronald.k@gmail.com',
-    role: 'Member',
-    status: 'Active',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&h=120&fit=crop&crop=faces',
-    joinDate: '2026-08-22',
-    lastActive: '12 mins ago',
-    device: 'Android 13 (Tecno Camon 20)',
-    lastWatchedMovie: 'The Beekeeper (VJ Ice P)',
-    totalWatched: 32
-  },
-  {
-    id: 'usr_9283746152',
-    name: 'Namubiru Sarah',
-    email: 'sarah.n@yahoo.com',
-    role: 'VIP',
-    status: 'Active',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120&h=120&fit=crop&crop=faces',
-    joinDate: '2026-07-10',
-    lastActive: '1 hour ago',
-    device: 'Android 14 (Infinix Note 30)',
-    lastWatchedMovie: 'Dune: Part Two (VJ Jingo)',
-    totalWatched: 76
-  },
-  {
-    id: 'usr_1029384756',
-    name: 'Mugisha Brian',
-    email: 'brian.m@gmail.com',
-    role: 'Member',
-    status: 'Suspended',
-    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&h=120&fit=crop&crop=faces',
-    joinDate: '2026-09-01',
-    lastActive: '2 days ago',
-    device: 'Android 12 (Redmi 10)',
-    lastWatchedMovie: 'Mob Land (VJ Junior)',
-    totalWatched: 14
-  },
-  {
-    id: 'usr_5566778899',
-    name: 'Guest_8492',
-    email: 'guest8492@device.freewatch',
-    role: 'Guest',
-    status: 'Active',
-    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&h=120&fit=crop&crop=faces',
-    joinDate: '2026-10-12',
-    lastActive: '3 hours ago',
-    device: 'Android 14 (Itel S23)',
-    lastWatchedMovie: 'Insidious: Out of the Further (VJ Emmy)',
-    totalWatched: 3
-  },
-  {
-    id: 'usr_3344556677',
-    name: 'Katende David',
-    email: 'david.katende@outlook.com',
-    role: 'Member',
-    status: 'Banned',
-    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=120&h=120&fit=crop&crop=faces',
-    joinDate: '2026-06-18',
-    lastActive: '5 days ago',
-    device: 'Android 13 (Galaxy A14)',
-    lastWatchedMovie: 'Prey (VJ Junior)',
-    totalWatched: 21
-  }
-];
-
-// Top Trending Luganda Dubbed Movies on FreeWatch
-const TRENDING_MOVIES = [
-  {
-    id: 533535,
-    title: 'Deadpool & Wolverine',
-    vj: 'VJ Junior',
-    category: 'Action / Comedy',
-    poster: 'https://image.tmdb.org/t/p/w500/8cdWjvZQUExUUTzyp4t6EDMubfO.jpg',
-    backdrop: 'https://image.tmdb.org/t/p/w780/x2RS3uTcsJJ9Ifj2mjyYbgx0Wh8.jpg',
-    views: '48.2K',
-    rating: 9.8,
-    trend: '+24%'
-  },
-  {
-    id: 693134,
-    title: 'Dune: Part Two',
-    vj: 'VJ Jingo',
-    category: 'Sci-Fi / Adventure',
-    poster: 'https://image.tmdb.org/t/p/w500/1pdfLvkbY9ohJlCjQH2CZjjYVvJ.jpg',
-    backdrop: 'https://image.tmdb.org/t/p/w780/stKGOmBidrO1Kk7Qc0s07Q0w9Wk.jpg',
-    views: '39.5K',
-    rating: 9.6,
-    trend: '+18%'
-  },
-  {
-    id: 1011985,
-    title: 'The Beekeeper',
-    vj: 'VJ Ice P',
-    category: 'Action / Thriller',
-    poster: 'https://image.tmdb.org/t/p/w500/A7EByudX0eOzlkQ2FIbogzyazm2.jpg',
-    backdrop: 'https://image.tmdb.org/t/p/w780/628Dep6AxEtDxjZoGP78TsOxYbK.jpg',
-    views: '34.1K',
-    rating: 9.4,
-    trend: '+15%'
-  },
-  {
-    id: 67078,
-    title: 'Insidious: Out of the Further',
-    vj: 'VJ Emmy',
-    category: 'Horror / Mystery',
-    poster: 'https://apposters.b-cdn.net/laba/yo/naki/bjoJ1544.jpg',
-    backdrop: 'https://apposters.b-cdn.net/laba/yo/naki/bjoJ1544.jpg',
-    views: '28.9K',
-    rating: 9.1,
-    trend: '+12%'
-  },
-  {
-    id: 928301,
-    title: 'Rogue Hostage',
-    vj: 'VJ Omutaka',
-    category: 'Action / Crime',
-    poster: 'https://image.tmdb.org/t/p/w500/8cdWjvZQUExUUTzyp4t6EDMubfO.jpg',
-    backdrop: 'https://image.tmdb.org/t/p/w780/x2RS3uTcsJJ9Ifj2mjyYbgx0Wh8.jpg',
-    views: '22.4K',
-    rating: 8.9,
-    trend: '+9%'
-  }
-];
-
-// Top VJs Leaderboard
-const TOP_VJS = [
-  { name: 'VJ Junior', movies: 542, views: '182K', rating: 9.9, badge: '🥇 Top Rated' },
-  { name: 'VJ Jingo', movies: 388, views: '145K', rating: 9.7, badge: '🥈 Master Dub' },
-  { name: 'VJ Ice P', movies: 295, views: '112K', rating: 9.5, badge: '🥉 Action Specialist' },
-  { name: 'VJ Emmy', movies: 184, views: '78K', rating: 9.3, badge: '🔥 Rising Star' },
-  { name: 'VJ Omutaka', movies: 142, views: '64K', rating: 9.1, badge: '✨ Classic Voice' }
-];
+import { ref, onValue, push, set, update, remove } from 'firebase/database';
 
 export default function App() {
   // Navigation: 'dashboard' | 'users' | 'videos' | 'chat' | 'notifications' | 'munowatch' | 'audit'
@@ -199,17 +53,25 @@ export default function App() {
   const [dbConnected, setDbConnected] = useState(true);
   const [fcmDaemonLive, setFcmDaemonLive] = useState(true);
 
-  // User Management State
-  const [users, setUsers] = useState(INITIAL_USERS);
+  // 100% REAL Live State from Firebase RTDB & MunoWatch
+  const [users, setUsers] = useState([]);
   const [userSearch, setUserSearch] = useState('');
   const [userRoleFilter, setUserRoleFilter] = useState('All');
   const [userStatusFilter, setUserStatusFilter] = useState('All');
   const [selectedUserDetail, setSelectedUserDetail] = useState(null);
   const [confirmDeleteUser, setConfirmDeleteUser] = useState(null);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
-  const [newUserData, setNewUserData] = useState({ name: '', email: '', role: 'Member', device: 'Android 14' });
+  const [newUserData, setNewUserData] = useState({ name: '', email: '', role: 'Member', bio: '' });
+  const [roleChangeModalUser, setRoleChangeModalUser] = useState(null);
+  const [newRoleSelection, setNewRoleSelection] = useState('Member');
 
-  // Live Chat State
+  // Real Catalog & Video Stats
+  const [munowatchCatalog, setMunowatchCatalog] = useState([]);
+  const [videoStats, setVideoStats] = useState({});
+  const [videoSearch, setVideoSearch] = useState('');
+  const [videoCategoryFilter, setVideoCategoryFilter] = useState('All');
+
+  // Live 2-Way Support Chat
   const [threads, setThreads] = useState([]);
   const [selectedThreadId, setSelectedThreadId] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -217,1009 +79,918 @@ export default function App() {
   const [chatSearch, setChatSearch] = useState('');
   const messagesEndRef = useRef(null);
 
-  // FCM Dispatcher State
-  const [notifTarget, setNotifTarget] = useState('all_users');
-  const [notifTitle, setNotifTitle] = useState('🔥 New Luganda VJ Release!');
-  const [notifBody, setNotifBody] = useState('New translated blockbuster is now streaming in Full HD. Tap to watch!');
-  const [notifImageUrl, setNotifImageUrl] = useState('https://image.tmdb.org/t/p/w780/x2RS3uTcsJJ9Ifj2mjyYbgx0Wh8.jpg');
-  const [notifMovieId, setNotifMovieId] = useState('533535');
+  // Simplified FCM Push Dispatcher
+  const [notifTitle, setNotifTitle] = useState('');
+  const [notifBody, setNotifBody] = useState('');
+  const [notifImageUrl, setNotifImageUrl] = useState('');
+  const [notifLink, setNotifLink] = useState('');
   const [isSendingNotif, setIsSendingNotif] = useState(false);
   const [notifSuccess, setNotifSuccess] = useState('');
   const [dispatchedNotifs, setDispatchedNotifs] = useState([]);
 
-  // MunoWatch Manager State
-  const [munowatchMovies, setMunowatchMovies] = useState(TRENDING_MOVIES);
+  // Real MunoWatch Manager & Sync Status
   const [isSyncingMunowatch, setIsSyncingMunowatch] = useState(false);
-  const [munowatchSyncStatus, setMunowatchSyncStatus] = useState('Synchronized 15m ago');
+  const [munowatchSyncMeta, setMunowatchSyncMeta] = useState({ lastCheck: 0, count: 0 });
 
-  // Audit Logs State
-  const [auditLogs, setAuditLogs] = useState([
-    { id: '1', action: 'System Poller Initialized', target: 'MunoWatch Server', admin: 'Daemon', timestamp: 'Today, 11:15 AM', type: 'system' },
-    { id: '2', action: 'FCM Push Broadcasted', target: 'Topic: all_users', admin: 'FreeWatch Admin', timestamp: 'Today, 10:48 AM', type: 'push' },
-    { id: '3', action: 'User Suspended', target: 'Mugisha Brian (usr_1029384756)', admin: 'FreeWatch Admin', timestamp: 'Yesterday, 4:20 PM', type: 'user' },
-    { id: '4', action: 'VIP Role Assigned', target: 'Namubiru Sarah (usr_9283746152)', admin: 'FreeWatch Admin', timestamp: 'Yesterday, 2:10 PM', type: 'role' },
-    { id: '5', action: 'Catalog Synchronized', target: '85 New MunoWatch Releases', admin: 'Daemon', timestamp: 'Yesterday, 11:14 AM', type: 'sync' }
-  ]);
+  // Real Audit Logs
+  const [auditLogs, setAuditLogs] = useState([]);
 
-  // Auth anonymous init
+  // Authenticate anonymously for Firebase RTDB read/write access
   useEffect(() => {
     signInAnonymously(auth).catch(() => {});
   }, []);
 
-  // Listen to Support Chats from Firebase RTDB
+  // 1. Listen to Real Users & Watch Histories from Firebase RTDB
   useEffect(() => {
-    const chatsRef = ref(rtdb, 'support_chats');
-    const unsubscribe = onValue(chatsRef, (snapshot) => {
-      setDbConnected(true);
-      const data = snapshot.val();
-      if (!data) return;
+    const usersRef = ref(rtdb, 'users');
+    const unsub = onValue(usersRef, (snapshot) => {
+      if (snapshot.exists()) {
+        setDbConnected(true);
+        const data = snapshot.val();
+        const userList = Object.keys(data).map((uid) => {
+          const u = data[uid] || {};
+          const profile = u.profile || {};
+          const history = Array.isArray(u.watch_history) ? u.watch_history : [];
+          const favorites = Array.isArray(u.favorites) ? u.favorites : [];
+          const lastWatched = history.length > 0 ? history[0] : null;
 
-      const parsedThreads = Object.keys(data).map((key) => {
-        const item = data[key];
-        const metadata = item.metadata || {};
-        const msgs = item.messages ? Object.values(item.messages) : [];
-        const lastMsg = msgs.length > 0 ? msgs[msgs.length - 1] : null;
+          return {
+            id: uid,
+            name: profile.name || (profile.email ? profile.email.split('@')[0] : 'FreeWatch User'),
+            email: profile.email || 'No email registered',
+            role: profile.role || (profile.name?.toLowerCase().includes('admin') ? 'Admin' : 'Member'),
+            status: profile.status || 'Active',
+            avatar: profile.avatar || 'assets/avatars/avatar_mirabel.png',
+            bio: profile.bio || 'FreeWatch Movie Streamer',
+            createdAt: profile.createdAt || new Date().toISOString(),
+            lastLogin: profile.lastLogin || profile.createdAt || new Date().toISOString(),
+            watchHistory: history,
+            favorites: favorites,
+            totalWatched: history.length,
+            totalFavorites: favorites.length,
+            lastWatchedMovie: lastWatched ? lastWatched.title : 'No watch history yet',
+          };
+        });
+        setUsers(userList);
+      } else {
+        setUsers([]);
+      }
+    }, () => setDbConnected(false));
 
-        return {
-          id: key,
-          userId: metadata.userId || key,
-          userName: metadata.userName || (key.startsWith('guest_') ? `Guest (${key.slice(-4)})` : 'FreeWatch User'),
-          lastMessage: metadata.lastMessage || (lastMsg ? lastMsg.text : 'Conversation opened'),
-          lastTimestamp: metadata.lastTimestamp || (lastMsg ? lastMsg.timestamp : Date.now()),
-          unreadCountAdmin: metadata.unreadCountAdmin || 0,
-          rawMessages: item.messages || {}
-        };
-      });
-
-      parsedThreads.sort((a, b) => b.lastTimestamp - a.lastTimestamp);
-      setThreads(parsedThreads);
-      setSelectedThreadId((prev) => prev || (parsedThreads.length > 0 ? parsedThreads[0].id : null));
-
-      // Also merge any new real Firebase users into User Management list
-      setUsers((prevUsers) => {
-        const existingIds = new Set(prevUsers.map((u) => u.id));
-        const newFromChat = parsedThreads
-          .filter((t) => !existingIds.has(t.userId))
-          .map((t) => ({
-            id: t.userId,
-            name: t.userName,
-            email: `${t.userName.toLowerCase().replace(/\s+/g, '')}@app.freewatch`,
-            role: 'Member',
-            status: 'Active',
-            avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${t.userId}`,
-            joinDate: new Date(t.lastTimestamp).toISOString().split('T')[0],
-            lastActive: 'Active recently',
-            device: 'Android Phone',
-            lastWatchedMovie: 'Latest Luganda Release',
-            totalWatched: 12
-          }));
-        return [...prevUsers, ...newFromChat];
-      });
-    }, () => {
-      setDbConnected(false);
-    });
-
-    return () => unsubscribe();
+    return () => unsub();
   }, []);
 
-  // Listen to active selected chat messages
+  // 2. Listen to Real Live Catalog & Stats from Firebase RTDB
   useEffect(() => {
-    if (!selectedThreadId) {
-      setMessages([]);
-      return;
-    }
-
-    const messagesRef = ref(rtdb, `support_chats/${selectedThreadId}/messages`);
-    const unsubscribe = onValue(messagesRef, (snapshot) => {
-      const data = snapshot.val();
-      if (!data) {
-        setMessages([]);
-        return;
+    // Real catalog cached in RTDB
+    const catalogRef = ref(rtdb, 'munowatch/catalog');
+    const unsubCatalog = onValue(catalogRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const val = snapshot.val();
+        if (Array.isArray(val)) {
+          setMunowatchCatalog(val);
+        } else if (typeof val === 'object') {
+          setMunowatchCatalog(Object.values(val));
+        }
+      } else {
+        // Fallback: Fetch directly from serverless proxy if not yet in RTDB
+        fetch('/api/munowatch-catalog')
+          .then(res => res.json())
+          .then(data => {
+            let list = [];
+            if (data.banner) list.push(data.banner);
+            if (data.dashboard) {
+              data.dashboard.forEach(c => {
+                if (c.movies) list.push(...c.movies);
+              });
+            }
+            if (list.length > 0) {
+              setMunowatchCatalog(list);
+              set(ref(rtdb, 'munowatch/catalog'), list).catch(() => {});
+            }
+          })
+          .catch(() => {});
       }
-
-      const list = Object.keys(data).map((k) => ({
-        id: k,
-        ...data[k]
-      }));
-      list.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
-      setMessages(list);
-
-      // Reset admin unread count
-      const metaRef = ref(rtdb, `support_chats/${selectedThreadId}/metadata`);
-      update(metaRef, { unreadCountAdmin: 0 }).catch(() => {});
     });
 
-    return () => unsubscribe();
-  }, [selectedThreadId]);
+    // Real video playback view events in RTDB
+    const statsRef = ref(rtdb, 'video_stats');
+    const unsubStats = onValue(statsRef, (snapshot) => {
+      if (snapshot.exists()) {
+        setVideoStats(snapshot.val());
+      }
+    });
 
-  // Listen to push notification history
+    // Real MunoWatch poller metadata
+    const metaRef = ref(rtdb, 'munowatch/known_movie_ids');
+    const unsubMeta = onValue(metaRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const d = snapshot.val();
+        setMunowatchSyncMeta({
+          lastCheck: d.lastCheck || Date.now(),
+          count: Array.isArray(d.list) ? d.list.length : 0,
+        });
+      }
+    });
+
+    return () => {
+      unsubCatalog();
+      unsubStats();
+      unsubMeta();
+    };
+  }, []);
+
+  // 3. Listen to Real Push Notification History from Firebase RTDB
   useEffect(() => {
     const historyRef = ref(rtdb, 'push_notifications/history');
-    const unsubscribe = onValue(historyRef, (snapshot) => {
-      const data = snapshot.val();
-      if (!data) return;
-      const list = Object.keys(data).map((k) => ({ id: k, ...data[k] }));
-      list.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-      setDispatchedNotifs(list);
+    const unsub = onValue(historyRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const val = snapshot.val();
+        const list = Object.keys(val).map(key => ({
+          id: key,
+          ...val[key]
+        })).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+        setDispatchedNotifs(list);
+      } else {
+        setDispatchedNotifs([]);
+      }
     });
-    return () => unsubscribe();
+    return () => unsub();
   }, []);
 
-  // Auto scroll chat to bottom
+  // 4. Listen to Real Audit Logs from Firebase RTDB
+  useEffect(() => {
+    const auditRef = ref(rtdb, 'audit_logs');
+    const unsub = onValue(auditRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const val = snapshot.val();
+        const list = Object.keys(val).map(key => ({
+          id: key,
+          ...val[key]
+        })).sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
+        setAuditLogs(list);
+      } else {
+        setAuditLogs([]);
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  // 5. Listen to Live Support Chat Threads from Firebase RTDB
+  useEffect(() => {
+    const chatsRef = ref(rtdb, 'support_chats');
+    const unsub = onValue(chatsRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        const threadList = Object.keys(data).map((uid) => {
+          const thread = data[uid] || {};
+          const meta = thread.metadata || {};
+          const msgMap = thread.messages || {};
+          const msgList = Object.values(msgMap);
+          return {
+            uid,
+            userName: meta.userName || `User_${uid.slice(0, 5)}`,
+            lastMessage: meta.lastMessage || (msgList.length ? msgList[msgList.length - 1].text : 'No messages yet'),
+            updatedAt: meta.updatedAt || meta.lastTimestamp || Date.now(),
+            unreadCount: meta.unreadCountAdmin || 0,
+            messagesCount: msgList.length,
+          };
+        }).sort((a, b) => b.updatedAt - a.updatedAt);
+
+        setThreads(threadList);
+        if (threadList.length > 0 && !selectedThreadId) {
+          setSelectedThreadId(threadList[0].uid);
+        }
+      } else {
+        setThreads([]);
+      }
+    });
+    return () => unsub();
+  }, [selectedThreadId]);
+
+  // Listen to Active Chat Messages
+  useEffect(() => {
+    if (!selectedThreadId) return;
+    const msgRef = ref(rtdb, `support_chats/${selectedThreadId}/messages`);
+    const unsub = onValue(msgRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const val = snapshot.val();
+        const list = Object.keys(val).map(id => ({ id, ...val[id] }))
+          .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+        setMessages(list);
+      } else {
+        setMessages([]);
+      }
+    });
+    return () => unsub();
+  }, [selectedThreadId]);
+
+  // Scroll chat messages to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Handle Send Chat Reply
-  const handleSendMessage = async (e) => {
-    e?.preventDefault();
-    if (!newMessage.trim() || !selectedThreadId) return;
-
-    const text = newMessage.trim();
-    setNewMessage('');
-
+  // Helper to log real immutable audit action to Firebase RTDB
+  const logAudit = async (action, target, details, category = 'General') => {
     try {
-      const messagesRef = ref(rtdb, `support_chats/${selectedThreadId}/messages`);
-      const newMsgRef = push(messagesRef);
-      const now = Date.now();
-
-      await set(newMsgRef, {
-        id: newMsgRef.key,
-        senderId: 'admin',
-        senderName: 'FreeWatch Support',
-        senderRole: 'admin',
-        text: text,
-        timestamp: now,
-        isRead: false
+      const logRef = push(ref(rtdb, 'audit_logs'));
+      await set(logRef, {
+        id: logRef.key,
+        timestamp: new Date().toISOString(),
+        action,
+        target,
+        actor: 'Admin Console',
+        category,
+        details,
       });
-
-      const metaRef = ref(rtdb, `support_chats/${selectedThreadId}/metadata`);
-      await update(metaRef, {
-        lastMessage: text,
-        lastTimestamp: now,
-        updatedAt: now,
-        unreadCountUser: 1
-      });
-    } catch (err) {
-      console.warn("Failed to send reply:", err);
-    }
+    } catch (_) {}
   };
 
-  // Handle Send Push Notification
-  const handleSendPushNotification = async (e) => {
-    e?.preventDefault();
-    setIsSendingNotif(true);
-
+  // User Actions: Ban / Unban
+  const handleToggleUserBan = async (user) => {
+    const nextStatus = user.status === 'Banned' ? 'Active' : 'Banned';
     try {
-      const pushRecord = {
-        targetTopic: notifTarget,
-        title: notifTitle,
-        body: notifBody,
-        imageUrl: notifImageUrl || null,
-        movieId: notifMovieId || null,
-        timestamp: Date.now(),
-        dispatchedBy: 'Admin Web Console'
-      };
-
-      // 1. Write to RTDB global_alerts/latest - instantly triggers 24/7 background FCM daemon!
-      const alertsRef = ref(rtdb, 'global_alerts/latest');
-      await set(alertsRef, {
-        ...pushRecord,
-        active: true
+      await update(ref(rtdb, `users/${user.id}/profile`), {
+        status: nextStatus,
+        statusUpdatedAt: new Date().toISOString(),
       });
-
-      // 2. Also log to history
-      const historyRef = ref(rtdb, 'push_notifications/history');
-      const newPushRef = push(historyRef);
-      await set(newPushRef, { id: newPushRef.key, ...pushRecord });
-
-      // 3. Log to audit trail
-      setAuditLogs((prev) => [
-        {
-          id: String(Date.now()),
-          action: 'FCM Push Broadcasted',
-          target: `${notifTitle} (Topic: ${notifTarget})`,
-          admin: 'FreeWatch Admin',
-          timestamp: 'Just now',
-          type: 'push'
-        },
-        ...prev
-      ]);
-
-      setNotifSuccess(`Notification broadcasted successfully to topic '${notifTarget}'!`);
-    } catch (err) {
-      console.warn("Push error:", err);
-      setNotifSuccess(`Dispatched to database and background FCM daemon!`);
+      await logAudit(
+        nextStatus === 'Banned' ? 'BAN_USER' : 'UNBAN_USER',
+        `${user.name} (${user.email})`,
+        `Account status changed to ${nextStatus}`,
+        'User Management'
+      );
+    } catch (e) {
+      alert('Failed to update status: ' + e.message);
     }
-
-    setIsSendingNotif(false);
-    setTimeout(() => setNotifSuccess(''), 5000);
-  };
-
-  // User Actions: Ban / Suspend
-  const handleToggleUserBan = (userId) => {
-    setUsers((prev) => 
-      prev.map((u) => {
-        if (u.id === userId) {
-          const newStatus = u.status === 'Banned' ? 'Active' : 'Banned';
-          setAuditLogs((logs) => [
-            {
-              id: String(Date.now()),
-              action: newStatus === 'Banned' ? 'User Banned' : 'User Unbanned',
-              target: `${u.name} (${u.id})`,
-              admin: 'FreeWatch Admin',
-              timestamp: 'Just now',
-              type: 'user'
-            },
-            ...logs
-          ]);
-          return { ...u, status: newStatus };
-        }
-        return u;
-      })
-    );
-  };
-
-  // User Actions: Delete
-  const handleDeleteUser = (userId) => {
-    const userToDelete = users.find((u) => u.id === userId);
-    setUsers((prev) => prev.filter((u) => u.id !== userId));
-    setConfirmDeleteUser(null);
-    if (selectedUserDetail?.id === userId) setSelectedUserDetail(null);
-
-    setAuditLogs((logs) => [
-      {
-        id: String(Date.now()),
-        action: 'User Permanently Deleted',
-        target: `${userToDelete?.name || userId}`,
-        admin: 'FreeWatch Admin',
-        timestamp: 'Just now',
-        type: 'user'
-      },
-      ...logs
-    ]);
   };
 
   // User Actions: Change Role
-  const handleChangeUserRole = (userId, newRole) => {
-    setUsers((prev) =>
-      prev.map((u) => {
-        if (u.id === userId) {
-          setAuditLogs((logs) => [
-            {
-              id: String(Date.now()),
-              action: `Role Changed to ${newRole}`,
-              target: `${u.name} (${u.id})`,
-              admin: 'FreeWatch Admin',
-              timestamp: 'Just now',
-              type: 'role'
-            },
-            ...logs
-          ]);
-          return { ...u, role: newRole };
-        }
-        return u;
-      })
-    );
+  const handleChangeUserRole = async () => {
+    if (!roleChangeModalUser) return;
+    try {
+      await update(ref(rtdb, `users/${roleChangeModalUser.id}/profile`), {
+        role: newRoleSelection,
+        roleUpdatedAt: new Date().toISOString(),
+      });
+      await logAudit(
+        'CHANGE_ROLE',
+        `${roleChangeModalUser.name} (${roleChangeModalUser.email})`,
+        `Role privileges changed to ${newRoleSelection}`,
+        'User Management'
+      );
+      setRoleChangeModalUser(null);
+    } catch (e) {
+      alert('Failed to update role: ' + e.message);
+    }
+  };
+
+  // User Actions: Delete User
+  const handleDeleteUser = async (user) => {
+    try {
+      await remove(ref(rtdb, `users/${user.id}`));
+      await logAudit(
+        'DELETE_USER',
+        `${user.name} (${user.email})`,
+        `User profile and data removed from Firebase RTDB`,
+        'User Management'
+      );
+      setConfirmDeleteUser(null);
+    } catch (e) {
+      alert('Failed to delete user: ' + e.message);
+    }
   };
 
   // User Actions: Add User
-  const handleCreateUser = (e) => {
+  const handleCreateUser = async (e) => {
     e.preventDefault();
-    if (!newUserData.name.trim()) return;
-
-    const newUser = {
-      id: `usr_${Date.now().toString().slice(-8)}`,
-      name: newUserData.name.trim(),
-      email: newUserData.email.trim() || `${newUserData.name.toLowerCase().replace(/\s+/g, '')}@freewatch.ug`,
-      role: newUserData.role,
-      status: 'Active',
-      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${newUserData.name}`,
-      joinDate: new Date().toISOString().split('T')[0],
-      lastActive: 'Just registered',
-      device: newUserData.device,
-      lastWatchedMovie: 'None yet',
-      totalWatched: 0
-    };
-
-    setUsers([newUser, ...users]);
-    setShowAddUserModal(false);
-    setNewUserData({ name: '', email: '', role: 'Member', device: 'Android 14' });
-
-    setAuditLogs((logs) => [
-      {
-        id: String(Date.now()),
-        action: 'New User Registered',
-        target: `${newUser.name} (${newUser.role})`,
-        admin: 'FreeWatch Admin',
-        timestamp: 'Just now',
-        type: 'user'
-      },
-      ...logs
-    ]);
-  };
-
-  // MunoWatch Manual Sync
-  const handleSyncMunowatch = async () => {
-    setIsSyncingMunowatch(true);
+    if (!newUserData.name.trim() || !newUserData.email.trim()) return;
     try {
-      const res = await fetch('https://munowatch.ai.studio/api/dashboard');
-      if (res.ok) {
-        const data = await res.json();
-        setMunowatchSyncStatus('Synchronized just now (Live API connected)');
-        setAuditLogs((logs) => [
-          {
-            id: String(Date.now()),
-            action: 'MunoWatch Live Sync Triggered',
-            target: '13 Categories Verified',
-            admin: 'FreeWatch Admin',
-            timestamp: 'Just now',
-            type: 'sync'
-          },
-          ...logs
-        ]);
-      }
-    } catch (_) {
-      setMunowatchSyncStatus('Synchronized via 24/7 background daemon');
+      const newUid = 'usr_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 6);
+      await set(ref(rtdb, `users/${newUid}/profile`), {
+        uid: newUid,
+        name: newUserData.name.trim(),
+        email: newUserData.email.trim().toLowerCase(),
+        role: newUserData.role,
+        status: 'Active',
+        avatar: 'assets/avatars/avatar_mirabel.png',
+        createdAt: new Date().toISOString(),
+        lastLogin: new Date().toISOString(),
+        bio: newUserData.bio || 'FreeWatch Member',
+      });
+      await logAudit(
+        'CREATE_USER',
+        `${newUserData.name} (${newUserData.email})`,
+        `New ${newUserData.role} registered via Admin Panel`,
+        'User Management'
+      );
+      setShowAddUserModal(false);
+      setNewUserData({ name: '', email: '', role: 'Member', bio: '' });
+    } catch (e) {
+      alert('Failed to create user: ' + e.message);
     }
-    setIsSyncingMunowatch(false);
   };
 
-  // Export Analytics / Users to CSV Document
-  const handleExportCSV = (dataType) => {
-    let csvContent = "data:text/csv;charset=utf-8,";
-    let fileName = "freewatch_analytics.csv";
-
-    if (dataType === 'users') {
-      fileName = "freewatch_users_directory.csv";
-      csvContent += "User ID,Name,Email,Role,Status,Device,Last Watched,Total Watched,Join Date\n";
-      users.forEach((u) => {
-        csvContent += `"${u.id}","${u.name}","${u.email}","${u.role}","${u.status}","${u.device}","${u.lastWatchedMovie}",${u.totalWatched},"${u.joinDate}"\n`;
-      });
-    } else {
-      fileName = "freewatch_audit_logs.csv";
-      csvContent += "ID,Action,Target,Admin,Timestamp,Type\n";
-      auditLogs.forEach((l) => {
-        csvContent += `"${l.id}","${l.action}","${l.target}","${l.admin}","${l.timestamp}","${l.type}"\n`;
-      });
-    }
-
+  // Export Users to CSV
+  const handleExportUsersCSV = () => {
+    const headers = ['UID', 'Name', 'Email', 'Role', 'Status', 'Total Watched', 'Total Favorites', 'Created Date', 'Last Login'];
+    const rows = users.map(u => [
+      `"${u.id}"`,
+      `"${u.name}"`,
+      `"${u.email}"`,
+      `"${u.role}"`,
+      `"${u.status}"`,
+      u.totalWatched,
+      u.totalFavorites,
+      `"${u.createdAt}"`,
+      `"${u.lastLogin}"`
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
     const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", fileName);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `freewatch_users_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
+  // Export Audit Logs to CSV
+  const handleExportAuditCSV = () => {
+    const headers = ['Timestamp', 'Action', 'Category', 'Target', 'Actor', 'Details'];
+    const rows = auditLogs.map(l => [
+      `"${l.timestamp}"`,
+      `"${l.action}"`,
+      `"${l.category || 'General'}"`,
+      `"${l.target}"`,
+      `"${l.actor}"`,
+      `"${(l.details || '').replace(/"/g, '""')}"`
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `freewatch_audit_logs_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Send Admin Chat Reply
+  const handleSendMessage = async (e) => {
+    e.preventDefault();
+    if (!newMessage.trim() || !selectedThreadId) return;
+
+    const text = newMessage.trim();
+    setNewMessage('');
+    const now = Date.now();
+
+    try {
+      const msgRef = push(ref(rtdb, `support_chats/${selectedThreadId}/messages`));
+      await set(msgRef, {
+        id: msgRef.key,
+        senderId: 'admin',
+        senderName: 'FreeWatch Support',
+        senderRole: 'admin',
+        text,
+        timestamp: now,
+        isRead: false,
+      });
+
+      await update(ref(rtdb, `support_chats/${selectedThreadId}/metadata`), {
+        lastMessage: text,
+        lastTimestamp: now,
+        updatedAt: now,
+        unreadCountUser: (threads.find(t => t.uid === selectedThreadId)?.unreadCountUser || 0) + 1,
+      });
+    } catch (e) {
+      alert('Failed to send message: ' + e.message);
+    }
+  };
+
+  // Simplified FCM Push Dispatcher
+  const handleSendNotification = async (e) => {
+    e.preventDefault();
+    if (!notifBody.trim()) {
+      alert('Please enter a notification message.');
+      return;
+    }
+
+    setIsSendingNotif(true);
+    setNotifSuccess('');
+
+    const payload = {
+      title: notifTitle.trim() || '🔥 FreeWatch Alert',
+      body: notifBody.trim(),
+      imageUrl: notifImageUrl.trim() || '',
+      link: notifLink.trim() || '',
+      targetTopic: 'all_users',
+      timestamp: Date.now(),
+      dispatchedBy: 'Admin Web Console',
+    };
+
+    try {
+      // 1. Write to RTDB global_alerts/latest to trigger local/cloud FCM daemons
+      await set(ref(rtdb, 'global_alerts/latest'), payload);
+
+      // 2. Save to push history
+      const historyRef = push(ref(rtdb, 'push_notifications/history'));
+      await set(historyRef, { id: historyRef.key, ...payload });
+
+      // 3. Log audit action
+      await logAudit(
+        'DISPATCH_PUSH',
+        'Topic: all_users',
+        `Broadcasted: "${payload.title}" - ${payload.body.slice(0, 50)}...`,
+        'Notifications'
+      );
+
+      // 4. Try Vercel serverless push if deployed
+      try {
+        await fetch('/api/send-push', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      } catch (_) {}
+
+      setNotifSuccess('Push notification successfully dispatched to all users!');
+      setNotifBody('');
+      setNotifTitle('');
+      setNotifImageUrl('');
+      setNotifLink('');
+    } catch (e) {
+      alert('Failed to dispatch alert: ' + e.message);
+    } finally {
+      setIsSendingNotif(false);
+      setTimeout(() => setNotifSuccess(''), 4000);
+    }
+  };
+
+  // Trigger MunoWatch Sync
+  const handleTriggerMunowatchSync = async () => {
+    setIsSyncingMunowatch(true);
+    try {
+      const res = await fetch('/api/cron-munowatch');
+      const data = await res.json();
+      await logAudit(
+        'MUNOWATCH_SYNC',
+        'MunoWatch Catalog',
+        `Manual sync triggered. ${data.message || 'Catalog updated.'}`,
+        'System Poller'
+      );
+      alert('Sync executed successfully: ' + (data.message || 'Catalog refreshed'));
+    } catch (e) {
+      // Fallback: Refresh catalog via client fetch
+      try {
+        const resp = await fetch('/api/munowatch-catalog');
+        const d = await resp.json();
+        let list = [];
+        if (d.banner) list.push(d.banner);
+        if (d.dashboard) {
+          d.dashboard.forEach(c => {
+            if (c.movies) list.push(...c.movies);
+          });
+        }
+        if (list.length > 0) {
+          setMunowatchCatalog(list);
+          await set(ref(rtdb, 'munowatch/catalog'), list);
+          await logAudit('MUNOWATCH_SYNC', 'MunoWatch Catalog', `Client refreshed ${list.length} catalog releases.`, 'System Poller');
+          alert(`Successfully synced ${list.length} movies from MunoWatch!`);
+        }
+      } catch (err) {
+        alert('Sync error: ' + err.message);
+      }
+    } finally {
+      setIsSyncingMunowatch(false);
+    }
+  };
+
+  // Real Dynamic Calculations for Home Dashboard
+  const totalRegisteredUsers = users.length;
+  const activeStreamersCount = users.filter(u => u.totalWatched > 0).length;
+  const totalCatalogMovies = munowatchCatalog.length;
+  const totalDispatchedAlerts = dispatchedNotifs.length;
+
+  // Aggregate Real Watched Movies across all users
+  const aggregatedWatchedMovies = React.useMemo(() => {
+    const movieMap = new Map();
+
+    users.forEach(u => {
+      (u.watchHistory || []).forEach(m => {
+        const id = m.id || m.vid;
+        if (!id) return;
+        if (!movieMap.has(id)) {
+          movieMap.set(id, {
+            id,
+            title: m.title || 'Untitled Movie',
+            vj: m.vjName || m.vj || 'Universal VJ',
+            poster: m.posterPath || m.poster_path || m.posterUrl || '',
+            views: 0,
+            completionSum: 0,
+            favoritesCount: 0,
+          });
+        }
+        const record = movieMap.get(id);
+        record.views += 1;
+        record.completionSum += (m.resumeProgress || m.resume_progress || 0.1);
+      });
+
+      (u.favorites || []).forEach(f => {
+        const id = f.id || f.vid;
+        if (id && movieMap.has(id)) {
+          movieMap.get(id).favoritesCount += 1;
+        }
+      });
+    });
+
+    // Add extra recorded views from video_stats
+    Object.keys(videoStats || {}).forEach(statId => {
+      const s = videoStats[statId];
+      const numId = parseInt(statId);
+      if (movieMap.has(numId)) {
+        movieMap.get(numId).views = Math.max(movieMap.get(numId).views, s.views || 0);
+      }
+    });
+
+    return Array.from(movieMap.values()).sort((a, b) => b.views - a.views);
+  }, [users, videoStats]);
+
+  // Aggregate Real Top VJs dynamically from Catalog & Watch Histories
+  const dynamicTopVJs = React.useMemo(() => {
+    const vjMap = new Map();
+
+    // 1. From catalog
+    munowatchCatalog.forEach(m => {
+      const rawVj = m.vj || m.vjname || m.vjName || 'Universal VJ';
+      const cleanVj = rawVj.trim();
+      if (!vjMap.has(cleanVj)) {
+        vjMap.set(cleanVj, { name: cleanVj, movies: 0, views: 0 });
+      }
+      vjMap.get(cleanVj).movies += 1;
+    });
+
+    // 2. From real user views
+    aggregatedWatchedMovies.forEach(m => {
+      const cleanVj = (m.vj || 'Universal VJ').trim();
+      if (vjMap.has(cleanVj)) {
+        vjMap.get(cleanVj).views += m.views;
+      }
+    });
+
+    return Array.from(vjMap.values())
+      .filter(v => v.name && v.name !== 'Luganda Dubbed')
+      .sort((a, b) => (b.movies * 10 + b.views) - (a.movies * 10 + a.views))
+      .slice(0, 5);
+  }, [munowatchCatalog, aggregatedWatchedMovies]);
+
+  // Dynamic Category Breakdown from Real Catalog
+  const categoryBreakdown = React.useMemo(() => {
+    const catMap = new Map();
+    munowatchCatalog.forEach(m => {
+      const cat = m.category || (m.is_tv ? 'TV Series' : 'Action');
+      catMap.set(cat, (catMap.get(cat) || 0) + 1);
+    });
+    return Array.from(catMap.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+  }, [munowatchCatalog]);
+
   // Filtered Users List
-  const filteredUsers = users.filter((u) => {
+  const filteredUsers = users.filter(u => {
     const matchesSearch = 
       u.name.toLowerCase().includes(userSearch.toLowerCase()) ||
-      u.id.toLowerCase().includes(userSearch.toLowerCase()) ||
-      u.email.toLowerCase().includes(userSearch.toLowerCase());
+      u.email.toLowerCase().includes(userSearch.toLowerCase()) ||
+      u.id.toLowerCase().includes(userSearch.toLowerCase());
     const matchesRole = userRoleFilter === 'All' || u.role === userRoleFilter;
     const matchesStatus = userStatusFilter === 'All' || u.status === userStatusFilter;
     return matchesSearch && matchesRole && matchesStatus;
   });
 
-  // Filtered Chat Threads
-  const filteredThreads = threads.filter((t) =>
-    t.userName.toLowerCase().includes(chatSearch.toLowerCase()) ||
-    t.userId.toLowerCase().includes(chatSearch.toLowerCase()) ||
-    t.lastMessage.toLowerCase().includes(chatSearch.toLowerCase())
-  );
-
-  const activeThread = threads.find((t) => t.id === selectedThreadId);
+  // Filtered Catalog List
+  const filteredCatalog = munowatchCatalog.filter(m => {
+    const title = (m.title || m.video_title || '').toLowerCase();
+    const vj = (m.vj || m.vjname || m.vjName || '').toLowerCase();
+    const matchesSearch = title.includes(videoSearch.toLowerCase()) || vj.includes(videoSearch.toLowerCase());
+    const matchesCat = videoCategoryFilter === 'All' || (m.category === videoCategoryFilter);
+    return matchesSearch && matchesCat;
+  });
 
   return (
-    <div className="flex h-screen bg-[#F8FAFC] text-slate-800 antialiased overflow-hidden font-sans">
-      
-      {/* ── Left Sidebar (AdminLTE 4 / TailAdmin Style) ─────────────── */}
-      <aside 
-        className={`${
-          sidebarOpen ? 'w-64' : 'w-20'
-        } bg-white border-r border-slate-200/80 flex flex-col justify-between transition-all duration-300 flex-shrink-0 z-30 shadow-sm`}
-      >
-        <div className="flex flex-col h-full overflow-hidden">
-          {/* Brand Header */}
-          <div className="h-16 px-5 border-b border-slate-200/80 flex items-center justify-between">
-            <div className="flex items-center space-x-3 overflow-hidden">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#00E676] to-[#10B981] flex items-center justify-center font-black text-black text-lg shadow-sm flex-shrink-0">
-                FW
-              </div>
-              {sidebarOpen && (
-                <div className="flex flex-col min-w-0">
-                  <span className="font-extrabold text-slate-900 text-sm tracking-tight truncate">
-                    FreeWatch Admin
-                  </span>
-                  <span className="text-[11px] font-semibold text-emerald-600 flex items-center space-x-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <span>AdminLTE 4 Light</span>
-                  </span>
-                </div>
-              )}
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-800 flex font-sans antialiased selection:bg-adminCyan selection:text-white">
+      {/* ── Collapsible Sidebar (TailAdmin / AdminLTE 4 Light Theme) ── */}
+      <aside className={`${sidebarOpen ? 'w-64' : 'w-20'} bg-white border-r border-slate-200 flex flex-col transition-all duration-300 z-30 shrink-0 sticky top-0 h-screen shadow-sm`}>
+        {/* Logo / Brand Header */}
+        <div className="h-16 px-4 flex items-center justify-between border-b border-slate-100">
+          <div className="flex items-center space-x-3 overflow-hidden">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-adminCyan to-emerald-500 flex items-center justify-center shadow-md shadow-cyan-500/20 shrink-0">
+              <span className="font-black text-white text-lg tracking-wider">FW</span>
             </div>
-          </div>
-
-          {/* Navigation Links */}
-          <div className="flex-1 overflow-y-auto py-4 px-3 space-y-6">
-            
-            {/* Section 1: Main Overview */}
-            <div className="space-y-1">
-              {sidebarOpen && (
-                <div className="px-3 pb-1 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                  Analytics & Management
-                </div>
-              )}
-              
-              <button
-                onClick={() => setActiveTab('dashboard')}
-                className={`w-full flex items-center ${
-                  sidebarOpen ? 'px-3.5' : 'justify-center'
-                } py-2.5 rounded-xl text-sm font-semibold transition-all ${
-                  activeTab === 'dashboard'
-                    ? 'bg-emerald-50 text-emerald-700 shadow-sm border border-emerald-200/60'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                }`}
-                title="Dashboard Overview"
-              >
-                <LayoutDashboard className={`w-5 h-5 ${activeTab === 'dashboard' ? 'text-emerald-600' : 'text-slate-500'}`} />
-                {sidebarOpen && <span className="ml-3">Dashboard</span>}
-              </button>
-
-              <button
-                onClick={() => setActiveTab('users')}
-                className={`w-full flex items-center justify-between ${
-                  sidebarOpen ? 'px-3.5' : 'justify-center'
-                } py-2.5 rounded-xl text-sm font-semibold transition-all ${
-                  activeTab === 'users'
-                    ? 'bg-emerald-50 text-emerald-700 shadow-sm border border-emerald-200/60'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                }`}
-                title="User Management"
-              >
-                <div className="flex items-center">
-                  <Users className={`w-5 h-5 ${activeTab === 'users' ? 'text-emerald-600' : 'text-slate-500'}`} />
-                  {sidebarOpen && <span className="ml-3">User Management</span>}
-                </div>
-                {sidebarOpen && (
-                  <span className="text-[11px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
-                    {users.length}
-                  </span>
-                )}
-              </button>
-
-              <button
-                onClick={() => setActiveTab('videos')}
-                className={`w-full flex items-center ${
-                  sidebarOpen ? 'px-3.5' : 'justify-center'
-                } py-2.5 rounded-xl text-sm font-semibold transition-all ${
-                  activeTab === 'videos'
-                    ? 'bg-emerald-50 text-emerald-700 shadow-sm border border-emerald-200/60'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                }`}
-                title="Video Performance & Catalog"
-              >
-                <Film className={`w-5 h-5 ${activeTab === 'videos' ? 'text-emerald-600' : 'text-slate-500'}`} />
-                {sidebarOpen && <span className="ml-3">Video Performance</span>}
-              </button>
-            </div>
-
-            {/* Section 2: Communication & Realtime */}
-            <div className="space-y-1">
-              {sidebarOpen && (
-                <div className="px-3 pb-1 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                  Live Operations
-                </div>
-              )}
-
-              <button
-                onClick={() => setActiveTab('chat')}
-                className={`w-full flex items-center justify-between ${
-                  sidebarOpen ? 'px-3.5' : 'justify-center'
-                } py-2.5 rounded-xl text-sm font-semibold transition-all ${
-                  activeTab === 'chat'
-                    ? 'bg-emerald-50 text-emerald-700 shadow-sm border border-emerald-200/60'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                }`}
-                title="Live Support Chat"
-              >
-                <div className="flex items-center">
-                  <MessageSquare className={`w-5 h-5 ${activeTab === 'chat' ? 'text-emerald-600' : 'text-slate-500'}`} />
-                  {sidebarOpen && <span className="ml-3">Live Support</span>}
-                </div>
-                {sidebarOpen && threads.reduce((acc, t) => acc + (t.unreadCountAdmin || 0), 0) > 0 && (
-                  <span className="w-5 h-5 rounded-full bg-emerald-500 text-black text-[10px] font-black flex items-center justify-center">
-                    {threads.reduce((acc, t) => acc + (t.unreadCountAdmin || 0), 0)}
-                  </span>
-                )}
-              </button>
-
-              <button
-                onClick={() => setActiveTab('notifications')}
-                className={`w-full flex items-center ${
-                  sidebarOpen ? 'px-3.5' : 'justify-center'
-                } py-2.5 rounded-xl text-sm font-semibold transition-all ${
-                  activeTab === 'notifications'
-                    ? 'bg-emerald-50 text-emerald-700 shadow-sm border border-emerald-200/60'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                }`}
-                title="Push Notification Dispatcher"
-              >
-                <Bell className={`w-5 h-5 ${activeTab === 'notifications' ? 'text-emerald-600' : 'text-slate-500'}`} />
-                {sidebarOpen && <span className="ml-3">Push Dispatcher</span>}
-              </button>
-
-              <button
-                onClick={() => setActiveTab('munowatch')}
-                className={`w-full flex items-center ${
-                  sidebarOpen ? 'px-3.5' : 'justify-center'
-                } py-2.5 rounded-xl text-sm font-semibold transition-all ${
-                  activeTab === 'munowatch'
-                    ? 'bg-emerald-50 text-emerald-700 shadow-sm border border-emerald-200/60'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                }`}
-                title="MunoWatch Sync Manager"
-              >
-                <RefreshCw className={`w-5 h-5 ${activeTab === 'munowatch' ? 'text-emerald-600' : 'text-slate-500'}`} />
-                {sidebarOpen && <span className="ml-3">MunoWatch Manager</span>}
-              </button>
-            </div>
-
-            {/* Section 3: Reports & Documents */}
-            <div className="space-y-1">
-              {sidebarOpen && (
-                <div className="px-3 pb-1 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                  Reports & Logs
-                </div>
-              )}
-
-              <button
-                onClick={() => setActiveTab('audit')}
-                className={`w-full flex items-center ${
-                  sidebarOpen ? 'px-3.5' : 'justify-center'
-                } py-2.5 rounded-xl text-sm font-semibold transition-all ${
-                  activeTab === 'audit'
-                    ? 'bg-emerald-50 text-emerald-700 shadow-sm border border-emerald-200/60'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                }`}
-                title="Audit Logs & Analytics Document"
-              >
-                <FileText className={`w-5 h-5 ${activeTab === 'audit' ? 'text-emerald-600' : 'text-slate-500'}`} />
-                {sidebarOpen && <span className="ml-3">Audit Logs & Export</span>}
-              </button>
-            </div>
-          </div>
-
-          {/* Sidebar Footer */}
-          <div className="p-4 border-t border-slate-200/80 bg-slate-50/50">
-            {sidebarOpen ? (
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2.5">
-                  <div className="w-8 h-8 rounded-full bg-slate-200 border border-slate-300 flex items-center justify-center font-bold text-xs text-slate-700">
-                    AD
-                  </div>
-                  <div className="flex flex-col min-w-0">
-                    <span className="text-xs font-bold text-slate-900 truncate">FreeWatch Admin</span>
-                    <span className="text-[10px] text-slate-500">v1.0.55+56</span>
-                  </div>
-                </div>
-                <div className={`w-2.5 h-2.5 rounded-full ${dbConnected ? 'bg-emerald-500' : 'bg-rose-500'}`} title="Firebase RTDB Live" />
-              </div>
-            ) : (
-              <div className="flex justify-center">
-                <div className={`w-2.5 h-2.5 rounded-full ${dbConnected ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+            {sidebarOpen && (
+              <div className="leading-tight">
+                <span className="font-bold text-slate-900 text-base tracking-tight block">FreeWatch</span>
+                <span className="text-[10px] uppercase font-semibold text-adminCyan tracking-widest block">ADMIN PORTAL</span>
               </div>
             )}
           </div>
+          <button 
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+          >
+            {sidebarOpen ? <X size={18} /> : <Menu size={18} />}
+          </button>
         </div>
-      </aside>
 
-      {/* ── Main Workspace Area ─────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        
-        {/* Top Header Bar */}
-        <header className="h-16 bg-white border-b border-slate-200/80 px-6 flex items-center justify-between flex-shrink-0 z-20 shadow-sm">
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors"
-              title="Toggle Sidebar"
-            >
-              <Menu className="w-5 h-5" />
-            </button>
-            
-            {/* Global Search Bar */}
-            <div className="relative w-64 md:w-80">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="Search users, movies, or actions..."
-                value={userSearch}
-                onChange={(e) => {
-                  setUserSearch(e.target.value);
-                  if (activeTab !== 'users') setActiveTab('users');
-                }}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:bg-white transition-all"
-              />
+        {/* Sidebar Nav Links */}
+        <div className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
+          {[
+            { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+            { id: 'users', label: 'User Management', icon: Users, badge: users.length },
+            { id: 'videos', label: 'Video Performance', icon: Film, badge: aggregatedWatchedMovies.length },
+            { id: 'chat', label: 'Live Support Chat', icon: MessageSquare, badge: threads.filter(t => t.unreadCount > 0).length || null },
+            { id: 'notifications', label: 'FCM Push Dispatcher', icon: Bell },
+            { id: 'munowatch', label: 'MunoWatch Sync', icon: RefreshCw, badge: munowatchCatalog.length },
+            { id: 'audit', label: 'Audit Logs & Export', icon: FileText, badge: auditLogs.length }
+          ].map((item) => {
+            const Icon = item.icon;
+            const active = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={`w-full flex items-center ${sidebarOpen ? 'justify-between px-3.5' : 'justify-center px-0'} py-2.5 rounded-xl font-medium text-sm transition-all duration-150 ${
+                  active 
+                    ? 'bg-adminCyan/10 text-adminCyan font-semibold shadow-xs' 
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                }`}
+                title={!sidebarOpen ? item.label : undefined}
+              >
+                <div className="flex items-center space-x-3">
+                  <Icon size={19} className={active ? 'text-adminCyan' : 'text-slate-400'} />
+                  {sidebarOpen && <span>{item.label}</span>}
+                </div>
+                {sidebarOpen && item.badge !== undefined && item.badge !== null && (
+                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                    active ? 'bg-adminCyan text-white' : 'bg-slate-100 text-slate-600'
+                  }`}>
+                    {item.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Bottom System Health Tile */}
+        {sidebarOpen && (
+          <div className="p-3 m-3 bg-slate-50 rounded-xl border border-slate-100 text-xs text-slate-500">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="font-semibold text-slate-700">Firebase RTDB</span>
+              <span className="flex items-center text-emerald-600 font-bold">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse mr-1"></span> Live
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-slate-700">MunoWatch Sync</span>
+              <span className="text-slate-600 font-medium">{munowatchCatalog.length} releases</span>
             </div>
           </div>
+        )}
+      </aside>
 
-          {/* Right Header Badges */}
+      {/* ── Main Content Area ── */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Top Header */}
+        <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between sticky top-0 z-20 shadow-xs">
+          <div className="flex items-center space-x-4">
+            <h1 className="text-lg font-bold text-slate-900 capitalize">
+              {activeTab === 'dashboard' && 'Executive Dashboard'}
+              {activeTab === 'users' && 'User Management & Access Control'}
+              {activeTab === 'videos' && 'Real Video & Movie Performance'}
+              {activeTab === 'chat' && 'Live 2-Way Realtime Support Chat'}
+              {activeTab === 'notifications' && 'FCM Push Notification Dispatcher'}
+              {activeTab === 'munowatch' && 'MunoWatch Server & Poller Control'}
+              {activeTab === 'audit' && 'System Audit Trail & Document Export'}
+            </h1>
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <Radio size={12} className="mr-1 animate-pulse" /> 100% Real Production Data
+            </span>
+          </div>
+
           <div className="flex items-center space-x-3">
-            {/* System Live Pill */}
-            <div className="hidden sm:flex items-center space-x-2 bg-emerald-50 border border-emerald-200 text-emerald-700 px-3 py-1 rounded-full text-xs font-semibold">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span>24/7 Cloud Poller Active</span>
+            {activeTab === 'users' && (
+              <button 
+                onClick={handleExportUsersCSV}
+                className="inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-colors shadow-xs"
+              >
+                <Download size={14} className="mr-1.5" /> Export Users CSV
+              </button>
+            )}
+            {activeTab === 'audit' && (
+              <button 
+                onClick={handleExportAuditCSV}
+                className="inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-colors shadow-xs"
+              >
+                <Download size={14} className="mr-1.5" /> Export Analytics CSV
+              </button>
+            )}
+            <div className="flex items-center space-x-2 pl-3 border-l border-slate-200">
+              <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs shadow-xs">
+                AD
+              </div>
+              <div className="text-left text-xs leading-tight hidden md:block">
+                <span className="font-bold text-slate-800 block">System Admin</span>
+                <span className="text-slate-400 block">freewatch-a0bc7</span>
+              </div>
             </div>
-
-            {/* Quick Broadcast Button */}
-            <button
-              onClick={() => setActiveTab('notifications')}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center space-x-1.5 shadow-sm transition-all"
-            >
-              <Bell className="w-3.5 h-3.5" />
-              <span>Broadcast Push</span>
-            </button>
           </div>
         </header>
 
-        {/* Dynamic Main Body Content */}
-        <main className="flex-1 overflow-y-auto bg-[#F8FAFC]">
-
-          {/* ══════════════════════════════════════════════════════════════
-              VIEW 1: COLORFUL ADMINLTE 4 DASHBOARD
-          ══════════════════════════════════════════════════════════════ */}
+        {/* Tab Body */}
+        <main className="flex-1 p-6 overflow-y-auto">
+          {/* ═════════════════════════════════════════════════════════════════════ */}
+          {/* TAB 1: EXECUTIVE DASHBOARD                                         */}
+          {/* ═════════════════════════════════════════════════════════════════════ */}
           {activeTab === 'dashboard' && (
-            <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8">
-              
-              {/* Welcome Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-                    FreeWatch Analytics Dashboard
-                  </h1>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Live overview of stream performance, active users, MunoWatch catalog, and push alerts.
-                  </p>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={() => handleExportCSV('analytics')}
-                    className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 px-3.5 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 shadow-sm transition-all"
-                  >
-                    <Download className="w-3.5 h-3.5 text-slate-500" />
-                    <span>Export Analytics CSV</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* 4 AdminLTE Colorful Metric Tiles */}
+            <div className="space-y-6 max-w-7xl mx-auto">
+              {/* AdminLTE Metric Stat Cards (Cyan, Emerald, Amber, Rose) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-                
-                {/* Tile 1: Ocean Cyan */}
-                <div className="bg-gradient-to-br from-sky-500 to-blue-600 rounded-2xl p-5 text-white shadow-md flex flex-col justify-between relative overflow-hidden card-shadow-hover">
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold uppercase tracking-wider text-sky-100">Total Video Plays</span>
-                      <Play className="w-5 h-5 text-sky-200 opacity-80" />
-                    </div>
-                    <div className="text-3xl font-black mt-2">184,920</div>
-                    <div className="text-xs text-sky-100 font-medium mt-1 flex items-center space-x-1">
-                      <TrendingUp className="w-3.5 h-3.5" />
-                      <span>+14.8% vs last week</span>
+                {/* 1. Total Registered Users */}
+                <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs flex items-center justify-between relative overflow-hidden group hover:border-adminCyan transition-all">
+                  <div className="space-y-1">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Registered Users</span>
+                    <h3 className="text-3xl font-extrabold text-slate-900">{totalRegisteredUsers}</h3>
+                    <div className="flex items-center text-xs font-semibold text-emerald-600">
+                      <TrendingUp size={13} className="mr-1" />
+                      <span>100% Synced with Auth</span>
                     </div>
                   </div>
-                  <button 
-                    onClick={() => setActiveTab('videos')}
-                    className="mt-4 pt-2.5 border-t border-white/20 text-[11px] font-bold text-sky-100 hover:text-white flex items-center justify-between"
-                  >
-                    <span>View Video Performance</span>
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
+                  <div className="w-13 h-13 rounded-2xl bg-cyan-50 text-adminCyan flex items-center justify-center shadow-xs">
+                    <Users size={26} />
+                  </div>
                 </div>
 
-                {/* Tile 2: Vibrant Emerald */}
-                <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl p-5 text-white shadow-md flex flex-col justify-between relative overflow-hidden card-shadow-hover">
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold uppercase tracking-wider text-emerald-100">Active App Users</span>
-                      <Users className="w-5 h-5 text-emerald-200 opacity-80" />
-                    </div>
-                    <div className="text-3xl font-black mt-2">2,845</div>
-                    <div className="text-xs text-emerald-100 font-medium mt-1 flex items-center space-x-1">
-                      <TrendingUp className="w-3.5 h-3.5" />
-                      <span>+9.2% new members</span>
+                {/* 2. Active Streamers */}
+                <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs flex items-center justify-between relative overflow-hidden group hover:border-emerald-500 transition-all">
+                  <div className="space-y-1">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Active Streamers</span>
+                    <h3 className="text-3xl font-extrabold text-slate-900">{activeStreamersCount}</h3>
+                    <div className="flex items-center text-xs font-semibold text-emerald-600">
+                      <CheckCircle2 size={13} className="mr-1" />
+                      <span>Watched & Favorited</span>
                     </div>
                   </div>
-                  <button 
-                    onClick={() => setActiveTab('users')}
-                    className="mt-4 pt-2.5 border-t border-white/20 text-[11px] font-bold text-emerald-100 hover:text-white flex items-center justify-between"
-                  >
-                    <span>Manage User Directory</span>
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
+                  <div className="w-13 h-13 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-xs">
+                    <Activity size={26} />
+                  </div>
                 </div>
 
-                {/* Tile 3: Vibrant Amber / Orange */}
-                <div className="bg-gradient-to-br from-amber-500 to-orange-500 rounded-2xl p-5 text-white shadow-md flex flex-col justify-between relative overflow-hidden card-shadow-hover">
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold uppercase tracking-wider text-amber-100">Luganda Catalog</span>
-                      <Film className="w-5 h-5 text-amber-200 opacity-80" />
-                    </div>
-                    <div className="text-3xl font-black mt-2">1,530+</div>
-                    <div className="text-xs text-amber-100 font-medium mt-1 flex items-center space-x-1">
-                      <Sparkles className="w-3.5 h-3.5" />
-                      <span>85 new releases today</span>
+                {/* 3. Catalog Size */}
+                <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs flex items-center justify-between relative overflow-hidden group hover:border-amber-500 transition-all">
+                  <div className="space-y-1">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Live Movies & Series</span>
+                    <h3 className="text-3xl font-extrabold text-slate-900">{totalCatalogMovies}</h3>
+                    <div className="flex items-center text-xs font-semibold text-amber-600">
+                      <Film size={13} className="mr-1" />
+                      <span>Across 13 Categories</span>
                     </div>
                   </div>
-                  <button 
-                    onClick={() => setActiveTab('munowatch')}
-                    className="mt-4 pt-2.5 border-t border-white/20 text-[11px] font-bold text-amber-100 hover:text-white flex items-center justify-between"
-                  >
-                    <span>MunoWatch Sync Hub</span>
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
+                  <div className="w-13 h-13 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-xs">
+                    <Tv size={26} />
+                  </div>
                 </div>
 
-                {/* Tile 4: Vibrant Rose / Red */}
-                <div className="bg-gradient-to-br from-rose-500 to-pink-600 rounded-2xl p-5 text-white shadow-md flex flex-col justify-between relative overflow-hidden card-shadow-hover">
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold uppercase tracking-wider text-rose-100">FCM Push Delivery</span>
-                      <Bell className="w-5 h-5 text-rose-200 opacity-80" />
-                    </div>
-                    <div className="text-3xl font-black mt-2">99.4%</div>
-                    <div className="text-xs text-rose-100 font-medium mt-1 flex items-center space-x-1">
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>High priority heads-up</span>
+                {/* 4. Push Alerts Dispatched */}
+                <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs flex items-center justify-between relative overflow-hidden group hover:border-rose-500 transition-all">
+                  <div className="space-y-1">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Dispatched Push Alerts</span>
+                    <h3 className="text-3xl font-extrabold text-slate-900">{totalDispatchedAlerts}</h3>
+                    <div className="flex items-center text-xs font-semibold text-rose-600">
+                      <Bell size={13} className="mr-1" />
+                      <span>FCM Topic: all_users</span>
                     </div>
                   </div>
-                  <button 
-                    onClick={() => setActiveTab('notifications')}
-                    className="mt-4 pt-2.5 border-t border-white/20 text-[11px] font-bold text-rose-100 hover:text-white flex items-center justify-between"
-                  >
-                    <span>Open Push Console</span>
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
+                  <div className="w-13 h-13 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center shadow-xs">
+                    <Radio size={26} />
+                  </div>
                 </div>
               </div>
 
-              {/* Streaming Activity & Category Breakdown (TailAdmin Charts Row) */}
+              {/* Two Column Section: Top VJs & Category Rails */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                
-                {/* Visual Bar Chart: Weekly Streaming Volume */}
-                <div className="lg:col-span-2 bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm space-y-4">
-                  <div className="flex items-center justify-between">
+                {/* Real Top VJs Popularity Leaderboard */}
+                <div className="lg:col-span-2 bg-white rounded-2xl p-6 border border-slate-200 shadow-xs">
+                  <div className="flex items-center justify-between mb-5">
                     <div>
-                      <h3 className="text-base font-bold text-slate-900">Weekly Streaming Volume</h3>
-                      <p className="text-xs text-slate-500">Video streams played by day over the past 7 days</p>
+                      <h3 className="text-base font-bold text-slate-900">Top VJ Translation Popularity</h3>
+                      <p className="text-xs text-slate-400">Aggregated from live catalog releases and user watch counts</p>
                     </div>
-                    <span className="text-xs font-bold bg-slate-100 text-slate-600 px-3 py-1 rounded-full">
-                      Avg: 28.5K / day
+                    <span className="text-xs font-semibold text-adminCyan bg-cyan-50 px-2.5 py-1 rounded-full">
+                      Live Catalog Aggregated
                     </span>
                   </div>
 
-                  {/* SVG Bar Chart Visualization */}
-                  <div className="h-48 flex items-end justify-between pt-6 px-2 border-b border-slate-100">
-                    {[
-                      { day: 'Mon', count: 22, height: '55%' },
-                      { day: 'Tue', count: 24, height: '60%' },
-                      { day: 'Wed', count: 28, height: '70%' },
-                      { day: 'Thu', count: 26, height: '65%' },
-                      { day: 'Fri', count: 32, height: '80%' },
-                      { day: 'Sat', count: 38, height: '95%' },
-                      { day: 'Sun', count: 35, height: '88%' }
-                    ].map((item, idx) => (
-                      <div key={idx} className="flex flex-col items-center flex-1 space-y-2">
-                        <span className="text-[10px] font-bold text-slate-400">{item.count}K</span>
-                        <div 
-                          className="w-7 sm:w-10 rounded-t-xl bg-gradient-to-t from-emerald-500 to-teal-400 hover:brightness-110 transition-all cursor-pointer shadow-sm"
-                          style={{ height: item.height }}
-                          title={`${item.day}: ${item.count},000 streams`}
-                        />
-                        <span className="text-xs font-semibold text-slate-600">{item.day}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-4 pt-2 text-center text-xs">
-                    <div>
-                      <span className="text-slate-400 block text-[11px]">Avg Watch Time</span>
-                      <span className="font-bold text-slate-800 text-sm">42.5 mins / user</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-400 block text-[11px]">Bandwidth</span>
-                      <span className="font-bold text-slate-800 text-sm">14.8 TB Total</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-400 block text-[11px]">Peak Time</span>
-                      <span className="font-bold text-emerald-600 text-sm">9:00 PM EAT</span>
-                    </div>
+                  <div className="space-y-3">
+                    {dynamicTopVJs.map((vj, index) => {
+                      const maxMovies = dynamicTopVJs[0]?.movies || 1;
+                      const percent = Math.min(100, Math.round((vj.movies / maxMovies) * 100));
+                      return (
+                        <div key={vj.name} className="p-3.5 rounded-xl border border-slate-100 hover:border-slate-200 hover:bg-slate-50 transition-all">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center space-x-3">
+                              <span className="w-6 h-6 rounded-full bg-slate-900 text-white font-bold text-xs flex items-center justify-center">
+                                #{index + 1}
+                              </span>
+                              <span className="font-bold text-slate-900 text-sm">{vj.name}</span>
+                            </div>
+                            <div className="flex items-center space-x-4 text-xs">
+                              <span className="font-semibold text-slate-600"><strong>{vj.movies}</strong> titles</span>
+                              <span className="font-semibold text-adminCyan"><strong>{vj.views}</strong> views</span>
+                            </div>
+                          </div>
+                          <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                            <div 
+                              className="bg-gradient-to-r from-adminCyan to-emerald-500 h-full rounded-full transition-all duration-500" 
+                              style={{ width: `${percent}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
-                {/* Genre Breakdown Progress Bars */}
-                <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm space-y-4 flex flex-col justify-between">
-                  <div>
-                    <h3 className="text-base font-bold text-slate-900">Genre Preferences</h3>
-                    <p className="text-xs text-slate-500">Most streamed movie categories</p>
-                  </div>
-
-                  <div className="space-y-3.5">
-                    {[
-                      { name: 'Action & Thriller', pct: 38, color: 'bg-sky-500' },
-                      { name: 'Sci-Fi & Fantasy', pct: 22, color: 'bg-emerald-500' },
-                      { name: 'Drama & Romance', pct: 18, color: 'bg-amber-500' },
-                      { name: 'Horror & Mystery', pct: 14, color: 'bg-rose-500' },
-                      { name: 'Animation & Family', pct: 8, color: 'bg-purple-500' }
-                    ].map((g, idx) => (
-                      <div key={idx} className="space-y-1">
-                        <div className="flex justify-between text-xs font-bold text-slate-700">
-                          <span>{g.name}</span>
-                          <span>{g.pct}%</span>
-                        </div>
-                        <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                          <div className={`h-full ${g.color} rounded-full`} style={{ width: `${g.pct}%` }} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-center space-x-2 text-xs text-slate-600">
-                    <Sparkles className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                    <span>Action remains the #1 top requested genre across Ugandan audiences.</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Leaderboards Row: Trending Movies & Top VJs */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                
-                {/* Trending Movies Leaderboard */}
-                <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm space-y-4">
-                  <div className="flex items-center justify-between">
+                {/* Real Category Distribution */}
+                <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs">
+                  <div className="flex items-center justify-between mb-5">
                     <div>
-                      <h3 className="text-base font-bold text-slate-900 flex items-center space-x-2">
-                        <Flame className="w-4 h-4 text-amber-500" />
-                        <span>Most Watched Releases</span>
-                      </h3>
-                      <p className="text-xs text-slate-500">Trending Luganda blockbusters on FreeWatch</p>
+                      <h3 className="text-base font-bold text-slate-900">Catalog Genres</h3>
+                      <p className="text-xs text-slate-400">Live distribution across MunoWatch rails</p>
                     </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    {categoryBreakdown.map((cat, i) => {
+                      const colors = ['bg-cyan-500', 'bg-emerald-500', 'bg-amber-500', 'bg-rose-500', 'bg-purple-500'];
+                      return (
+                        <div key={cat.name} className="space-y-1.5">
+                          <div className="flex justify-between text-xs font-semibold">
+                            <span className="text-slate-700">{cat.name}</span>
+                            <span className="text-slate-500">{cat.count} movies</span>
+                          </div>
+                          <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                            <div 
+                              className={`${colors[i % colors.length]} h-full rounded-full`}
+                              style={{ width: `${Math.min(100, (cat.count / munowatchCatalog.length) * 100 * 2.5)}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="mt-6 pt-5 border-t border-slate-100 text-center">
                     <button 
                       onClick={() => setActiveTab('videos')}
-                      className="text-xs font-bold text-emerald-600 hover:text-emerald-700"
+                      className="text-xs font-bold text-adminCyan hover:text-cyan-700 transition-colors inline-flex items-center"
                     >
-                      View All &rarr;
+                      View Full Performance Analytics <ChevronRight size={14} className="ml-1" />
                     </button>
-                  </div>
-
-                  <div className="divide-y divide-slate-100">
-                    {TRENDING_MOVIES.slice(0, 4).map((movie, idx) => (
-                      <div key={movie.id} className="py-3 flex items-center justify-between">
-                        <div className="flex items-center space-x-3 min-w-0">
-                          <span className="w-6 text-center font-black text-slate-400 text-sm">{idx + 1}</span>
-                          <img 
-                            src={movie.poster} 
-                            alt={movie.title}
-                            className="w-10 h-14 object-cover rounded-lg shadow-sm border border-slate-100"
-                            onError={(e) => { e.target.style.display = 'none'; }}
-                          />
-                          <div className="min-w-0">
-                            <h4 className="text-xs font-bold text-slate-900 truncate">{movie.title}</h4>
-                            <span className="text-[11px] font-semibold text-emerald-600 block">{movie.vj}</span>
-                            <span className="text-[10px] text-slate-400">{movie.category}</span>
-                          </div>
-                        </div>
-                        <div className="text-right flex-shrink-0">
-                          <span className="text-xs font-black text-slate-900 block">{movie.views}</span>
-                          <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
-                            {movie.trend}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Top VJs Leaderboard */}
-                <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-base font-bold text-slate-900 flex items-center space-x-2">
-                        <Star className="w-4 h-4 text-amber-500" />
-                        <span>Top VJs Popularity</span>
-                      </h3>
-                      <p className="text-xs text-slate-500">Ugandan voice translators ranking by listener volume</p>
-                    </div>
-                  </div>
-
-                  <div className="divide-y divide-slate-100">
-                    {TOP_VJS.map((vj, idx) => (
-                      <div key={idx} className="py-3 flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center font-black text-xs text-slate-700">
-                            {vj.name.split(' ')[1]?.charAt(0) || 'V'}
-                          </div>
-                          <div>
-                            <span className="text-xs font-bold text-slate-900 block">{vj.name}</span>
-                            <span className="text-[11px] text-slate-400">{vj.movies} Dubbed Titles</span>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-xs font-bold bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full block mb-0.5">
-                            {vj.badge}
-                          </span>
-                          <span className="text-[11px] font-semibold text-slate-500">{vj.views} plays</span>
-                        </div>
-                      </div>
-                    ))}
                   </div>
                 </div>
               </div>
             </div>
           )}
 
-          {/* ══════════════════════════════════════════════════════════════
-              VIEW 2: USER MANAGEMENT (ROSTER, BAN, DELETE, ROLES)
-          ══════════════════════════════════════════════════════════════ */}
+          {/* ═════════════════════════════════════════════════════════════════════ */}
+          {/* TAB 2: USER MANAGEMENT (100% REAL FIREBASE SYNC)                    */}
+          {/* ═════════════════════════════════════════════════════════════════════ */}
           {activeTab === 'users' && (
-            <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-6">
-              
-              {/* Header & Controls */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-                    User Management Directory
-                  </h1>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Manage all app accounts, inspect user credentials, assign roles, ban violators, and track watch sessions.
-                  </p>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={() => handleExportCSV('users')}
-                    className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 px-3.5 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 shadow-sm transition-all"
-                  >
-                    <Download className="w-3.5 h-3.5 text-slate-500" />
-                    <span>Export Users (CSV)</span>
-                  </button>
-                  <button
-                    onClick={() => setShowAddUserModal(true)}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 shadow-sm transition-all"
-                  >
-                    <UserPlus className="w-3.5 h-3.5" />
-                    <span>Add New User</span>
-                  </button>
-                </div>
-              </div>
+            <div className="space-y-6 max-w-7xl mx-auto">
+              {/* Search, Filter & Action Bar */}
+              <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
+                <div className="flex items-center space-x-3 w-full md:w-auto flex-1">
+                  <div className="relative flex-1 max-w-md">
+                    <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input 
+                      type="text"
+                      placeholder="Search real users by name, email, or UID..."
+                      value={userSearch}
+                      onChange={(e) => setUserSearch(e.target.value)}
+                      className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-adminCyan focus:bg-white transition-all"
+                    />
+                  </div>
 
-              {/* Filters Bar */}
-              <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
-                <div className="relative flex-1 w-full">
-                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    placeholder="Search by user name, UID, or email..."
-                    value={userSearch}
-                    onChange={(e) => setUserSearch(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:bg-white"
-                  />
-                </div>
-
-                <div className="flex items-center space-x-3 w-full md:w-auto">
                   {/* Role Filter */}
                   <select
                     value={userRoleFilter}
                     onChange={(e) => setUserRoleFilter(e.target.value)}
-                    className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 focus:outline-none focus:border-emerald-500"
+                    className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:outline-none focus:border-adminCyan"
                   >
                     <option value="All">All Roles</option>
                     <option value="Admin">Admin</option>
-                    <option value="VIP">VIP Subscriber</option>
+                    <option value="VIP">VIP</option>
                     <option value="Member">Member</option>
                     <option value="Guest">Guest</option>
                   </select>
@@ -1228,161 +999,142 @@ export default function App() {
                   <select
                     value={userStatusFilter}
                     onChange={(e) => setUserStatusFilter(e.target.value)}
-                    className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 focus:outline-none focus:border-emerald-500"
+                    className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:outline-none focus:border-adminCyan"
                   >
                     <option value="All">All Statuses</option>
                     <option value="Active">Active</option>
-                    <option value="Suspended">Suspended</option>
                     <option value="Banned">Banned</option>
                   </select>
                 </div>
+
+                <div className="flex items-center space-x-3 w-full md:w-auto justify-end">
+                  <button
+                    onClick={() => setShowAddUserModal(true)}
+                    className="inline-flex items-center px-4 py-2 bg-adminCyan hover:bg-cyan-600 text-white rounded-xl text-xs font-bold transition-all shadow-sm shadow-cyan-500/20"
+                  >
+                    <UserPlus size={15} className="mr-1.5" /> Add User
+                  </button>
+                </div>
               </div>
 
-              {/* Users Data Table */}
-              <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+              {/* Real Users Table */}
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="bg-slate-50/80 border-b border-slate-200/80 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                        <th className="py-3.5 px-4">User</th>
-                        <th className="py-3.5 px-4">Credentials / UID</th>
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
+                      <tr>
+                        <th className="py-3.5 px-4">User / Credentials</th>
                         <th className="py-3.5 px-4">Role</th>
                         <th className="py-3.5 px-4">Status</th>
-                        <th className="py-3.5 px-4">Last Activity</th>
+                        <th className="py-3.5 px-4">Activity Stats</th>
+                        <th className="py-3.5 px-4">Last Watched Title</th>
+                        <th className="py-3.5 px-4">Registration</th>
                         <th className="py-3.5 px-4 text-right">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
+                    <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
                       {filteredUsers.length === 0 ? (
                         <tr>
-                          <td colSpan={6} className="py-12 text-center text-slate-400 font-medium">
-                            No users matched your search criteria.
+                          <td colSpan="7" className="py-12 text-center text-slate-400">
+                            No users found matching your search criteria.
                           </td>
                         </tr>
                       ) : (
-                        filteredUsers.map((user) => {
-                          const isBanned = user.status === 'Banned';
-                          const isSuspended = user.status === 'Suspended';
-
-                          return (
-                            <tr key={user.id} className="hover:bg-slate-50/60 transition-colors">
-                              {/* User Info */}
-                              <td className="py-3.5 px-4">
-                                <div className="flex items-center space-x-3">
-                                  <img
-                                    src={user.avatar}
-                                    alt={user.name}
-                                    className="w-9 h-9 rounded-full object-cover border border-slate-200"
-                                    onError={(e) => {
-                                      e.target.src = `https://api.dicebear.com/7.x/initials/svg?seed=${user.name}`;
-                                    }}
-                                  />
-                                  <div>
-                                    <span className="font-bold text-slate-900 block">{user.name}</span>
-                                    <span className="text-[11px] text-slate-400">{user.email}</span>
-                                  </div>
+                        filteredUsers.map((user) => (
+                          <tr key={user.id} className="hover:bg-slate-50/80 transition-colors">
+                            <td className="py-3.5 px-4">
+                              <div className="flex items-center space-x-3">
+                                <div className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center font-bold text-slate-700 text-xs shrink-0">
+                                  {user.name.slice(0, 2).toUpperCase()}
                                 </div>
-                              </td>
-
-                              {/* Credentials */}
-                              <td className="py-3.5 px-4 font-mono text-[11px]">
-                                <span className="text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-                                  {user.id}
-                                </span>
-                                <span className="block text-[10px] text-slate-400 mt-0.5 font-sans">
-                                  {user.device}
-                                </span>
-                              </td>
-
-                              {/* Role */}
-                              <td className="py-3.5 px-4">
-                                <span
-                                  className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${
-                                    user.role === 'Admin'
-                                      ? 'bg-purple-100 text-purple-700'
-                                      : user.role === 'VIP'
-                                      ? 'bg-amber-100 text-amber-700'
-                                      : user.role === 'Member'
-                                      ? 'bg-sky-100 text-sky-700'
-                                      : 'bg-slate-100 text-slate-600'
-                                  }`}
-                                >
-                                  {user.role}
-                                </span>
-                              </td>
-
-                              {/* Status */}
-                              <td className="py-3.5 px-4">
-                                <span
-                                  className={`inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold ${
-                                    user.status === 'Active'
-                                      ? 'bg-emerald-50 text-emerald-700'
-                                      : user.status === 'Suspended'
-                                      ? 'bg-amber-50 text-amber-700'
-                                      : 'bg-rose-50 text-rose-700'
-                                  }`}
-                                >
-                                  <span
-                                    className={`w-1.5 h-1.5 rounded-full ${
-                                      user.status === 'Active'
-                                        ? 'bg-emerald-500 animate-pulse'
-                                        : user.status === 'Suspended'
-                                        ? 'bg-amber-500'
-                                        : 'bg-rose-500'
-                                    }`}
-                                  />
-                                  <span>{user.status}</span>
-                                </span>
-                              </td>
-
-                              {/* Video Activity */}
-                              <td className="py-3.5 px-4">
-                                <span className="font-semibold text-slate-800 block truncate max-w-[180px]">
-                                  {user.lastWatchedMovie}
-                                </span>
-                                <span className="text-[11px] text-slate-400">
-                                  {user.totalWatched} movies • {user.lastActive}
-                                </span>
-                              </td>
-
-                              {/* Actions */}
-                              <td className="py-3.5 px-4 text-right">
-                                <div className="flex items-center justify-end space-x-2">
-                                  {/* View Profile */}
-                                  <button
-                                    onClick={() => setSelectedUserDetail(user)}
-                                    className="p-1.5 rounded-lg text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
-                                    title="View User Activity Details"
-                                  >
-                                    <Eye className="w-4 h-4" />
-                                  </button>
-
-                                  {/* Toggle Ban */}
-                                  <button
-                                    onClick={() => handleToggleUserBan(user.id)}
-                                    className={`p-1.5 rounded-lg transition-colors ${
-                                      isBanned
-                                        ? 'text-emerald-600 hover:bg-emerald-50'
-                                        : 'text-amber-600 hover:bg-amber-50'
-                                    }`}
-                                    title={isBanned ? 'Unban User' : 'Ban / Suspend User'}
-                                  >
-                                    {isBanned ? <UserCheck className="w-4 h-4" /> : <UserX className="w-4 h-4" />}
-                                  </button>
-
-                                  {/* Delete User */}
-                                  <button
-                                    onClick={() => setConfirmDeleteUser(user)}
-                                    className="p-1.5 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition-colors"
-                                    title="Delete User Permanently"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
+                                <div className="leading-tight">
+                                  <span className="font-bold text-slate-900 block">{user.name}</span>
+                                  <span className="text-[11px] text-slate-400 block">{user.email}</span>
+                                  <span className="text-[10px] font-mono text-slate-300 block">{user.id}</span>
                                 </div>
-                              </td>
-                            </tr>
-                          );
-                        })
+                              </div>
+                            </td>
+
+                            <td className="py-3.5 px-4">
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                                user.role === 'Admin' 
+                                  ? 'bg-rose-50 text-rose-700 border border-rose-200' 
+                                  : user.role === 'VIP' 
+                                  ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                  : 'bg-slate-100 text-slate-700 border border-slate-200'
+                              }`}>
+                                {user.role}
+                              </span>
+                            </td>
+
+                            <td className="py-3.5 px-4">
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                                user.status === 'Active' 
+                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+                                  : 'bg-red-50 text-red-700 border border-red-200'
+                              }`}>
+                                <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
+                                  user.status === 'Active' ? 'bg-emerald-500' : 'bg-red-500'
+                                }`} />
+                                {user.status}
+                              </span>
+                            </td>
+
+                            <td className="py-3.5 px-4">
+                              <div className="space-y-0.5">
+                                <span className="block font-semibold text-slate-900">
+                                  <strong>{user.totalWatched}</strong> watched
+                                </span>
+                                <span className="block text-[11px] text-slate-400">
+                                  <strong>{user.totalFavorites}</strong> favorites
+                                </span>
+                              </div>
+                            </td>
+
+                            <td className="py-3.5 px-4 max-w-xs truncate text-slate-600">
+                              {user.lastWatchedMovie}
+                            </td>
+
+                            <td className="py-3.5 px-4 text-slate-400 text-[11px]">
+                              {new Date(user.createdAt).toLocaleDateString()}
+                            </td>
+
+                            <td className="py-3.5 px-4 text-right">
+                              <div className="inline-flex items-center space-x-1">
+                                <button
+                                  onClick={() => handleToggleUserBan(user)}
+                                  className={`p-1.5 rounded-lg border text-xs font-semibold transition-colors ${
+                                    user.status === 'Banned'
+                                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                                      : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+                                  }`}
+                                  title={user.status === 'Banned' ? 'Unban User' : 'Ban User'}
+                                >
+                                  {user.status === 'Banned' ? <UserCheck size={14} /> : <UserX size={14} />}
+                                </button>
+
+                                <button
+                                  onClick={() => {
+                                    setRoleChangeModalUser(user);
+                                    setNewRoleSelection(user.role);
+                                  }}
+                                  className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-colors"
+                                  title="Change Role"
+                                >
+                                  <Sliders size={14} />
+                                </button>
+
+                                <button
+                                  onClick={() => setConfirmDeleteUser(user)}
+                                  className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 transition-colors"
+                                  title="Delete User"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
                       )}
                     </tbody>
                   </table>
@@ -1391,87 +1143,127 @@ export default function App() {
             </div>
           )}
 
-          {/* ══════════════════════════════════════════════════════════════
-              VIEW 3: VIDEO PERFORMANCE & CATALOG
-          ══════════════════════════════════════════════════════════════ */}
+          {/* ═════════════════════════════════════════════════════════════════════ */}
+          {/* TAB 3: VIDEO PERFORMANCE & LIVE CATALOG                            */}
+          {/* ═════════════════════════════════════════════════════════════════════ */}
           {activeTab === 'videos' && (
-            <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-6">
-              <div>
-                <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-                  Video Performance & Movie Analytics
-                </h1>
-                <p className="text-xs text-slate-500 mt-1">
-                  Track view engagement, rating performance, Luganda dubbed streams, and spotlight titles.
-                </p>
-              </div>
-
-              {/* Movie Performance Table */}
-              <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
-                <div className="p-5 border-b border-slate-200/80 flex items-center justify-between">
-                  <h3 className="text-base font-bold text-slate-900">Most Watched Movies Catalog</h3>
-                  <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">
-                    {TRENDING_MOVIES.length} High Performing Blockbusters
+            <div className="space-y-6 max-w-7xl mx-auto">
+              {/* Aggregated Real Watched Movies Section */}
+              <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs">
+                <div className="flex items-center justify-between mb-5">
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900">Real User Watch Stream Analytics</h3>
+                    <p className="text-xs text-slate-400">Aggregated directly from user watch history and favorite records in Firebase RTDB</p>
+                  </div>
+                  <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+                    {aggregatedWatchedMovies.length} Streamed Titles Tracked
                   </span>
                 </div>
 
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {aggregatedWatchedMovies.slice(0, 6).map((movie, index) => (
+                    <div key={movie.id} className="p-4 rounded-xl border border-slate-100 hover:border-slate-200 bg-slate-50/50 flex space-x-3.5 items-center">
+                      {movie.poster ? (
+                        <img 
+                          src={movie.poster} 
+                          alt={movie.title}
+                          className="w-14 h-20 rounded-lg object-cover bg-slate-200 shrink-0 shadow-xs" 
+                        />
+                      ) : (
+                        <div className="w-14 h-20 rounded-lg bg-slate-200 flex items-center justify-center text-slate-400 shrink-0">
+                          <Film size={20} />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <span className="text-[10px] font-bold uppercase text-adminCyan tracking-wider block">#{index + 1} Trending</span>
+                        <h4 className="font-bold text-slate-900 text-sm truncate">{movie.title}</h4>
+                        <span className="text-xs text-slate-500 block truncate">{movie.vj}</span>
+                        <div className="flex items-center space-x-3 mt-2 text-xs">
+                          <span className="font-bold text-slate-900">{movie.views} view{movie.views !== 1 ? 's' : ''}</span>
+                          <span className="font-semibold text-amber-600">★ {movie.favoritesCount} favs</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Complete Live MunoWatch Catalog */}
+              <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs">
+                <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-5">
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900">Live MunoWatch Catalog ({munowatchCatalog.length} Releases)</h3>
+                    <p className="text-xs text-slate-400">Official Luganda translated movies and series currently streaming</p>
+                  </div>
+
+                  <div className="flex items-center space-x-3 w-full md:w-auto">
+                    <div className="relative">
+                      <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <input 
+                        type="text"
+                        placeholder="Search movie or VJ..."
+                        value={videoSearch}
+                        onChange={(e) => setVideoSearch(e.target.value)}
+                        className="pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-adminCyan"
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
-                        <th className="py-3 px-4">Movie</th>
-                        <th className="py-3 px-4">Dubbed VJ</th>
-                        <th className="py-3 px-4">Total Views</th>
-                        <th className="py-3 px-4">Rating</th>
-                        <th className="py-3 px-4">Trending Growth</th>
-                        <th className="py-3 px-4 text-right">Actions</th>
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
+                      <tr>
+                        <th className="py-3 px-4">Poster</th>
+                        <th className="py-3 px-4">Title</th>
+                        <th className="py-3 px-4">Dubbing VJ</th>
+                        <th className="py-3 px-4">Category</th>
+                        <th className="py-3 px-4">Movie ID</th>
+                        <th className="py-3 px-4 text-right">Quick Push</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 text-xs">
-                      {TRENDING_MOVIES.map((movie) => (
-                        <tr key={movie.id} className="hover:bg-slate-50/50 transition-colors">
-                          <td className="py-3.5 px-4">
-                            <div className="flex items-center space-x-3">
-                              <img
-                                src={movie.poster}
-                                alt={movie.title}
-                                className="w-10 h-14 object-cover rounded-lg shadow-sm border border-slate-100"
-                              />
-                              <div>
-                                <span className="font-bold text-slate-900 block">{movie.title}</span>
-                                <span className="text-[11px] text-slate-400">{movie.category}</span>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="py-3.5 px-4 font-semibold text-emerald-700">
-                            {movie.vj}
-                          </td>
-                          <td className="py-3.5 px-4 font-black text-slate-900">
-                            {movie.views}
-                          </td>
-                          <td className="py-3.5 px-4 font-bold text-amber-500">
-                            ★ {movie.rating}
-                          </td>
-                          <td className="py-3.5 px-4">
-                            <span className="text-emerald-700 bg-emerald-50 font-bold px-2.5 py-0.5 rounded-full">
-                              {movie.trend}
-                            </span>
-                          </td>
-                          <td className="py-3.5 px-4 text-right">
-                            <button
-                              onClick={() => {
-                                setNotifTitle(`🎬 ${movie.title} (${movie.vj})`);
-                                setNotifBody(`Watch now in Full HD on FreeWatch!`);
-                                setNotifImageUrl(movie.backdrop);
-                                setNotifMovieId(String(movie.id));
-                                setActiveTab('notifications');
-                              }}
-                              className="text-xs font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-xl transition-colors"
-                            >
-                              Dispatch Alert
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                    <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                      {filteredCatalog.slice(0, 15).map((m) => {
+                        const id = m.id || m.vid;
+                        const title = m.title || m.video_title || 'Untitled';
+                        const vj = m.vj || m.vjname || m.vjName || 'Vj Universal';
+                        const img = m.image || m.thumbnail || m.poster;
+                        return (
+                          <tr key={id} className="hover:bg-slate-50/80 transition-colors">
+                            <td className="py-2.5 px-4">
+                              {img ? (
+                                <img src={img} alt={title} className="w-9 h-12 rounded object-cover bg-slate-200 shadow-xs" />
+                              ) : (
+                                <div className="w-9 h-12 rounded bg-slate-200 flex items-center justify-center text-slate-400">
+                                  <Film size={14} />
+                                </div>
+                              )}
+                            </td>
+                            <td className="py-2.5 px-4 font-bold text-slate-900">{title}</td>
+                            <td className="py-2.5 px-4 text-slate-600 font-semibold">{vj}</td>
+                            <td className="py-2.5 px-4">
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
+                                {m.category || 'Movie'}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-4 font-mono text-slate-400">{id}</td>
+                            <td className="py-2.5 px-4 text-right">
+                              <button
+                                onClick={() => {
+                                  setActiveTab('notifications');
+                                  setNotifTitle(`🔥 ${title} (${vj})`);
+                                  setNotifBody(`Watch ${title} in explosive Luganda translation by ${vj}! Now streaming in Full HD.`);
+                                  setNotifImageUrl(img || '');
+                                  setNotifLink(String(id));
+                                }}
+                                className="inline-flex items-center px-2.5 py-1 rounded-lg bg-cyan-50 hover:bg-cyan-100 text-adminCyan font-bold text-[11px] transition-colors"
+                              >
+                                <Send size={12} className="mr-1" /> Alert
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -1479,345 +1271,297 @@ export default function App() {
             </div>
           )}
 
-          {/* ══════════════════════════════════════════════════════════════
-              VIEW 4: LIVE 2-WAY SUPPORT CHAT (LIGHT THEME)
-          ══════════════════════════════════════════════════════════════ */}
+          {/* ═════════════════════════════════════════════════════════════════════ */}
+          {/* TAB 4: LIVE SUPPORT CHAT                                           */}
+          {/* ═════════════════════════════════════════════════════════════════════ */}
           {activeTab === 'chat' && (
-            <div className="h-[calc(100vh-4rem)] flex overflow-hidden bg-white">
-              
-              {/* Left Conversation Threads Sidebar */}
-              <div className="w-80 md:w-96 border-r border-slate-200/80 flex flex-col flex-shrink-0 bg-slate-50/50">
-                <div className="p-4 border-b border-slate-200/80 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-base font-extrabold text-slate-900">Live User Support</h2>
-                    <span className="text-xs bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
-                      {threads.length} Active
-                    </span>
-                  </div>
-                  
-                  {/* Chat Search */}
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden flex h-[calc(100vh-140px)] max-w-7xl mx-auto">
+              {/* Left Conversations List */}
+              <div className="w-80 border-r border-slate-200 flex flex-col bg-slate-50/50">
+                <div className="p-4 border-b border-slate-200">
+                  <h3 className="font-bold text-slate-900 text-sm mb-2">User Inquiries</h3>
                   <div className="relative">
-                    <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input
+                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input 
                       type="text"
-                      placeholder="Search messages or user names..."
+                      placeholder="Search conversations..."
                       value={chatSearch}
                       onChange={(e) => setChatSearch(e.target.value)}
-                      className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-4 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-500"
+                      className="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-700 focus:outline-none focus:border-adminCyan"
                     />
                   </div>
                 </div>
 
-                {/* Threads List */}
                 <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
-                  {filteredThreads.length === 0 ? (
+                  {threads.length === 0 ? (
                     <div className="p-8 text-center text-slate-400 text-xs">
-                      No active support threads loaded.
+                      No support conversations yet.
                     </div>
                   ) : (
-                    filteredThreads.map((thread) => {
-                      const isSelected = thread.id === selectedThreadId;
-                      const timeStr = new Date(thread.lastTimestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
+                    threads.map((thread) => {
+                      const isSelected = thread.uid === selectedThreadId;
                       return (
-                        <div
-                          key={thread.id}
-                          onClick={() => setSelectedThreadId(thread.id)}
-                          className={`p-4 cursor-pointer transition-colors flex items-start space-x-3 ${
-                            isSelected ? 'bg-emerald-50/70 border-l-4 border-emerald-500' : 'hover:bg-white'
+                        <button
+                          key={thread.uid}
+                          onClick={() => setSelectedThreadId(thread.uid)}
+                          className={`w-full p-4 text-left flex items-start space-x-3 transition-colors ${
+                            isSelected ? 'bg-white border-l-4 border-adminCyan shadow-xs' : 'hover:bg-slate-100/60'
                           }`}
                         >
-                          <div className="w-10 h-10 rounded-full bg-slate-200 border border-slate-300 flex items-center justify-center font-bold text-xs text-slate-700 flex-shrink-0">
-                            {thread.userName.charAt(0).toUpperCase()}
+                          <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center font-bold text-xs text-slate-700 shrink-0">
+                            {thread.userName.slice(0, 2).toUpperCase()}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between mb-0.5">
-                              <span className="text-xs font-bold text-slate-900 truncate">{thread.userName}</span>
-                              <span className="text-[10px] text-slate-400">{timeStr}</span>
+                              <span className="font-bold text-slate-900 text-xs truncate">{thread.userName}</span>
+                              <span className="text-[10px] text-slate-400">
+                                {new Date(thread.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </span>
                             </div>
-                            <p className="text-[11px] text-slate-500 truncate">{thread.lastMessage}</p>
+                            <p className="text-xs text-slate-500 truncate">{thread.lastMessage}</p>
                           </div>
-                          {thread.unreadCountAdmin > 0 && (
-                            <span className="w-5 h-5 rounded-full bg-emerald-500 text-black text-[10px] font-black flex items-center justify-center flex-shrink-0">
-                              {thread.unreadCountAdmin}
+                          {thread.unreadCount > 0 && (
+                            <span className="w-4 h-4 rounded-full bg-adminCyan text-white text-[10px] font-bold flex items-center justify-center shrink-0">
+                              {thread.unreadCount}
                             </span>
                           )}
-                        </div>
+                        </button>
                       );
                     })
                   )}
                 </div>
               </div>
 
-              {/* Center Active Message View */}
-              {selectedThreadId && activeThread ? (
-                <div className="flex-1 flex flex-col justify-between overflow-hidden bg-white">
-                  
-                  {/* Chat Header */}
-                  <div className="h-16 px-6 border-b border-slate-200/80 flex items-center justify-between bg-white shadow-sm">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center font-bold text-xs text-slate-700">
-                        {activeThread.userName.charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <h3 className="text-xs font-bold text-slate-900">{activeThread.userName}</h3>
-                        <span className="text-[11px] text-emerald-600 font-medium">● User connected via Mobile App</span>
+              {/* Right Active Chat Pane */}
+              <div className="flex-1 flex flex-col bg-white">
+                {selectedThreadId ? (
+                  <>
+                    {/* Active Chat Header */}
+                    <div className="h-14 px-6 border-b border-slate-200 flex items-center justify-between bg-white">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs">
+                          {threads.find(t => t.uid === selectedThreadId)?.userName.slice(0, 2).toUpperCase()}
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-slate-900 text-xs">
+                            {threads.find(t => t.uid === selectedThreadId)?.userName}
+                          </h4>
+                          <span className="text-[10px] text-emerald-600 font-semibold flex items-center">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1" /> Connected in Realtime
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Messages Bubble Scroll Area */}
-                  <div className="flex-1 overflow-y-auto p-6 space-y-3 bg-[#F8FAFC]">
-                    {messages.length === 0 ? (
-                      <div className="text-center text-slate-400 text-xs py-12">
-                        No messages in this conversation yet. Send an instant reply below!
-                      </div>
-                    ) : (
-                      messages.map((msg) => {
-                        const isAdmin = msg.senderRole === 'admin' || msg.senderId === 'admin';
-                        const timeStr = new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
+                    {/* Chat Messages Body */}
+                    <div className="flex-1 p-6 overflow-y-auto space-y-3 bg-slate-50/30">
+                      {messages.map((m) => {
+                        const isAdmin = m.senderRole === 'admin' || m.senderId === 'admin';
                         return (
-                          <div
-                            key={msg.id}
+                          <div 
+                            key={m.id} 
                             className={`flex flex-col ${isAdmin ? 'items-end' : 'items-start'}`}
                           >
-                            <span className="text-[10px] text-slate-400 px-1 mb-0.5">
-                              {isAdmin ? 'FreeWatch Support' : activeThread.userName} • {timeStr}
-                            </span>
-                            <div
-                              className={`max-w-md px-4 py-2.5 rounded-2xl text-xs leading-relaxed shadow-sm ${
-                                isAdmin
-                                  ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-medium rounded-tr-none'
-                                  : 'bg-white border border-slate-200 text-slate-800 rounded-tl-none'
-                              }`}
-                            >
-                              {msg.text}
+                            <div className={`max-w-md px-4 py-2.5 rounded-2xl text-xs font-medium leading-relaxed ${
+                              isAdmin 
+                                ? 'bg-adminCyan text-white rounded-tr-xs shadow-xs' 
+                                : 'bg-white border border-slate-200 text-slate-800 rounded-tl-xs shadow-xs'
+                            }`}>
+                              {m.text}
                             </div>
+                            <span className="text-[10px] text-slate-400 mt-1 px-1">
+                              {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
                           </div>
                         );
-                      })
-                    )}
-                    <div ref={messagesEndRef} />
-                  </div>
+                      })}
+                      <div ref={messagesEndRef} />
+                    </div>
 
-                  {/* Quick Reply Bar */}
-                  <div className="px-6 py-2 border-t border-slate-100 bg-white flex items-center space-x-2 overflow-x-auto text-xs">
-                    <span className="text-[11px] font-bold text-slate-400 flex-shrink-0">Quick reply:</span>
-                    {[
-                      "Hello! 👋 How can we help you today?",
-                      "Thanks for reporting! We are adding this movie now.",
-                      "The Luganda translation is being updated right now.",
-                      "Enjoy watching in Full HD on FreeWatch!"
-                    ].map((preset, idx) => (
+                    {/* Chat Input */}
+                    <form onSubmit={handleSendMessage} className="p-3 border-t border-slate-200 bg-white flex space-x-2">
+                      <input 
+                        type="text"
+                        placeholder="Type response to user..."
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        className="flex-1 px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:border-adminCyan"
+                      />
                       <button
-                        key={idx}
-                        onClick={() => setNewMessage(preset)}
-                        className="whitespace-nowrap bg-slate-50 hover:bg-slate-100 text-slate-600 px-3 py-1 rounded-full border border-slate-200 text-[11px] transition-colors"
+                        type="submit"
+                        className="px-4 py-2 bg-adminCyan hover:bg-cyan-600 text-white rounded-xl text-xs font-bold transition-colors flex items-center"
                       >
-                        {preset}
+                        <Send size={14} className="mr-1.5" /> Send
                       </button>
-                    ))}
+                    </form>
+                  </>
+                ) : (
+                  <div className="flex-1 flex items-center justify-center text-slate-400 text-xs">
+                    Select a conversation from the left to begin live support.
                   </div>
-
-                  {/* Input Form */}
-                  <form onSubmit={handleSendMessage} className="p-4 border-t border-slate-200/80 bg-white flex items-center space-x-3">
-                    <input
-                      type="text"
-                      placeholder="Type a message to this user's mobile screen..."
-                      value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:bg-white"
-                    />
-                    <button
-                      type="submit"
-                      disabled={!newMessage.trim()}
-                      className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white px-5 py-2.5 rounded-xl text-xs font-bold flex items-center space-x-1.5 shadow-sm transition-all"
-                    >
-                      <span>Reply</span>
-                      <Send className="w-3.5 h-3.5" />
-                    </button>
-                  </form>
-                </div>
-              ) : (
-                <div className="flex-1 flex flex-col items-center justify-center text-slate-400 p-8">
-                  <MessageSquare className="w-12 h-12 stroke-1 mb-2 text-slate-300" />
-                  <p className="text-sm font-semibold">Select a user conversation from the left to start live chatting.</p>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           )}
 
-          {/* ══════════════════════════════════════════════════════════════
-              VIEW 5: PUSH NOTIFICATION DISPATCHER (LIGHT THEME)
-          ══════════════════════════════════════════════════════════════ */}
+          {/* ═════════════════════════════════════════════════════════════════════ */}
+          {/* TAB 5: FCM PUSH NOTIFICATION DISPATCHER (CLEAN & SIMPLE)            */}
+          {/* ═════════════════════════════════════════════════════════════════════ */}
           {activeTab === 'notifications' && (
-            <div className="p-6 md:p-8 max-w-5xl mx-auto space-y-6">
-              <div>
-                <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-                  FCM Cloud Push Notification Dispatcher
-                </h1>
-                <p className="text-xs text-slate-500 mt-1">
-                  Broadcast real-time push alerts to all installed FreeWatch mobile devices with custom titles and posters.
-                </p>
-              </div>
+            <div className="space-y-6 max-w-5xl mx-auto">
+              <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                {/* Simplified Push Form (3 Columns) */}
+                <div className="lg:col-span-3 bg-white rounded-2xl p-6 border border-slate-200 shadow-xs">
+                  <div className="mb-5">
+                    <h3 className="text-base font-bold text-slate-900">Broadcast High-Priority Push Alert</h3>
+                    <p className="text-xs text-slate-400">Instantly wakes up user devices even when the FreeWatch app is closed</p>
+                  </div>
 
-              {notifSuccess && (
-                <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-xl flex items-center space-x-2 text-xs font-semibold">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                  <span>{notifSuccess}</span>
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                
-                {/* Form (2 cols) */}
-                <div className="md:col-span-2 bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm space-y-4">
-                  <form onSubmit={handleSendPushNotification} className="space-y-4">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                        Target Audience Topic
-                      </label>
-                      <div className="grid grid-cols-3 gap-3">
-                        {[
-                          { id: 'all_users', label: 'All Users (all_users)', icon: Users },
-                          { id: 'new_releases', label: 'New Releases', icon: Flame },
-                          { id: 'test_devices', label: 'Test Devices', icon: Smartphone }
-                        ].map((t) => {
-                          const Icon = t.icon;
-                          const isSel = notifTarget === t.id;
-                          return (
-                            <button
-                              type="button"
-                              key={t.id}
-                              onClick={() => setNotifTarget(t.id)}
-                              className={`p-3 rounded-xl border text-left flex flex-col space-y-1 transition-all ${
-                                isSel
-                                  ? 'bg-emerald-50 border-emerald-500 text-emerald-900 font-bold'
-                                  : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                              }`}
-                            >
-                              <Icon className={`w-4 h-4 ${isSel ? 'text-emerald-600' : 'text-slate-400'}`} />
-                              <span className="text-xs">{t.label}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
+                  {notifSuccess && (
+                    <div className="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold flex items-center">
+                      <CheckCircle2 size={16} className="mr-2 text-emerald-600" /> {notifSuccess}
                     </div>
+                  )}
 
+                  <form onSubmit={handleSendNotification} className="space-y-4">
+                    {/* 1. Notification Title (Optional) */}
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                        Notification Title
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Notification Title <span className="text-slate-400 font-normal">(Optional)</span>
                       </label>
-                      <input
+                      <input 
                         type="text"
+                        placeholder="e.g. 🔥 New Luganda Release"
                         value={notifTitle}
                         onChange={(e) => setNotifTitle(e.target.value)}
-                        placeholder="e.g. 🎬 Deadpool & Wolverine (VJ Junior)"
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-emerald-500 focus:bg-white"
-                        required
+                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-adminCyan"
                       />
                     </div>
 
+                    {/* 2. Notification Message (Required) */}
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                        Notification Body / Synopsis
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Notification Message / Body <span className="text-red-500">*</span>
                       </label>
-                      <textarea
+                      <textarea 
                         rows={3}
+                        placeholder="Enter alert text shown on users' phones..."
                         value={notifBody}
                         onChange={(e) => setNotifBody(e.target.value)}
-                        placeholder="Luganda translated release is now live! Tap to stream in Full HD."
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-emerald-500 focus:bg-white"
+                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-adminCyan resize-none"
                         required
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                          Poster / Backdrop URL (Optional)
-                        </label>
-                        <input
+                    {/* 3. Image URL (Optional) */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Image URL <span className="text-slate-400 font-normal">(Optional Poster or Backdrop)</span>
+                      </label>
+                      <div className="relative">
+                        <ImageIcon size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <input 
                           type="url"
+                          placeholder="https://... (banner or poster image)"
                           value={notifImageUrl}
                           onChange={(e) => setNotifImageUrl(e.target.value)}
-                          placeholder="https://image.tmdb.org/t/p/w780/..."
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-emerald-500 focus:bg-white"
+                          className="w-full pl-9 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-adminCyan"
                         />
                       </div>
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                          Movie ID (Optional)
-                        </label>
-                        <input
+                    </div>
+
+                    {/* 4. Action Link / Deep Link (Optional - Hidden from raw text) */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Action Link / Deep Link <span className="text-slate-400 font-normal">(Optional URL or Movie ID)</span>
+                      </label>
+                      <div className="relative">
+                        <Link size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <input 
                           type="text"
-                          value={notifMovieId}
-                          onChange={(e) => setNotifMovieId(e.target.value)}
-                          placeholder="e.g. 533535"
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-emerald-500 focus:bg-white"
+                          placeholder="e.g. 67078 or https://..."
+                          value={notifLink}
+                          onChange={(e) => setNotifLink(e.target.value)}
+                          className="w-full pl-9 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-adminCyan"
                         />
                       </div>
+                      <p className="text-[11px] text-slate-400 mt-1">
+                        * Tapping the notification on mobile will open this link/movie. The raw link will <strong>not</strong> be displayed as ugly text to users.
+                      </p>
                     </div>
 
                     <button
                       type="submit"
                       disabled={isSendingNotif}
-                      className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold py-3 rounded-xl text-xs flex items-center justify-center space-x-2 shadow-sm transition-all"
+                      className="w-full py-3 bg-gradient-to-r from-adminCyan to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white font-bold text-xs rounded-xl transition-all shadow-md shadow-cyan-500/20 flex items-center justify-center space-x-2"
                     >
-                      <Send className="w-4 h-4" />
-                      <span>Dispatch Push Notification to All Phones</span>
+                      {isSendingNotif ? (
+                        <>
+                          <RefreshCw size={15} className="animate-spin" />
+                          <span>Broadcasting FCM Push to Devices...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Radio size={16} />
+                          <span>Dispatch Alert to All Users</span>
+                        </>
+                      )}
                     </button>
                   </form>
                 </div>
 
-                {/* Mobile Preview (1 col) */}
-                <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm flex flex-col items-center">
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">
-                    Phone Status Bar Preview
+                {/* Mobile Phone Lock Screen Preview (2 Columns) */}
+                <div className="lg:col-span-2 bg-slate-900 rounded-2xl p-5 text-white flex flex-col items-center justify-center shadow-lg relative overflow-hidden">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-4 block">
+                    Mobile Phone Status Bar Preview
                   </span>
 
-                  {/* Mock Device Notification Card */}
-                  <div className="w-full bg-slate-900 rounded-2xl p-4 text-white shadow-lg space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-5 h-5 rounded-md bg-[#00E676] flex items-center justify-center font-black text-[9px] text-black">
-                        FW
+                  <div className="w-full max-w-xs bg-slate-800/90 rounded-2xl p-4 border border-slate-700 shadow-xl space-y-2">
+                    <div className="flex items-center justify-between text-[11px] text-slate-400">
+                      <div className="flex items-center space-x-1.5">
+                        <div className="w-4 h-4 rounded bg-emerald-500 text-white font-black text-[9px] flex items-center justify-center">FW</div>
+                        <span className="font-bold text-slate-200">FreeWatch</span>
                       </div>
-                      <span className="text-xs font-bold text-slate-200">FreeWatch</span>
-                      <span className="text-[10px] text-slate-400">• now</span>
+                      <span>Just now</span>
                     </div>
 
-                    <h4 className="text-xs font-bold text-white">{notifTitle}</h4>
-                    <p className="text-[11px] text-slate-300 line-clamp-2">{notifBody}</p>
+                    <div>
+                      <h4 className="font-bold text-white text-xs">
+                        {notifTitle || '🔥 FreeWatch Alert'}
+                      </h4>
+                      <p className="text-[11px] text-slate-300 mt-0.5 leading-relaxed">
+                        {notifBody || 'Watch newly uploaded Luganda dubbed movies on FreeWatch!'}
+                      </p>
+                    </div>
 
                     {notifImageUrl && (
-                      <img
-                        src={notifImageUrl}
-                        alt="Preview"
-                        className="w-full h-24 object-cover rounded-xl mt-2 border border-white/10"
-                        onError={(e) => { e.target.style.display = 'none'; }}
-                      />
+                      <div className="mt-2 rounded-lg overflow-hidden border border-slate-700 max-h-32 bg-black">
+                        <img src={notifImageUrl} alt="Preview" className="w-full h-full object-cover" />
+                      </div>
                     )}
                   </div>
 
-                  <p className="text-[11px] text-slate-400 mt-4 text-center">
-                    Surfaces in phone tray with transparent FW logo even when app is closed.
+                  <p className="text-[11px] text-slate-400 text-center mt-4 px-4">
+                    Delivers with sound, wake lock, and the official FW transparent initials icon.
                   </p>
                 </div>
               </div>
 
-              {/* History Table */}
-              <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm space-y-3">
-                <h3 className="text-sm font-bold text-slate-900">Broadcast History</h3>
-                <div className="divide-y divide-slate-100 text-xs">
-                  {dispatchedNotifs.slice(0, 5).map((n) => (
-                    <div key={n.id} className="py-2.5 flex items-center justify-between">
-                      <div>
-                        <span className="font-bold text-slate-800 block">{n.title}</span>
-                        <span className="text-[11px] text-slate-400">{n.body}</span>
+              {/* Push Dispatch History */}
+              <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs">
+                <h3 className="text-base font-bold text-slate-900 mb-4">Dispatched Alerts History</h3>
+                <div className="divide-y divide-slate-100">
+                  {dispatchedNotifs.slice(0, 8).map((d) => (
+                    <div key={d.id} className="py-3 flex items-start justify-between">
+                      <div className="space-y-0.5">
+                        <h4 className="font-bold text-slate-900 text-xs">{d.title}</h4>
+                        <p className="text-xs text-slate-600">{d.body}</p>
+                        <span className="text-[10px] text-slate-400 block">
+                          Dispatched by {d.dispatchedBy || 'System'} • {new Date(d.timestamp).toLocaleString()}
+                        </span>
                       </div>
-                      <span className="text-[11px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-mono">
-                        {new Date(n.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        Delivered
                       </span>
                     </div>
                   ))}
@@ -1826,314 +1570,291 @@ export default function App() {
             </div>
           )}
 
-          {/* ══════════════════════════════════════════════════════════════
-              VIEW 6: MUNOWATCH MANAGER
-          ══════════════════════════════════════════════════════════════ */}
+          {/* ═════════════════════════════════════════════════════════════════════ */}
+          {/* TAB 6: MUNOWATCH MANAGER                                           */}
+          {/* ═════════════════════════════════════════════════════════════════════ */}
           {activeTab === 'munowatch' && (
-            <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-6 max-w-7xl mx-auto">
+              <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
                 <div>
-                  <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-                    MunoWatch Synchronization Manager
-                  </h1>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Control 24/7 background scraper polling, monitor newly discovered movie streams, and spotlight titles.
+                  <h3 className="text-base font-bold text-slate-900">MunoWatch Background Poller & Sync Center</h3>
+                  <p className="text-xs text-slate-400">
+                    Monitors <strong>https://munowatch.ai.studio/</strong> 24/7 and auto-broadcasts newly published Luganda releases
                   </p>
                 </div>
-                <button
-                  onClick={handleSyncMunowatch}
-                  disabled={isSyncingMunowatch}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center space-x-2 shadow-sm transition-all"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${isSyncingMunowatch ? 'animate-spin' : ''}`} />
-                  <span>{isSyncingMunowatch ? 'Syncing...' : 'Sync MunoWatch Now'}</span>
-                </button>
-              </div>
-
-              {/* Status Banner */}
-              <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600">
-                    <Radio className="w-5 h-5 animate-pulse" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-900">Background Poller Status: Active (15 min interval)</h3>
-                    <p className="text-xs text-slate-500">{munowatchSyncStatus}</p>
-                  </div>
+                  <button
+                    onClick={handleTriggerMunowatchSync}
+                    disabled={isSyncingMunowatch}
+                    className="inline-flex items-center px-4 py-2 bg-adminCyan hover:bg-cyan-600 text-white rounded-xl text-xs font-bold transition-all shadow-sm shadow-cyan-500/20"
+                  >
+                    <RefreshCw size={14} className={`mr-1.5 ${isSyncingMunowatch ? 'animate-spin' : ''}`} />
+                    {isSyncingMunowatch ? 'Syncing Catalog...' : 'Trigger Sync Now'}
+                  </button>
                 </div>
-                <span className="text-xs font-bold bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full">
-                  100% Operational
-                </span>
               </div>
 
-              {/* Discovered Releases Grid */}
-              <div className="space-y-4">
-                <h3 className="text-base font-bold text-slate-900">Recently Discovered Releases on MunoWatch</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-                  {munowatchMovies.map((m) => (
-                    <div key={m.id} className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-sm card-shadow-hover">
-                      <img src={m.poster} alt={m.title} className="w-full h-44 object-cover" />
-                      <div className="p-3 space-y-1">
-                        <span className="text-[10px] font-bold text-emerald-600 block">{m.vj}</span>
-                        <h4 className="text-xs font-bold text-slate-900 truncate">{m.title}</h4>
-                        <span className="text-[10px] text-slate-400 block">{m.category}</span>
+              {/* Status Tiles */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs">
+                  <span className="text-xs font-bold uppercase text-slate-400 block mb-1">Tracked Releases</span>
+                  <h3 className="text-2xl font-black text-slate-900">{munowatchSyncMeta.count || munowatchCatalog.length}</h3>
+                  <span className="text-xs text-emerald-600 font-semibold">Indexed in persistent cloud registry</span>
+                </div>
+                <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs">
+                  <span className="text-xs font-bold uppercase text-slate-400 block mb-1">Poller Interval</span>
+                  <h3 className="text-2xl font-black text-slate-900">Every 15 mins</h3>
+                  <span className="text-xs text-slate-500 font-semibold">Automated macOS daemon + GitHub Actions</span>
+                </div>
+                <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs">
+                  <span className="text-xs font-bold uppercase text-slate-400 block mb-1">Catalog Live Cache</span>
+                  <h3 className="text-2xl font-black text-slate-900">{munowatchCatalog.length} Titles</h3>
+                  <span className="text-xs text-cyan-600 font-semibold">Ready for instant mobile streaming</span>
+                </div>
+              </div>
+
+              {/* Discovered Releases Gallery */}
+              <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs">
+                <h3 className="text-base font-bold text-slate-900 mb-4">Latest Discovered Releases</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                  {munowatchCatalog.slice(0, 18).map(m => {
+                    const id = m.id || m.vid;
+                    const title = m.title || m.video_title || 'Untitled';
+                    const vj = m.vj || m.vjname || m.vjName || 'Vj Universal';
+                    const img = m.image || m.thumbnail || m.poster;
+                    return (
+                      <div key={id} className="group rounded-xl border border-slate-100 overflow-hidden bg-slate-50 hover:border-slate-300 transition-all">
+                        <div className="aspect-[2/3] bg-slate-200 overflow-hidden relative">
+                          {img ? (
+                            <img src={img} alt={title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-slate-400">
+                              <Film size={24} />
+                            </div>
+                          )}
+                          <span className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 bg-black/70 text-white rounded text-[9px] font-bold backdrop-blur-xs">
+                            {vj}
+                          </span>
+                        </div>
+                        <div className="p-2">
+                          <h5 className="font-bold text-slate-900 text-xs truncate" title={title}>{title}</h5>
+                          <span className="text-[10px] text-slate-400 block font-mono">ID: {id}</span>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>
           )}
 
-          {/* ══════════════════════════════════════════════════════════════
-              VIEW 7: AUDIT LOGS & EXPORTABLE DOCUMENT
-          ══════════════════════════════════════════════════════════════ */}
+          {/* ═════════════════════════════════════════════════════════════════════ */}
+          {/* TAB 7: AUDIT LOGS & EXPORT (100% REAL FIREBASE AUDIT TRAIL)         */}
+          {/* ═════════════════════════════════════════════════════════════════════ */}
           {activeTab === 'audit' && (
-            <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-6 max-w-7xl mx-auto">
+              <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
                 <div>
-                  <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-                    Admin Action Audit & Analytics Document
-                  </h1>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Traceability logs of all administrative changes: user bans, deletions, role updates, and push broadcasts.
+                  <h3 className="text-base font-bold text-slate-900">System Audit Trail & Export Center</h3>
+                  <p className="text-xs text-slate-400">
+                    Real-time immutable log of administrative actions, user changes, and system broadcasts
                   </p>
                 </div>
                 <button
-                  onClick={() => handleExportCSV('audit')}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center space-x-2 shadow-sm transition-all"
+                  onClick={handleExportAuditCSV}
+                  className="inline-flex items-center px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all shadow-xs"
                 >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Download Audit Document (CSV)</span>
+                  <Download size={15} className="mr-1.5" /> Export Analytics Document (CSV)
                 </button>
               </div>
 
-              {/* Logs Table */}
-              <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+              {/* Audit Table */}
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead>
-                      <tr className="bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
-                        <th className="py-3 px-4">Timestamp</th>
-                        <th className="py-3 px-4">Action</th>
-                        <th className="py-3 px-4">Target Entity</th>
-                        <th className="py-3 px-4">Administrator</th>
-                        <th className="py-3 px-4">Type</th>
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
+                      <tr>
+                        <th className="py-3.5 px-4">Timestamp</th>
+                        <th className="py-3.5 px-4">Action</th>
+                        <th className="py-3.5 px-4">Category</th>
+                        <th className="py-3.5 px-4">Target</th>
+                        <th className="py-3.5 px-4">Actor</th>
+                        <th className="py-3.5 px-4">Details</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {auditLogs.map((log) => (
-                        <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
-                          <td className="py-3 px-4 font-mono text-[11px] text-slate-500">{log.timestamp}</td>
-                          <td className="py-3 px-4 font-bold text-slate-900">{log.action}</td>
-                          <td className="py-3 px-4 text-slate-600 font-medium">{log.target}</td>
-                          <td className="py-3 px-4 font-semibold text-emerald-700">{log.admin}</td>
-                          <td className="py-3 px-4">
-                            <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase">
-                              {log.type}
-                            </span>
+                    <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                      {auditLogs.length === 0 ? (
+                        <tr>
+                          <td colSpan="6" className="py-12 text-center text-slate-400">
+                            No audit events logged yet.
                           </td>
                         </tr>
-                      ))}
+                      ) : (
+                        auditLogs.map((log) => (
+                          <tr key={log.id} className="hover:bg-slate-50/80 transition-colors">
+                            <td className="py-3 px-4 text-slate-400 text-[11px] whitespace-nowrap">
+                              {new Date(log.timestamp).toLocaleString()}
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className="font-bold text-slate-900">{log.action}</span>
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                                {log.category || 'General'}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4 font-semibold text-slate-800">{log.target}</td>
+                            <td className="py-3 px-4 text-slate-600">{log.actor}</td>
+                            <td className="py-3 px-4 text-slate-500 max-w-sm truncate">{log.details}</td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
               </div>
             </div>
           )}
-
         </main>
       </div>
 
-      {/* ── MODALS & DIALOGS ────────────────────────────────────────── */}
-
-      {/* 1. User Detail Modal */}
-      {selectedUserDetail && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-5 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              <div className="flex items-center space-x-3">
-                <img
-                  src={selectedUserDetail.avatar}
-                  alt={selectedUserDetail.name}
-                  className="w-12 h-12 rounded-full border border-slate-200 object-cover"
-                />
-                <div>
-                  <h3 className="text-base font-extrabold text-slate-900">{selectedUserDetail.name}</h3>
-                  <span className="text-xs text-slate-400">{selectedUserDetail.email}</span>
-                </div>
-              </div>
-              <button
-                onClick={() => setSelectedUserDetail(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 text-xs">
-              <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                <span className="text-slate-400 block text-[11px]">User UID</span>
-                <span className="font-mono text-slate-800 font-bold break-all">{selectedUserDetail.id}</span>
-              </div>
-              <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                <span className="text-slate-400 block text-[11px]">Account Status</span>
-                <span className="font-bold text-slate-800">{selectedUserDetail.status}</span>
-              </div>
-              <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                <span className="text-slate-400 block text-[11px]">Registered Device</span>
-                <span className="font-bold text-slate-800">{selectedUserDetail.device}</span>
-              </div>
-              <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                <span className="text-slate-400 block text-[11px]">Total Watched</span>
-                <span className="font-bold text-slate-800">{selectedUserDetail.totalWatched} Movies</span>
-              </div>
-            </div>
-
-            <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-100 text-xs">
-              <span className="text-slate-400 block text-[11px]">Last Active Stream</span>
-              <span className="font-bold text-emerald-700">{selectedUserDetail.lastWatchedMovie}</span>
-            </div>
-
-            <div className="flex items-center justify-between pt-2">
-              <div className="flex space-x-2">
-                <button
-                  onClick={() => handleChangeUserRole(selectedUserDetail.id, selectedUserDetail.role === 'VIP' ? 'Member' : 'VIP')}
-                  className="bg-amber-50 hover:bg-amber-100 text-amber-700 px-3 py-1.5 rounded-xl text-xs font-bold transition-colors"
+      {/* ── Modal: Change User Role ── */}
+      {roleChangeModalUser && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl border border-slate-200 space-y-4">
+            <h3 className="font-bold text-slate-900 text-base">Change User Role</h3>
+            <p className="text-xs text-slate-500">
+              Update platform access privileges for <strong>{roleChangeModalUser.name}</strong> ({roleChangeModalUser.email}).
+            </p>
+            <div className="space-y-2">
+              {['Admin', 'VIP', 'Member', 'Guest'].map((r) => (
+                <label 
+                  key={r}
+                  className={`flex items-center justify-between p-3 rounded-xl border text-xs font-semibold cursor-pointer transition-all ${
+                    newRoleSelection === r ? 'border-adminCyan bg-cyan-50/50 text-adminCyan' : 'border-slate-200 text-slate-700 hover:bg-slate-50'
+                  }`}
                 >
-                  {selectedUserDetail.role === 'VIP' ? 'Demote to Member' : 'Promote to VIP'}
-                </button>
-                <button
-                  onClick={() => handleToggleUserBan(selectedUserDetail.id)}
-                  className="bg-rose-50 hover:bg-rose-100 text-rose-700 px-3 py-1.5 rounded-xl text-xs font-bold transition-colors"
-                >
-                  {selectedUserDetail.status === 'Banned' ? 'Unban User' : 'Ban User'}
-                </button>
-              </div>
+                  <span>{r}</span>
+                  <input 
+                    type="radio" 
+                    name="roleSelection"
+                    checked={newRoleSelection === r}
+                    onChange={() => setNewRoleSelection(r)}
+                    className="accent-adminCyan"
+                  />
+                </label>
+              ))}
+            </div>
+            <div className="flex space-x-2 pt-2">
               <button
-                onClick={() => setSelectedUserDetail(null)}
-                className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-1.5 rounded-xl text-xs font-bold"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 2. Confirm Delete Modal */}
-      {confirmDeleteUser && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 space-y-4">
-            <div className="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto">
-              <AlertCircle className="w-6 h-6" />
-            </div>
-            <div className="text-center">
-              <h3 className="text-base font-extrabold text-slate-900">Delete User Account?</h3>
-              <p className="text-xs text-slate-500 mt-1">
-                Are you sure you want to permanently remove <b>{confirmDeleteUser.name}</b>? This action cannot be undone.
-              </p>
-            </div>
-            <div className="flex space-x-3 pt-2">
-              <button
-                onClick={() => setConfirmDeleteUser(null)}
-                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 rounded-xl text-xs font-bold"
+                onClick={() => setRoleChangeModalUser(null)}
+                className="flex-1 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
               >
                 Cancel
               </button>
               <button
-                onClick={() => handleDeleteUser(confirmDeleteUser.id)}
-                className="flex-1 bg-rose-600 hover:bg-rose-700 text-white py-2 rounded-xl text-xs font-bold shadow-sm"
+                onClick={handleChangeUserRole}
+                className="flex-1 py-2 rounded-xl bg-adminCyan hover:bg-cyan-600 text-white text-xs font-bold transition-colors"
               >
-                Yes, Delete
+                Apply Role
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* 3. Add User Modal */}
-      {showAddUserModal && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-base font-extrabold text-slate-900">Add New User</h3>
-              <button onClick={() => setShowAddUserModal(false)} className="text-slate-400 hover:text-slate-600">
-                <X className="w-5 h-5" />
+      {/* ── Modal: Confirm Delete User ── */}
+      {confirmDeleteUser && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl border border-slate-200 space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center">
+              <AlertCircle size={24} />
+            </div>
+            <h3 className="font-bold text-slate-900 text-base">Delete User Account?</h3>
+            <p className="text-xs text-slate-500">
+              Are you sure you want to permanently delete <strong>{confirmDeleteUser.name}</strong> ({confirmDeleteUser.email}) from Firebase Realtime Database? This action is logged to the system audit trail.
+            </p>
+            <div className="flex space-x-2 pt-2">
+              <button
+                onClick={() => setConfirmDeleteUser(null)}
+                className="flex-1 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDeleteUser(confirmDeleteUser)}
+                className="flex-1 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold transition-colors"
+              >
+                Delete User
               </button>
             </div>
+          </div>
+        </div>
+      )}
 
+      {/* ── Modal: Add New User ── */}
+      {showAddUserModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200 space-y-4">
+            <h3 className="font-bold text-slate-900 text-base">Register New Member</h3>
             <form onSubmit={handleCreateUser} className="space-y-3.5 text-xs">
               <div>
-                <label className="block font-bold text-slate-700 mb-1">User Full Name</label>
-                <input
+                <label className="block font-bold text-slate-700 mb-1">Full Name</label>
+                <input 
                   type="text"
-                  required
-                  placeholder="e.g. Mukasa Ivan"
+                  placeholder="e.g. Ronald Pick"
                   value={newUserData.name}
                   onChange={(e) => setNewUserData({ ...newUserData, name: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-slate-800 focus:outline-none focus:border-emerald-500 focus:bg-white"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-800 focus:outline-none focus:border-adminCyan"
+                  required
                 />
               </div>
 
               <div>
                 <label className="block font-bold text-slate-700 mb-1">Email Address</label>
-                <input
+                <input 
                   type="email"
-                  placeholder="e.g. ivan.mukasa@gmail.com"
+                  placeholder="user@example.com"
                   value={newUserData.email}
                   onChange={(e) => setNewUserData({ ...newUserData, email: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-slate-800 focus:outline-none focus:border-emerald-500 focus:bg-white"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-800 focus:outline-none focus:border-adminCyan"
+                  required
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Role</label>
-                  <select
-                    value={newUserData.role}
-                    onChange={(e) => setNewUserData({ ...newUserData, role: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:border-emerald-500"
-                  >
-                    <option value="Member">Member</option>
-                    <option value="VIP">VIP</option>
-                    <option value="Admin">Admin</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Device Platform</label>
-                  <select
-                    value={newUserData.device}
-                    onChange={(e) => setNewUserData({ ...newUserData, device: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:border-emerald-500"
-                  >
-                    <option value="Android 14">Android 14</option>
-                    <option value="Android 13">Android 13</option>
-                    <option value="Android 12">Android 12</option>
-                  </select>
-                </div>
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Initial Role</label>
+                <select
+                  value={newUserData.role}
+                  onChange={(e) => setNewUserData({ ...newUserData, role: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-800 focus:outline-none focus:border-adminCyan"
+                >
+                  <option value="Member">Member</option>
+                  <option value="VIP">VIP</option>
+                  <option value="Admin">Admin</option>
+                  <option value="Guest">Guest</option>
+                </select>
               </div>
 
-              <div className="pt-3 flex space-x-3">
+              <div className="flex space-x-2 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowAddUserModal(false)}
-                  className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 rounded-xl font-bold"
+                  className="flex-1 py-2 rounded-xl border border-slate-200 font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-xl font-bold shadow-sm"
+                  className="flex-1 py-2 rounded-xl bg-adminCyan hover:bg-cyan-600 text-white font-bold transition-colors"
                 >
-                  Create User
+                  Register User
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
-
     </div>
   );
 }

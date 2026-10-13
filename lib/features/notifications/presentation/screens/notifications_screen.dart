@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../home/providers/home_providers.dart';
 import '../../../home/widgets/floating_nav_bar.dart';
@@ -212,7 +213,7 @@ class NotificationsScreen extends ConsumerWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () {
+        onTap: () async {
           ref.read(notificationsProvider.notifier).markAsRead(item.id);
           if (item.linkedMovie != null) {
             Navigator.of(context).push(
@@ -220,6 +221,16 @@ class NotificationsScreen extends ConsumerWidget {
                 builder: (_) => MovieDetailScreen(movie: item.linkedMovie!),
               ),
             );
+          } else if (item.link != null && item.link!.trim().isNotEmpty) {
+            final link = item.link!.trim();
+            if (link.startsWith('http://') || link.startsWith('https://')) {
+              try {
+                final uri = Uri.parse(link);
+                if (await canLaunchUrl(uri)) {
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                }
+              } catch (_) {}
+            }
           }
         },
         child: Padding(
@@ -296,27 +307,41 @@ class NotificationsScreen extends ConsumerWidget {
 
               const SizedBox(width: 14),
 
-              // 2. Middle Message Text & Timestamp
+              // 2. Middle Message Text & Timestamp (Never display raw links!)
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    if (item.title != null && item.title!.trim().isNotEmpty) ...[
+                      Text(
+                        item.title!.trim(),
+                        style: TextStyle(
+                          color: item.isRead
+                              ? Colors.white.withOpacity(0.85)
+                              : Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                    ],
                     Text(
                       item.message,
                       style: TextStyle(
                         color: item.isRead
-                            ? Colors.white.withOpacity(0.72)
-                            : Colors.white,
-                        fontSize: 14.5,
+                            ? Colors.white.withOpacity(0.68)
+                            : Colors.white.withOpacity(0.92),
+                        fontSize: 14,
                         fontWeight:
-                            item.isRead ? FontWeight.w500 : FontWeight.w600,
+                            item.isRead ? FontWeight.w400 : FontWeight.w500,
                         height: 1.35,
-                        letterSpacing: -0.2,
+                        letterSpacing: -0.1,
                       ),
                     ),
                     if (item.time.isNotEmpty) ...[
-                      const SizedBox(height: 3),
+                      const SizedBox(height: 4),
                       Text(
                         item.time,
                         style: TextStyle(

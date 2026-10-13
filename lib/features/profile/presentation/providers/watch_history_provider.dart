@@ -99,6 +99,18 @@ class WatchHistoryNotifier extends StateNotifier<List<Movie>> {
       ...state.where((m) => m.id != movie.id),
     ];
     _saveHistory();
+
+    // Asynchronously record live stream view event in Firebase RTDB video_stats
+    try {
+      FirebaseDatabase.instance.ref('video_stats/${movie.id}').update({
+        'id': movie.id,
+        'title': movie.title,
+        'vj': movie.vjName ?? 'Universal VJ',
+        'poster_path': movie.posterPath,
+        'views': ServerValue.increment(1),
+        'lastStreamed': ServerValue.timestamp,
+      }).catchError((_) {});
+    } catch (_) {}
   }
 
   void updateProgress(int movieId, double progress, int positionSeconds) {
