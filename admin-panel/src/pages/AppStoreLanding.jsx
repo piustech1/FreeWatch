@@ -1,28 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Share2, ArrowLeft, Star, Download, Check, Sparkles, 
-  Smartphone, ShieldCheck, Film, Tv, Play, HardDrive, 
-  MessageSquare, Sun, Moon, ExternalLink, X, ChevronRight,
-  Layers, Search, Compass, Gamepad2, Award
+  Smartphone, Film, Tv, Play, HardDrive, 
+  MessageSquare, Sun, Moon, ExternalLink, X, ChevronRight
 } from 'lucide-react';
 import { ref, onValue } from 'firebase/database';
 import { rtdb } from '../firebase';
 
 export default function AppStoreLanding() {
-  const [theme, setTheme] = useState('dark'); // 'dark' | 'light'
+  // Default theme is 'light' as requested
+  const [theme, setTheme] = useState('light'); // 'light' | 'dark'
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [downloadState, setDownloadState] = useState('idle'); // 'idle' | 'downloading' | 'completed'
   const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [isNotesExpanded, setIsNotesExpanded] = useState(false);
   const [shareToast, setShareToast] = useState(false);
+  const [activeLightboxImage, setActiveLightboxImage] = useState(null);
 
   // Dynamic Release Config - Mobile Application Features Only
   const [releaseInfo, setReleaseInfo] = useState({
-    version: '1.0.56',
-    buildNumber: 57,
+    version: '1.0.57',
+    buildNumber: 58,
     size: '83.6 MB',
     releaseDate: 'Just now',
-    apkUrl: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.56/FreeWatch_Release_v1.0.56.apk',
+    apkUrl: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.57/FreeWatch-release.apk',
     notes: [
       'Permanent offline movie downloads: downloaded movies now persist safely across all sign-outs, cache resets, and guest sessions.',
       'Instant live support chat alerts: receive prompt lock-screen notifications the moment a FreeWatch support moderator responds, with 1-tap jump to chat.',
@@ -30,6 +31,60 @@ export default function AppStoreLanding() {
       'Faster streaming engine: accelerated movie startup speeds and significantly reduced cellular data usage.'
     ]
   });
+
+  // Real App Screenshots added by user in assets/images/
+  const screenshots = [
+    {
+      url: '/screenshots/photo_2026-10-14_02-13-23.jpg',
+      title: 'Luganda Dubbed Movies',
+      caption: 'Non-stop entertainment translated by VJ Junior, VJ Jingo, VJ Emmie & top VJs'
+    },
+    {
+      url: '/screenshots/photo_2026-10-14_02-15-30.jpg',
+      title: 'Curated Movie Catalog',
+      caption: 'Explore trending translated blockbusters, series, and daily releases'
+    },
+    {
+      url: '/screenshots/photo_2026-10-14_02-15-36.jpg',
+      title: 'Crisp Streaming Quality',
+      caption: 'Full HD playback optimized for low mobile data consumption'
+    },
+    {
+      url: '/screenshots/photo_2026-10-14_02-15-40.jpg',
+      title: 'Detailed Movie Overview',
+      caption: 'Cast details, ratings, storylines, and instant trailers'
+    },
+    {
+      url: '/screenshots/photo_2026-10-14_02-15-44.jpg',
+      title: 'Cinema Video Player',
+      caption: 'Auto-hiding HUD, 10s seek jump, swipe brightness, and landscape controls'
+    },
+    {
+      url: '/screenshots/photo_2026-10-14_02-15-49.jpg',
+      title: 'Permanent Offline Downloads',
+      caption: 'Download movies once, stream anywhere without Internet or active data'
+    },
+    {
+      url: '/screenshots/photo_2026-10-14_02-15-53.jpg',
+      title: 'WhatsApp Styled Live Support',
+      caption: 'Direct line to FreeWatch support team with instant lock-screen notifications'
+    },
+    {
+      url: '/screenshots/photo_2026-10-14_02-15-57.jpg',
+      title: 'Instant Search & Filter',
+      caption: 'Find any movie by title, actor, translator, or genre in milliseconds'
+    },
+    {
+      url: '/screenshots/photo_2026-10-14_02-16-00.jpg',
+      title: 'Personal Watchlist & Favorites',
+      caption: 'Bookmark movies to stream later across your devices'
+    },
+    {
+      url: '/screenshots/photo_2026-10-14_02-16-04.jpg',
+      title: 'Tailored Settings',
+      caption: 'Configure playback quality, download storage, and notifications'
+    }
+  ];
 
   useEffect(() => {
     let unsub = () => {};
@@ -85,11 +140,11 @@ export default function AppStoreLanding() {
     }
 
     setDownloadState('downloading');
-    setDownloadProgress(10);
+    setDownloadProgress(12);
 
     const interval = setInterval(() => {
       setDownloadProgress(prev => {
-        if (prev >= 90) {
+        if (prev >= 92) {
           clearInterval(interval);
           setDownloadState('completed');
           // Trigger actual APK download
@@ -101,9 +156,9 @@ export default function AppStoreLanding() {
           document.body.removeChild(link);
           return 100;
         }
-        return prev + 18;
+        return prev + 16;
       });
-    }, 240);
+    }, 200);
   };
 
   const handleShare = async () => {
@@ -125,50 +180,26 @@ export default function AppStoreLanding() {
   const isDark = theme === 'dark';
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 font-sans ${isDark ? 'bg-black text-white' : 'bg-[#F2F2F7] text-[#1C1C1E]'}`}>
+    <div className={`min-h-screen transition-colors duration-300 font-sans ${isDark ? 'bg-[#000000] text-white' : 'bg-[#F2F2F7] text-[#1C1C1E]'}`}>
       
       {/* Toast Notification */}
       {shareToast && (
         <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 px-5 py-2.5 rounded-full bg-blue-600 text-white text-xs font-semibold shadow-2xl flex items-center space-x-2 animate-bounce">
           <Check className="w-4 h-4" />
-          <span>App Store link copied to clipboard!</span>
+          <span>App link copied to clipboard!</span>
         </div>
       )}
 
       {/* Main Container - Mobile Centered Frame */}
-      <div className="max-w-md mx-auto min-h-screen relative flex flex-col shadow-2xl overflow-hidden border-x border-neutral-800/40">
+      <div className={`max-w-md mx-auto min-h-screen relative flex flex-col shadow-2xl overflow-hidden transition-colors duration-300 ${
+        isDark ? 'bg-black border-x border-neutral-800/60' : 'bg-white border-x border-neutral-200/80 shadow-slate-200/50'
+      }`}>
 
-        {/* ── 1. iOS Status Bar ── */}
-        <div className={`px-6 pt-3 pb-2 flex items-center justify-between text-xs font-semibold select-none ${isDark ? 'text-white' : 'text-black'}`}>
-          <span className="font-bold tracking-tight">9:41</span>
-          
-          {/* Dynamic Island Notch */}
-          <div className="w-28 h-6 bg-black rounded-full mx-auto flex items-center justify-end px-2 space-x-1.5 shadow-inner">
-            <div className="w-2.5 h-2.5 bg-neutral-900 rounded-full border border-neutral-800"></div>
-          </div>
-
-          <div className="flex items-center space-x-1.5">
-            {/* Cellular */}
-            <div className="flex items-end space-x-0.5 h-2.5">
-              <span className="w-0.5 h-1 bg-current rounded-full"></span>
-              <span className="w-0.5 h-1.5 bg-current rounded-full"></span>
-              <span className="w-0.5 h-2 bg-current rounded-full"></span>
-              <span className="w-0.5 h-2.5 bg-current rounded-full"></span>
-            </div>
-            {/* WiFi */}
-            <span className="text-[11px]">5G</span>
-            {/* Battery */}
-            <div className="w-5 h-2.5 border border-current rounded-sm p-0.5 flex items-center">
-              <div className="h-full w-3/4 bg-current rounded-2xs"></div>
-            </div>
-          </div>
-        </div>
-
-        {/* ── 2. Navigation Header Bar ── */}
-        <div className="px-5 py-2 flex items-center justify-between">
+        {/* ── 1. Top Navigation Bar (Clean Native Style, No Fake Status Bar) ── */}
+        <div className="px-5 pt-4 pb-2 flex items-center justify-between">
           <button 
             onClick={() => window.history.back()}
-            className={`p-2 rounded-full transition-colors ${isDark ? 'text-blue-400 hover:bg-neutral-900' : 'text-blue-600 hover:bg-neutral-200'}`}
+            className={`p-2 rounded-full transition-colors ${isDark ? 'text-blue-400 hover:bg-neutral-900' : 'text-blue-600 hover:bg-neutral-100'}`}
             title="Go back"
           >
             <ArrowLeft className="w-5 h-5 stroke-[2.5]" />
@@ -181,7 +212,7 @@ export default function AppStoreLanding() {
               className={`p-2 rounded-full border transition-all ${
                 isDark 
                   ? 'border-neutral-800 bg-neutral-900 text-yellow-400 hover:bg-neutral-800' 
-                  : 'border-neutral-300 bg-white text-neutral-800 hover:bg-neutral-100 shadow-sm'
+                  : 'border-neutral-200 bg-white text-neutral-800 hover:bg-neutral-100 shadow-xs'
               }`}
               title={`Switch to ${isDark ? 'Light' : 'Dark'} mode`}
             >
@@ -191,7 +222,7 @@ export default function AppStoreLanding() {
             {/* Share Button */}
             <button 
               onClick={handleShare}
-              className={`p-2 rounded-full transition-colors ${isDark ? 'text-blue-400 hover:bg-neutral-900' : 'text-blue-600 hover:bg-neutral-200'}`}
+              className={`p-2 rounded-full transition-colors ${isDark ? 'text-blue-400 hover:bg-neutral-900' : 'text-blue-600 hover:bg-neutral-100'}`}
               title="Share FreeWatch"
             >
               <Share2 className="w-5 h-5 stroke-[2.2]" />
@@ -199,14 +230,14 @@ export default function AppStoreLanding() {
           </div>
         </div>
 
-        {/* ── 3. App Product Header (Squircle with Real App Icon, Title, GET / UPDATE Button) ── */}
+        {/* ── 2. App Product Header (Clean Squircle Icon - NO Red Outline) ── */}
         <div className="px-5 pt-3 pb-5 flex items-center space-x-4">
-          {/* Authentic Squircle App Icon using Real App Asset */}
-          <div className="w-24 h-24 rounded-[22px] bg-gradient-to-br from-red-600 via-rose-700 to-black p-0.5 shadow-2xl flex-shrink-0 relative overflow-hidden border border-white/10">
+          {/* Authentic Squircle App Icon - Clean & Borderless */}
+          <div className="w-24 h-24 rounded-[22px] shadow-lg flex-shrink-0 relative overflow-hidden bg-neutral-900 border border-black/5">
             <img 
               src="/app_icon.png" 
               alt="FreeWatch App Icon" 
-              className="w-full h-full object-cover rounded-[20px]"
+              className="w-full h-full object-cover rounded-[22px]"
             />
           </div>
 
@@ -239,7 +270,7 @@ export default function AppStoreLanding() {
 
               <button 
                 onClick={handleShare}
-                className={`p-1.5 rounded-full transition-colors ${isDark ? 'text-blue-400 hover:bg-neutral-800' : 'text-blue-600 hover:bg-neutral-200'}`}
+                className={`p-1.5 rounded-full transition-colors ${isDark ? 'text-blue-400 hover:bg-neutral-800' : 'text-blue-600 hover:bg-neutral-100'}`}
               >
                 <Share2 className="w-4 h-4" />
               </button>
@@ -247,7 +278,7 @@ export default function AppStoreLanding() {
           </div>
         </div>
 
-        {/* ── 4. Stat Row Badges (1.2K RATINGS, AGE 12+, CHART #1) ── */}
+        {/* ── 3. Stat Row Badges (1.2K RATINGS, AGE 12+, CHART #1) ── */}
         <div className={`mx-5 py-3 border-y grid grid-cols-3 text-center divide-x ${
           isDark ? 'border-neutral-800 divide-neutral-800' : 'border-neutral-200 divide-neutral-200'
         }`}>
@@ -259,35 +290,35 @@ export default function AppStoreLanding() {
             <div className="text-xl font-bold tracking-tight mt-0.5">4.9</div>
             <div className="flex items-center justify-center space-x-0.5 text-yellow-400 mt-1">
               {[...Array(5)].map((_, i) => (
-                <Star key={i} className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                <Star key={i} className="w-2.5 h-2.5 fill-yellow-400" />
               ))}
             </div>
           </div>
 
-          {/* Column 2: Age */}
+          {/* Column 2: Age Rating */}
           <div className="px-2">
             <div className={`text-[10px] font-bold tracking-wider uppercase ${isDark ? 'text-neutral-500' : 'text-neutral-400'}`}>
               AGE
             </div>
             <div className="text-xl font-bold tracking-tight mt-0.5">12+</div>
-            <div className={`text-[10px] font-medium mt-1 ${isDark ? 'text-neutral-400' : 'text-neutral-500'}`}>
+            <div className={`text-[10px] mt-1 ${isDark ? 'text-neutral-400' : 'text-neutral-500'}`}>
               Years Old
             </div>
           </div>
 
-          {/* Column 3: Chart */}
+          {/* Column 3: Category Chart */}
           <div className="px-2">
             <div className={`text-[10px] font-bold tracking-wider uppercase ${isDark ? 'text-neutral-500' : 'text-neutral-400'}`}>
               CHART
             </div>
-            <div className="text-xl font-bold tracking-tight mt-0.5 text-blue-500">#1</div>
-            <div className={`text-[10px] font-medium mt-1 truncate ${isDark ? 'text-neutral-400' : 'text-neutral-500'}`}>
+            <div className="text-xl font-bold tracking-tight mt-0.5 text-[#0071E3]">#1</div>
+            <div className={`text-[10px] truncate mt-1 ${isDark ? 'text-neutral-400' : 'text-neutral-500'}`}>
               Luganda Dubbed
             </div>
           </div>
         </div>
 
-        {/* ── 5. What's New Section (Frosted & Collapsible) ── */}
+        {/* ── 4. What's New Section (Frosted & Collapsible) ── */}
         <div className="px-5 py-3">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold tracking-tight">What's New</h2>
@@ -299,11 +330,11 @@ export default function AppStoreLanding() {
             </button>
           </div>
 
-          <div className="flex items-center justify-between text-xs mt-1">
-            <span className={isDark ? 'text-neutral-400 font-medium' : 'text-neutral-500 font-medium'}>
+          <div className="flex items-baseline space-x-2 mt-1">
+            <span className={`text-xs font-semibold ${isDark ? 'text-neutral-400' : 'text-neutral-500'}`}>
               Version {releaseInfo.version}
             </span>
-            <span className={isDark ? 'text-neutral-500' : 'text-neutral-400'}>
+            <span className={`text-[11px] ${isDark ? 'text-neutral-500' : 'text-neutral-400'}`}>
               {releaseInfo.releaseDate}
             </span>
           </div>
@@ -311,10 +342,10 @@ export default function AppStoreLanding() {
           {/* Frosted Glass Container with iOS style ... more */}
           <div className={`mt-3 p-3.5 rounded-2xl border backdrop-blur-xl transition-all duration-300 ${
             isDark 
-              ? 'bg-white/[0.04] border-white/10 shadow-inner' 
-              : 'bg-white/80 border-black/5 shadow-xs'
+              ? 'bg-white/[0.04] border-white/10 shadow-inner text-neutral-300' 
+              : 'bg-neutral-50/90 border-neutral-200/80 shadow-xs text-neutral-800'
           }`}>
-            <ul className={`space-y-2 text-xs leading-relaxed ${isDark ? 'text-neutral-300' : 'text-neutral-700'}`}>
+            <ul className="space-y-2 text-xs leading-relaxed">
               {(isNotesExpanded ? releaseInfo.notes : releaseInfo.notes.slice(0, 2)).map((item, idx) => (
                 <li key={idx} className="flex items-start space-x-2">
                   <span className="text-[#0071E3] font-bold text-sm leading-none mt-0.5">•</span>
@@ -334,99 +365,60 @@ export default function AppStoreLanding() {
           </div>
         </div>
 
-        {/* ── 6. Preview Screenshots Carousel ── */}
-        <div className="py-2">
-          <div className="px-5 mb-2.5">
+        {/* ── 5. Preview Section (App Video & Real Screenshots) ── */}
+        <div className="py-3">
+          <div className="px-5 pb-2.5 flex items-center justify-between">
             <h2 className="text-lg font-bold tracking-tight">Preview</h2>
+            <span className={`text-[11px] font-medium ${isDark ? 'text-neutral-500' : 'text-neutral-400'}`}>
+              Swipe for more
+            </span>
           </div>
 
-          <div className="flex space-x-3 overflow-x-auto px-5 pb-3 scrollbar-none snap-x snap-mandatory">
-            {/* Screen 1: Home Feed */}
-            <div className={`snap-center flex-shrink-0 w-52 h-96 rounded-2xl p-3 flex flex-col justify-between border shadow-lg relative overflow-hidden ${
-              isDark ? 'bg-[#1C1C1E] border-neutral-800' : 'bg-white border-neutral-200'
+          <div className="flex space-x-3.5 overflow-x-auto px-5 pb-3 scrollbar-none snap-x snap-mandatory">
+            {/* App Preview Video Card */}
+            <div className={`snap-center flex-shrink-0 w-64 h-[440px] rounded-2xl overflow-hidden border shadow-lg relative flex flex-col ${
+              isDark ? 'bg-black border-neutral-800' : 'bg-neutral-950 border-neutral-200'
             }`}>
-              <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                <span className="text-xs font-bold text-red-500">FREEWATCH</span>
-                <span className="text-[10px] bg-red-600 text-white px-1.5 py-0.5 rounded font-bold">LIVE</span>
+              <div className="absolute top-3 left-3 z-20 flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-white text-[10px] font-bold">
+                <Film className="w-3 h-3 text-red-500" />
+                <span>App Video Preview</span>
               </div>
-              <div className="flex-1 flex flex-col justify-center items-center text-center px-2">
-                <Tv className="w-12 h-12 text-blue-500 mb-2" />
-                <h4 className="text-xs font-bold">Trending Movies</h4>
-                <p className={`text-[10px] mt-1 ${isDark ? 'text-neutral-400' : 'text-neutral-500'}`}>
-                  VJ Junior • VJ Jingo • VJ Emmie translated blockbusters in HD.
-                </p>
-              </div>
-              <div className="bg-red-500/10 text-red-500 rounded-lg p-2 text-center text-[10px] font-semibold">
-                Daily New Releases
-              </div>
+              <video
+                src="/media/video_2026-10-14_00-44-53.mp4"
+                controls
+                playsInline
+                preload="metadata"
+                poster="/screenshots/photo_2026-10-14_02-13-23.jpg"
+                className="w-full h-full object-cover"
+              />
             </div>
 
-            {/* Screen 2: Landscape Cinema Player */}
-            <div className={`snap-center flex-shrink-0 w-52 h-96 rounded-2xl p-3 flex flex-col justify-between border shadow-lg relative overflow-hidden ${
-              isDark ? 'bg-[#1C1C1E] border-neutral-800' : 'bg-white border-neutral-200'
-            }`}>
-              <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                <span className="text-xs font-bold text-blue-400">Cinematic Player</span>
-                <span className="text-[10px] bg-blue-600 text-white px-1.5 py-0.5 rounded font-bold">1080p</span>
-              </div>
-              <div className="flex-1 flex flex-col justify-center items-center text-center px-2">
-                <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center mb-2">
-                  <Play className="w-6 h-6 text-blue-500 fill-blue-500" />
+            {/* Real App Screenshots */}
+            {screenshots.map((s, idx) => (
+              <div 
+                key={idx}
+                onClick={() => setActiveLightboxImage(s)}
+                className={`snap-center flex-shrink-0 w-60 h-[440px] rounded-2xl overflow-hidden border shadow-md relative group cursor-pointer transition-transform duration-200 hover:scale-[1.01] ${
+                  isDark ? 'bg-neutral-900 border-neutral-800' : 'bg-white border-neutral-200'
+                }`}
+              >
+                <img 
+                  src={s.url}
+                  alt={s.title}
+                  loading="lazy"
+                  className="w-full h-full object-cover object-top"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-3.5 flex flex-col justify-end text-white">
+                  <p className="text-xs font-bold leading-snug">{s.title}</p>
+                  <p className="text-[10px] text-neutral-300 mt-0.5 line-clamp-2">{s.caption}</p>
                 </div>
-                <h4 className="text-xs font-bold">Landscape Gesture Controls</h4>
-                <p className={`text-[10px] mt-1 ${isDark ? 'text-neutral-400' : 'text-neutral-500'}`}>
-                  Auto-disappearing controls, 10s seek jump & volume swipes.
-                </p>
               </div>
-              <div className="bg-blue-500/10 text-blue-400 rounded-lg p-2 text-center text-[10px] font-semibold">
-                OLED Pure Black
-              </div>
-            </div>
-
-            {/* Screen 3: WhatsApp Support */}
-            <div className={`snap-center flex-shrink-0 w-52 h-96 rounded-2xl p-3 flex flex-col justify-between border shadow-lg relative overflow-hidden ${
-              isDark ? 'bg-[#1C1C1E] border-neutral-800' : 'bg-white border-neutral-200'
-            }`}>
-              <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                <span className="text-xs font-bold text-emerald-500">Live Support</span>
-                <span className="text-[10px] bg-emerald-600 text-white px-1.5 py-0.5 rounded font-bold">24/7</span>
-              </div>
-              <div className="flex-1 flex flex-col justify-center items-center text-center px-2">
-                <MessageSquare className="w-12 h-12 text-emerald-500 mb-2" />
-                <h4 className="text-xs font-bold">WhatsApp Styled Chat</h4>
-                <p className={`text-[10px] mt-1 ${isDark ? 'text-neutral-400' : 'text-neutral-500'}`}>
-                  Direct line to admin team with real-time push notifications.
-                </p>
-              </div>
-              <div className="bg-emerald-500/10 text-emerald-500 rounded-lg p-2 text-center text-[10px] font-semibold">
-                Instant Admin Responses
-              </div>
-            </div>
-
-            {/* Screen 4: Offline Downloads */}
-            <div className={`snap-center flex-shrink-0 w-52 h-96 rounded-2xl p-3 flex flex-col justify-between border shadow-lg relative overflow-hidden ${
-              isDark ? 'bg-[#1C1C1E] border-neutral-800' : 'bg-white border-neutral-200'
-            }`}>
-              <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                <span className="text-xs font-bold text-purple-400">Downloads</span>
-                <span className="text-[10px] bg-purple-600 text-white px-1.5 py-0.5 rounded font-bold">Offline</span>
-              </div>
-              <div className="flex-1 flex flex-col justify-center items-center text-center px-2">
-                <HardDrive className="w-12 h-12 text-purple-400 mb-2" />
-                <h4 className="text-xs font-bold">Permanent Device Storage</h4>
-                <p className={`text-[10px] mt-1 ${isDark ? 'text-neutral-400' : 'text-neutral-500'}`}>
-                  Watch anywhere without Wi-Fi. Downloads persist across logouts!
-                </p>
-              </div>
-              <div className="bg-purple-500/10 text-purple-400 rounded-lg p-2 text-center text-[10px] font-semibold">
-                Zero Data Mode
-              </div>
-            </div>
+            ))}
           </div>
         </div>
 
-        {/* ── 7. Information Section ── */}
-        <div className="px-5 py-4 border-t border-neutral-800/40">
+        {/* ── 6. Information Section ── */}
+        <div className={`px-5 py-4 border-t ${isDark ? 'border-neutral-800/60' : 'border-neutral-200/80'}`}>
           <h2 className="text-lg font-bold tracking-tight mb-2.5">Information</h2>
 
           <div className={`divide-y text-xs ${isDark ? 'divide-neutral-800/80 text-neutral-300' : 'divide-neutral-200 text-neutral-700'}`}>
@@ -456,7 +448,7 @@ export default function AppStoreLanding() {
             </div>
             <div className="py-2.5 flex justify-between">
               <span className={isDark ? 'text-neutral-500' : 'text-neutral-400'}>Price</span>
-              <span className="font-semibold text-right text-emerald-500">Free</span>
+              <span className="font-semibold text-right text-emerald-500 font-bold">Free</span>
             </div>
             <div className="py-2.5 flex justify-between">
               <span className={isDark ? 'text-neutral-500' : 'text-neutral-400'}>Copyright</span>
@@ -465,33 +457,76 @@ export default function AppStoreLanding() {
           </div>
         </div>
 
-        {/* ── 8. Bottom App Store Navigation Tab Bar ── */}
-        <div className={`mt-auto border-t py-2 px-6 grid grid-cols-5 text-center select-none ${
-          isDark ? 'bg-black/90 border-neutral-800 text-neutral-400' : 'bg-white/90 border-neutral-200 text-neutral-500'
+        {/* ── 7. Join our TikTok Community Bottom Sticky Dock ── */}
+        <div className={`mt-auto sticky bottom-0 z-40 border-t backdrop-blur-xl px-4 py-3 flex items-center justify-between transition-colors ${
+          isDark 
+            ? 'bg-black/95 border-neutral-800 text-white' 
+            : 'bg-white/95 border-neutral-200/90 text-neutral-900 shadow-[0_-4px_24px_rgba(0,0,0,0.06)]'
         }`}>
-          <div className="flex flex-col items-center cursor-pointer hover:opacity-80">
-            <Compass className="w-5 h-5" />
-            <span className="text-[10px] mt-0.5 font-medium">Today</span>
-          </div>
-          <div className="flex flex-col items-center cursor-pointer hover:opacity-80">
-            <Gamepad2 className="w-5 h-5" />
-            <span className="text-[10px] mt-0.5 font-medium">Games</span>
-          </div>
-          <div className="flex flex-col items-center cursor-pointer text-[#0071E3]">
-            <Layers className="w-5 h-5 stroke-[2.5]" />
-            <span className="text-[10px] mt-0.5 font-bold">Apps</span>
-          </div>
-          <div className="flex flex-col items-center cursor-pointer hover:opacity-80">
-            <Award className="w-5 h-5" />
-            <span className="text-[10px] mt-0.5 font-medium">Arcade</span>
-          </div>
-          <div className="flex flex-col items-center cursor-pointer hover:opacity-80">
-            <Search className="w-5 h-5" />
-            <span className="text-[10px] mt-0.5 font-medium">Search</span>
-          </div>
+          <a 
+            href="https://www.tiktok.com/@freewatchmoviesug?_r=1&_t=ZS-9AV8GRTNGfi"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center space-x-3 flex-1 min-w-0 pr-3 group cursor-pointer"
+          >
+            {/* TikTok Icon Badge with dark styling and gradient pop */}
+            <div className="w-10 h-10 rounded-xl bg-black flex items-center justify-center flex-shrink-0 shadow-md relative overflow-hidden border border-white/10 group-hover:scale-105 transition-transform">
+              <svg className="w-5 h-5 fill-white" viewBox="0 0 24 24">
+                <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64c.298-.002.595.042.88.13V9.4a6.33 6.33 0 0 0-1-.08A6.34 6.34 0 0 0 3 15.66a6.34 6.34 0 0 0 10.82 4.5 6.34 6.34 0 0 0 1.84-4.49V8.67a8.21 8.21 0 0 0 4.93 1.62V6.85a4.84 4.84 0 0 1-1-.16Z"/>
+              </svg>
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="text-xs font-black tracking-tight flex items-center space-x-1.5 truncate">
+                <span>Join our TikTok Community</span>
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#FE2C55] animate-ping"></span>
+              </span>
+              <span className={`text-[11px] truncate font-medium ${isDark ? 'text-neutral-400' : 'text-neutral-500'}`}>
+                @freewatchmoviesug • Trailers & Drops
+              </span>
+            </div>
+          </a>
+
+          <a
+            href="https://www.tiktok.com/@freewatchmoviesug?_r=1&_t=ZS-9AV8GRTNGfi"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-shrink-0 px-4 py-2 rounded-full bg-[#FE2C55] hover:bg-[#e0264b] active:scale-95 text-white font-bold text-xs shadow-md transition-all flex items-center space-x-1.5"
+          >
+            <span>Follow</span>
+            <ExternalLink className="w-3.5 h-3.5" />
+          </a>
         </div>
 
       </div>
+
+      {/* ── Screenshot Lightbox Modal ── */}
+      {activeLightboxImage && (
+        <div 
+          onClick={() => setActiveLightboxImage(null)}
+          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 cursor-pointer"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="relative max-w-sm w-full max-h-[90vh] flex flex-col items-center bg-black rounded-3xl overflow-hidden shadow-2xl border border-white/15"
+          >
+            <button
+              onClick={() => setActiveLightboxImage(null)}
+              className="absolute top-3 right-3 z-30 p-2 rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <img 
+              src={activeLightboxImage.url}
+              alt={activeLightboxImage.title}
+              className="w-full h-auto max-h-[75vh] object-contain rounded-t-3xl"
+            />
+            <div className="w-full p-4 bg-neutral-950 text-white">
+              <h4 className="text-sm font-bold">{activeLightboxImage.title}</h4>
+              <p className="text-xs text-neutral-400 mt-0.5">{activeLightboxImage.caption}</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Version History iOS Modal Sheet ── */}
       {showVersionHistory && (
@@ -499,33 +534,33 @@ export default function AppStoreLanding() {
           <div className={`w-full max-w-md rounded-t-3xl sm:rounded-2xl p-6 shadow-2xl max-h-[80vh] flex flex-col ${
             isDark ? 'bg-[#1C1C1E] text-white' : 'bg-white text-[#1C1C1E]'
           }`}>
-            <div className="flex items-center justify-between pb-3 border-b border-neutral-800">
+            <div className={`flex items-center justify-between pb-3 border-b ${isDark ? 'border-neutral-800' : 'border-neutral-200'}`}>
               <h3 className="text-lg font-bold">Version History</h3>
               <button 
                 onClick={() => setShowVersionHistory(false)}
-                className="p-1 rounded-full text-neutral-400 hover:text-white"
+                className={`p-1 rounded-full ${isDark ? 'text-neutral-400 hover:text-white' : 'text-neutral-500 hover:text-neutral-900'}`}
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="overflow-y-auto divide-y divide-neutral-800 py-3 space-y-4">
+            <div className={`overflow-y-auto divide-y py-3 space-y-4 ${isDark ? 'divide-neutral-800' : 'divide-neutral-100'}`}>
               <div>
                 <div className="flex justify-between items-baseline mb-1">
-                  <span className="font-bold text-sm">Version 1.0.56</span>
-                  <span className="text-xs text-neutral-400">Just now</span>
+                  <span className="font-bold text-sm">Version 1.0.57</span>
+                  <span className={`text-xs ${isDark ? 'text-neutral-400' : 'text-neutral-500'}`}>Just now</span>
                 </div>
-                <p className="text-xs text-neutral-300 leading-relaxed">
+                <p className={`text-xs leading-relaxed ${isDark ? 'text-neutral-300' : 'text-neutral-600'}`}>
                   Permanent offline movie downloads, live chat reply alerts, auto-update prompt, and video player enhancements.
                 </p>
               </div>
 
               <div className="pt-3">
                 <div className="flex justify-between items-baseline mb-1">
-                  <span className="font-bold text-sm">Version 1.0.55</span>
-                  <span className="text-xs text-neutral-400">1w ago</span>
+                  <span className="font-bold text-sm">Version 1.0.56</span>
+                  <span className={`text-xs ${isDark ? 'text-neutral-400' : 'text-neutral-500'}`}>1w ago</span>
                 </div>
-                <p className="text-xs text-neutral-300 leading-relaxed">
+                <p className={`text-xs leading-relaxed ${isDark ? 'text-neutral-300' : 'text-neutral-600'}`}>
                   Real-time live presence tracking, WhatsApp style support chat, and ban enforcement.
                 </p>
               </div>
@@ -533,9 +568,9 @@ export default function AppStoreLanding() {
               <div className="pt-3">
                 <div className="flex justify-between items-baseline mb-1">
                   <span className="font-bold text-sm">Version 1.0.50</span>
-                  <span className="text-xs text-neutral-400">2w ago</span>
+                  <span className={`text-xs ${isDark ? 'text-neutral-400' : 'text-neutral-500'}`}>2w ago</span>
                 </div>
-                <p className="text-xs text-neutral-300 leading-relaxed">
+                <p className={`text-xs leading-relaxed ${isDark ? 'text-neutral-300' : 'text-neutral-600'}`}>
                   FreeWatch live streaming engine, MunoWatch synchronization cron, and rich movie catalog.
                 </p>
               </div>

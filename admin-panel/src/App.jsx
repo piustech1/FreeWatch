@@ -89,14 +89,16 @@ export default function App() {
   };
 
   const isAdminRoute = 
+    currentPath.startsWith('/pickle') ||
     currentPath.startsWith('/admin') ||
     currentPath.startsWith('/panel') ||
     currentPath.startsWith('/dashboard') ||
+    searchParams.includes('view=pickle') ||
     searchParams.includes('view=admin');
 
   // When visiting root ('/') or any public URL, render the App Store Product Listing Page as MAIN!
   if (!isAdminRoute) {
-    return <AppStoreLanding onNavigateToAdmin={() => navigateTo('/admin')} />;
+    return <AppStoreLanding onNavigateToAdmin={() => navigateTo('/pickle')} />;
   }
 
   // Navigation: 'dashboard' | 'users' | 'videos' | 'chat' | 'notifications' | 'munowatch' | 'audit' | 'store'
