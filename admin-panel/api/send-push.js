@@ -61,11 +61,16 @@ module.exports = async (req, res) => {
       title = '🔥 New Luganda VJ Release!', 
       body = 'New translated blockbuster is now streaming in Full HD. Tap to watch!',
       imageUrl = '',
-      movieId = ''
+      movieId = '',
+      route = '',
+      type = 'notification',
     } = req.body || {};
 
+    const cleanTopic = topic.replace(/[^a-zA-Z0-9-_.~%]/g, '_');
+    const isSupportChat = route === '/developer-chat' || type === 'support_chat_reply';
+
     const message = {
-      topic,
+      topic: cleanTopic,
       notification: {
         title,
         body,
@@ -75,13 +80,15 @@ module.exports = async (req, res) => {
         body,
         imageUrl: imageUrl || '',
         movieId: String(movieId || ''),
+        route: route || (isSupportChat ? '/developer-chat' : ''),
+        type: type || (isSupportChat ? 'support_chat_reply' : 'general'),
         timestamp: String(Date.now()),
         click_action: 'FLUTTER_NOTIFICATION_CLICK',
       },
       android: {
         priority: 'high',
         notification: {
-          channelId: 'freewatch_alerts',
+          channelId: isSupportChat ? 'freewatch_support_chat' : 'freewatch_alerts',
           priority: 'max',
           defaultSound: true,
           defaultVibrateTimings: true,

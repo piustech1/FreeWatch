@@ -7,6 +7,8 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'core/services/notification_service.dart';
 import 'core/services/movie_notification_tracker.dart';
 import 'core/services/user_presence_service.dart';
+import 'core/services/support_chat_notification_service.dart';
+import 'core/router/app_router.dart';
 import 'features/favorites/presentation/providers/favorites_provider.dart';
 import 'features/profile/presentation/providers/watch_history_provider.dart';
 import 'firebase_options.dart';
@@ -26,9 +28,22 @@ void main() async {
     debugPrint('Firebase initialization notice: $e');
   }
 
-  // Initialize device OS notifications service
+  // Initialize device OS notifications service with deep-link navigation
   try {
-    await NotificationService().initialize();
+    await NotificationService().initialize(
+      onNotificationTap: (response) {
+        final payload = response.payload;
+        if (payload != null && payload.isNotEmpty) {
+          if (payload == '/developer-chat' || payload == '/chat') {
+            appRouter.push('/developer-chat');
+          } else if (payload.startsWith('/')) {
+            appRouter.push(payload);
+          } else if (int.tryParse(payload) != null) {
+            appRouter.push('/movie/$payload');
+          }
+        }
+      },
+    );
   } catch (e) {
     debugPrint('Notification service initialization notice: $e');
   }
@@ -38,6 +53,13 @@ void main() async {
     UserPresenceService().initialize();
   } catch (e) {
     debugPrint('User presence service initialization notice: $e');
+  }
+
+  // Initialize real-time admin support chat response listener
+  try {
+    await SupportChatNotificationService().initialize();
+  } catch (e) {
+    debugPrint('Support chat notification service initialization notice: $e');
   }
 
   // Force portrait orientation
@@ -57,11 +79,15 @@ void main() async {
   // Riverpod root container
   final container = ProviderContainer();
 
-  // Listen to Firebase Auth state to synchronize user-scoped favorites and watch history
+  // Listen to Firebase Auth state to synchronize user-scoped favorites, watch history, and chat alerts
   try {
     FirebaseAuth.instance.authStateChanges().listen((user) {
       container.read(favoritesProvider.notifier).syncWithUser(user?.uid);
       container.read(watchHistoryProvider.notifier).syncWithUser(user?.uid);
+      if (user?.uid != null) {
+        NotificationService().subscribeToUserTopic(user!.uid);
+        SupportChatNotificationService().startListening(user.uid);
+      }
     });
   } catch (e) {
     debugPrint('Auth state sync listener notice: $e');

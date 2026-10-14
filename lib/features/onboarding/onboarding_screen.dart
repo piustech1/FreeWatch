@@ -666,6 +666,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
         // Solid FreeWatch Red LOG IN Button
         _buildSolidSubmitButton('LOG IN'),
+
+        const SizedBox(height: 14),
+        _buildGuestAndOfflineButton(),
       ],
     );
   }
@@ -816,6 +819,95 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
         // Solid FreeWatch Red SIGN UP Button
         _buildSolidSubmitButton('SIGN UP'),
+
+        const SizedBox(height: 14),
+        _buildGuestAndOfflineButton(),
+      ],
+    );
+  }
+
+  Widget _buildGuestAndOfflineButton() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          children: [
+            Expanded(child: Container(height: 1, color: Colors.white.withOpacity(0.10))),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: Text(
+                'OR',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.35),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.8,
+                ),
+              ),
+            ),
+            Expanded(child: Container(height: 1, color: Colors.white.withOpacity(0.10))),
+          ],
+        ),
+        const SizedBox(height: 12),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+            child: Container(
+              width: double.infinity,
+              height: 46,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.07),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.14),
+                  width: 1,
+                ),
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(24),
+                  onTap: () {
+                    AppToast.show(
+                      context,
+                      'Entering FreeWatch in Guest / Offline Mode',
+                      isSuccess: true,
+                    );
+                    context.go('/home');
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.cloud_off_rounded,
+                          color: Color(0xFF00E676),
+                          size: 17,
+                        ),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            'Continue as Guest & Offline Downloads',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.90),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.1,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }

@@ -69,19 +69,19 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
           files: release-artifacts/FreeWatch-release.apk
-          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v1.0.44' }}
-          name: Release ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v1.0.44' }}
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v1.0.56' }}
+          name: Release ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v1.0.56' }}
           body: |
             ## 🎬 FreeWatch Release ${{ github.ref_name }}
             
             Download `FreeWatch-release.apk` below and install it directly on your Android device!
             
             ### ✨ Highlights in this release:
-            - 🔥 **Firebase Auth & Realtime Streaming**: Dedicated FreeWatch user authentication paired with Realtime Database streaming & automatic TMDB Gap-Filling.
-            - 🔔 **Rich OS Device Notifications**: Background & lock-screen notifications with BigPicture poster preview when new movies arrive.
-            - 🛡️ **Android Stability & Compatibility**: minSdk 23 and Java 8 core library desugaring for stable execution on older & modern Android devices.
-            - 💎 **Universal Liquid Glass Empty States**: Polished empty views for Notifications, Watchlist, Downloads & VJ selections.
-            - 🚫 **Zero Mock Data in Production**: Clean, real-time live data experience.
+            - 💬 **Live Support Chat Push Notifications**: Admin messages & replies in the admin panel instantly send rich OS notifications that deep-link directly into the `/developer-chat` screen.
+            - 💾 **Persistent Offline Downloads**: Multi-tier storage persistence keeps downloaded movies intact across user logout, session switches, and guest mode.
+            - 🚀 **In-App Auto-Update System**: Non-intrusive update banner detects new releases via Realtime Database and GitHub API without exposing users to raw GitHub URLs.
+            - 🏪 **App Store Product Listing Website**: Sleek Apple App Store inspired landing site with Light & Dark modes, Luganda #1 chart ranking, user ratings, and 1-tap direct APK download.
+            - 🛡️ **Zero Mock Data & Real-Time Presence**: Full production integration with Firebase Realtime Database and Firestore.
           generate_release_notes: true
           draft: false
           prerelease: false

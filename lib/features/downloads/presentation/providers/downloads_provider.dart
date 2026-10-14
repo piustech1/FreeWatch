@@ -17,29 +17,120 @@ class DownloadsNotifier extends StateNotifier<List<DownloadedMovie>> {
     _loadDownloads();
   }
 
+  Future<Directory> _getMoviesDir() async {
+    final dir = await getApplicationDocumentsDirectory();
+    final moviesDir = Directory('${dir.path}/movies');
+    if (!await moviesDir.exists()) {
+      await moviesDir.create(recursive: true);
+    }
+    return moviesDir;
+  }
+
+  Future<File> _getRegistryFile() async {
+    final moviesDir = await _getMoviesDir();
+    return File('${moviesDir.path}/downloads_registry.json');
+  }
+
   Future<void> _loadDownloads() async {
+    List<DownloadedMovie> items = [];
     try {
+      final moviesDir = await _getMoviesDir();
+      final registryFile = await _getRegistryFile();
+
+      // Tier 1: Try loading from SharedPreferences
       final prefs = await SharedPreferences.getInstance();
       final savedJson = prefs.getString(_prefKeyDownloadedMovies);
 
       if (savedJson != null && savedJson.isNotEmpty) {
-        final List<dynamic> decoded = jsonDecode(savedJson) as List<dynamic>;
-        final items = decoded
-            .map((e) => DownloadedMovie.fromJson(e as Map<String, dynamic>))
-            // Reset any item that was stuck in downloading state across app restarts to paused
-            .map((e) {
-              if (e.isDownloading) {
-                return e.copyWith(
-                  isDownloading: false,
-                  isPaused: true,
+        try {
+          final List<dynamic> decoded = jsonDecode(savedJson) as List<dynamic>;
+          items = decoded
+              .map((e) => DownloadedMovie.fromJson(e as Map<String, dynamic>))
+              .toList();
+        } catch (_) {}
+      }
+
+      // Tier 2: If SharedPreferences is empty or corrupted (e.g. after logout or clean), fallback to physical disk registry
+      if (items.isEmpty && await registryFile.exists()) {
+        try {
+          final registryJson = await registryFile.readAsString();
+          if (registryJson.isNotEmpty) {
+            final List<dynamic> decoded = jsonDecode(registryJson) as List<dynamic>;
+            items = decoded
+                .map((e) => DownloadedMovie.fromJson(e as Map<String, dynamic>))
+                .toList();
+          }
+        } catch (e) {
+          debugPrint('Error reading disk downloads registry: $e');
+        }
+      }
+
+      // Tier 3: Path Re-validation and File Reconciliation
+      final Map<int, DownloadedMovie> reconciled = {};
+      for (final item in items) {
+        String? validPath = item.localFilePath;
+        final expectedPath = '${moviesDir.path}/${item.id}.mp4';
+
+        if (validPath == null || !File(validPath).existsSync()) {
+          if (File(expectedPath).existsSync()) {
+            validPath = expectedPath;
+          }
+        }
+
+        final fileExists = validPath != null && File(validPath).existsSync();
+        int sizeMb = item.fileSizeMb;
+        if (fileExists) {
+          try {
+            final len = await File(validPath).length();
+            if (len > 0) sizeMb = (len / (1024 * 1024)).round();
+          } catch (_) {}
+        }
+
+        reconciled[item.id] = item.copyWith(
+          localFilePath: validPath ?? expectedPath,
+          fileSizeMb: sizeMb,
+          isDownloading: false, // Reset stuck state across app reloads
+          isPaused: item.isDownloading ? true : item.isPaused,
+          downloadProgress: fileExists ? 1.0 : item.downloadProgress,
+        );
+      }
+
+      // Scan physical storage directory to recover any orphaned or downloaded .mp4 files
+      try {
+        if (await moviesDir.exists()) {
+          final files = moviesDir.listSync();
+          for (final f in files) {
+            if (f is File && f.path.endsWith('.mp4')) {
+              final basename = f.uri.pathSegments.last.replaceAll('.mp4', '');
+              final id = int.tryParse(basename);
+              if (id != null && !reconciled.containsKey(id)) {
+                final len = await f.length();
+                final sizeMb = (len / (1024 * 1024)).round();
+                reconciled[id] = DownloadedMovie(
+                  id: id,
+                  title: 'Downloaded Movie #$id',
+                  voteAverage: 8.0,
+                  fileSizeMb: sizeMb > 0 ? sizeMb : 750,
+                  downloadedAt: DateTime.now(),
+                  localFilePath: f.path,
+                  downloadProgress: 1.0,
                 );
               }
-              return e;
-            })
-            .toList();
-        state = items;
-        return;
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('Disk scan error: $e');
       }
+
+      final finalList = reconciled.values.toList();
+      state = finalList;
+
+      // Sync reconciled state to both storage tiers for future permanence
+      if (finalList.isNotEmpty) {
+        await _persistDownloads(finalList);
+      }
+      return;
     } catch (e) {
       debugPrint('Error loading downloads: $e');
     }
@@ -52,8 +143,7 @@ class DownloadsNotifier extends StateNotifier<List<DownloadedMovie>> {
 
   Future<void> _persistDownloads(List<DownloadedMovie> list) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      // Persist all items; if actively downloading, save as paused so app kill won't lose them
+      // 1. Sanitize state for disk writing
       final toSave = list.map((m) {
         if (m.isDownloading) {
           return m.copyWith(isDownloading: false, isPaused: true);
@@ -61,7 +151,14 @@ class DownloadsNotifier extends StateNotifier<List<DownloadedMovie>> {
         return m;
       }).toList();
       final encoded = jsonEncode(toSave.map((m) => m.toJson()).toList());
+
+      // Tier 1: SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_prefKeyDownloadedMovies, encoded);
+
+      // Tier 2: Physical Device Storage File
+      final registryFile = await _getRegistryFile();
+      await registryFile.writeAsString(encoded, flush: true);
     } catch (e) {
       debugPrint('Error persisting downloads: $e');
     }

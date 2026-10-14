@@ -6,6 +6,7 @@ import '../../features/auth/presentation/screens/choose_avatar_screen.dart';
 import '../../features/auth/presentation/screens/banned_account_screen.dart';
 import '../../features/movie_detail/presentation/screens/movie_detail_screen.dart';
 import '../../features/notifications/presentation/screens/notifications_screen.dart';
+import '../../features/chat/presentation/screens/developer_chat_screen.dart';
 import '../../data/models/movie.dart';
 
 GoRouter createAppRouter({String initialLocation = '/splash'}) => GoRouter(
@@ -54,6 +55,16 @@ GoRouter createAppRouter({String initialLocation = '/splash'}) => GoRouter(
       path: '/notifications',
       name: 'notifications',
       builder: (context, state) => const NotificationsScreen(),
+    ),
+    GoRoute(
+      path: '/developer-chat',
+      name: 'developer-chat',
+      builder: (context, state) => const DeveloperChatScreen(),
+    ),
+    GoRoute(
+      path: '/chat',
+      name: 'chat',
+      builder: (context, state) => const DeveloperChatScreen(),
     ),
     // /movie/:id and /movie/:id/play
     GoRoute(

@@ -48,3 +48,5 @@ service-account*.json
 /scripts/*.log
 /scripts/.known_munowatch_ids.json
 *.apk
+node_modules/
+dist/

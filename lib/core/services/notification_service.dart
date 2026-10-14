@@ -9,7 +9,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../firebase_options.dart';
 
-Future<void> _persistToAppNotificationCenter({
+Future<void> persistToAppNotificationCenter({
   required String id,
   required String? title,
   required String message,
@@ -58,10 +58,11 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   final title = notification?.title ?? data['title'] ?? 'FreeWatch New Release';
   final body = notification?.body ?? data['body'] ?? 'Watch the latest translated releases now!';
   final imageUrl = data['imageUrl'] ?? data['image'] ?? notification?.android?.imageUrl;
-  final link = data['link'] ?? data['url'] ?? data['movieId'] ?? data['payload'];
+  final link = data['route'] ?? data['link'] ?? data['url'] ?? data['movieId'] ?? data['payload'];
+  final isChat = link == '/developer-chat' || data['type'] == 'support_chat_reply' || data['type'] == 'support_reply';
 
   // Persist into user notifications feed
-  await _persistToAppNotificationCenter(
+  await persistToAppNotificationCenter(
     id: message.messageId ?? 'bg_${DateTime.now().millisecondsSinceEpoch}',
     title: title,
     message: body,
@@ -69,13 +70,22 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     link: link,
   );
 
-  await NotificationService().showMovieNotification(
-    id: message.messageId.hashCode,
-    title: title,
-    body: body,
-    imageUrl: imageUrl,
-    payload: link,
-  );
+  if (isChat) {
+    await NotificationService().showSupportChatNotification(
+      id: message.messageId.hashCode,
+      title: title,
+      body: body,
+      payload: '/developer-chat',
+    );
+  } else {
+    await NotificationService().showMovieNotification(
+      id: message.messageId.hashCode,
+      title: title,
+      body: body,
+      imageUrl: imageUrl,
+      payload: link,
+    );
+  }
 }
 
 /// Central Notification Service managing OS-level device notifications
@@ -164,9 +174,10 @@ class NotificationService {
         final title = notification?.title ?? data['title'] ?? 'FreeWatch New Release';
         final body = notification?.body ?? data['body'] ?? 'Watch the latest releases now!';
         final imageUrl = data['imageUrl'] ?? data['image'] ?? notification?.android?.imageUrl;
-        final link = data['link'] ?? data['url'] ?? data['movieId'] ?? data['payload'];
+        final link = data['route'] ?? data['link'] ?? data['url'] ?? data['movieId'] ?? data['payload'];
+        final isChat = link == '/developer-chat' || data['type'] == 'support_chat_reply' || data['type'] == 'support_reply';
 
-        _persistToAppNotificationCenter(
+        persistToAppNotificationCenter(
           id: message.messageId ?? 'fg_${DateTime.now().millisecondsSinceEpoch}',
           title: title,
           message: body,
@@ -174,13 +185,22 @@ class NotificationService {
           link: link,
         );
 
-        showMovieNotification(
-          id: message.messageId.hashCode,
-          title: title,
-          body: body,
-          imageUrl: imageUrl,
-          payload: link,
-        );
+        if (isChat) {
+          showSupportChatNotification(
+            id: message.messageId.hashCode,
+            title: title,
+            body: body,
+            payload: '/developer-chat',
+          );
+        } else {
+          showMovieNotification(
+            id: message.messageId.hashCode,
+            title: title,
+            body: body,
+            imageUrl: imageUrl,
+            payload: link,
+          );
+        }
       });
 
       // Schedule OS-level recurring alerts that trigger even when the app is closed
@@ -289,6 +309,63 @@ class NotificationService {
       );
     } catch (e) {
       debugPrint('Failed to show movie notification: $e');
+    }
+  }
+
+  /// Displays an instant high-priority OS notification when an Admin replies to user support chat
+  Future<void> showSupportChatNotification({
+    required int id,
+    required String title,
+    required String body,
+    String payload = '/developer-chat',
+  }) async {
+    try {
+      const androidDetails = AndroidNotificationDetails(
+        'freewatch_support_chat',
+        'Support & Help Desk Alerts',
+        channelDescription: 'Real-time notifications for FreeWatch live support and help chat',
+        importance: Importance.max,
+        priority: Priority.high,
+        color: Color(0xFF00E676),
+        icon: '@drawable/ic_notification',
+        enableVibration: true,
+        playSound: true,
+        category: AndroidNotificationCategory.message,
+      );
+
+      const darwinDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      );
+
+      const platformDetails = NotificationDetails(
+        android: androidDetails,
+        iOS: darwinDetails,
+        macOS: darwinDetails,
+      );
+
+      await _notificationsPlugin.show(
+        id,
+        title,
+        body,
+        platformDetails,
+        payload: payload,
+      );
+    } catch (e) {
+      debugPrint('Failed to show support chat notification: $e');
+    }
+  }
+
+  /// Subscribes this device to user-specific FCM channel for targeted admin alerts
+  Future<void> subscribeToUserTopic(String? uid) async {
+    if (uid == null || uid.isEmpty) return;
+    try {
+      final topic = 'user_${uid.replaceAll(RegExp(r'[^a-zA-Z0-9-_.~%]'), '_')}';
+      await FirebaseMessaging.instance.subscribeToTopic(topic);
+      debugPrint('Subscribed to user FCM topic: $topic');
+    } catch (e) {
+      debugPrint('Failed to subscribe to user topic: $e');
     }
   }
 

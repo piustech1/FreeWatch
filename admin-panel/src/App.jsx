@@ -54,9 +54,22 @@ import {
 } from 'lucide-react';
 import { rtdb, auth, signInAnonymously } from './firebase';
 import { ref, onValue, push, set, update, remove } from 'firebase/database';
+import AppStoreLanding from './pages/AppStoreLanding';
 
 export default function App() {
-  // Navigation: 'dashboard' | 'users' | 'videos' | 'chat' | 'notifications' | 'munowatch' | 'audit'
+  const isDirectStoreRoute = 
+    typeof window !== 'undefined' && (
+      window.location.pathname.startsWith('/download') || 
+      window.location.pathname.startsWith('/store') || 
+      window.location.pathname.startsWith('/app') || 
+      window.location.search.includes('view=store')
+    );
+
+  if (isDirectStoreRoute) {
+    return <AppStoreLanding />;
+  }
+
+  // Navigation: 'dashboard' | 'users' | 'videos' | 'chat' | 'notifications' | 'munowatch' | 'audit' | 'store'
   const [activeTab, setActiveTab] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
@@ -561,6 +574,36 @@ export default function App() {
         updatedAt: now,
         unreadCountUser: (threads.find(t => t.uid === selectedThreadId)?.unreadCountUser || 0) + 1,
       });
+
+      // Write in-app notification entry for the user
+      try {
+        const notifRef = push(ref(rtdb, `users/${selectedThreadId}/notifications`));
+        await set(notifRef, {
+          id: notifRef.key,
+          section: 'Support',
+          title: 'FreeWatch Live Support',
+          message: text,
+          time: 'Just now',
+          timestamp: now,
+          link: '/developer-chat',
+          route: '/developer-chat',
+          isRead: false,
+          iconColor: 0xFF00E676,
+        });
+      } catch (_) {}
+
+      // Dispatch FCM OS push alert to user's device
+      fetch('/api/send-push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          topic: `user_${selectedThreadId}`,
+          title: '💬 FreeWatch Live Support',
+          body: text,
+          route: '/developer-chat',
+          type: 'support_chat_reply',
+        }),
+      }).catch(err => console.warn('Push reply dispatch non-fatal error:', err));
     } catch (e) {
       alert('Failed to send message: ' + e.message);
     }
@@ -825,7 +868,8 @@ export default function App() {
             { id: 'chat', label: 'Live Support Chat', icon: MessageSquare, badge: threads.filter(t => t.unreadCount > 0).length || null },
             { id: 'notifications', label: 'FCM Push Dispatcher', icon: Bell },
             { id: 'munowatch', label: 'MunoWatch Sync', icon: RefreshCw, badge: munowatchCatalog.length },
-            { id: 'audit', label: 'Audit Logs & Export', icon: FileText, badge: auditLogs.length }
+            { id: 'audit', label: 'Audit Logs & Export', icon: FileText, badge: auditLogs.length },
+            { id: 'store', label: 'App Store Hub & Downloads', icon: Layers }
           ].map((item) => {
             const Icon = item.icon;
             const active = activeTab === item.id;
@@ -886,6 +930,7 @@ export default function App() {
               {activeTab === 'notifications' && 'FCM Push Notification Dispatcher'}
               {activeTab === 'munowatch' && 'MunoWatch Server & Poller Control'}
               {activeTab === 'audit' && 'System Audit Trail & Document Export'}
+              {activeTab === 'store' && 'Apple App Store Listing & Download Hub'}
             </h1>
             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#00E676]/10 text-[#00A344] border border-[#00E676]/30">
               <Radio size={12} className="mr-1 animate-pulse text-[#00E676]" /> 100% Real Production Data
@@ -2353,6 +2398,13 @@ export default function App() {
                   </table>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* TAB 8: APPLE APP STORE LISTING & DOWNLOAD HUB */}
+          {activeTab === 'store' && (
+            <div className="max-w-4xl mx-auto py-2">
+              <AppStoreLanding />
             </div>
           )}
         </main>

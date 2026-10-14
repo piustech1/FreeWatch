@@ -14,6 +14,7 @@ import '../../../profile/presentation/providers/user_profile_provider.dart';
 import '../../domain/models/chat_message.dart';
 import '../providers/chat_provider.dart';
 import '../widgets/chat_wallpaper_painter.dart';
+import '../../../../core/services/support_chat_notification_service.dart';
 
 class DeveloperChatScreen extends ConsumerStatefulWidget {
   const DeveloperChatScreen({super.key});
@@ -33,6 +34,7 @@ class _DeveloperChatScreenState extends ConsumerState<DeveloperChatScreen> {
   @override
   void initState() {
     super.initState();
+    SupportChatNotificationService.isChatScreenVisible = true;
     _textController.addListener(_onTextChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _scrollToBottom(animated: false);
@@ -48,6 +50,7 @@ class _DeveloperChatScreenState extends ConsumerState<DeveloperChatScreen> {
 
   @override
   void dispose() {
+    SupportChatNotificationService.isChatScreenVisible = false;
     _textController.removeListener(_onTextChanged);
     _textController.dispose();
     _scrollController.dispose();

@@ -19,6 +19,7 @@ import '../downloads/presentation/screens/downloads_screen.dart';
 import '../profile/presentation/screens/profile_screen.dart';
 import '../notifications/presentation/screens/notifications_screen.dart';
 import '../../shared/widgets/tiktok_promo_modal.dart';
+import 'widgets/app_update_banner.dart';
 
 /// Main Application Shell & Home Screen with persistent top bar across all tabs
 class HomeScreen extends ConsumerStatefulWidget {
@@ -69,6 +70,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   onNotificationTap: _openNotifications,
                   onProfileTap: () => navigateToBottomNavTab(context, ref, 4),
                 ),
+
+                // ── Dynamic Release Update Banner ──────────────────────────────
+                const AppUpdateBanner(),
 
                 // ── Tab View ──────────────────────────────────────────
                 Expanded(
