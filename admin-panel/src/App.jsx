@@ -39,7 +39,18 @@ import {
   Tv,
   Check,
   Link,
-  Image as ImageIcon
+  Image as ImageIcon,
+  CheckCheck,
+  Smile,
+  Paperclip,
+  Mic,
+  Grid,
+  List,
+  Copy,
+  MessageCircle,
+  Info,
+  Lock,
+  Ban
 } from 'lucide-react';
 import { rtdb, auth, signInAnonymously } from './firebase';
 import { ref, onValue, push, set, update, remove } from 'firebase/database';
@@ -58,8 +69,14 @@ export default function App() {
   const [userSearch, setUserSearch] = useState('');
   const [userRoleFilter, setUserRoleFilter] = useState('All');
   const [userStatusFilter, setUserStatusFilter] = useState('All');
+  const [userQuickFilter, setUserQuickFilter] = useState('all'); // 'all' | 'active' | 'banned' | 'vip' | 'streamers'
+  const [userViewMode, setUserViewMode] = useState('table'); // 'table' | 'cards'
   const [selectedUserDetail, setSelectedUserDetail] = useState(null);
   const [confirmDeleteUser, setConfirmDeleteUser] = useState(null);
+  const [banModalUser, setBanModalUser] = useState(null);
+  const [banReason, setBanReason] = useState('Terms of Service Violation');
+  const [customBanReason, setCustomBanReason] = useState('');
+  const [copiedUid, setCopiedUid] = useState(null);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [newUserData, setNewUserData] = useState({ name: '', email: '', role: 'Member', bio: '' });
   const [roleChangeModalUser, setRoleChangeModalUser] = useState(null);
@@ -110,18 +127,41 @@ export default function App() {
         const userList = Object.keys(data).map((uid) => {
           const u = data[uid] || {};
           const profile = u.profile || {};
+          const presence = u.presence || {};
           const history = Array.isArray(u.watch_history) ? u.watch_history : [];
           const favorites = Array.isArray(u.favorites) ? u.favorites : [];
           const lastWatched = history.length > 0 ? history[0] : null;
+
+          // Determine live presence & last active timestamp
+          const rawIsOnline = presence.isOnline ?? profile.isOnline ?? u.isOnline ?? false;
+          const rawLastSeen = presence.lastSeen || profile.lastSeen || u.lastSeen || profile.lastLogin;
+          let lastSeenTime = 0;
+          if (typeof rawLastSeen === 'number') {
+            lastSeenTime = rawLastSeen;
+          } else if (typeof rawLastSeen === 'string') {
+            lastSeenTime = new Date(rawLastSeen).getTime() || 0;
+          }
+          const isRecentlyActive = lastSeenTime > 0 && (Date.now() - lastSeenTime) < 5 * 60 * 1000;
+          const isOnline = Boolean(rawIsOnline || isRecentlyActive);
+
+          // Determine account status & ban details
+          const isBanned = profile.status === 'Banned' || u.status === 'Banned' || profile.isBanned === true || u.isBanned === true;
+          const status = isBanned ? 'Banned' : (profile.status || 'Active');
+          const banReason = profile.banReason || u.banReason || 'Terms of Service Violation';
 
           return {
             id: uid,
             name: profile.name || (profile.email ? profile.email.split('@')[0] : 'FreeWatch User'),
             email: profile.email || 'No email registered',
             role: profile.role || (profile.name?.toLowerCase().includes('admin') ? 'Admin' : 'Member'),
-            status: profile.status || 'Active',
+            status,
+            isBanned,
+            banReason,
+            isOnline,
+            lastSeenTime,
+            platform: presence.platform || profile.platform || 'Mobile App',
             avatar: profile.avatar || 'assets/avatars/avatar_mirabel.png',
-            bio: profile.bio || 'FreeWatch Movie Streamer',
+            bio: profile.bio || 'Luganda dubbed movie enthusiast • Streaming on FreeWatch',
             createdAt: profile.createdAt || new Date().toISOString(),
             lastLogin: profile.lastLogin || profile.createdAt || new Date().toISOString(),
             watchHistory: history,
@@ -306,22 +346,80 @@ export default function App() {
     } catch (_) {}
   };
 
-  // User Actions: Ban / Unban
-  const handleToggleUserBan = async (user) => {
-    const nextStatus = user.status === 'Banned' ? 'Active' : 'Banned';
+  // Relative Time Formatter for Last Seen
+  const formatLastSeen = (timestamp) => {
+    if (!timestamp) return 'Offline';
+    const now = Date.now();
+    const diff = Math.floor((now - timestamp) / 1000);
+    if (diff < 60) return 'Just now';
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    if (diff < 172800) return 'Yesterday';
+    return new Date(timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' });
+  };
+
+  // Helper to copy user UID
+  const handleCopyUid = (uid, e) => {
+    if (e) e.stopPropagation();
+    try {
+      navigator.clipboard.writeText(uid);
+      setCopiedUid(uid);
+      setTimeout(() => setCopiedUid(null), 2000);
+    } catch (_) {}
+  };
+
+  // User Actions: Unban User (instant reactivation)
+  const handleUnbanUser = async (user) => {
     try {
       await update(ref(rtdb, `users/${user.id}/profile`), {
-        status: nextStatus,
+        status: 'Active',
+        isBanned: false,
         statusUpdatedAt: new Date().toISOString(),
       });
+      await update(ref(rtdb, `users/${user.id}`), {
+        status: 'Active',
+        isBanned: false,
+      });
       await logAudit(
-        nextStatus === 'Banned' ? 'BAN_USER' : 'UNBAN_USER',
+        'UNBAN_USER',
         `${user.name} (${user.email})`,
-        `Account status changed to ${nextStatus}`,
+        'Account access reactivated',
         'User Management'
       );
     } catch (e) {
-      alert('Failed to update status: ' + e.message);
+      alert('Failed to reactivate account: ' + e.message);
+    }
+  };
+
+  // User Actions: Confirm Ban User (modal submit)
+  const handleConfirmBan = async () => {
+    if (!banModalUser) return;
+    const finalReason = banReason === 'Other' 
+      ? (customBanReason.trim() || 'Suspension by administrator') 
+      : banReason;
+    try {
+      await update(ref(rtdb, `users/${banModalUser.id}/profile`), {
+        status: 'Banned',
+        isBanned: true,
+        banReason: finalReason,
+        bannedAt: new Date().toISOString(),
+        statusUpdatedAt: new Date().toISOString(),
+      });
+      await update(ref(rtdb, `users/${banModalUser.id}`), {
+        status: 'Banned',
+        isBanned: true,
+        banReason: finalReason,
+      });
+      await logAudit(
+        'BAN_USER',
+        `${banModalUser.name} (${banModalUser.email})`,
+        `Account suspended: ${finalReason}`,
+        'User Management'
+      );
+      setBanModalUser(null);
+      setCustomBanReason('');
+    } catch (e) {
+      alert('Failed to suspend user: ' + e.message);
     }
   };
 
@@ -675,7 +773,13 @@ export default function App() {
       u.id.toLowerCase().includes(userSearch.toLowerCase());
     const matchesRole = userRoleFilter === 'All' || u.role === userRoleFilter;
     const matchesStatus = userStatusFilter === 'All' || u.status === userStatusFilter;
-    return matchesSearch && matchesRole && matchesStatus;
+    const matchesQuick = 
+      userQuickFilter === 'all' ? true :
+      userQuickFilter === 'active' ? u.isOnline :
+      userQuickFilter === 'banned' ? u.status === 'Banned' :
+      userQuickFilter === 'vip' ? (u.role === 'VIP' || u.role === 'Admin') :
+      userQuickFilter === 'streamers' ? u.totalWatched > 0 : true;
+    return matchesSearch && matchesRole && matchesStatus && matchesQuick;
   });
 
   // Filtered Catalog List
@@ -1002,182 +1106,507 @@ export default function App() {
           )}
 
           {/* ═════════════════════════════════════════════════════════════════════ */}
-          {/* TAB 2: USER MANAGEMENT (100% REAL FIREBASE SYNC)                    */}
+          {/* TAB 2: ADVANCED REAL-TIME USER MANAGEMENT (100% FIREBASE SYNC)      */}
           {/* ═════════════════════════════════════════════════════════════════════ */}
           {activeTab === 'users' && (
             <div className="space-y-6 max-w-7xl mx-auto">
-              {/* Search, Filter & Action Bar */}
-              <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
-                <div className="flex items-center space-x-3 w-full md:w-auto flex-1">
-                  <div className="relative flex-1 max-w-md">
+              {/* Executive Metrics Pulse Row */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-center justify-between">
+                  <div>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">Total Users</span>
+                    <h3 className="text-2xl font-black text-slate-900">{users.length}</h3>
+                    <span className="text-[10px] text-slate-500 font-medium">Real Firebase RTDB accounts</span>
+                  </div>
+                  <div className="w-12 h-12 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700">
+                    <Users size={22} />
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-2xl p-5 border border-[#00E676]/30 shadow-xs flex items-center justify-between bg-gradient-to-br from-white to-[#00E676]/5">
+                  <div>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#00A344] block mb-1 flex items-center">
+                      <span className="w-2 h-2 rounded-full bg-[#00E676] mr-1.5 animate-pulse" /> Active Now
+                    </span>
+                    <h3 className="text-2xl font-black text-slate-900">{users.filter(u => u.isOnline).length}</h3>
+                    <span className="text-[10px] text-[#00A344] font-semibold">Live in FreeWatch mobile app</span>
+                  </div>
+                  <div className="w-12 h-12 rounded-2xl bg-[#00E676]/15 border border-[#00E676]/30 flex items-center justify-center text-[#009640]">
+                    <Activity size={22} />
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-2xl p-5 border border-rose-200/80 shadow-xs flex items-center justify-between">
+                  <div>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-rose-600 block mb-1">Suspended / Banned</span>
+                    <h3 className="text-2xl font-black text-slate-900">{users.filter(u => u.status === 'Banned').length}</h3>
+                    <span className="text-[10px] text-rose-500 font-medium">Locked out of mobile app</span>
+                  </div>
+                  <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600">
+                    <ShieldAlert size={22} />
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-2xl p-5 border border-amber-200/80 shadow-xs flex items-center justify-between">
+                  <div>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-amber-600 block mb-1">VIP & Admins</span>
+                    <h3 className="text-2xl font-black text-slate-900">{users.filter(u => u.role === 'VIP' || u.role === 'Admin').length}</h3>
+                    <span className="text-[10px] text-amber-600 font-medium">Privileged platform tier</span>
+                  </div>
+                  <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600">
+                    <Star size={22} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Advanced Search, Filters & Action Bar */}
+              <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs space-y-3">
+                <div className="flex flex-col md:flex-row items-center justify-between gap-3">
+                  <div className="relative flex-1 w-full md:max-w-md">
                     <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input 
                       type="text"
-                      placeholder="Search real users by name, email, or UID..."
+                      placeholder="Search users by name, email, or UID..."
                       value={userSearch}
                       onChange={(e) => setUserSearch(e.target.value)}
-                      className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-[#00E676] focus:bg-white transition-all"
+                      className="w-full pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-[#00E676] focus:bg-white transition-all"
                     />
+                    {userSearch && (
+                      <button 
+                        onClick={() => setUserSearch('')}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
                   </div>
 
-                  {/* Role Filter */}
-                  <select
-                    value={userRoleFilter}
-                    onChange={(e) => setUserRoleFilter(e.target.value)}
-                    className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:outline-none focus:border-[#00E676]"
-                  >
-                    <option value="All">All Roles</option>
-                    <option value="Admin">Admin</option>
-                    <option value="VIP">VIP</option>
-                    <option value="Member">Member</option>
-                    <option value="Guest">Guest</option>
-                  </select>
+                  <div className="flex items-center space-x-2 w-full md:w-auto justify-between md:justify-end">
+                    {/* Role Filter */}
+                    <select
+                      value={userRoleFilter}
+                      onChange={(e) => setUserRoleFilter(e.target.value)}
+                      className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:outline-none focus:border-[#00E676]"
+                    >
+                      <option value="All">All Roles</option>
+                      <option value="Admin">Admin</option>
+                      <option value="VIP">VIP</option>
+                      <option value="Member">Member</option>
+                      <option value="Guest">Guest</option>
+                    </select>
 
-                  {/* Status Filter */}
-                  <select
-                    value={userStatusFilter}
-                    onChange={(e) => setUserStatusFilter(e.target.value)}
-                    className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:outline-none focus:border-[#00E676]"
-                  >
-                    <option value="All">All Statuses</option>
-                    <option value="Active">Active</option>
-                    <option value="Banned">Banned</option>
-                  </select>
+                    {/* Status Filter */}
+                    <select
+                      value={userStatusFilter}
+                      onChange={(e) => setUserStatusFilter(e.target.value)}
+                      className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:outline-none focus:border-[#00E676]"
+                    >
+                      <option value="All">All Statuses</option>
+                      <option value="Active">Active</option>
+                      <option value="Banned">Banned</option>
+                    </select>
+
+                    {/* View Switcher: Table vs Cards */}
+                    <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
+                      <button
+                        onClick={() => setUserViewMode('table')}
+                        className={`p-1.5 rounded-lg text-xs font-semibold transition-all ${
+                          userViewMode === 'table' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-900'
+                        }`}
+                        title="Dense Table View"
+                      >
+                        <List size={15} />
+                      </button>
+                      <button
+                        onClick={() => setUserViewMode('cards')}
+                        className={`p-1.5 rounded-lg text-xs font-semibold transition-all ${
+                          userViewMode === 'cards' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-900'
+                        }`}
+                        title="Interactive Cards View"
+                      >
+                        <Grid size={15} />
+                      </button>
+                    </div>
+
+                    <button
+                      onClick={() => setShowAddUserModal(true)}
+                      className="inline-flex items-center px-3.5 py-2 bg-[#00E676] hover:bg-[#00C853] text-black rounded-xl text-xs font-extrabold transition-all shadow-sm shadow-[#00E676]/25 shrink-0"
+                    >
+                      <UserPlus size={15} className="mr-1.5" /> Add User
+                    </button>
+                  </div>
                 </div>
 
-                <div className="flex items-center space-x-3 w-full md:w-auto justify-end">
-                  <button
-                    onClick={() => setShowAddUserModal(true)}
-                    className="inline-flex items-center px-4 py-2 bg-[#00E676] hover:bg-[#00C853] text-black rounded-xl text-xs font-extrabold transition-all shadow-sm shadow-[#00E676]/25"
-                  >
-                    <UserPlus size={15} className="mr-1.5" /> Add User
-                  </button>
+                {/* Quick Filter Navigation Pills */}
+                <div className="flex items-center space-x-2 pt-2 border-t border-slate-100 overflow-x-auto text-xs">
+                  {[
+                    { key: 'all', label: `All Users (${users.length})` },
+                    { key: 'active', label: `🟢 Active Now (${users.filter(u => u.isOnline).length})` },
+                    { key: 'banned', label: `🔴 Banned (${users.filter(u => u.status === 'Banned').length})` },
+                    { key: 'vip', label: `👑 VIP & Admins (${users.filter(u => u.role === 'VIP' || u.role === 'Admin').length})` },
+                    { key: 'streamers', label: `🎬 Active Streamers (${users.filter(u => u.totalWatched > 0).length})` },
+                  ].map((f) => (
+                    <button
+                      key={f.key}
+                      onClick={() => setUserQuickFilter(f.key)}
+                      className={`px-3 py-1 rounded-full font-bold transition-all shrink-0 text-[11px] ${
+                        userQuickFilter === f.key 
+                          ? 'bg-[#00E676] text-black shadow-xs font-black' 
+                          : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                      }`}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                  <span className="text-[11px] text-slate-400 ml-auto shrink-0 pl-2">
+                    Showing {filteredUsers.length} of {users.length} users
+                  </span>
                 </div>
               </div>
 
-              {/* Real Users Table */}
-              <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
-                      <tr>
-                        <th className="py-3.5 px-4">User / Credentials</th>
-                        <th className="py-3.5 px-4">Role</th>
-                        <th className="py-3.5 px-4">Status</th>
-                        <th className="py-3.5 px-4">Activity Stats</th>
-                        <th className="py-3.5 px-4">Last Watched Title</th>
-                        <th className="py-3.5 px-4">Registration</th>
-                        <th className="py-3.5 px-4 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                      {filteredUsers.length === 0 ? (
+              {/* VIEW 1: DENSE MODERN TABLE */}
+              {userViewMode === 'table' ? (
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
                         <tr>
-                          <td colSpan="7" className="py-12 text-center text-slate-400">
-                            No users found matching your search criteria.
-                          </td>
+                          <th className="py-3.5 px-4">User Identity</th>
+                          <th className="py-3.5 px-4">Live Presence</th>
+                          <th className="py-3.5 px-4">Role</th>
+                          <th className="py-3.5 px-4">Status</th>
+                          <th className="py-3.5 px-4">Watch Engagement</th>
+                          <th className="py-3.5 px-4">Last Watched Title</th>
+                          <th className="py-3.5 px-4 text-right">Actions</th>
                         </tr>
-                      ) : (
-                        filteredUsers.map((user) => (
-                          <tr key={user.id} className="hover:bg-slate-50/80 transition-colors">
-                            <td className="py-3.5 px-4">
-                              <div className="flex items-center space-x-3">
-                                <div className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center font-bold text-slate-700 text-xs shrink-0">
-                                  {(user.name || 'User').slice(0, 2).toUpperCase()}
-                                </div>
-                                <div className="leading-tight">
-                                  <span className="font-bold text-slate-900 block">{user.name}</span>
-                                  <span className="text-[11px] text-slate-400 block">{user.email}</span>
-                                  <span className="text-[10px] font-mono text-slate-300 block">{user.id}</span>
-                                </div>
-                              </div>
-                            </td>
-
-                            <td className="py-3.5 px-4">
-                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold ${
-                                user.role === 'Admin' 
-                                  ? 'bg-rose-50 text-rose-700 border border-rose-200' 
-                                  : user.role === 'VIP' 
-                                  ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                                  : 'bg-slate-100 text-slate-700 border border-slate-200'
-                              }`}>
-                                {user.role}
-                              </span>
-                            </td>
-
-                            <td className="py-3.5 px-4">
-                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold ${
-                                user.status === 'Active' 
-                                  ? 'bg-[#00E676]/15 text-[#00A344] border border-[#00E676]/30' 
-                                  : 'bg-red-50 text-red-700 border border-red-200'
-                              }`}>
-                                <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
-                                  user.status === 'Active' ? 'bg-[#00E676]' : 'bg-red-500'
-                                }`} />
-                                {user.status}
-                              </span>
-                            </td>
-
-                            <td className="py-3.5 px-4">
-                              <div className="space-y-0.5">
-                                <span className="block font-semibold text-slate-900">
-                                  <strong>{user.totalWatched}</strong> watched
-                                </span>
-                                <span className="block text-[11px] text-slate-400">
-                                  <strong>{user.totalFavorites}</strong> favorites
-                                </span>
-                              </div>
-                            </td>
-
-                            <td className="py-3.5 px-4 max-w-xs truncate text-slate-600">
-                              {user.lastWatchedMovie}
-                            </td>
-
-                            <td className="py-3.5 px-4 text-slate-400 text-[11px]">
-                              {new Date(user.createdAt).toLocaleDateString()}
-                            </td>
-
-                            <td className="py-3.5 px-4 text-right">
-                              <div className="inline-flex items-center space-x-1">
-                                <button
-                                  onClick={() => handleToggleUserBan(user)}
-                                  className={`p-1.5 rounded-lg border text-xs font-semibold transition-colors ${
-                                    user.status === 'Banned'
-                                      ? 'bg-[#00E676]/15 text-[#00A344] border-[#00E676]/30 hover:bg-[#00E676]/25'
-                                      : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
-                                  }`}
-                                  title={user.status === 'Banned' ? 'Unban User' : 'Ban User'}
-                                >
-                                  {user.status === 'Banned' ? <UserCheck size={14} /> : <UserX size={14} />}
-                                </button>
-
-                                <button
-                                  onClick={() => {
-                                    setRoleChangeModalUser(user);
-                                    setNewRoleSelection(user.role);
-                                  }}
-                                  className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-colors"
-                                  title="Change Role"
-                                >
-                                  <Sliders size={14} />
-                                </button>
-
-                                <button
-                                  onClick={() => setConfirmDeleteUser(user)}
-                                  className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 transition-colors"
-                                  title="Delete User"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              </div>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                        {filteredUsers.length === 0 ? (
+                          <tr>
+                            <td colSpan="7" className="py-12 text-center text-slate-400">
+                              No users found matching your search criteria.
                             </td>
                           </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
+                        ) : (
+                          filteredUsers.map((user) => (
+                            <tr key={user.id} className="hover:bg-slate-50/80 transition-colors">
+                              <td className="py-3.5 px-4">
+                                <div className="flex items-center space-x-3">
+                                  {/* Avatar with Live Online Ripple */}
+                                  <div className="relative shrink-0">
+                                    <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center font-bold text-slate-700 text-xs">
+                                      {(user.name || 'User').slice(0, 2).toUpperCase()}
+                                    </div>
+                                    <span 
+                                      className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${
+                                        user.isOnline ? 'bg-[#00E676]' : 'bg-slate-300'
+                                      }`}
+                                      title={user.isOnline ? 'Active Now' : 'Offline'}
+                                    />
+                                  </div>
+
+                                  <div className="leading-tight">
+                                    <button
+                                      onClick={() => setSelectedUserDetail(user)}
+                                      className="font-bold text-slate-900 hover:text-[#00A344] text-left block transition-colors"
+                                    >
+                                      {user.name}
+                                    </button>
+                                    <span className="text-[11px] text-slate-400 block">{user.email}</span>
+                                    <div className="flex items-center space-x-1 mt-0.5">
+                                      <span className="text-[10px] font-mono text-slate-400">{user.id.slice(0, 14)}...</span>
+                                      <button
+                                        onClick={(e) => handleCopyUid(user.id, e)}
+                                        className="text-slate-400 hover:text-slate-700 transition-colors"
+                                        title="Copy full UID"
+                                      >
+                                        {copiedUid === user.id ? (
+                                          <Check size={11} className="text-[#00A344]" />
+                                        ) : (
+                                          <Copy size={11} />
+                                        )}
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
+
+                              {/* Live Presence Badge */}
+                              <td className="py-3.5 px-4">
+                                {user.isOnline ? (
+                                  <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold bg-[#00E676]/15 text-[#009640] border border-[#00E676]/30">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-[#00E676] mr-1.5 animate-pulse" /> Active Now
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-500 border border-slate-200">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-slate-300 mr-1.5" />
+                                    {formatLastSeen(user.lastSeenTime)}
+                                  </span>
+                                )}
+                              </td>
+
+                              {/* Role */}
+                              <td className="py-3.5 px-4">
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                                  user.role === 'Admin' 
+                                    ? 'bg-rose-50 text-rose-700 border border-rose-200' 
+                                    : user.role === 'VIP' 
+                                    ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                    : 'bg-slate-100 text-slate-700 border border-slate-200'
+                                }`}>
+                                  {user.role}
+                                </span>
+                              </td>
+
+                              {/* Status */}
+                              <td className="py-3.5 px-4">
+                                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                                  user.status === 'Active' 
+                                    ? 'bg-[#00E676]/15 text-[#00A344] border border-[#00E676]/30' 
+                                    : 'bg-rose-50 text-rose-700 border border-rose-200'
+                                }`}>
+                                  <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
+                                    user.status === 'Active' ? 'bg-[#00E676]' : 'bg-rose-500'
+                                  }`} />
+                                  {user.status}
+                                </span>
+                                {user.status === 'Banned' && user.banReason && (
+                                  <span className="block text-[10px] text-rose-500 mt-0.5 font-normal max-w-[140px] truncate" title={user.banReason}>
+                                    {user.banReason}
+                                  </span>
+                                )}
+                              </td>
+
+                              {/* Watch Engagement */}
+                              <td className="py-3.5 px-4">
+                                <div className="space-y-1">
+                                  <div className="flex items-center justify-between text-[11px]">
+                                    <span className="font-bold text-slate-900">{user.totalWatched} movies</span>
+                                    <span className="text-slate-400 text-[10px]">★ {user.totalFavorites} favs</span>
+                                  </div>
+                                  <div className="w-24 bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                                    <div 
+                                      className="h-full bg-gradient-to-r from-[#00E676] to-[#00A344] rounded-full"
+                                      style={{ width: `${Math.min(100, (user.totalWatched / 20) * 100)}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              </td>
+
+                              {/* Last Watched */}
+                              <td className="py-3.5 px-4 max-w-xs truncate text-slate-600">
+                                <div className="flex items-center space-x-1.5">
+                                  <Film size={12} className="text-slate-400 shrink-0" />
+                                  <span className="truncate">{user.lastWatchedMovie}</span>
+                                </div>
+                              </td>
+
+                              {/* Actions */}
+                              <td className="py-3.5 px-4 text-right">
+                                <div className="inline-flex items-center space-x-1">
+                                  {/* Deep Profile Drawer Trigger */}
+                                  <button
+                                    onClick={() => setSelectedUserDetail(user)}
+                                    className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-colors"
+                                    title="View Full Profile & History"
+                                  >
+                                    <Eye size={14} />
+                                  </button>
+
+                                  {/* Ban / Reactivate Action */}
+                                  <button
+                                    onClick={() => {
+                                      if (user.status === 'Banned') {
+                                        handleUnbanUser(user);
+                                      } else {
+                                        setBanModalUser(user);
+                                      }
+                                    }}
+                                    className={`p-1.5 rounded-lg border text-xs font-semibold transition-colors ${
+                                      user.status === 'Banned'
+                                        ? 'bg-[#00E676]/15 text-[#00A344] border-[#00E676]/30 hover:bg-[#00E676]/25'
+                                        : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'
+                                    }`}
+                                    title={user.status === 'Banned' ? 'Reactivate User Account' : 'Suspend Account (Instant Lockout)'}
+                                  >
+                                    {user.status === 'Banned' ? <UserCheck size={14} /> : <UserX size={14} />}
+                                  </button>
+
+                                  {/* Role Modal */}
+                                  <button
+                                    onClick={() => {
+                                      setRoleChangeModalUser(user);
+                                      setNewRoleSelection(user.role);
+                                    }}
+                                    className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-colors"
+                                    title="Change Privileges"
+                                  >
+                                    <Sliders size={14} />
+                                  </button>
+
+                                  {/* Delete */}
+                                  <button
+                                    onClick={() => setConfirmDeleteUser(user)}
+                                    className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 transition-colors"
+                                    title="Delete User"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                /* VIEW 2: INTERACTIVE PROFILE CARDS GRID */
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredUsers.length === 0 ? (
+                    <div className="col-span-full py-12 text-center text-slate-400 bg-white rounded-2xl border border-slate-200">
+                      No users found matching your search criteria.
+                    </div>
+                  ) : (
+                    filteredUsers.map((user) => (
+                      <div 
+                        key={user.id}
+                        className="bg-white rounded-2xl border border-slate-200/90 hover:border-slate-300 shadow-xs hover:shadow-md transition-all p-5 flex flex-col justify-between"
+                      >
+                        <div>
+                          {/* Card Header */}
+                          <div className="flex items-start justify-between mb-4">
+                            <div className="flex items-center space-x-3">
+                              <div className="relative">
+                                <div className="w-12 h-12 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center font-bold text-slate-800 text-sm">
+                                  {(user.name || 'User').slice(0, 2).toUpperCase()}
+                                </div>
+                                <span 
+                                  className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-white ${
+                                    user.isOnline ? 'bg-[#00E676]' : 'bg-slate-300'
+                                  }`}
+                                />
+                              </div>
+                              <div>
+                                <h4 className="font-bold text-slate-900 text-sm">{user.name}</h4>
+                                <span className="text-xs text-slate-400 block">{user.email}</span>
+                                <div className="flex items-center space-x-1 mt-0.5">
+                                  <span className="text-[10px] font-mono text-slate-400">{user.id.slice(0, 12)}...</span>
+                                  <button
+                                    onClick={(e) => handleCopyUid(user.id, e)}
+                                    className="text-slate-400 hover:text-slate-700 transition-colors"
+                                    title="Copy UID"
+                                  >
+                                    {copiedUid === user.id ? (
+                                      <Check size={11} className="text-[#00A344]" />
+                                    ) : (
+                                      <Copy size={11} />
+                                    )}
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              user.role === 'Admin' ? 'bg-rose-50 text-rose-700 border border-rose-200' :
+                              user.role === 'VIP' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                              'bg-slate-100 text-slate-700 border border-slate-200'
+                            }`}>
+                              {user.role}
+                            </span>
+                          </div>
+
+                          {/* Presence & Status Tag */}
+                          <div className="flex items-center space-x-2 mb-3">
+                            {user.isOnline ? (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#00E676]/15 text-[#009640] border border-[#00E676]/30">
+                                <span className="w-1.5 h-1.5 rounded-full bg-[#00E676] mr-1.5 animate-pulse" /> Active Now
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-500 border border-slate-200">
+                                Offline • {formatLastSeen(user.lastSeenTime)}
+                              </span>
+                            )}
+
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              user.status === 'Active' ? 'bg-[#00E676]/15 text-[#00A344]' : 'bg-rose-50 text-rose-700'
+                            }`}>
+                              {user.status}
+                            </span>
+                          </div>
+
+                          {/* Engagement Counters */}
+                          <div className="grid grid-cols-2 gap-2 bg-slate-50 rounded-xl p-2.5 text-center mb-3">
+                            <div>
+                              <span className="text-[10px] text-slate-400 font-bold block uppercase">Watched</span>
+                              <span className="font-extrabold text-slate-900 text-xs">{user.totalWatched} movies</span>
+                            </div>
+                            <div>
+                              <span className="text-[10px] text-slate-400 font-bold block uppercase">Favorites</span>
+                              <span className="font-extrabold text-slate-900 text-xs">★ {user.totalFavorites} saved</span>
+                            </div>
+                          </div>
+
+                          {/* Last Watched Snippet */}
+                          <div className="text-xs text-slate-600 bg-white border border-slate-100 rounded-xl p-2.5 flex items-center space-x-2 mb-3">
+                            <Film size={14} className="text-[#00A344] shrink-0" />
+                            <span className="truncate text-[11px]">{user.lastWatchedMovie}</span>
+                          </div>
+
+                          {user.status === 'Banned' && (
+                            <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs mb-3 flex items-start space-x-2">
+                              <AlertCircle size={14} className="shrink-0 mt-0.5" />
+                              <div className="leading-tight">
+                                <span className="font-bold block">Account Suspended</span>
+                                <span className="text-[11px] text-rose-600">{user.banReason}</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Card Actions */}
+                        <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                          <button
+                            onClick={() => setSelectedUserDetail(user)}
+                            className="flex-1 py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition-colors inline-flex items-center justify-center"
+                          >
+                            <Eye size={13} className="mr-1" /> Dossier
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              if (user.status === 'Banned') {
+                                handleUnbanUser(user);
+                              } else {
+                                setBanModalUser(user);
+                              }
+                            }}
+                            className={`py-1.5 px-3 rounded-xl text-xs font-bold transition-colors inline-flex items-center justify-center ${
+                              user.status === 'Banned'
+                                ? 'bg-[#00E676]/20 text-[#00A344] hover:bg-[#00E676]/30'
+                                : 'bg-rose-50 text-rose-700 hover:bg-rose-100'
+                            }`}
+                          >
+                            {user.status === 'Banned' ? 'Reactivate' : 'Ban User'}
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              setRoleChangeModalUser(user);
+                              setNewRoleSelection(user.role);
+                            }}
+                            className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
+                            title="Privileges"
+                          >
+                            <Sliders size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -1310,132 +1739,305 @@ export default function App() {
           )}
 
           {/* ═════════════════════════════════════════════════════════════════════ */}
-          {/* TAB 4: LIVE SUPPORT CHAT                                           */}
+          {/* TAB 4: WHATSAPP-STYLE LIVE SUPPORT CHAT                             */}
           {/* ═════════════════════════════════════════════════════════════════════ */}
           {activeTab === 'chat' && (
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden flex h-[calc(100vh-140px)] max-w-7xl mx-auto">
-              {/* Left Conversations List */}
-              <div className="w-80 border-r border-slate-200 flex flex-col bg-slate-50/50">
-                <div className="p-4 border-b border-slate-200">
-                  <h3 className="font-bold text-slate-900 text-sm mb-2">User Inquiries</h3>
+            <div className="bg-[#EFEAE2] rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden flex h-[calc(100vh-140px)] max-w-7xl mx-auto">
+              {/* WhatsApp Left Conversations List */}
+              <div className="w-80 md:w-96 border-r border-[#E9EDEF] flex flex-col bg-white shrink-0">
+                {/* WhatsApp Sidebar Header */}
+                <div className="h-16 px-4 bg-[#F0F2F5] border-b border-[#E9EDEF] flex items-center justify-between shrink-0">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#00E676] to-[#00C853] flex items-center justify-center text-black font-black text-sm shadow-xs">
+                      FW
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-[#111B21] text-sm leading-tight">Live Support</h3>
+                      <span className="text-[10px] text-[#00A884] font-semibold flex items-center">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#00E676] mr-1 animate-pulse" />
+                        Connected to RTDB
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-1 text-[#54656F]">
+                    <span className="text-[11px] font-bold bg-[#E9EDEF] px-2 py-0.5 rounded-full text-slate-700">
+                      {threads.length} chats
+                    </span>
+                  </div>
+                </div>
+
+                {/* WhatsApp Search Bar */}
+                <div className="p-2.5 bg-[#F0F2F5] border-b border-[#E9EDEF]">
                   <div className="relative">
-                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#54656F]" />
                     <input 
                       type="text"
-                      placeholder="Search conversations..."
+                      placeholder="Search or start new conversation..."
                       value={chatSearch}
                       onChange={(e) => setChatSearch(e.target.value)}
-                      className="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-700 focus:outline-none focus:border-[#00E676]"
+                      className="w-full pl-9 pr-3 py-1.5 bg-white rounded-lg text-xs font-normal text-[#111B21] placeholder:text-[#8696A0] focus:outline-none shadow-2xs border border-transparent focus:border-[#00E676]"
                     />
                   </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
+                {/* WhatsApp Conversations Scroll Area */}
+                <div className="flex-1 overflow-y-auto divide-y divide-[#F0F2F5]">
                   {threads.length === 0 ? (
                     <div className="p-8 text-center text-slate-400 text-xs">
                       No support conversations yet.
                     </div>
                   ) : (
-                    threads.map((thread) => {
-                      const isSelected = thread.uid === selectedThreadId;
-                      return (
-                        <button
-                          key={thread.uid}
-                          onClick={() => setSelectedThreadId(thread.uid)}
-                          className={`w-full p-4 text-left flex items-start space-x-3 transition-colors ${
-                            isSelected ? 'bg-white border-l-4 border-[#00E676] shadow-xs' : 'hover:bg-slate-100/60'
-                          }`}
-                        >
-                          <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center font-bold text-xs text-slate-700 shrink-0">
-                            {(thread.userName || 'User').slice(0, 2).toUpperCase()}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between mb-0.5">
-                              <span className="font-bold text-slate-900 text-xs truncate">{thread.userName || 'FreeWatch User'}</span>
-                              <span className="text-[10px] text-slate-400">
-                                {new Date(thread.updatedAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                              </span>
+                    threads
+                      .filter(t => !chatSearch || (t.userName || '').toLowerCase().includes(chatSearch.toLowerCase()) || (t.lastMessage || '').toLowerCase().includes(chatSearch.toLowerCase()))
+                      .map((thread) => {
+                        const isSelected = thread.uid === selectedThreadId;
+                        const matchedUser = users.find(u => u.id === thread.uid);
+                        const isUserOnline = matchedUser?.isOnline;
+
+                        return (
+                          <button
+                            key={thread.uid}
+                            onClick={() => setSelectedThreadId(thread.uid)}
+                            className={`w-full px-4 py-3 text-left flex items-center space-x-3 transition-colors ${
+                              isSelected ? 'bg-[#F0F2F5]' : 'hover:bg-[#F5F6F6] bg-white'
+                            }`}
+                          >
+                            <div className="relative shrink-0">
+                              <div className="w-11 h-11 rounded-full bg-slate-200 border border-slate-100 flex items-center justify-center font-bold text-xs text-slate-700 shadow-2xs">
+                                {(thread.userName || 'User').slice(0, 2).toUpperCase()}
+                              </div>
+                              <span 
+                                className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${
+                                  isUserOnline ? 'bg-[#00E676]' : 'bg-slate-300'
+                                }`}
+                              />
                             </div>
-                            <p className="text-xs text-slate-500 truncate">{thread.lastMessage}</p>
-                          </div>
-                          {thread.unreadCount > 0 && (
-                            <span className="w-4 h-4 rounded-full bg-[#00E676] text-black text-[10px] font-black flex items-center justify-center shrink-0">
-                              {thread.unreadCount}
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })
+
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between mb-0.5">
+                                <span className="font-semibold text-[#111B21] text-xs truncate">
+                                  {thread.userName || 'FreeWatch User'}
+                                </span>
+                                <span className={`text-[10px] ${thread.unreadCount > 0 ? 'text-[#00A884] font-bold' : 'text-[#667781]'}`}>
+                                  {new Date(thread.updatedAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <p className="text-xs text-[#667781] truncate pr-2 flex items-center">
+                                  <CheckCheck size={13} className="text-[#53BDEB] inline mr-1 shrink-0" />
+                                  <span className="truncate">{thread.lastMessage}</span>
+                                </p>
+                                {thread.unreadCount > 0 && (
+                                  <span className="min-w-5 h-5 px-1.5 rounded-full bg-[#25D366] text-white text-[10px] font-bold flex items-center justify-center shrink-0">
+                                    {thread.unreadCount}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })
                   )}
                 </div>
               </div>
 
-              {/* Right Active Chat Pane */}
-              <div className="flex-1 flex flex-col bg-white">
+              {/* WhatsApp Right Active Chat Pane */}
+              <div className="flex-1 flex flex-col bg-[#EFEAE2] relative">
                 {selectedThreadId ? (
                   <>
-                    {/* Active Chat Header */}
-                    <div className="h-14 px-6 border-b border-slate-200 flex items-center justify-between bg-white">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs">
-                          {((threads.find(t => t.uid === selectedThreadId)?.userName) || 'User').slice(0, 2).toUpperCase()}
-                        </div>
-                        <div>
-                          <h4 className="font-bold text-slate-900 text-xs">
-                            {threads.find(t => t.uid === selectedThreadId)?.userName || 'User'}
-                          </h4>
-                          <span className="text-[10px] text-[#00A344] font-bold flex items-center">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#00E676] mr-1 animate-pulse" /> Connected in Realtime
-                          </span>
-                        </div>
-                      </div>
-                    </div>
+                    {/* WhatsApp Active Chat Header */}
+                    {(() => {
+                      const activeThread = threads.find(t => t.uid === selectedThreadId);
+                      const activeUser = users.find(u => u.id === selectedThreadId);
 
-                    {/* Chat Messages Body */}
-                    <div className="flex-1 p-6 overflow-y-auto space-y-3 bg-slate-50/30">
+                      return (
+                        <div className="h-16 px-5 border-b border-[#E9EDEF] flex items-center justify-between bg-[#F0F2F5] z-10 shrink-0">
+                          <div className="flex items-center space-x-3.5">
+                            <div className="relative">
+                              <div className="w-10 h-10 rounded-full bg-slate-200 text-slate-800 flex items-center justify-center font-bold text-xs shadow-2xs border border-white">
+                                {((activeThread?.userName || activeUser?.name) || 'User').slice(0, 2).toUpperCase()}
+                              </div>
+                              <span 
+                                className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-[#F0F2F5] ${
+                                  activeUser?.isOnline ? 'bg-[#00E676]' : 'bg-slate-300'
+                                }`}
+                              />
+                            </div>
+                            <div>
+                              <h4 className="font-semibold text-[#111B21] text-sm leading-tight">
+                                {activeUser?.name || activeThread?.userName || 'FreeWatch User'}
+                              </h4>
+                              <span className="text-[11px] font-medium flex items-center">
+                                {activeUser?.isOnline ? (
+                                  <span className="text-[#00A884] font-semibold">online</span>
+                                ) : (
+                                  <span className="text-[#667781]">
+                                    last seen {formatLastSeen(activeUser?.lastSeenTime)}
+                                  </span>
+                                )}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* WhatsApp Header Actions */}
+                          <div className="flex items-center space-x-1 text-[#54656F]">
+                            {activeUser && (
+                              <button 
+                                onClick={() => setSelectedUserDetail(activeUser)}
+                                className="p-2 hover:bg-black/5 rounded-full transition-colors text-slate-700"
+                                title="Inspect Full Dossier"
+                              >
+                                <Info size={18} />
+                              </button>
+                            )}
+
+                            {activeUser && (
+                              <button 
+                                onClick={() => {
+                                  if (activeUser.status === 'Banned') {
+                                    handleUnbanUser(activeUser);
+                                  } else {
+                                    setBanModalUser(activeUser);
+                                  }
+                                }}
+                                className={`p-2 rounded-full transition-colors ${
+                                  activeUser.status === 'Banned' ? 'text-[#00A344] hover:bg-[#00E676]/10' : 'text-rose-600 hover:bg-rose-50'
+                                }`}
+                                title={activeUser.status === 'Banned' ? 'Reactivate User' : 'Suspend Account'}
+                              >
+                                {activeUser.status === 'Banned' ? <UserCheck size={18} /> : <UserX size={18} />}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* WhatsApp Chat Messages Canvas with subtle doodle texture */}
+                    <div 
+                      className="flex-1 p-5 overflow-y-auto space-y-2.5"
+                      style={{
+                        backgroundImage: `radial-gradient(#c8c2b7 0.9px, transparent 0.9px)`,
+                        backgroundSize: '18px 18px',
+                      }}
+                    >
+                      {/* WhatsApp Centered Date Badge */}
+                      <div className="flex justify-center my-2">
+                        <span className="bg-white/95 text-[#54656F] text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-md shadow-[0_1px_0.5px_rgba(11,20,26,0.13)] border border-slate-200/50">
+                          Today
+                        </span>
+                      </div>
+
                       {messages.map((m) => {
                         const isAdmin = m.senderRole === 'admin' || m.senderId === 'admin';
                         return (
                           <div 
                             key={m.id} 
-                            className={`flex flex-col ${isAdmin ? 'items-end' : 'items-start'}`}
+                            className={`flex ${isAdmin ? 'justify-end' : 'justify-start'}`}
                           >
-                            <div className={`max-w-md px-4 py-2.5 rounded-2xl text-xs font-medium leading-relaxed ${
-                              isAdmin 
-                                ? 'bg-[#00E676] text-black font-semibold rounded-tr-xs shadow-xs' 
-                                : 'bg-white border border-slate-200 text-slate-800 rounded-tl-xs shadow-xs'
-                            }`}>
-                              {m.text}
+                            <div 
+                              className={`relative max-w-md px-3.5 py-2 shadow-[0_1px_0.5px_rgba(11,20,26,0.13)] ${
+                                isAdmin 
+                                  ? 'bg-[#D9FDD3] text-[#111B21] rounded-2xl rounded-tr-xs border border-[#C6ECC0]/60' 
+                                  : 'bg-white text-[#111B21] rounded-2xl rounded-tl-xs border border-slate-100'
+                              }`}
+                            >
+                              <p className="text-xs leading-relaxed break-words whitespace-pre-wrap font-normal">
+                                {m.text}
+                              </p>
+                              <div className="flex items-center justify-end space-x-1 mt-1 text-[10px] text-[#667781]">
+                                <span>
+                                  {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                                {isAdmin && (
+                                  <CheckCheck size={14} className="text-[#53BDEB] shrink-0 inline ml-0.5" />
+                                )}
+                              </div>
                             </div>
-                            <span className="text-[10px] text-slate-400 mt-1 px-1">
-                              {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </span>
                           </div>
                         );
                       })}
                       <div ref={messagesEndRef} />
                     </div>
 
-                    {/* Chat Input */}
-                    <form onSubmit={handleSendMessage} className="p-3 border-t border-slate-200 bg-white flex space-x-2">
-                      <input 
-                        type="text"
-                        placeholder="Type response to user..."
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        className="flex-1 px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:border-[#00E676]"
-                      />
-                      <button
-                        type="submit"
-                        className="px-4 py-2 bg-[#00E676] hover:bg-[#00C853] text-black rounded-xl text-xs font-extrabold transition-colors flex items-center shadow-sm shadow-[#00E676]/20"
-                      >
-                        <Send size={14} className="mr-1.5" /> Send
-                      </button>
-                    </form>
+                    {/* WhatsApp Input Dock */}
+                    <div className="p-3 border-t border-[#E9EDEF] bg-[#F0F2F5] flex flex-col space-y-2 z-10 shrink-0">
+                      {/* Quick Canned Responses Bar */}
+                      <div className="flex items-center space-x-2 overflow-x-auto pb-1 text-[11px]">
+                        <span className="font-bold text-[10px] uppercase text-[#667781] shrink-0">Quick Reply:</span>
+                        {[
+                          '👋 Welcome to FreeWatch Support! How can we assist you today?',
+                          '🎬 Your requested movie is now uploaded to the catalog!',
+                          '✅ Account status verified and active.',
+                          '🍿 Enjoy streaming on FreeWatch!',
+                        ].map((quick, qIdx) => (
+                          <button
+                            key={qIdx}
+                            type="button"
+                            onClick={() => setNewMessage(quick)}
+                            className="px-2.5 py-1 bg-white hover:bg-slate-50 border border-slate-200/80 rounded-full text-[#111B21] shrink-0 transition-colors shadow-2xs font-medium text-[11px]"
+                          >
+                            {quick.slice(0, 32)}...
+                          </button>
+                        ))}
+                      </div>
+
+                      <form onSubmit={handleSendMessage} className="flex items-center space-x-2">
+                        <button
+                          type="button"
+                          className="p-2 text-[#54656F] hover:text-[#111B21] transition-colors"
+                          title="Emoji"
+                        >
+                          <Smile size={20} />
+                        </button>
+                        <button
+                          type="button"
+                          className="p-2 text-[#54656F] hover:text-[#111B21] transition-colors"
+                          title="Attach"
+                        >
+                          <Paperclip size={20} />
+                        </button>
+
+                        <input 
+                          type="text"
+                          placeholder="Type a message..."
+                          value={newMessage}
+                          onChange={(e) => setNewMessage(e.target.value)}
+                          className="flex-1 px-4 py-2.5 bg-white rounded-lg text-xs font-normal text-[#111B21] placeholder:text-[#8696A0] focus:outline-none shadow-2xs border-0"
+                        />
+
+                        {newMessage.trim() ? (
+                          <button
+                            type="submit"
+                            className="w-10 h-10 rounded-full bg-[#00A884] hover:bg-[#008f6f] text-white flex items-center justify-center transition-all shadow-sm shrink-0"
+                            title="Send Message"
+                          >
+                            <Send size={16} className="translate-x-0.5" />
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className="p-2 text-[#54656F] hover:text-[#111B21] transition-colors"
+                            title="Voice Note"
+                          >
+                            <Mic size={20} />
+                          </button>
+                        )}
+                      </form>
+                    </div>
                   </>
                 ) : (
-                  <div className="flex-1 flex items-center justify-center text-slate-400 text-xs">
-                    Select a conversation from the left to begin live support.
+                  <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-slate-500">
+                    <div className="w-16 h-16 rounded-3xl bg-white border border-slate-200/80 shadow-md flex items-center justify-center text-[#00E676] mb-4">
+                      <MessageCircle size={32} />
+                    </div>
+                    <h3 className="text-base font-bold text-slate-800 mb-1">FreeWatch Live Support Web</h3>
+                    <p className="text-xs text-slate-500 max-w-sm">
+                      Send and receive real-time messages directly to users streaming on the FreeWatch mobile application.
+                    </p>
+                    <span className="text-[10px] text-slate-400 mt-4 flex items-center">
+                      <Lock size={12} className="mr-1 text-slate-400" /> Realtime 2-way synchronized via Firebase RTDB
+                    </span>
                   </div>
                 )}
               </div>
@@ -1890,6 +2492,281 @@ export default function App() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal: Suspend / Ban User with Reason ── */}
+      {banModalUser && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0 border border-rose-200">
+                <ShieldAlert size={24} />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-900 text-base">Suspend User Account</h3>
+                <p className="text-xs text-slate-500">
+                  {banModalUser.name} ({banModalUser.email})
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800 leading-relaxed">
+              <strong>⚠️ Instant Mobile Lockout:</strong> Suspending this account will immediately lock the user out of the FreeWatch mobile application in real time and block all streaming.
+            </div>
+
+            <div className="space-y-2">
+              <label className="block font-bold text-slate-700 text-xs">Select Suspension Reason</label>
+              {[
+                'Terms of Service Violation',
+                'Spamming & Inappropriate Behavior',
+                'Suspicious Account Activity',
+                'Multiple Device Abuse',
+                'Other',
+              ].map((reasonOption) => (
+                <label 
+                  key={reasonOption}
+                  className={`flex items-center justify-between p-2.5 rounded-xl border text-xs font-semibold cursor-pointer transition-all ${
+                    banReason === reasonOption 
+                      ? 'border-rose-500 bg-rose-50/70 text-rose-700' 
+                      : 'border-slate-200 text-slate-700 hover:bg-slate-50'
+                  }`}
+                >
+                  <span>{reasonOption}</span>
+                  <input 
+                    type="radio" 
+                    name="banReasonSelect"
+                    checked={banReason === reasonOption}
+                    onChange={() => setBanReason(reasonOption)}
+                    className="accent-rose-600"
+                  />
+                </label>
+              ))}
+
+              {banReason === 'Other' && (
+                <div className="pt-1">
+                  <input 
+                    type="text"
+                    placeholder="Enter custom suspension reason..."
+                    value={customBanReason}
+                    onChange={(e) => setCustomBanReason(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:border-rose-500"
+                    autoFocus
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="flex space-x-2 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setBanModalUser(null);
+                  setCustomBanReason('');
+                }}
+                className="flex-1 py-2 rounded-xl border border-slate-200 font-semibold text-slate-600 hover:bg-slate-50 transition-colors text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmBan}
+                className="flex-1 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold transition-colors shadow-sm shadow-rose-600/25 text-xs"
+              >
+                Confirm Suspension
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal: Deep User Profile Dossier ── */}
+      {selectedUserDetail && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 space-y-5 max-h-[90vh] overflow-y-auto">
+            {/* Dossier Header */}
+            <div className="flex items-start justify-between border-b border-slate-100 pb-4">
+              <div className="flex items-center space-x-4">
+                <div className="relative">
+                  <div className="w-14 h-14 rounded-full bg-slate-100 border-2 border-slate-200 flex items-center justify-center font-black text-slate-800 text-lg shadow-xs">
+                    {(selectedUserDetail.name || 'User').slice(0, 2).toUpperCase()}
+                  </div>
+                  <span 
+                    className={`absolute bottom-0 right-0 w-4 h-4 rounded-full border-2 border-white ${
+                      selectedUserDetail.isOnline ? 'bg-[#00E676]' : 'bg-slate-300'
+                    }`}
+                  />
+                </div>
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <h3 className="font-extrabold text-slate-900 text-lg">{selectedUserDetail.name}</h3>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      selectedUserDetail.role === 'Admin' ? 'bg-rose-50 text-rose-700 border border-rose-200' :
+                      selectedUserDetail.role === 'VIP' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                      'bg-slate-100 text-slate-700 border border-slate-200'
+                    }`}>
+                      {selectedUserDetail.role}
+                    </span>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      selectedUserDetail.status === 'Active' ? 'bg-[#00E676]/15 text-[#00A344] border border-[#00E676]/30' : 'bg-rose-50 text-rose-700 border border-rose-200'
+                    }`}>
+                      {selectedUserDetail.status}
+                    </span>
+                  </div>
+                  <span className="text-xs text-slate-400 block mt-0.5">{selectedUserDetail.email}</span>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <span className="text-[11px] font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+                      UID: {selectedUserDetail.id}
+                    </span>
+                    <button
+                      onClick={(e) => handleCopyUid(selectedUserDetail.id, e)}
+                      className="text-xs text-[#00A344] font-bold hover:underline flex items-center"
+                    >
+                      {copiedUid === selectedUserDetail.id ? (
+                        <>
+                          <Check size={12} className="mr-1" /> Copied!
+                        </>
+                      ) : (
+                        <>
+                          <Copy size={12} className="mr-1" /> Copy UID
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setSelectedUserDetail(null)}
+                className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Account Metadata Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 text-center">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">Presence</span>
+                <span className={`text-xs font-bold ${selectedUserDetail.isOnline ? 'text-[#00A344]' : 'text-slate-600'}`}>
+                  {selectedUserDetail.isOnline ? '🟢 Active Now' : `Offline (${formatLastSeen(selectedUserDetail.lastSeenTime)})`}
+                </span>
+              </div>
+              <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 text-center">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">Movies Watched</span>
+                <span className="text-xs font-extrabold text-slate-900">{selectedUserDetail.totalWatched} titles</span>
+              </div>
+              <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 text-center">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">Favorites</span>
+                <span className="text-xs font-extrabold text-amber-600">★ {selectedUserDetail.totalFavorites} saved</span>
+              </div>
+              <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 text-center">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">Platform</span>
+                <span className="text-xs font-bold text-slate-700">{selectedUserDetail.platform}</span>
+              </div>
+            </div>
+
+            {/* Watch History List */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider">
+                  Watch History ({selectedUserDetail.watchHistory.length})
+                </h4>
+                <span className="text-[10px] text-slate-400">Streamed on FreeWatch Android / iOS</span>
+              </div>
+              <div className="border border-slate-200 rounded-xl overflow-hidden max-h-44 overflow-y-auto divide-y divide-slate-100 bg-white">
+                {selectedUserDetail.watchHistory.length === 0 ? (
+                  <div className="p-4 text-center text-xs text-slate-400">
+                    No movies watched by this user yet.
+                  </div>
+                ) : (
+                  selectedUserDetail.watchHistory.map((item, idx) => (
+                    <div key={idx} className="p-2.5 px-3 flex items-center justify-between text-xs hover:bg-slate-50">
+                      <div className="flex items-center space-x-2 min-w-0">
+                        <Film size={14} className="text-[#00A344] shrink-0" />
+                        <span className="font-bold text-slate-800 truncate">{item.title || 'Untitled Movie'}</span>
+                        {item.vj && <span className="text-[10px] text-slate-400 font-medium">({item.vj})</span>}
+                      </div>
+                      <span className="text-[10px] text-slate-400 shrink-0 ml-2">
+                        {item.watchedAt ? new Date(item.watchedAt).toLocaleDateString() : 'Recent'}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Favorites List */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider">
+                  Bookmarked Favorites ({selectedUserDetail.favorites.length})
+                </h4>
+              </div>
+              <div className="border border-slate-200 rounded-xl overflow-hidden max-h-32 overflow-y-auto divide-y divide-slate-100 bg-white">
+                {selectedUserDetail.favorites.length === 0 ? (
+                  <div className="p-4 text-center text-xs text-slate-400">
+                    No favorites saved yet.
+                  </div>
+                ) : (
+                  selectedUserDetail.favorites.map((fav, idx) => (
+                    <div key={idx} className="p-2 px-3 flex items-center justify-between text-xs hover:bg-slate-50">
+                      <div className="flex items-center space-x-2 min-w-0">
+                        <Star size={13} className="text-amber-500 shrink-0" />
+                        <span className="font-semibold text-slate-800 truncate">{fav.title || 'Untitled Movie'}</span>
+                      </div>
+                      <span className="text-[10px] text-slate-400">{fav.category || 'Movie'}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Dossier Actions */}
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedThreadId(selectedUserDetail.id);
+                  setActiveTab('chat');
+                  setSelectedUserDetail(null);
+                }}
+                className="py-2.5 px-4 bg-[#00E676] hover:bg-[#00C853] text-black font-extrabold rounded-xl text-xs transition-colors flex items-center shadow-sm shadow-[#00E676]/25"
+              >
+                <MessageCircle size={15} className="mr-1.5" /> Open WhatsApp Live Support
+              </button>
+
+              <div className="flex items-center space-x-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const userToBan = selectedUserDetail;
+                    setSelectedUserDetail(null);
+                    if (userToBan.status === 'Banned') {
+                      handleUnbanUser(userToBan);
+                    } else {
+                      setBanModalUser(userToBan);
+                    }
+                  }}
+                  className={`py-2 px-3.5 rounded-xl text-xs font-bold transition-colors ${
+                    selectedUserDetail.status === 'Banned'
+                      ? 'bg-[#00E676]/15 text-[#00A344] hover:bg-[#00E676]/25'
+                      : 'bg-rose-50 text-rose-700 hover:bg-rose-100'
+                  }`}
+                >
+                  {selectedUserDetail.status === 'Banned' ? 'Reactivate User' : 'Suspend User'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedUserDetail(null)}
+                  className="py-2 px-4 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

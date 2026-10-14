@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
 import '../../core/constants/app_colors.dart';
 
 /// Modern Mobile Splash Screen:
@@ -57,11 +58,33 @@ class _SplashScreenState extends State<SplashScreen>
     _controller.forward();
 
     // Auto-navigate after animations complete: /home if logged in, /onboarding if not
-    _navigationTimer = Timer(const Duration(milliseconds: 2800), () {
+    _navigationTimer = Timer(const Duration(milliseconds: 2800), () async {
       if (mounted) {
         final user = FirebaseAuth.instance.currentUser;
         if (user != null) {
-          context.go('/home');
+          try {
+            // Rapid verify account status in RTDB
+            final snap = await FirebaseDatabase.instance
+                .ref('users/${user.uid}/profile')
+                .get()
+                .timeout(const Duration(milliseconds: 1400));
+            if (snap.exists && snap.value is Map) {
+              final data = Map<String, dynamic>.from(snap.value as Map);
+              final status = data['status']?.toString();
+              final isBanned = data['isBanned'] == true || status == 'Banned';
+              if (isBanned) {
+                final reason = data['banReason']?.toString() ?? '';
+                if (mounted) {
+                  context.go('/banned?reason=${Uri.encodeComponent(reason)}');
+                  return;
+                }
+              }
+            }
+          } catch (_) {}
+
+          if (mounted) {
+            context.go('/home');
+          }
         } else {
           context.go('/onboarding');
         }

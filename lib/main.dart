@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'core/services/notification_service.dart';
 import 'core/services/movie_notification_tracker.dart';
+import 'core/services/user_presence_service.dart';
 import 'features/favorites/presentation/providers/favorites_provider.dart';
 import 'features/profile/presentation/providers/watch_history_provider.dart';
 import 'firebase_options.dart';
@@ -30,6 +31,13 @@ void main() async {
     await NotificationService().initialize();
   } catch (e) {
     debugPrint('Notification service initialization notice: $e');
+  }
+
+  // Initialize real-time presence & connection monitoring
+  try {
+    UserPresenceService().initialize();
+  } catch (e) {
+    debugPrint('User presence service initialization notice: $e');
   }
 
   // Force portrait orientation

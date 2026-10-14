@@ -3,6 +3,7 @@ import '../../features/home/home_screen.dart';
 import '../../features/splash/splash_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/auth/presentation/screens/choose_avatar_screen.dart';
+import '../../features/auth/presentation/screens/banned_account_screen.dart';
 import '../../features/movie_detail/presentation/screens/movie_detail_screen.dart';
 import '../../features/notifications/presentation/screens/notifications_screen.dart';
 import '../../data/models/movie.dart';
@@ -19,6 +20,14 @@ GoRouter createAppRouter({String initialLocation = '/splash'}) => GoRouter(
       path: '/splash',
       name: 'splash',
       builder: (context, state) => const SplashScreen(),
+    ),
+    GoRoute(
+      path: '/banned',
+      name: 'banned',
+      builder: (context, state) {
+        final reason = state.uri.queryParameters['reason'];
+        return BannedAccountScreen(initialReason: reason);
+      },
     ),
     GoRoute(
       path: '/onboarding',
