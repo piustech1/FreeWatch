@@ -41,11 +41,22 @@ class _AppUpdateBannerState extends State<AppUpdateBanner> {
         : AppUpdateService.defaultStoreListingUrl;
     try {
       final uri = Uri.parse(urlStr);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      // Attempt external application first (Chrome / Default browser)
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched) {
+        // Fallback to platform default
+        await launchUrl(uri, mode: LaunchMode.platformDefault);
       }
     } catch (e) {
       debugPrint('Failed to launch update page: $e');
+      // Final fallback attempt
+      try {
+        final uri = Uri.parse(urlStr);
+        await launchUrl(uri);
+      } catch (_) {}
     }
   }
 
@@ -58,64 +69,55 @@ class _AppUpdateBannerState extends State<AppUpdateBanner> {
     final update = _updateInfo!;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 12),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(22),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  const Color(0xFF0071E3).withOpacity(0.22),
-                  const Color(0xFF00E676).withOpacity(0.12),
-                  Colors.white.withOpacity(0.06),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(18),
+              // Liquid glass iOS frosted curved surface - no harsh gradients
+              color: Colors.white.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(22),
               border: Border.all(
-                color: const Color(0xFF0071E3).withOpacity(0.40),
-                width: 1.2,
+                color: Colors.white.withOpacity(0.14),
+                width: 1.0,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF0071E3).withOpacity(0.20),
-                  blurRadius: 16,
-                  offset: const Offset(0, 4),
+                  color: Colors.black.withOpacity(0.25),
+                  blurRadius: 18,
+                  offset: const Offset(0, 6),
                 ),
               ],
             ),
             child: Row(
               children: [
-                // Rocket Icon with glowing badge
+                // Clean Vector Update Icon (No Emojis) in Frosted Glass Squircle
                 Container(
                   width: 42,
                   height: 42,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF0071E3),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF0071E3).withOpacity(0.45),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+                    color: Colors.white.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(13),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.18),
+                      width: 0.8,
+                    ),
                   ),
                   child: const Center(
-                    child: Text(
-                      '🚀',
-                      style: TextStyle(fontSize: 20),
+                    child: Icon(
+                      Icons.system_update_rounded,
+                      color: Colors.white,
+                      size: 22,
                     ),
                   ),
                 ),
 
                 const SizedBox(width: 12),
 
-                // Text Information
+                // Text Information & Tap Target
                 Expanded(
                   child: GestureDetector(
                     onTap: _launchStoreListing,
@@ -131,41 +133,43 @@ class _AppUpdateBannerState extends State<AppUpdateBanner> {
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 13.5,
-                                fontWeight: FontWeight.w800,
+                                fontWeight: FontWeight.w700,
                                 letterSpacing: -0.2,
                               ),
                             ),
-                            const SizedBox(width: 6),
+                            const SizedBox(width: 7),
+                            // Frosted Liquid Glass Version Badge (No green gradients)
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF00E676).withOpacity(0.20),
-                                borderRadius: BorderRadius.circular(6),
+                                color: Colors.white.withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(8),
                                 border: Border.all(
-                                  color: const Color(0xFF00E676).withOpacity(0.60),
-                                  width: 0.8,
+                                  color: Colors.white.withOpacity(0.18),
+                                  width: 0.6,
                                 ),
                               ),
                               child: Text(
                                 'v${update.version}',
-                                style: const TextStyle(
-                                  color: Color(0xFF00E676),
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.92),
                                   fontSize: 10,
-                                  fontWeight: FontWeight.w800,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.2,
                                 ),
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 2),
+                        const SizedBox(height: 3),
                         Text(
                           'Tap to view what\'s new & download latest APK',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.65),
+                            color: Colors.white.withOpacity(0.60),
                             fontSize: 11.5,
-                            fontWeight: FontWeight.w500,
+                            fontWeight: FontWeight.w400,
                           ),
                         ),
                       ],
@@ -175,44 +179,53 @@ class _AppUpdateBannerState extends State<AppUpdateBanner> {
 
                 const SizedBox(width: 8),
 
-                // Action Pill Button (Apple App Store style)
-                GestureDetector(
-                  onTap: _launchStoreListing,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0071E3),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF0071E3).withOpacity(0.35),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
+                // Action Pill Button (Apple App Store style) with direct Material InkWell
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: _launchStoreListing,
+                    borderRadius: BorderRadius.circular(18),
+                    splashColor: Colors.white.withOpacity(0.2),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7.5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0071E3),
+                        borderRadius: BorderRadius.circular(18),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF0071E3).withOpacity(0.40),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Text(
+                        'UPDATE',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.5,
                         ),
-                      ],
-                    ),
-                    child: const Text(
-                      'UPDATE',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.5,
                       ),
                     ),
                   ),
                 ),
 
                 if (!update.isMandatory) ...[
-                  const SizedBox(width: 6),
-                  GestureDetector(
-                    onTap: () => setState(() => _dismissed = true),
-                    child: Padding(
-                      padding: const EdgeInsets.all(4),
-                      child: Icon(
-                        Icons.close_rounded,
-                        color: Colors.white.withOpacity(0.40),
-                        size: 18,
+                  const SizedBox(width: 4),
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => setState(() => _dismissed = true),
+                      borderRadius: BorderRadius.circular(16),
+                      child: Padding(
+                        padding: const EdgeInsets.all(6),
+                        child: Icon(
+                          Icons.close_rounded,
+                          color: Colors.white.withOpacity(0.45),
+                          size: 18,
+                        ),
                       ),
                     ),
                   ),

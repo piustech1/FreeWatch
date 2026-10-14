@@ -2,7 +2,7 @@ name: freewatch
 description: "FreeWatch - Free Movie Streaming Platform"
 publish_to: 'none'
 
-version: 1.0.57+58
+version: 1.0.58+59
 
 environment:
   sdk: ^3.5.4

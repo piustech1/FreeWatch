@@ -17,13 +17,27 @@ export default function AppStoreLanding() {
   const [shareToast, setShareToast] = useState(false);
   const [activeLightboxImage, setActiveLightboxImage] = useState(null);
 
+  // Intelligent Button Label: Shows 'INSTALL' on first visit, 'UPDATE' if visited/installed before
+  const [hasVisitedBefore, setHasVisitedBefore] = useState(false);
+
+  useEffect(() => {
+    try {
+      const visited = localStorage.getItem('freewatch_store_visited');
+      if (visited) {
+        setHasVisitedBefore(true);
+      } else {
+        localStorage.setItem('freewatch_store_visited', 'true');
+      }
+    } catch (_) {}
+  }, []);
+
   // Dynamic Release Config - Mobile Application Features Only
   const [releaseInfo, setReleaseInfo] = useState({
-    version: '1.0.57',
-    buildNumber: 58,
+    version: '1.0.58',
+    buildNumber: 59,
     size: '83.6 MB',
     releaseDate: 'Just now',
-    apkUrl: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.57/FreeWatch-release.apk',
+    apkUrl: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.58/FreeWatch-release.apk',
     notes: [
       'Permanent offline movie downloads: downloaded movies now persist safely across all sign-outs, cache resets, and guest sessions.',
       'Instant live support chat alerts: receive prompt lock-screen notifications the moment a FreeWatch support moderator responds, with 1-tap jump to chat.',
@@ -32,57 +46,57 @@ export default function AppStoreLanding() {
     ]
   });
 
-  // Real App Screenshots added by user in assets/images/
+  // Ordered Screenshots: Main user flows first (Home, Movie, Series, Search, Category, Favorites, Chat, Profile, Notifications, Splash)
   const screenshots = [
     {
-      url: '/screenshots/photo_2026-10-14_02-13-23.jpg',
-      title: 'Luganda Dubbed Movies',
-      caption: 'Non-stop entertainment translated by VJ Junior, VJ Jingo, VJ Emmie & top VJs'
-    },
-    {
       url: '/screenshots/photo_2026-10-14_02-15-30.jpg',
-      title: 'Curated Movie Catalog',
-      caption: 'Explore trending translated blockbusters, series, and daily releases'
-    },
-    {
-      url: '/screenshots/photo_2026-10-14_02-15-36.jpg',
-      title: 'Crisp Streaming Quality',
-      caption: 'Full HD playback optimized for low mobile data consumption'
-    },
-    {
-      url: '/screenshots/photo_2026-10-14_02-15-40.jpg',
-      title: 'Detailed Movie Overview',
-      caption: 'Cast details, ratings, storylines, and instant trailers'
+      title: 'Home Page',
+      caption: 'Trending Luganda dubbed movies, VJ categories, and fresh daily additions'
     },
     {
       url: '/screenshots/photo_2026-10-14_02-15-44.jpg',
-      title: 'Cinema Video Player',
-      caption: 'Auto-hiding HUD, 10s seek jump, swipe brightness, and landscape controls'
+      title: 'Movie Details Page',
+      caption: 'Watch instantly with full cast, storyline synopsis, and video player controls'
     },
     {
-      url: '/screenshots/photo_2026-10-14_02-15-49.jpg',
-      title: 'Permanent Offline Downloads',
-      caption: 'Download movies once, stream anywhere without Internet or active data'
+      url: '/screenshots/photo_2026-10-14_02-15-40.jpg',
+      title: 'Series Details Page',
+      caption: 'Multi-season episode browser with Luganda translation and trailer playback'
     },
     {
       url: '/screenshots/photo_2026-10-14_02-15-53.jpg',
-      title: 'WhatsApp Styled Live Support',
-      caption: 'Direct line to FreeWatch support team with instant lock-screen notifications'
+      title: 'Search Page with a List of Movies',
+      caption: 'Lightning-fast instant search across thousands of translated films and series'
     },
     {
-      url: '/screenshots/photo_2026-10-14_02-15-57.jpg',
-      title: 'Instant Search & Filter',
-      caption: 'Find any movie by title, actor, translator, or genre in milliseconds'
+      url: '/screenshots/photo_2026-10-14_02-15-49.jpg',
+      title: 'Search Category Page',
+      caption: 'Browse genres, VJs (VJ Junior, VJ Jingo, VJ Emmie), and curated collections'
     },
     {
       url: '/screenshots/photo_2026-10-14_02-16-00.jpg',
-      title: 'Personal Watchlist & Favorites',
-      caption: 'Bookmark movies to stream later across your devices'
+      title: 'Favorites Page',
+      caption: 'Personal watchlist to bookmark your favorite blockbusters and resume later'
+    },
+    {
+      url: '/screenshots/photo_2026-10-14_02-13-23.jpg',
+      title: 'Chat Page',
+      caption: 'Direct 24/7 live support with WhatsApp-styled messaging and instant alerts'
+    },
+    {
+      url: '/screenshots/photo_2026-10-14_02-15-57.jpg',
+      title: 'Profile Page',
+      caption: 'Manage account, playback preferences, dark/light themes, and app settings'
     },
     {
       url: '/screenshots/photo_2026-10-14_02-16-04.jpg',
-      title: 'Tailored Settings',
-      caption: 'Configure playback quality, download storage, and notifications'
+      title: 'Notifications Page',
+      caption: 'Stay updated on newly dubbed releases, live announcements, and support replies'
+    },
+    {
+      url: '/screenshots/photo_2026-10-14_02-15-36.jpg',
+      title: 'Splash Screen',
+      caption: 'Fast opening branding and instant initialization into the FreeWatch cinema'
     }
   ];
 
@@ -132,6 +146,11 @@ export default function AppStoreLanding() {
   }, []);
 
   const handleDownload = () => {
+    try {
+      localStorage.setItem('freewatch_store_visited', 'true');
+      setHasVisitedBefore(true);
+    } catch (_) {}
+
     if (downloadState === 'downloading') return;
 
     if (downloadState === 'completed') {
@@ -249,13 +268,13 @@ export default function AppStoreLanding() {
             </p>
 
             <div className="flex items-center space-x-3 mt-3">
-              {/* iOS Pill Download Button */}
+              {/* Intelligent iOS Pill Button: 'INSTALL' for new visitors, 'UPDATE' for returning users */}
               <button
                 onClick={handleDownload}
                 disabled={downloadState === 'downloading'}
                 className="relative overflow-hidden px-6 py-1.5 rounded-full bg-[#0071E3] hover:bg-blue-600 active:scale-95 text-white font-bold text-xs uppercase tracking-wider shadow-md transition-all flex items-center justify-center min-w-[96px] h-8"
               >
-                {downloadState === 'idle' && 'UPDATE'}
+                {downloadState === 'idle' && (hasVisitedBefore ? 'UPDATE' : 'INSTALL')}
                 {downloadState === 'downloading' && (
                   <div className="flex items-center space-x-1.5">
                     <svg className="animate-spin h-3.5 w-3.5 text-white" viewBox="0 0 24 24">
@@ -365,7 +384,7 @@ export default function AppStoreLanding() {
           </div>
         </div>
 
-        {/* ── 5. Preview Section (App Video & Real Screenshots) ── */}
+        {/* ── 5. Preview Section (App Video & Real Screenshots in Correct Flow) ── */}
         <div className="py-3">
           <div className="px-5 pb-2.5 flex items-center justify-between">
             <h2 className="text-lg font-bold tracking-tight">Preview</h2>
@@ -388,12 +407,12 @@ export default function AppStoreLanding() {
                 controls
                 playsInline
                 preload="metadata"
-                poster="/screenshots/photo_2026-10-14_02-13-23.jpg"
+                poster="/screenshots/photo_2026-10-14_02-15-30.jpg"
                 className="w-full h-full object-cover"
               />
             </div>
 
-            {/* Real App Screenshots */}
+            {/* Real App Screenshots Ordered by Priority */}
             {screenshots.map((s, idx) => (
               <div 
                 key={idx}

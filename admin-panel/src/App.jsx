@@ -160,10 +160,10 @@ export default function App() {
   // In-App Update Banner Remote Controller State
   const [updateConfig, setUpdateConfig] = useState({
     show_banner: true,
-    latest_version: '1.0.57',
-    latest_build: 58,
-    store_url: 'https://freewatch-piustech.vercel.app/',
-    direct_apk_url: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.56/FreeWatch-release.apk',
+    latest_version: '1.0.58',
+    latest_build: 59,
+    store_url: 'https://freewatchug.online/',
+    direct_apk_url: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.58/FreeWatch-release.apk',
     release_notes: '• Permanent offline movie downloads across sessions\n• Live support chat replies on lock screen with 1-tap jump\n• Smoother video player HUD and landscape gestures\n• Faster video playback with lower data consumption',
     is_mandatory: false,
   });
