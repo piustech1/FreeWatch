@@ -57,16 +57,46 @@ import { ref, onValue, push, set, update, remove } from 'firebase/database';
 import AppStoreLanding from './pages/AppStoreLanding';
 
 export default function App() {
-  const isDirectStoreRoute = 
-    typeof window !== 'undefined' && (
-      window.location.pathname.startsWith('/download') || 
-      window.location.pathname.startsWith('/store') || 
-      window.location.pathname.startsWith('/app') || 
-      window.location.search.includes('view=store')
-    );
+  const [currentPath, setCurrentPath] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.location.pathname;
+    }
+    return '/';
+  });
 
-  if (isDirectStoreRoute) {
-    return <AppStoreLanding />;
+  const [searchParams, setSearchParams] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.location.search;
+    }
+    return '';
+  });
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setCurrentPath(window.location.pathname);
+      setSearchParams(window.location.search);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const navigateTo = (path) => {
+    if (typeof window !== 'undefined') {
+      window.history.pushState({}, '', path);
+      setCurrentPath(path);
+      setSearchParams('');
+    }
+  };
+
+  const isAdminRoute = 
+    currentPath.startsWith('/admin') ||
+    currentPath.startsWith('/panel') ||
+    currentPath.startsWith('/dashboard') ||
+    searchParams.includes('view=admin');
+
+  // When visiting root ('/') or any public URL, render the App Store Product Listing Page as MAIN!
+  if (!isAdminRoute) {
+    return <AppStoreLanding onNavigateToAdmin={() => navigateTo('/admin')} />;
   }
 
   // Navigation: 'dashboard' | 'users' | 'videos' | 'chat' | 'notifications' | 'munowatch' | 'audit' | 'store'
@@ -954,6 +984,16 @@ export default function App() {
                 <Download size={14} className="mr-1.5" /> Export Analytics CSV
               </button>
             )}
+
+            <button
+              onClick={() => navigateTo('/')}
+              className="inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition-colors shadow-xs"
+              title="Open public App Store listing page"
+            >
+              <ExternalLink size={13} className="mr-1.5 text-blue-600" />
+              View Store Listing
+            </button>
+
             <div className="flex items-center space-x-2 pl-3 border-l border-slate-200">
               <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs shadow-xs">
                 AD
@@ -2404,7 +2444,7 @@ export default function App() {
           {/* TAB 8: APPLE APP STORE LISTING & DOWNLOAD HUB */}
           {activeTab === 'store' && (
             <div className="max-w-4xl mx-auto py-2">
-              <AppStoreLanding />
+              <AppStoreLanding onNavigateToAdmin={() => setActiveTab('dashboard')} />
             </div>
           )}
         </main>

@@ -8,7 +8,7 @@ import {
 import { ref, onValue } from 'firebase/database';
 import { rtdb } from '../firebase';
 
-export default function AppStoreLanding() {
+export default function AppStoreLanding({ onNavigateToAdmin }) {
   const [theme, setTheme] = useState('dark'); // 'dark' | 'light'
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [downloadState, setDownloadState] = useState('idle'); // 'idle' | 'downloading' | 'completed'
@@ -32,9 +32,11 @@ export default function AppStoreLanding() {
   });
 
   useEffect(() => {
+    let unsub = () => {};
+    // 1. Listen to Firebase RTDB app_config/update
     try {
       const updateRef = ref(rtdb, 'app_config/update');
-      const unsub = onValue(updateRef, (snapshot) => {
+      unsub = onValue(updateRef, (snapshot) => {
         if (snapshot.exists()) {
           const val = snapshot.val();
           setReleaseInfo(prev => ({
@@ -46,8 +48,32 @@ export default function AppStoreLanding() {
           }));
         }
       });
-      return () => unsub();
     } catch (_) {}
+
+    // 2. Also fetch latest release info from GitHub API dynamically
+    fetch('https://api.github.com/repos/piustech1/FreeWatch/releases/latest')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.tag_name) {
+          const cleanTag = data.tag_name.replace('v', '').trim();
+          let apk = releaseInfo.apkUrl;
+          if (Array.isArray(data.assets)) {
+            const asset = data.assets.find(a => a.name && a.name.endsWith('.apk'));
+            if (asset && asset.browser_download_url) {
+              apk = asset.browser_download_url;
+            }
+          }
+          setReleaseInfo(prev => ({
+            ...prev,
+            version: cleanTag,
+            apkUrl: apk,
+            notes: data.body ? data.body.split('\n').filter(Boolean) : prev.notes
+          }));
+        }
+      })
+      .catch(() => {});
+
+    return () => unsub();
   }, []);
 
   const handleDownload = () => {
@@ -149,6 +175,33 @@ export default function AppStoreLanding() {
           </button>
 
           <div className="flex items-center space-x-2">
+            {/* Admin Console Shortcut */}
+            {onNavigateToAdmin ? (
+              <button 
+                onClick={onNavigateToAdmin}
+                className={`p-2 rounded-full border transition-all ${
+                  isDark 
+                    ? 'border-neutral-800 bg-neutral-900 text-emerald-400 hover:bg-neutral-800' 
+                    : 'border-neutral-300 bg-white text-emerald-600 hover:bg-neutral-100 shadow-sm'
+                }`}
+                title="Open Admin Console"
+              >
+                <ShieldCheck className="w-4 h-4" />
+              </button>
+            ) : (
+              <a 
+                href="/admin"
+                className={`p-2 rounded-full border transition-all ${
+                  isDark 
+                    ? 'border-neutral-800 bg-neutral-900 text-emerald-400 hover:bg-neutral-800' 
+                    : 'border-neutral-300 bg-white text-emerald-600 hover:bg-neutral-100 shadow-sm'
+                }`}
+                title="Open Admin Console"
+              >
+                <ShieldCheck className="w-4 h-4" />
+              </a>
+            )}
+
             {/* Theme Toggle (Light / Dark) */}
             <button 
               onClick={() => setTheme(isDark ? 'light' : 'dark')}
@@ -416,6 +469,24 @@ export default function AppStoreLanding() {
             <div className="py-2.5 flex justify-between">
               <span className={isDark ? 'text-neutral-500' : 'text-neutral-400'}>Price</span>
               <span className="font-semibold text-right text-emerald-500">Free</span>
+            </div>
+            <div className="py-2.5 flex justify-between items-center">
+              <span className={isDark ? 'text-neutral-500' : 'text-neutral-400'}>Admin Console</span>
+              {onNavigateToAdmin ? (
+                <button 
+                  onClick={onNavigateToAdmin}
+                  className="font-semibold text-right text-xs text-blue-500 hover:underline"
+                >
+                  Sign In to Portal &rarr;
+                </button>
+              ) : (
+                <a 
+                  href="/admin" 
+                  className="font-semibold text-right text-xs text-blue-500 hover:underline"
+                >
+                  Sign In to Portal &rarr;
+                </a>
+              )}
             </div>
             <div className="py-2.5 flex justify-between">
               <span className={isDark ? 'text-neutral-500' : 'text-neutral-400'}>Copyright</span>

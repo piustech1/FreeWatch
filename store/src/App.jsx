@@ -153,6 +153,19 @@ export default function App() {
           </button>
 
           <div className="flex items-center space-x-2">
+            {/* Admin Console Shortcut */}
+            <a 
+              href="/admin"
+              className={`p-2 rounded-full border transition-all ${
+                isDark 
+                  ? 'border-neutral-800 bg-neutral-900 text-emerald-400 hover:bg-neutral-800' 
+                  : 'border-neutral-300 bg-white text-emerald-600 hover:bg-neutral-100 shadow-sm'
+              }`}
+              title="Open Admin Console"
+            >
+              <ShieldCheck className="w-4 h-4" />
+            </a>
+
             {/* Theme Toggle (Light / Dark) */}
             <button 
               onClick={() => setTheme(isDark ? 'light' : 'dark')}
@@ -420,6 +433,15 @@ export default function App() {
             <div className="py-2.5 flex justify-between">
               <span className={isDark ? 'text-neutral-500' : 'text-neutral-400'}>Price</span>
               <span className="font-semibold text-right text-emerald-500">Free</span>
+            </div>
+            <div className="py-2.5 flex justify-between items-center">
+              <span className={isDark ? 'text-neutral-500' : 'text-neutral-400'}>Admin Console</span>
+              <a 
+                href="/admin" 
+                className="font-semibold text-right text-xs text-blue-500 hover:underline"
+              >
+                Sign In to Portal &rarr;
+              </a>
             </div>
             <div className="py-2.5 flex justify-between">
               <span className={isDark ? 'text-neutral-500' : 'text-neutral-400'}>Copyright</span>
