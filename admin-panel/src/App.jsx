@@ -50,10 +50,13 @@ import {
   MessageCircle,
   Info,
   Lock,
-  Ban
+  Ban,
+  LogOut,
+  EyeOff,
+  User
 } from 'lucide-react';
 import { rtdb, auth, signInAnonymously } from './firebase';
-import { ref, onValue, push, set, update, remove } from 'firebase/database';
+import { ref, onValue, push, set, update, remove, get } from 'firebase/database';
 import AppStoreLanding from './pages/AppStoreLanding';
 
 export default function App() {
@@ -104,6 +107,77 @@ export default function App() {
   // Navigation: 'dashboard' | 'users' | 'videos' | 'chat' | 'notifications' | 'munowatch' | 'audit' | 'store'
   const [activeTab, setActiveTab] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  // Admin Authentication Gate State
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const sess = sessionStorage.getItem('freewatch_admin_session');
+      const local = localStorage.getItem('freewatch_admin_session');
+      return sess === 'true' || local === 'true';
+    }
+    return false;
+  });
+  const [adminUsername, setAdminUsername] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
+  const [showAdminPassword, setShowAdminPassword] = useState(false);
+  const [adminRememberMe, setAdminRememberMe] = useState(true);
+  const [adminAuthError, setAdminAuthError] = useState('');
+  const [adminAuthLoading, setAdminAuthLoading] = useState(false);
+
+  // Mobile Slide-Out Drawer State
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Admin Authentication Handlers
+  const handleAdminLogin = async (e) => {
+    if (e) e.preventDefault();
+    setAdminAuthError('');
+    setAdminAuthLoading(true);
+
+    try {
+      // 1. Fetch credentials from Firebase RTDB (/admin_auth)
+      let expectedUser = 'dev';
+      let expectedPass = 'greatdevpass';
+
+      try {
+        const authSnapshot = await get(ref(rtdb, 'admin_auth'));
+        if (authSnapshot.exists()) {
+          const data = authSnapshot.val();
+          if (data.username) expectedUser = data.username;
+          if (data.password) expectedPass = data.password;
+        }
+      } catch (err) {
+        console.warn('Firebase RTDB credentials fetch failed, falling back to local credentials:', err);
+      }
+
+      if (adminUsername.trim() === expectedUser && adminPassword === expectedPass) {
+        sessionStorage.setItem('freewatch_admin_session', 'true');
+        if (adminRememberMe) {
+          localStorage.setItem('freewatch_admin_session', 'true');
+        } else {
+          localStorage.removeItem('freewatch_admin_session');
+        }
+        setIsAdminAuthenticated(true);
+        setAdminAuthError('');
+      } else {
+        setAdminAuthError('Invalid administrator credentials. Access denied.');
+      }
+    } catch (err) {
+      setAdminAuthError('Authentication service error. Please try again.');
+    } finally {
+      setAdminAuthLoading(false);
+    }
+  };
+
+  const handleAdminLogout = () => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('freewatch_admin_session');
+      localStorage.removeItem('freewatch_admin_session');
+    }
+    setIsAdminAuthenticated(false);
+    setAdminUsername('');
+    setAdminPassword('');
+    setMobileMenuOpen(false);
+  };
 
   // RTDB & Live Status
   const [dbConnected, setDbConnected] = useState(true);
@@ -207,7 +281,7 @@ export default function App() {
         force_show: updateConfig.show_banner,
         updated_at: Date.now(),
       });
-      setUpdateConfigSavedMsg('✅ Update Banner config saved live to Firebase RTDB! All devices will receive it.');
+      setUpdateConfigSavedMsg('Update Banner config saved live to Firebase RTDB! All devices will receive it.');
       setTimeout(() => setUpdateConfigSavedMsg(''), 4500);
     } catch (err) {
       alert('Failed to save update configuration: ' + err.message);
@@ -707,7 +781,7 @@ export default function App() {
     setNotifSuccess('');
 
     const payload = {
-      title: notifTitle.trim() || '🔥 FreeWatch Alert',
+      title: notifTitle.trim() || 'FreeWatch Alert',
       body: notifBody.trim(),
       imageUrl: notifImageUrl.trim() || '',
       link: notifLink.trim() || '',
@@ -920,10 +994,245 @@ export default function App() {
     return matchesSearch && matchesCat;
   });
 
+  const navItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'users', label: 'User Management', icon: Users, badge: users.length },
+    { id: 'videos', label: 'Video Performance', icon: Film, badge: aggregatedWatchedMovies.length },
+    { id: 'chat', label: 'Live Support Chat', icon: MessageSquare, badge: threads.filter(t => t.unreadCount > 0).length || null },
+    { id: 'notifications', label: 'FCM Push Dispatcher', icon: Bell },
+    { id: 'munowatch', label: 'MunoWatch Sync', icon: RefreshCw, badge: munowatchCatalog.length },
+    { id: 'audit', label: 'Audit Logs & Export', icon: FileText, badge: auditLogs.length },
+    { id: 'store', label: 'App Store Hub & Downloads', icon: Layers }
+  ];
+
+  // ── Liquid iOS Frosted Glass Admin Login Gate ──
+  if (!isAdminAuthenticated) {
+    return (
+      <div className="min-h-screen bg-[#0B1120] text-slate-100 flex items-center justify-center p-4 sm:p-6 font-sans relative overflow-hidden select-none selection:bg-[#00E676] selection:text-black">
+        {/* iOS Frosted Ambient Glow Blobs */}
+        <div className="pointer-events-none absolute -top-40 -left-40 w-96 h-96 bg-[#00E676]/20 rounded-full blur-[128px] animate-pulse" />
+        <div className="pointer-events-none absolute -bottom-40 -right-40 w-96 h-96 bg-blue-600/20 rounded-full blur-[128px]" />
+        <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-[140px]" />
+
+        {/* Liquid Glassmorphic Card */}
+        <div className="relative z-10 w-full max-w-md bg-white/[0.07] backdrop-blur-2xl border border-white/[0.15] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.6)] rounded-3xl p-7 sm:p-9 text-white">
+          {/* Brand Header */}
+          <div className="flex flex-col items-center text-center mb-7">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#00E676] to-[#00B0FF] p-0.5 shadow-xl shadow-[#00E676]/25 flex items-center justify-center mb-3.5">
+              <div className="w-full h-full bg-slate-900 rounded-[14px] flex items-center justify-center overflow-hidden">
+                <img 
+                  src="/logo_initials.png" 
+                  alt="FreeWatch" 
+                  className="w-12 h-12 object-contain" 
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }} 
+                />
+                <span className="font-black text-[#00E676] text-xl tracking-wider">FW</span>
+              </div>
+            </div>
+            <h1 className="text-2xl font-black tracking-tight text-white">FreeWatch Admin</h1>
+            <p className="text-xs text-slate-300 mt-1 font-medium">Restricted Security Console & Portal</p>
+            <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.08] border border-white/[0.12] text-[11px] font-semibold text-slate-300">
+              <Lock size={12} className="text-[#00E676]" /> Firebase RTDB Protected
+            </div>
+          </div>
+
+          {/* Error Alert */}
+          {adminAuthError && (
+            <div className="mb-5 p-3.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-200 text-xs font-semibold flex items-center gap-2.5">
+              <ShieldAlert size={16} className="shrink-0 text-rose-400" />
+              <span>{adminAuthError}</span>
+            </div>
+          )}
+
+          {/* Form */}
+          <form onSubmit={handleAdminLogin} className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
+                Admin Username
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                  <User size={16} />
+                </div>
+                <input
+                  type="text"
+                  value={adminUsername}
+                  onChange={(e) => setAdminUsername(e.target.value)}
+                  placeholder="Enter username (e.g. dev)"
+                  required
+                  autoComplete="username"
+                  className="w-full pl-10 pr-4 py-3 bg-white/[0.06] border border-white/[0.15] rounded-xl text-sm font-medium text-white placeholder-slate-400 focus:outline-none focus:border-[#00E676] focus:bg-white/[0.1] focus:ring-2 focus:ring-[#00E676]/30 transition-all"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
+                Master Password
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                  <Lock size={16} />
+                </div>
+                <input
+                  type={showAdminPassword ? "text" : "password"}
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                  placeholder="Enter master password"
+                  required
+                  autoComplete="current-password"
+                  className="w-full pl-10 pr-11 py-3 bg-white/[0.06] border border-white/[0.15] rounded-xl text-sm font-medium text-white placeholder-slate-400 focus:outline-none focus:border-[#00E676] focus:bg-white/[0.1] focus:ring-2 focus:ring-[#00E676]/30 transition-all"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowAdminPassword(!showAdminPassword)}
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-white transition-colors"
+                >
+                  {showAdminPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between text-xs pt-1">
+              <label className="flex items-center gap-2 cursor-pointer select-none text-slate-300 hover:text-white transition-colors">
+                <input
+                  type="checkbox"
+                  checked={adminRememberMe}
+                  onChange={(e) => setAdminRememberMe(e.target.checked)}
+                  className="w-4 h-4 rounded bg-white/[0.1] border-white/[0.2] text-[#00E676] focus:ring-[#00E676] focus:ring-offset-0 focus:ring-offset-transparent cursor-pointer"
+                />
+                <span>Remember session</span>
+              </label>
+              <span className="text-slate-400 text-[11px] font-semibold">dev / ****</span>
+            </div>
+
+            <button
+              type="submit"
+              disabled={adminAuthLoading}
+              className="w-full mt-2 py-3.5 px-5 bg-gradient-to-r from-[#00E676] to-[#00C853] hover:from-[#00f27c] hover:to-[#00d859] active:scale-[0.99] text-slate-950 font-black text-sm rounded-xl transition-all shadow-lg shadow-[#00E676]/30 flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
+            >
+              {adminAuthLoading ? (
+                <>
+                  <RefreshCw size={16} className="animate-spin" />
+                  <span>Verifying credentials...</span>
+                </>
+              ) : (
+                <>
+                  <ShieldCheck size={18} />
+                  <span>Unlock Admin Console</span>
+                </>
+              )}
+            </button>
+          </form>
+
+          {/* Quick link back to public storefront */}
+          <div className="mt-6 pt-5 border-t border-white/[0.1] text-center">
+            <button
+              type="button"
+              onClick={() => navigateTo('/')}
+              className="text-xs font-semibold text-slate-400 hover:text-white transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+            >
+              <ExternalLink size={13} />
+              <span>Return to Public App Store Page</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-800 flex font-sans antialiased selection:bg-[#00E676] selection:text-black">
-      {/* ── Collapsible Sidebar (TailAdmin / AdminLTE 4 Light Theme) ── */}
-      <aside className={`${sidebarOpen ? 'w-64' : 'w-20'} bg-white border-r border-slate-200 flex flex-col transition-all duration-300 z-30 shrink-0 sticky top-0 h-screen shadow-sm`}>
+      {/* ── Mobile Navigation Drawer (Overlay Backdrop & Slide-in Panel) ── */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          {/* Backdrop blur overlay */}
+          <div 
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+          {/* Drawer panel */}
+          <div className="fixed inset-y-0 left-0 w-72 max-w-[85vw] bg-white/95 backdrop-blur-xl border-r border-slate-200/80 shadow-2xl flex flex-col z-50 animate-in slide-in-from-left duration-200">
+            {/* Drawer Header */}
+            <div className="h-16 px-4 flex items-center justify-between border-b border-slate-100">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#00E676] to-[#00C853] flex items-center justify-center shadow-md shadow-[#00E676]/30 shrink-0">
+                  <span className="font-black text-black text-lg tracking-wider">FW</span>
+                </div>
+                <div>
+                  <span className="font-bold text-slate-900 text-base tracking-tight block">FreeWatch</span>
+                  <span className="text-[10px] uppercase font-bold text-[#00A344] tracking-widest block">ADMIN PORTAL</span>
+                </div>
+              </div>
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                aria-label="Close menu"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Drawer Links */}
+            <div className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                const active = activeTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      setActiveTab(item.id);
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl font-medium text-sm transition-all duration-150 ${
+                      active
+                        ? 'bg-[#00E676]/15 text-[#009640] font-bold shadow-xs border-r-4 border-[#00E676]'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <Icon size={19} className={active ? 'text-[#00C853]' : 'text-slate-400'} />
+                      <span>{item.label}</span>
+                    </div>
+                    {item.badge !== undefined && item.badge !== null && (
+                      <span className={`text-[11px] font-black px-2 py-0.5 rounded-full ${
+                        active ? 'bg-[#00E676] text-black' : 'bg-slate-100 text-slate-600'
+                      }`}>
+                        {item.badge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Drawer Footer with View Store & Sign Out */}
+            <div className="p-3 border-t border-slate-100 space-y-2">
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  navigateTo('/');
+                }}
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer"
+              >
+                <ExternalLink size={14} />
+                <span>View Public Storefront</span>
+              </button>
+              <button
+                onClick={handleAdminLogout}
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-colors cursor-pointer"
+              >
+                <LogOut size={14} />
+                <span>Sign Out (dev)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Collapsible Desktop Sidebar (Hidden on Mobile) ── */}
+      <aside className={`${sidebarOpen ? 'w-64' : 'w-20'} hidden md:flex bg-white/90 backdrop-blur-md border-r border-slate-200/80 flex-col transition-all duration-300 z-30 shrink-0 sticky top-0 h-screen shadow-xs`}>
         {/* Logo / Brand Header */}
         <div className="h-16 px-4 flex items-center justify-between border-b border-slate-100">
           <div className="flex items-center space-x-3 overflow-hidden">
@@ -939,7 +1248,8 @@ export default function App() {
           </div>
           <button 
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+            aria-label={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
           >
             {sidebarOpen ? <X size={18} /> : <Menu size={18} />}
           </button>
@@ -947,23 +1257,14 @@ export default function App() {
 
         {/* Sidebar Nav Links */}
         <div className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
-          {[
-            { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-            { id: 'users', label: 'User Management', icon: Users, badge: users.length },
-            { id: 'videos', label: 'Video Performance', icon: Film, badge: aggregatedWatchedMovies.length },
-            { id: 'chat', label: 'Live Support Chat', icon: MessageSquare, badge: threads.filter(t => t.unreadCount > 0).length || null },
-            { id: 'notifications', label: 'FCM Push Dispatcher', icon: Bell },
-            { id: 'munowatch', label: 'MunoWatch Sync', icon: RefreshCw, badge: munowatchCatalog.length },
-            { id: 'audit', label: 'Audit Logs & Export', icon: FileText, badge: auditLogs.length },
-            { id: 'store', label: 'App Store Hub & Downloads', icon: Layers }
-          ].map((item) => {
+          {navItems.map((item) => {
             const Icon = item.icon;
             const active = activeTab === item.id;
             return (
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`w-full flex items-center ${sidebarOpen ? 'justify-between px-3.5' : 'justify-center px-0'} py-2.5 rounded-xl font-medium text-sm transition-all duration-150 ${
+                className={`w-full flex items-center ${sidebarOpen ? 'justify-between px-3.5' : 'justify-center px-0'} py-2.5 rounded-xl font-medium text-sm transition-all duration-150 cursor-pointer ${
                   active 
                     ? 'bg-[#00E676]/15 text-[#009640] font-bold shadow-xs border-r-4 border-[#00E676]' 
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
@@ -1005,29 +1306,37 @@ export default function App() {
 
       {/* ── Main Content Area ── */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Top Header */}
-        <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between sticky top-0 z-20 shadow-xs">
-          <div className="flex items-center space-x-4">
-            <h1 className="text-lg font-bold text-slate-900 capitalize">
-              {activeTab === 'dashboard' && 'Executive Dashboard'}
-              {activeTab === 'users' && 'User Management & Access Control'}
-              {activeTab === 'videos' && 'Real Video & Movie Performance'}
-              {activeTab === 'chat' && 'Live 2-Way Realtime Support Chat'}
-              {activeTab === 'notifications' && 'FCM Push Notification Dispatcher'}
-              {activeTab === 'munowatch' && 'MunoWatch Server & Poller Control'}
-              {activeTab === 'audit' && 'System Audit Trail & Document Export'}
-              {activeTab === 'store' && 'Apple App Store Listing & Download Hub'}
-            </h1>
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#00E676]/10 text-[#00A344] border border-[#00E676]/30">
-              <Radio size={12} className="mr-1 animate-pulse text-[#00E676]" /> 100% Real Production Data
-            </span>
+        {/* Top Header (Liquid Frosted Glass, Spacious, Responsive) */}
+        <header className="h-16 bg-white/80 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-20 shadow-xs">
+          <div className="flex items-center space-x-3 sm:space-x-4 min-w-0">
+            {/* Mobile Hamburger Drawer Trigger */}
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="md:hidden p-2 -ml-1 text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors shrink-0 cursor-pointer"
+              aria-label="Open navigation menu"
+            >
+              <Menu size={22} />
+            </button>
+
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-lg font-bold text-slate-900 capitalize truncate">
+                {activeTab === 'dashboard' && 'Executive Dashboard'}
+                {activeTab === 'users' && 'User Management & Access Control'}
+                {activeTab === 'videos' && 'Real Video & Movie Performance'}
+                {activeTab === 'chat' && 'Live 2-Way Realtime Support Chat'}
+                {activeTab === 'notifications' && 'FCM Push Notification Dispatcher'}
+                {activeTab === 'munowatch' && 'MunoWatch Server & Poller Control'}
+                {activeTab === 'audit' && 'System Audit Trail & Export'}
+                {activeTab === 'store' && 'Apple App Store Listing & Download Hub'}
+              </h1>
+            </div>
           </div>
 
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2 sm:space-x-3 shrink-0">
             {activeTab === 'users' && (
               <button 
                 onClick={handleExportUsersCSV}
-                className="inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-colors shadow-xs"
+                className="hidden sm:inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-colors shadow-xs cursor-pointer"
               >
                 <Download size={14} className="mr-1.5" /> Export Users CSV
               </button>
@@ -1035,7 +1344,7 @@ export default function App() {
             {activeTab === 'audit' && (
               <button 
                 onClick={handleExportAuditCSV}
-                className="inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-colors shadow-xs"
+                className="hidden sm:inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-colors shadow-xs cursor-pointer"
               >
                 <Download size={14} className="mr-1.5" /> Export Analytics CSV
               </button>
@@ -1043,119 +1352,128 @@ export default function App() {
 
             <button
               onClick={() => navigateTo('/')}
-              className="inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition-colors shadow-xs"
+              className="inline-flex items-center px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition-colors shadow-xs cursor-pointer"
               title="Open public App Store listing page"
             >
-              <ExternalLink size={13} className="mr-1.5 text-blue-600" />
-              View Store Listing
+              <ExternalLink size={13} className="sm:mr-1.5 text-blue-600" />
+              <span className="hidden sm:inline">View Store</span>
             </button>
 
-            <div className="flex items-center space-x-2 pl-3 border-l border-slate-200">
-              <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs shadow-xs">
-                AD
+            {/* Admin Avatar & Sign Out */}
+            <div className="flex items-center space-x-2 pl-2 sm:pl-3 border-l border-slate-200">
+              <div className="w-8 h-8 rounded-full bg-slate-900 text-[#00E676] flex items-center justify-center font-black text-xs shadow-xs shrink-0">
+                dev
               </div>
-              <div className="text-left text-xs leading-tight hidden md:block">
+              <div className="text-left text-xs leading-tight hidden lg:block">
                 <span className="font-bold text-slate-800 block">System Admin</span>
-                <span className="text-slate-400 block">freewatch-a0bc7</span>
+                <span className="text-slate-400 block text-[10px]">dev (Logged In)</span>
               </div>
+              <button
+                onClick={handleAdminLogout}
+                title="Sign Out of Admin Console"
+                className="p-1.5 sm:px-2.5 sm:py-1.5 text-xs font-bold text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors flex items-center gap-1 border border-transparent hover:border-rose-200 cursor-pointer"
+              >
+                <LogOut size={15} />
+                <span className="hidden md:inline">Sign Out</span>
+              </button>
             </div>
           </div>
         </header>
 
         {/* Tab Body */}
-        <main className="flex-1 p-6 overflow-y-auto">
+        <main className="flex-1 p-4 sm:p-6 overflow-y-auto">
           {/* ═════════════════════════════════════════════════════════════════════ */}
           {/* TAB 1: EXECUTIVE DASHBOARD                                         */}
           {/* ═════════════════════════════════════════════════════════════════════ */}
           {activeTab === 'dashboard' && (
             <div className="space-y-6 max-w-7xl mx-auto">
-              {/* Colorful AdminLTE Metric Stat Cards (Ocean Cyan, FreeWatch Green, Amber, Rose) */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              {/* Colorful Frosted Metric Stat Cards (2-column on mobile, 4-column on desktop) */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
                 {/* 1. Total Video Plays (Sky/Ocean Blue) */}
-                <div className="bg-gradient-to-br from-sky-500 to-blue-600 rounded-2xl p-5 text-white shadow-md flex flex-col justify-between relative overflow-hidden group hover:shadow-lg transition-all">
+                <div className="bg-gradient-to-br from-sky-500 to-blue-600 rounded-2xl p-3.5 sm:p-5 text-white shadow-md flex flex-col justify-between relative overflow-hidden group hover:shadow-lg transition-all">
                   <div>
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold uppercase tracking-wider text-sky-100">Total Video Plays</span>
-                      <Play size={20} className="text-sky-200 opacity-80" />
+                      <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-sky-100 truncate">Total Plays</span>
+                      <Play size={18} className="text-sky-200 opacity-80 shrink-0" />
                     </div>
-                    <div className="text-3xl font-black mt-2">{totalVideoPlays.toLocaleString()}</div>
-                    <div className="text-xs text-sky-100 font-medium mt-1 flex items-center">
-                      <TrendingUp size={13} className="mr-1" />
-                      <span>+14.8% stream volume</span>
+                    <div className="text-xl sm:text-3xl font-black mt-1 sm:mt-2">{totalVideoPlays.toLocaleString()}</div>
+                    <div className="text-[10px] sm:text-xs text-sky-100 font-medium mt-1 flex items-center truncate">
+                      <TrendingUp size={12} className="mr-1 shrink-0" />
+                      <span className="truncate">+14.8% stream volume</span>
                     </div>
                   </div>
                   <button 
                     onClick={() => setActiveTab('videos')}
-                    className="mt-4 pt-2.5 border-t border-white/20 text-[11px] font-bold text-sky-100 hover:text-white flex items-center justify-between transition-colors"
+                    className="mt-3 sm:mt-4 pt-2 sm:pt-2.5 border-t border-white/20 text-[10px] sm:text-[11px] font-bold text-sky-100 hover:text-white flex items-center justify-between transition-colors cursor-pointer"
                   >
-                    <span>View Video Performance</span>
-                    <ChevronRight size={14} />
+                    <span className="truncate">Performance</span>
+                    <ChevronRight size={13} className="shrink-0" />
                   </button>
                 </div>
 
                 {/* 2. Registered Users (FreeWatch Authentic Electric Green #00E676) */}
-                <div className="bg-gradient-to-br from-[#00E676] to-[#00A844] rounded-2xl p-5 text-slate-950 shadow-md shadow-[#00E676]/20 flex flex-col justify-between relative overflow-hidden group hover:shadow-lg transition-all">
+                <div className="bg-gradient-to-br from-[#00E676] to-[#00A844] rounded-2xl p-3.5 sm:p-5 text-slate-950 shadow-md shadow-[#00E676]/20 flex flex-col justify-between relative overflow-hidden group hover:shadow-lg transition-all">
                   <div>
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-black uppercase tracking-wider text-slate-900">Registered Users</span>
-                      <Users size={20} className="text-slate-900 opacity-90" />
+                      <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-slate-900 truncate">Users</span>
+                      <Users size={18} className="text-slate-900 opacity-90 shrink-0" />
                     </div>
-                    <div className="text-3xl font-black mt-2 text-black">{totalRegisteredUsers}</div>
-                    <div className="text-xs text-slate-900 font-bold mt-1 flex items-center">
-                      <CheckCircle2 size={13} className="mr-1" />
-                      <span>100% Synced ({activeStreamersCount} active streamers)</span>
+                    <div className="text-xl sm:text-3xl font-black mt-1 sm:mt-2 text-black">{totalRegisteredUsers}</div>
+                    <div className="text-[10px] sm:text-xs text-slate-900 font-bold mt-1 flex items-center truncate">
+                      <CheckCircle2 size={12} className="mr-1 shrink-0" />
+                      <span className="truncate">{activeStreamersCount} active streamers</span>
                     </div>
                   </div>
                   <button 
                     onClick={() => setActiveTab('users')}
-                    className="mt-4 pt-2.5 border-t border-black/15 text-[11px] font-extrabold text-black hover:text-slate-900 flex items-center justify-between transition-colors"
+                    className="mt-3 sm:mt-4 pt-2 sm:pt-2.5 border-t border-black/15 text-[10px] sm:text-[11px] font-extrabold text-black hover:text-slate-900 flex items-center justify-between transition-colors cursor-pointer"
                   >
-                    <span>Manage User Directory</span>
-                    <ChevronRight size={14} />
+                    <span className="truncate">Directory</span>
+                    <ChevronRight size={13} className="shrink-0" />
                   </button>
                 </div>
 
                 {/* 3. Live Movies & Series (Amber/Orange) */}
-                <div className="bg-gradient-to-br from-amber-500 to-orange-500 rounded-2xl p-5 text-white shadow-md flex flex-col justify-between relative overflow-hidden group hover:shadow-lg transition-all">
+                <div className="bg-gradient-to-br from-amber-500 to-orange-500 rounded-2xl p-3.5 sm:p-5 text-white shadow-md flex flex-col justify-between relative overflow-hidden group hover:shadow-lg transition-all">
                   <div>
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold uppercase tracking-wider text-amber-100">Live Movies & Series</span>
-                      <Film size={20} className="text-amber-200 opacity-80" />
+                      <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-amber-100 truncate">Catalog</span>
+                      <Film size={18} className="text-amber-200 opacity-80 shrink-0" />
                     </div>
-                    <div className="text-3xl font-black mt-2">{totalCatalogMovies}</div>
-                    <div className="text-xs text-amber-100 font-medium mt-1 flex items-center">
-                      <Tv size={13} className="mr-1" />
-                      <span>Across 13 Categories</span>
+                    <div className="text-xl sm:text-3xl font-black mt-1 sm:mt-2">{totalCatalogMovies}</div>
+                    <div className="text-[10px] sm:text-xs text-amber-100 font-medium mt-1 flex items-center truncate">
+                      <Tv size={12} className="mr-1 shrink-0" />
+                      <span className="truncate">13 Categories</span>
                     </div>
                   </div>
                   <button 
                     onClick={() => setActiveTab('munowatch')}
-                    className="mt-4 pt-2.5 border-t border-white/20 text-[11px] font-bold text-amber-100 hover:text-white flex items-center justify-between transition-colors"
+                    className="mt-3 sm:mt-4 pt-2 sm:pt-2.5 border-t border-white/20 text-[10px] sm:text-[11px] font-bold text-amber-100 hover:text-white flex items-center justify-between transition-colors cursor-pointer"
                   >
-                    <span>MunoWatch Sync Hub</span>
-                    <ChevronRight size={14} />
+                    <span className="truncate">MunoWatch</span>
+                    <ChevronRight size={13} className="shrink-0" />
                   </button>
                 </div>
 
                 {/* 4. Push Alerts Dispatched (Rose/Pink) */}
-                <div className="bg-gradient-to-br from-rose-500 to-pink-600 rounded-2xl p-5 text-white shadow-md flex flex-col justify-between relative overflow-hidden group hover:shadow-lg transition-all">
+                <div className="bg-gradient-to-br from-rose-500 to-pink-600 rounded-2xl p-3.5 sm:p-5 text-white shadow-md flex flex-col justify-between relative overflow-hidden group hover:shadow-lg transition-all">
                   <div>
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold uppercase tracking-wider text-rose-100">Dispatched Push Alerts</span>
-                      <Bell size={20} className="text-rose-200 opacity-80" />
+                      <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-rose-100 truncate">Push Alerts</span>
+                      <Bell size={18} className="text-rose-200 opacity-80 shrink-0" />
                     </div>
-                    <div className="text-3xl font-black mt-2">{totalDispatchedAlerts}</div>
-                    <div className="text-xs text-rose-100 font-medium mt-1 flex items-center">
-                      <Radio size={13} className="mr-1" />
-                      <span>FCM Topic: all_users</span>
+                    <div className="text-xl sm:text-3xl font-black mt-1 sm:mt-2">{totalDispatchedAlerts}</div>
+                    <div className="text-[10px] sm:text-xs text-rose-100 font-medium mt-1 flex items-center truncate">
+                      <Radio size={12} className="mr-1 shrink-0" />
+                      <span className="truncate">all_users topic</span>
                     </div>
                   </div>
                   <button 
                     onClick={() => setActiveTab('notifications')}
-                    className="mt-4 pt-2.5 border-t border-white/20 text-[11px] font-bold text-rose-100 hover:text-white flex items-center justify-between transition-colors"
+                    className="mt-3 sm:mt-4 pt-2 sm:pt-2.5 border-t border-white/20 text-[10px] sm:text-[11px] font-bold text-rose-100 hover:text-white flex items-center justify-between transition-colors cursor-pointer"
                   >
-                    <span>Broadcast Push Alert</span>
-                    <ChevronRight size={14} />
+                    <span className="truncate">Broadcast</span>
+                    <ChevronRight size={13} className="shrink-0" />
                   </button>
                 </div>
               </div>
@@ -1251,51 +1569,51 @@ export default function App() {
           {/* ═════════════════════════════════════════════════════════════════════ */}
           {activeTab === 'users' && (
             <div className="space-y-6 max-w-7xl mx-auto">
-              {/* Executive Metrics Pulse Row */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-center justify-between">
-                  <div>
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">Total Users</span>
-                    <h3 className="text-2xl font-black text-slate-900">{users.length}</h3>
-                    <span className="text-[10px] text-slate-500 font-medium">Real Firebase RTDB accounts</span>
+              {/* Executive Metrics Pulse Row (2-column on mobile, 4-column on desktop) */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                <div className="bg-white/85 backdrop-blur-md rounded-2xl p-3.5 sm:p-5 border border-slate-200/80 shadow-xs flex items-center justify-between">
+                  <div className="min-w-0 pr-1">
+                    <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1 truncate">Total Users</span>
+                    <h3 className="text-xl sm:text-2xl font-black text-slate-900">{users.length}</h3>
+                    <span className="text-[9px] sm:text-[10px] text-slate-500 font-medium truncate block">Real RTDB accounts</span>
                   </div>
-                  <div className="w-12 h-12 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700">
-                    <Users size={22} />
+                  <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700 shrink-0">
+                    <Users size={18} className="sm:w-5 sm:h-5" />
                   </div>
                 </div>
 
-                <div className="bg-white rounded-2xl p-5 border border-[#00E676]/30 shadow-xs flex items-center justify-between bg-gradient-to-br from-white to-[#00E676]/5">
-                  <div>
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#00A344] block mb-1 flex items-center">
-                      <span className="w-2 h-2 rounded-full bg-[#00E676] mr-1.5 animate-pulse" /> Active Now
+                <div className="bg-white/85 backdrop-blur-md rounded-2xl p-3.5 sm:p-5 border border-slate-200/80 shadow-xs flex items-center justify-between">
+                  <div className="min-w-0 pr-1">
+                    <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#00A344] block mb-1 flex items-center truncate">
+                      <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-[#00E676] mr-1.5 animate-pulse shrink-0" /> Active Now
                     </span>
-                    <h3 className="text-2xl font-black text-slate-900">{users.filter(u => u.isOnline).length}</h3>
-                    <span className="text-[10px] text-[#00A344] font-semibold">Live in FreeWatch mobile app</span>
+                    <h3 className="text-xl sm:text-2xl font-black text-slate-900">{users.filter(u => u.isOnline).length}</h3>
+                    <span className="text-[9px] sm:text-[10px] text-[#00A344] font-semibold truncate block">Live in mobile app</span>
                   </div>
-                  <div className="w-12 h-12 rounded-2xl bg-[#00E676]/15 border border-[#00E676]/30 flex items-center justify-center text-[#009640]">
-                    <Activity size={22} />
-                  </div>
-                </div>
-
-                <div className="bg-white rounded-2xl p-5 border border-rose-200/80 shadow-xs flex items-center justify-between">
-                  <div>
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-rose-600 block mb-1">Suspended / Banned</span>
-                    <h3 className="text-2xl font-black text-slate-900">{users.filter(u => u.status === 'Banned').length}</h3>
-                    <span className="text-[10px] text-rose-500 font-medium">Locked out of mobile app</span>
-                  </div>
-                  <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600">
-                    <ShieldAlert size={22} />
+                  <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-[#009640] shrink-0">
+                    <Activity size={18} className="sm:w-5 sm:h-5" />
                   </div>
                 </div>
 
-                <div className="bg-white rounded-2xl p-5 border border-amber-200/80 shadow-xs flex items-center justify-between">
-                  <div>
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-amber-600 block mb-1">VIP & Admins</span>
-                    <h3 className="text-2xl font-black text-slate-900">{users.filter(u => u.role === 'VIP' || u.role === 'Admin').length}</h3>
-                    <span className="text-[10px] text-amber-600 font-medium">Privileged platform tier</span>
+                <div className="bg-white/85 backdrop-blur-md rounded-2xl p-3.5 sm:p-5 border border-slate-200/80 shadow-xs flex items-center justify-between">
+                  <div className="min-w-0 pr-1">
+                    <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-rose-600 block mb-1 truncate">Suspended</span>
+                    <h3 className="text-xl sm:text-2xl font-black text-slate-900">{users.filter(u => u.status === 'Banned').length}</h3>
+                    <span className="text-[9px] sm:text-[10px] text-rose-500 font-medium truncate block">Locked out of app</span>
                   </div>
-                  <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600">
-                    <Star size={22} />
+                  <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600 shrink-0">
+                    <ShieldAlert size={18} className="sm:w-5 sm:h-5" />
+                  </div>
+                </div>
+
+                <div className="bg-white/85 backdrop-blur-md rounded-2xl p-3.5 sm:p-5 border border-slate-200/80 shadow-xs flex items-center justify-between">
+                  <div className="min-w-0 pr-1">
+                    <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-amber-600 block mb-1 truncate">VIP & Admins</span>
+                    <h3 className="text-xl sm:text-2xl font-black text-slate-900">{users.filter(u => u.role === 'VIP' || u.role === 'Admin').length}</h3>
+                    <span className="text-[9px] sm:text-[10px] text-amber-600 font-medium truncate block">Privileged tier</span>
+                  </div>
+                  <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 shrink-0">
+                    <Star size={18} className="sm:w-5 sm:h-5" />
                   </div>
                 </div>
               </div>
@@ -1472,11 +1790,11 @@ export default function App() {
                                 </div>
                               </td>
 
-                              {/* Live Presence Badge */}
+                               {/* Live Presence Badge */}
                               <td className="py-3.5 px-4">
                                 {user.isOnline ? (
-                                  <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold bg-[#00E676]/15 text-[#009640] border border-[#00E676]/30">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-[#00E676] mr-1.5 animate-pulse" /> Active Now
+                                  <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse" /> Active Now
                                   </span>
                                 ) : (
                                   <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-500 border border-slate-200">
@@ -1503,11 +1821,11 @@ export default function App() {
                               <td className="py-3.5 px-4">
                                 <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold ${
                                   user.status === 'Active' 
-                                    ? 'bg-[#00E676]/15 text-[#00A344] border border-[#00E676]/30' 
+                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60' 
                                     : 'bg-rose-50 text-rose-700 border border-rose-200'
                                 }`}>
                                   <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
-                                    user.status === 'Active' ? 'bg-[#00E676]' : 'bg-rose-500'
+                                    user.status === 'Active' ? 'bg-emerald-500' : 'bg-rose-500'
                                   }`} />
                                   {user.status}
                                 </span>
@@ -1565,7 +1883,7 @@ export default function App() {
                                     }}
                                     className={`p-1.5 rounded-lg border text-xs font-semibold transition-colors ${
                                       user.status === 'Banned'
-                                        ? 'bg-[#00E676]/15 text-[#00A344] border-[#00E676]/30 hover:bg-[#00E676]/25'
+                                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
                                         : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'
                                     }`}
                                     title={user.status === 'Banned' ? 'Reactivate User Account' : 'Suspend Account (Instant Lockout)'}
@@ -1661,8 +1979,8 @@ export default function App() {
                           {/* Presence & Status Tag */}
                           <div className="flex items-center space-x-2 mb-3">
                             {user.isOnline ? (
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#00E676]/15 text-[#009640] border border-[#00E676]/30">
-                                <span className="w-1.5 h-1.5 rounded-full bg-[#00E676] mr-1.5 animate-pulse" /> Active Now
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse" /> Active Now
                               </span>
                             ) : (
                               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-500 border border-slate-200">
@@ -1671,7 +1989,7 @@ export default function App() {
                             )}
 
                             <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                              user.status === 'Active' ? 'bg-[#00E676]/15 text-[#00A344]' : 'bg-rose-50 text-rose-700'
+                              user.status === 'Active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60' : 'bg-rose-50 text-rose-700 border border-rose-200'
                             }`}>
                               {user.status}
                             </span>
@@ -1757,18 +2075,18 @@ export default function App() {
           {activeTab === 'videos' && (
             <div className="space-y-6 max-w-7xl mx-auto">
               {/* Aggregated Real Watched Movies Section */}
-              <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs">
-                <div className="flex items-center justify-between mb-5">
+              <div className="bg-white/85 backdrop-blur-md rounded-2xl p-4 sm:p-6 border border-slate-200/80 shadow-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-5">
                   <div>
                     <h3 className="text-base font-bold text-slate-900">Real User Watch Stream Analytics</h3>
                     <p className="text-xs text-slate-400">Aggregated directly from user watch history and favorite records in Firebase RTDB</p>
                   </div>
-                  <span className="text-xs font-bold text-[#00A344] bg-[#00E676]/10 px-3 py-1 rounded-full border border-[#00E676]/30">
-                    {aggregatedWatchedMovies.length} Streamed Titles Tracked
+                  <span className="text-xs font-semibold text-slate-600 bg-slate-100 px-3 py-1 rounded-full self-start sm:self-auto">
+                    {aggregatedWatchedMovies.length} Streamed Titles
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                   {aggregatedWatchedMovies.slice(0, 6).map((movie, index) => (
                     <div key={movie.id} className="p-4 rounded-xl border border-slate-100 hover:border-slate-200 bg-slate-50/50 flex space-x-3.5 items-center">
                       {movie.poster ? (
@@ -1859,12 +2177,12 @@ export default function App() {
                               <button
                                 onClick={() => {
                                   setActiveTab('notifications');
-                                  setNotifTitle(`🔥 ${title} (${vj})`);
-                                  setNotifBody(`Watch ${title} in explosive Luganda translation by ${vj}! Now streaming in Full HD.`);
+                                  setNotifTitle(`${title} (${vj})`);
+                                  setNotifBody(`Watch ${title} in exclusive Luganda translation by ${vj}! Now streaming in Full HD.`);
                                   setNotifImageUrl(img || '');
                                   setNotifLink(String(id));
                                 }}
-                                className="inline-flex items-center px-2.5 py-1 rounded-lg bg-[#00E676]/15 hover:bg-[#00E676]/25 text-[#00A344] border border-[#00E676]/30 font-bold text-[11px] transition-colors"
+                                className="inline-flex items-center px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold text-[11px] transition-colors cursor-pointer"
                               >
                                 <Send size={12} className="mr-1" /> Alert
                               </button>
@@ -2107,10 +2425,10 @@ export default function App() {
                       <div className="flex items-center space-x-2 overflow-x-auto pb-1 text-[11px]">
                         <span className="font-bold text-[10px] uppercase text-[#667781] shrink-0">Quick Reply:</span>
                         {[
-                          '👋 Welcome to FreeWatch Support! How can we assist you today?',
-                          '🎬 Your requested movie is now uploaded to the catalog!',
-                          '✅ Account status verified and active.',
-                          '🍿 Enjoy streaming on FreeWatch!',
+                          'Welcome to FreeWatch Support! How can we assist you today?',
+                          'Your requested movie is now uploaded to the catalog!',
+                          'Account status verified and active.',
+                          'Enjoy streaming on FreeWatch!',
                         ].map((quick, qIdx) => (
                           <button
                             key={qIdx}
@@ -2199,8 +2517,8 @@ export default function App() {
                   </div>
 
                   {notifSuccess && (
-                    <div className="mb-4 p-3 rounded-xl bg-[#00E676]/15 border border-[#00E676]/30 text-[#00A344] text-xs font-bold flex items-center">
-                      <CheckCircle2 size={16} className="mr-2 text-[#00C853]" /> {notifSuccess}
+                    <div className="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center">
+                      <CheckCircle2 size={16} className="mr-2 text-emerald-600" /> {notifSuccess}
                     </div>
                   )}
 
@@ -2212,7 +2530,7 @@ export default function App() {
                       </label>
                       <input 
                         type="text"
-                        placeholder="e.g. 🔥 New Luganda Release"
+                        placeholder="e.g. New Luganda Release"
                         value={notifTitle}
                         onChange={(e) => setNotifTitle(e.target.value)}
                         className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-[#00E676]"
@@ -2308,7 +2626,7 @@ export default function App() {
 
                     <div>
                       <h4 className="font-bold text-white text-xs">
-                        {notifTitle || '🔥 FreeWatch Alert'}
+                        {notifTitle || 'FreeWatch Alert'}
                       </h4>
                       <p className="text-[11px] text-slate-300 mt-0.5 leading-relaxed">
                         {notifBody || 'Watch newly uploaded Luganda dubbed movies on FreeWatch!'}
@@ -2341,7 +2659,7 @@ export default function App() {
                           Dispatched by {d.dispatchedBy || 'System'} • {new Date(d.timestamp).toLocaleString()}
                         </span>
                       </div>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#00E676]/15 text-[#00A344] border border-[#00E676]/30">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
                         Delivered
                       </span>
                     </div>
@@ -2896,7 +3214,7 @@ export default function App() {
                       {selectedUserDetail.role}
                     </span>
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                      selectedUserDetail.status === 'Active' ? 'bg-[#00E676]/15 text-[#00A344] border border-[#00E676]/30' : 'bg-rose-50 text-rose-700 border border-rose-200'
+                      selectedUserDetail.status === 'Active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60' : 'bg-rose-50 text-rose-700 border border-rose-200'
                     }`}>
                       {selectedUserDetail.status}
                     </span>
