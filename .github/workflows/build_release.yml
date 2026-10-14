@@ -39,6 +39,16 @@ jobs:
           flutter --version
           java -version
 
+      - name: Extract App Version from pubspec.yaml
+        id: app_version
+        run: |
+          VERSION=$(grep -m 1 '^version:' pubspec.yaml | sed 's/version: //' | cut -d'+' -f1 | tr -d ' ')
+          BUILD=$(grep -m 1 '^version:' pubspec.yaml | sed 's/version: //' | cut -d'+' -f2 | tr -d ' ')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "build=$BUILD" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+          echo "Extracted Version: $VERSION, Build: $BUILD, Tag: v$VERSION"
+
       - name: Install dependencies
         run: flutter pub get
 
@@ -69,19 +79,19 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
           files: release-artifacts/FreeWatch-release.apk
-          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v1.0.56' }}
-          name: Release ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v1.0.56' }}
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || steps.app_version.outputs.tag }}
+          name: Release ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || steps.app_version.outputs.tag }}
           body: |
-            ## 🎬 FreeWatch Release ${{ github.ref_name }}
+            ## 🎬 FreeWatch Release ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || steps.app_version.outputs.tag }}
             
             Download `FreeWatch-release.apk` below and install it directly on your Android device!
             
             ### ✨ Highlights in this release:
-            - 💬 **Live Support Chat Push Notifications**: Admin messages & replies in the admin panel instantly send rich OS notifications that deep-link directly into the `/developer-chat` screen.
+            - 🛡️ **WhatsApp-Style Account Review & Appeal**: Submit suspension review requests directly in the app with real-time status updates and automatic instant unban restoration upon admin approval.
+            - 📢 **Smart AdMob Interstitial Ads**: Google Mobile Ads integration with 60-second cooldown protection.
+            - 🔄 **Automated Update Detection**: Dynamic runtime PackageInfo verification ensures the update banner strictly hides when the latest version is installed.
+            - 💬 **Live Support Chat Push Notifications**: Admin messages & replies in the admin panel instantly notify users and deep-link directly into the chat screen.
             - 💾 **Persistent Offline Downloads**: Multi-tier storage persistence keeps downloaded movies intact across user logout, session switches, and guest mode.
-            - 🚀 **In-App Auto-Update System**: Non-intrusive update banner detects new releases via Realtime Database and GitHub API without exposing users to raw GitHub URLs.
-            - 🏪 **App Store Product Listing Website**: Sleek Apple App Store inspired landing site with Light & Dark modes, Luganda #1 chart ranking, user ratings, and 1-tap direct APK download.
-            - 🛡️ **Zero Mock Data & Real-Time Presence**: Full production integration with Firebase Realtime Database and Firestore.
           generate_release_notes: true
           draft: false
           prerelease: false

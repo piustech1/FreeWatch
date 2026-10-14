@@ -30,9 +30,9 @@ class AppUpdateService {
   factory AppUpdateService() => _instance;
   AppUpdateService._internal();
 
-  // Fallback defaults matching current pubspec version 1.0.58+59
-  static const int defaultBuildNumber = 59;
-  static const String defaultVersionName = '1.0.58';
+  // Fallback defaults matching current pubspec version 1.0.59+60
+  static const int defaultBuildNumber = 60;
+  static const String defaultVersionName = '1.0.59';
   static const String defaultStoreListingUrl = 'https://freewatch-piustech.vercel.app/';
 
   /// Strictly determines if [remoteVersion] or [remoteBuild] is newer than the locally installed app

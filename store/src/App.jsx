@@ -31,16 +31,17 @@ export default function App() {
 
   // Dynamic Release Config - Mobile Application Features Only
   const [releaseInfo, setReleaseInfo] = useState({
-    version: '1.0.58',
-    buildNumber: 59,
-    size: '83.6 MB',
+    version: '1.0.59',
+    buildNumber: 60,
+    size: '83.8 MB',
     releaseDate: 'Just now',
-    apkUrl: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.58/FreeWatch-release.apk',
+    apkUrl: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.59/FreeWatch-release.apk',
     notes: [
-      'Permanent offline movie downloads: downloaded movies now persist safely across all sign-outs, cache resets, and guest sessions.',
-      'Instant live support chat alerts: receive prompt lock-screen notifications the moment a FreeWatch support moderator responds, with 1-tap jump to chat.',
-      'Refined cinema video player: improved swipe-to-seek responsiveness, seamless buffering, and immersive landscape controls.',
-      'Faster streaming engine: accelerated movie startup speeds and significantly reduced cellular data usage.'
+      'In-app account review & appeals: WhatsApp-styled appeal process to submit and track account status with instant unban restoration.',
+      'Optimized performance & smart ad system: smooth browsing with lightweight Google AdMob interstitial integration.',
+      'Smart automated update checker: dynamically compares installed version to ensure zero false update prompts.',
+      'Permanent offline movie downloads: downloaded movies persist safely across sign-outs and guest sessions.',
+      'Instant live support chat alerts: receive prompt lock-screen notifications the moment FreeWatch support responds.'
     ]
   });
 
