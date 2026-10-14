@@ -16,8 +16,9 @@ function getFirebaseAdmin() {
 
   if (!serviceAccount) {
     const localPaths = [
-      path.resolve(__dirname, '../../service-account.json'),
+      path.resolve(__dirname, 'service-account.json'),
       path.resolve(__dirname, '../service-account.json'),
+      path.resolve(__dirname, '../../service-account.json'),
       path.resolve(process.env.HOME || '', 'Desktop/FreeWatch/service-account.json')
     ];
     for (const p of localPaths) {

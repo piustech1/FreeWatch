@@ -7,6 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../domain/models/chat_message.dart';
 import '../../../profile/presentation/providers/user_profile_provider.dart';
+import '../../../../core/services/notification_service.dart';
+import '../../../../core/services/support_chat_notification_service.dart';
 
 const String _prefKeyGuestChatUid = 'freewatch_guest_chat_uid';
 
@@ -78,6 +80,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
       }
       _activeUid = uid;
       state = state.copyWith(userId: _activeUid);
+
+      // Subscribe to targeted FCM topic and start support chat listener
+      NotificationService().subscribeToUserTopic(_activeUid);
+      SupportChatNotificationService().startListening(_activeUid);
 
       // 1. Load locally cached messages
       final cacheKey = 'freewatch_chat_messages_$_activeUid';

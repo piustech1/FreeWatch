@@ -31,7 +31,7 @@ class AppUpdateService {
   // Current installed app build version metadata
   static const int currentBuildNumber = 57; // v1.0.56 release build
   static const String currentVersionName = '1.0.56';
-  static const String defaultStoreListingUrl = 'https://freewatch-piustech.vercel.app/download';
+  static const String defaultStoreListingUrl = 'https://freewatch-piustech.vercel.app/';
 
   /// Query latest release from Firebase RTDB and fallback to GitHub Releases
   Future<AppUpdateInfo> checkForUpdate() async {
@@ -51,13 +51,17 @@ class AppUpdateService {
         final releaseNotes = data['release_notes']?.toString() ??
             'New features, performance enhancements, and stability improvements.';
         final isMandatory = data['is_mandatory'] == true;
+        final showBanner = data['show_banner'] == true ||
+            data['force_show'] == true ||
+            data['banner_active'] == true;
 
-        if (latestBuild > currentBuildNumber ||
+        if (showBanner ||
+            latestBuild > currentBuildNumber ||
             (latestVersion.isNotEmpty && latestVersion != currentVersionName)) {
           return AppUpdateInfo(
             hasUpdate: true,
-            version: latestVersion.isNotEmpty ? latestVersion : '1.0.56',
-            buildNumber: latestBuild > 0 ? latestBuild : 57,
+            version: latestVersion.isNotEmpty ? latestVersion : '1.0.57',
+            buildNumber: latestBuild > 0 ? latestBuild : 58,
             releaseNotes: releaseNotes,
             storeUrl: storeUrl.isNotEmpty ? storeUrl : defaultStoreListingUrl,
             directApkUrl: directApkUrl,

@@ -141,6 +141,16 @@ class NotificationService {
             enableVibration: true,
           ),
         );
+        await androidPlatform.createNotificationChannel(
+          const AndroidNotificationChannel(
+            'freewatch_support_chat',
+            'FreeWatch Live Support',
+            description: 'Instant replies from FreeWatch admin support team',
+            importance: Importance.max,
+            playSound: true,
+            enableVibration: true,
+          ),
+        );
         await androidPlatform.requestNotificationsPermission();
       }
 

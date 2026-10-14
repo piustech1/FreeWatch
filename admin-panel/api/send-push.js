@@ -19,9 +19,16 @@ function getFirebaseAdmin() {
   }
 
   if (!serviceAccount) {
-    const localPath = path.resolve(__dirname, '../../service-account.json');
-    if (fs.existsSync(localPath)) {
-      serviceAccount = require(localPath);
+    const candidatePaths = [
+      path.resolve(__dirname, 'service-account.json'),
+      path.resolve(__dirname, '../service-account.json'),
+      path.resolve(__dirname, '../../service-account.json')
+    ];
+    for (const p of candidatePaths) {
+      if (fs.existsSync(p)) {
+        serviceAccount = require(p);
+        break;
+      }
     }
   }
 

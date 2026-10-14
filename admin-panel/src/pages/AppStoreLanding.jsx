@@ -8,14 +8,15 @@ import {
 import { ref, onValue } from 'firebase/database';
 import { rtdb } from '../firebase';
 
-export default function AppStoreLanding({ onNavigateToAdmin }) {
+export default function AppStoreLanding() {
   const [theme, setTheme] = useState('dark'); // 'dark' | 'light'
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [downloadState, setDownloadState] = useState('idle'); // 'idle' | 'downloading' | 'completed'
   const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [isNotesExpanded, setIsNotesExpanded] = useState(false);
   const [shareToast, setShareToast] = useState(false);
 
-  // Dynamic Release Config
+  // Dynamic Release Config - Mobile Application Features Only
   const [releaseInfo, setReleaseInfo] = useState({
     version: '1.0.56',
     buildNumber: 57,
@@ -23,11 +24,10 @@ export default function AppStoreLanding({ onNavigateToAdmin }) {
     releaseDate: 'Just now',
     apkUrl: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.56/FreeWatch_Release_v1.0.56.apk',
     notes: [
-      'Permanent offline movie downloads: downloads now persist across all sign-outs & guest sessions.',
-      'Instant Live Support chat reply alerts: get notified the moment an admin responds, with direct 1-tap navigation.',
-      'Auto-updating engine: seamless in-app notifications whenever a new build is released.',
-      'Enhanced video player with responsive HUD, swipe-to-seek, and landscape mode improvements.',
-      'Optimized database listeners for lower data usage and faster movie stream initiation.'
+      'Permanent offline movie downloads: downloaded movies now persist safely across all sign-outs, cache resets, and guest sessions.',
+      'Instant live support chat alerts: receive prompt lock-screen notifications the moment a FreeWatch support moderator responds, with 1-tap jump to chat.',
+      'Refined cinema video player: improved swipe-to-seek responsiveness, seamless buffering, and immersive landscape controls.',
+      'Faster streaming engine: accelerated movie startup speeds and significantly reduced cellular data usage.'
     ]
   });
 
@@ -175,33 +175,6 @@ export default function AppStoreLanding({ onNavigateToAdmin }) {
           </button>
 
           <div className="flex items-center space-x-2">
-            {/* Admin Console Shortcut */}
-            {onNavigateToAdmin ? (
-              <button 
-                onClick={onNavigateToAdmin}
-                className={`p-2 rounded-full border transition-all ${
-                  isDark 
-                    ? 'border-neutral-800 bg-neutral-900 text-emerald-400 hover:bg-neutral-800' 
-                    : 'border-neutral-300 bg-white text-emerald-600 hover:bg-neutral-100 shadow-sm'
-                }`}
-                title="Open Admin Console"
-              >
-                <ShieldCheck className="w-4 h-4" />
-              </button>
-            ) : (
-              <a 
-                href="/admin"
-                className={`p-2 rounded-full border transition-all ${
-                  isDark 
-                    ? 'border-neutral-800 bg-neutral-900 text-emerald-400 hover:bg-neutral-800' 
-                    : 'border-neutral-300 bg-white text-emerald-600 hover:bg-neutral-100 shadow-sm'
-                }`}
-                title="Open Admin Console"
-              >
-                <ShieldCheck className="w-4 h-4" />
-              </a>
-            )}
-
             {/* Theme Toggle (Light / Dark) */}
             <button 
               onClick={() => setTheme(isDark ? 'light' : 'dark')}
@@ -226,16 +199,15 @@ export default function AppStoreLanding({ onNavigateToAdmin }) {
           </div>
         </div>
 
-        {/* ── 3. App Product Header (Squircle, Title, GET / UPDATE Button) ── */}
+        {/* ── 3. App Product Header (Squircle with Real App Icon, Title, GET / UPDATE Button) ── */}
         <div className="px-5 pt-3 pb-5 flex items-center space-x-4">
-          {/* Squircle App Icon */}
-          <div className="w-24 h-24 rounded-[22px] bg-gradient-to-br from-red-600 via-rose-700 to-black p-1 shadow-2xl flex-shrink-0 relative overflow-hidden border border-white/10">
-            <div className="w-full h-full rounded-[18px] bg-black flex flex-col items-center justify-center relative overflow-hidden">
-              <Film className="w-10 h-10 text-red-500 drop-shadow-md" />
-              <span className="text-[10px] font-black tracking-widest text-white mt-1">FREEWATCH</span>
-              {/* Glossy overlay reflection */}
-              <div className="absolute -top-6 -right-6 w-16 h-16 bg-white/15 rounded-full blur-md"></div>
-            </div>
+          {/* Authentic Squircle App Icon using Real App Asset */}
+          <div className="w-24 h-24 rounded-[22px] bg-gradient-to-br from-red-600 via-rose-700 to-black p-0.5 shadow-2xl flex-shrink-0 relative overflow-hidden border border-white/10">
+            <img 
+              src="/app_icon.png" 
+              alt="FreeWatch App Icon" 
+              className="w-full h-full object-cover rounded-[20px]"
+            />
           </div>
 
           {/* Title & Subtitle & Actions */}
@@ -315,8 +287,8 @@ export default function AppStoreLanding({ onNavigateToAdmin }) {
           </div>
         </div>
 
-        {/* ── 5. What's New Section ── */}
-        <div className="px-5 py-4">
+        {/* ── 5. What's New Section (Frosted & Collapsible) ── */}
+        <div className="px-5 py-3">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold tracking-tight">What's New</h2>
             <button 
@@ -336,14 +308,30 @@ export default function AppStoreLanding({ onNavigateToAdmin }) {
             </span>
           </div>
 
-          <ul className={`mt-2.5 space-y-1.5 text-xs leading-relaxed ${isDark ? 'text-neutral-300' : 'text-neutral-700'}`}>
-            {releaseInfo.notes.map((item, idx) => (
-              <li key={idx} className="flex items-start space-x-2">
-                <span className="text-[#0071E3] font-bold">•</span>
-                <span>{item}</span>
-              </li>
-            ))}
-          </ul>
+          {/* Frosted Glass Container with iOS style ... more */}
+          <div className={`mt-3 p-3.5 rounded-2xl border backdrop-blur-xl transition-all duration-300 ${
+            isDark 
+              ? 'bg-white/[0.04] border-white/10 shadow-inner' 
+              : 'bg-white/80 border-black/5 shadow-xs'
+          }`}>
+            <ul className={`space-y-2 text-xs leading-relaxed ${isDark ? 'text-neutral-300' : 'text-neutral-700'}`}>
+              {(isNotesExpanded ? releaseInfo.notes : releaseInfo.notes.slice(0, 2)).map((item, idx) => (
+                <li key={idx} className="flex items-start space-x-2">
+                  <span className="text-[#0071E3] font-bold text-sm leading-none mt-0.5">•</span>
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+
+            {releaseInfo.notes.length > 2 && (
+              <button
+                onClick={() => setIsNotesExpanded(!isNotesExpanded)}
+                className="mt-2 text-xs font-semibold text-[#0071E3] hover:underline flex items-center space-x-1"
+              >
+                <span>{isNotesExpanded ? 'Show less' : '... more'}</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* ── 6. Preview Screenshots Carousel ── */}
@@ -469,24 +457,6 @@ export default function AppStoreLanding({ onNavigateToAdmin }) {
             <div className="py-2.5 flex justify-between">
               <span className={isDark ? 'text-neutral-500' : 'text-neutral-400'}>Price</span>
               <span className="font-semibold text-right text-emerald-500">Free</span>
-            </div>
-            <div className="py-2.5 flex justify-between items-center">
-              <span className={isDark ? 'text-neutral-500' : 'text-neutral-400'}>Admin Console</span>
-              {onNavigateToAdmin ? (
-                <button 
-                  onClick={onNavigateToAdmin}
-                  className="font-semibold text-right text-xs text-blue-500 hover:underline"
-                >
-                  Sign In to Portal &rarr;
-                </button>
-              ) : (
-                <a 
-                  href="/admin" 
-                  className="font-semibold text-right text-xs text-blue-500 hover:underline"
-                >
-                  Sign In to Portal &rarr;
-                </a>
-              )}
             </div>
             <div className="py-2.5 flex justify-between">
               <span className={isDark ? 'text-neutral-500' : 'text-neutral-400'}>Copyright</span>
