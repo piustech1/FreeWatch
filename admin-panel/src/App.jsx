@@ -201,6 +201,9 @@ export default function App() {
   const [roleChangeModalUser, setRoleChangeModalUser] = useState(null);
   const [newRoleSelection, setNewRoleSelection] = useState('Member');
 
+  // Real Banned Account Appeals / Reviews from Firebase RTDB (/account_reviews)
+  const [accountReviews, setAccountReviews] = useState([]);
+
   // Real Catalog & Video Stats
   const [munowatchCatalog, setMunowatchCatalog] = useState([]);
   const [videoStats, setVideoStats] = useState({});
@@ -352,6 +355,79 @@ export default function App() {
 
     return () => unsub();
   }, []);
+
+  // Listen to Banned Account Reviews & Appeals from Firebase RTDB (/account_reviews)
+  useEffect(() => {
+    try {
+      const reviewsRef = ref(rtdb, 'account_reviews');
+      const unsub = onValue(reviewsRef, (snap) => {
+        if (snap.exists() && snap.val()) {
+          const val = snap.val();
+          const list = Object.keys(val).map(key => ({
+            id: key,
+            uid: key,
+            ...val[key]
+          })).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+          setAccountReviews(list);
+        } else {
+          setAccountReviews([]);
+        }
+      });
+      return () => unsub();
+    } catch (_) {}
+  }, []);
+
+  const handleApproveAppeal = async (review) => {
+    const targetUid = review.uid || review.id;
+    if (!targetUid) return;
+    try {
+      // 1. Reactivate user in RTDB
+      await update(ref(rtdb, `users/${targetUid}/profile`), {
+        status: 'Active',
+        isBanned: false,
+        banReason: null,
+        unbannedAt: Date.now(),
+        unbannedBy: 'Admin Console'
+      });
+      // 2. Mark review as approved
+      await update(ref(rtdb, `account_reviews/${targetUid}`), {
+        status: 'approved',
+        resolvedAt: Date.now(),
+        resolvedBy: 'dev'
+      });
+      // 3. Log audit event
+      await push(ref(rtdb, 'audit_logs'), {
+        action: 'APPROVE_APPEAL_UNBAN',
+        targetUid,
+        targetEmail: review.email || 'unknown',
+        actor: 'dev',
+        timestamp: Date.now()
+      });
+    } catch (e) {
+      alert('Failed to approve appeal: ' + e.message);
+    }
+  };
+
+  const handleRejectAppeal = async (review) => {
+    const targetUid = review.uid || review.id;
+    if (!targetUid) return;
+    try {
+      await update(ref(rtdb, `account_reviews/${targetUid}`), {
+        status: 'rejected',
+        resolvedAt: Date.now(),
+        resolvedBy: 'dev'
+      });
+      await push(ref(rtdb, 'audit_logs'), {
+        action: 'REJECT_APPEAL',
+        targetUid,
+        targetEmail: review.email || 'unknown',
+        actor: 'dev',
+        timestamp: Date.now()
+      });
+    } catch (e) {
+      alert('Failed to reject appeal: ' + e.message);
+    }
+  };
 
   // 2. Listen to Real Live Catalog & Stats from Firebase RTDB
   useEffect(() => {
@@ -1030,10 +1106,6 @@ export default function App() {
               </div>
             </div>
             <h1 className="text-2xl font-black tracking-tight text-white">FreeWatch Admin</h1>
-            <p className="text-xs text-slate-300 mt-1 font-medium">Restricted Security Console & Portal</p>
-            <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.08] border border-white/[0.12] text-[11px] font-semibold text-slate-300">
-              <Lock size={12} className="text-[#00E676]" /> Firebase RTDB Protected
-            </div>
           </div>
 
           {/* Error Alert */}
@@ -1048,7 +1120,7 @@ export default function App() {
           <form onSubmit={handleAdminLogin} className="space-y-4">
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
-                Admin Username
+                Username
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -1058,7 +1130,7 @@ export default function App() {
                   type="text"
                   value={adminUsername}
                   onChange={(e) => setAdminUsername(e.target.value)}
-                  placeholder="Enter username (e.g. dev)"
+                  placeholder="Enter username"
                   required
                   autoComplete="username"
                   className="w-full pl-10 pr-4 py-3 bg-white/[0.06] border border-white/[0.15] rounded-xl text-sm font-medium text-white placeholder-slate-400 focus:outline-none focus:border-[#00E676] focus:bg-white/[0.1] focus:ring-2 focus:ring-[#00E676]/30 transition-all"
@@ -1068,7 +1140,7 @@ export default function App() {
 
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
-                Master Password
+                Password
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -1078,7 +1150,7 @@ export default function App() {
                   type={showAdminPassword ? "text" : "password"}
                   value={adminPassword}
                   onChange={(e) => setAdminPassword(e.target.value)}
-                  placeholder="Enter master password"
+                  placeholder="Enter password"
                   required
                   autoComplete="current-password"
                   className="w-full pl-10 pr-11 py-3 bg-white/[0.06] border border-white/[0.15] rounded-xl text-sm font-medium text-white placeholder-slate-400 focus:outline-none focus:border-[#00E676] focus:bg-white/[0.1] focus:ring-2 focus:ring-[#00E676]/30 transition-all"
@@ -1700,15 +1772,16 @@ export default function App() {
                 <div className="flex items-center space-x-2 pt-2 border-t border-slate-100 overflow-x-auto text-xs">
                   {[
                     { key: 'all', label: `All Users (${users.length})` },
-                    { key: 'active', label: `🟢 Active Now (${users.filter(u => u.isOnline).length})` },
-                    { key: 'banned', label: `🔴 Banned (${users.filter(u => u.status === 'Banned').length})` },
-                    { key: 'vip', label: `👑 VIP & Admins (${users.filter(u => u.role === 'VIP' || u.role === 'Admin').length})` },
-                    { key: 'streamers', label: `🎬 Active Streamers (${users.filter(u => u.totalWatched > 0).length})` },
+                    { key: 'active', label: `Active Now (${users.filter(u => u.isOnline).length})` },
+                    { key: 'banned', label: `Banned (${users.filter(u => u.status === 'Banned').length})` },
+                    { key: 'appeals', label: `Appeals & Reviews (${accountReviews.filter(r => r.status === 'pending').length} Pending)` },
+                    { key: 'vip', label: `VIP & Admins (${users.filter(u => u.role === 'VIP' || u.role === 'Admin').length})` },
+                    { key: 'streamers', label: `Active Streamers (${users.filter(u => u.totalWatched > 0).length})` },
                   ].map((f) => (
                     <button
                       key={f.key}
                       onClick={() => setUserQuickFilter(f.key)}
-                      className={`px-3 py-1 rounded-full font-bold transition-all shrink-0 text-[11px] ${
+                      className={`px-3 py-1 rounded-full font-bold transition-all shrink-0 text-[11px] cursor-pointer ${
                         userQuickFilter === f.key 
                           ? 'bg-[#00E676] text-black shadow-xs font-black' 
                           : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
@@ -1718,13 +1791,86 @@ export default function App() {
                     </button>
                   ))}
                   <span className="text-[11px] text-slate-400 ml-auto shrink-0 pl-2">
-                    Showing {filteredUsers.length} of {users.length} users
+                    {userQuickFilter === 'appeals' 
+                      ? `${accountReviews.length} total reviews`
+                      : `Showing ${filteredUsers.length} of ${users.length} users`}
                   </span>
                 </div>
               </div>
 
-              {/* VIEW 1: DENSE MODERN TABLE */}
-              {userViewMode === 'table' ? (
+              {/* SPECIAL VIEW: BANNED ACCOUNT REVIEWS & APPEALS */}
+              {userQuickFilter === 'appeals' ? (
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 space-y-4">
+                  <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+                    <div>
+                      <h3 className="text-base font-bold text-slate-900">Banned Account Reviews & Appeals</h3>
+                      <p className="text-xs text-slate-400">Direct user explanations submitted from the FreeWatch mobile suspension screen</p>
+                    </div>
+                    <span className="text-xs font-bold px-3 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                      {accountReviews.filter(r => r.status === 'pending').length} Pending Review
+                    </span>
+                  </div>
+
+                  {accountReviews.length === 0 ? (
+                    <div className="text-center py-12 text-slate-400 text-xs">
+                      No account reviews or appeals have been submitted yet.
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {accountReviews.map((appeal) => (
+                        <div key={appeal.id} className="p-4 rounded-xl border border-slate-200 bg-slate-50/60 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                          <div className="space-y-1.5 min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-bold text-sm text-slate-900">{appeal.name || 'User'}</span>
+                              <span className="text-xs text-slate-500 font-mono">({appeal.email || 'No email'})</span>
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                appeal.status === 'approved' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                                appeal.status === 'rejected' ? 'bg-rose-50 text-rose-700 border border-rose-200' :
+                                'bg-amber-50 text-amber-700 border border-amber-200'
+                              }`}>
+                                {appeal.status ? appeal.status.toUpperCase() : 'PENDING'}
+                              </span>
+                              <span className="text-[10px] text-slate-400">
+                                {appeal.createdAt ? new Date(appeal.createdAt).toLocaleString() : ''}
+                              </span>
+                            </div>
+                            <div className="text-xs text-slate-700 bg-white p-3 rounded-lg border border-slate-200">
+                              <span className="font-bold text-slate-900 block text-[11px] mb-0.5">User Explanation:</span>
+                              "{appeal.reviewText || appeal.explanation || 'No explanation provided.'}"
+                            </div>
+                            {appeal.banReason && (
+                              <div className="text-[11px] text-slate-500">
+                                <span className="font-semibold text-rose-600">Original Ban Reason:</span> {appeal.banReason}
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0 self-end md:self-center">
+                            {appeal.status !== 'approved' && (
+                              <button
+                                onClick={() => handleApproveAppeal(appeal)}
+                                className="px-3 py-1.5 rounded-lg bg-[#00E676] hover:bg-[#00C853] text-black font-extrabold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                              >
+                                <UserCheck size={14} />
+                                <span>Approve & Unban</span>
+                              </button>
+                            )}
+                            {appeal.status !== 'rejected' && appeal.status !== 'approved' && (
+                              <button
+                                onClick={() => handleRejectAppeal(appeal)}
+                                className="px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                              >
+                                <UserX size={14} />
+                                <span>Reject</span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : userViewMode === 'table' ? (
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs">

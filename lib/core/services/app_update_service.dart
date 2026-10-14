@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 class AppUpdateInfo {
   final bool hasUpdate;
@@ -22,58 +23,87 @@ class AppUpdateInfo {
   });
 }
 
-/// Central service monitoring GitHub Releases & Firebase RTDB for future application updates
+/// Central service dynamically monitoring GitHub Releases & Firebase RTDB for application updates.
+/// Guarantees the update banner only appears when a genuinely NEWER version exists.
 class AppUpdateService {
   static final AppUpdateService _instance = AppUpdateService._internal();
   factory AppUpdateService() => _instance;
   AppUpdateService._internal();
 
-  // Current installed app build version metadata
-  static const int currentBuildNumber = 57; // v1.0.56 release build
-  static const String currentVersionName = '1.0.56';
+  // Fallback defaults matching current pubspec version 1.0.58+59
+  static const int defaultBuildNumber = 59;
+  static const String defaultVersionName = '1.0.58';
   static const String defaultStoreListingUrl = 'https://freewatch-piustech.vercel.app/';
 
-  /// Query latest release from Firebase RTDB and fallback to GitHub Releases
-  Future<AppUpdateInfo> checkForUpdate() async {
-    // 1. Try Firebase RTDB app_config/update first for instantaneous config
-    try {
-      final snap = await FirebaseDatabase.instance
-          .ref('app_config/update')
-          .get()
-          .timeout(const Duration(seconds: 3));
-
-      if (snap.exists && snap.value is Map) {
-        final data = Map<String, dynamic>.from(snap.value as Map);
-        final latestBuild = (data['latest_build'] as num?)?.toInt() ?? 0;
-        final latestVersion = data['latest_version']?.toString() ?? '';
-        final storeUrl = data['store_url']?.toString() ?? defaultStoreListingUrl;
-        final directApkUrl = data['direct_apk_url']?.toString();
-        final releaseNotes = data['release_notes']?.toString() ??
-            'New features, performance enhancements, and stability improvements.';
-        final isMandatory = data['is_mandatory'] == true;
-        final showBanner = data['show_banner'] == true ||
-            data['force_show'] == true ||
-            data['banner_active'] == true;
-
-        if (showBanner ||
-            latestBuild > currentBuildNumber ||
-            (latestVersion.isNotEmpty && latestVersion != currentVersionName)) {
-          return AppUpdateInfo(
-            hasUpdate: true,
-            version: latestVersion.isNotEmpty ? latestVersion : '1.0.57',
-            buildNumber: latestBuild > 0 ? latestBuild : 58,
-            releaseNotes: releaseNotes,
-            storeUrl: storeUrl.isNotEmpty ? storeUrl : defaultStoreListingUrl,
-            directApkUrl: directApkUrl,
-            isMandatory: isMandatory,
-          );
-        }
-      }
-    } catch (e) {
-      debugPrint('[AppUpdateService] RTDB check notice: $e');
+  /// Strictly determines if [remoteVersion] or [remoteBuild] is newer than the locally installed app
+  static bool isRemoteVersionNewer({
+    required String remoteVersion,
+    required int remoteBuild,
+    required String localVersion,
+    required int localBuild,
+  }) {
+    // 1. If remote build number is provided and both are positive, compare build numbers
+    if (remoteBuild > 0 && localBuild > 0) {
+      if (remoteBuild > localBuild) return true;
+      if (remoteBuild < localBuild) return false;
+      // If build numbers are equal, check semantic version below as secondary
     }
 
-    // 2. Direct GitHub Releases API Fallback
+    // 2. Semantic version comparison e.g. "1.0.59" > "1.0.58"
+    final cleanRemote = remoteVersion.replaceAll(RegExp(r'[^0-9.]'), '').trim();
+    final cleanLocal = localVersion.replaceAll(RegExp(r'[^0-9.]'), '').trim();
+
+    if (cleanRemote.isEmpty) return false;
+    if (cleanLocal.isEmpty) return true;
+
+    final rParts = cleanRemote.split('.').map((s) => int.tryParse(s) ?? 0).toList();
+    final lParts = cleanLocal.split('.').map((s) => int.tryParse(s) ?? 0).toList();
+
+    final maxLen = rParts.length > lParts.length ? rParts.length : lParts.length;
+    for (int i = 0; i < maxLen; i++) {
+      final r = i < rParts.length ? rParts[i] : 0;
+      final l = i < lParts.length ? lParts[i] : 0;
+      if (r > l) return true;
+      if (r < l) return false;
+    }
+
+    // If version numbers are identical, this is the current release
+    return false;
+  }
+
+  /// Get the actual installed app version and build number from the OS
+  Future<Map<String, dynamic>> getInstalledAppInfo() async {
+    String versionName = defaultVersionName;
+    int buildNumber = defaultBuildNumber;
+
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      if (packageInfo.version.isNotEmpty) {
+        versionName = packageInfo.version;
+      }
+      final parsedBuild = int.tryParse(packageInfo.buildNumber);
+      if (parsedBuild != null && parsedBuild > 0) {
+        buildNumber = parsedBuild;
+      }
+    } catch (e) {
+      debugPrint('[AppUpdateService] PackageInfo lookup fallback: $e');
+    }
+
+    return {
+      'version': versionName,
+      'build': buildNumber,
+    };
+  }
+
+  /// Check GitHub Releases and Firebase RTDB for a genuinely newer release
+  Future<AppUpdateInfo> checkForUpdate() async {
+    final localInfo = await getInstalledAppInfo();
+    final localVersion = localInfo['version'] as String;
+    final localBuild = localInfo['build'] as int;
+
+    debugPrint('[AppUpdateService] Local App Version: $localVersion+$localBuild');
+
+    // 1. Direct GitHub Releases API Check (Automated source of truth)
     try {
       final dio = Dio(
         BaseOptions(
@@ -89,28 +119,20 @@ class AppUpdateService {
 
       if (response.statusCode == 200 && response.data != null) {
         final data = response.data!;
-        final tagName = data['tag_name']?.toString() ?? ''; // e.g. "v1.0.56"
+        final tagName = data['tag_name']?.toString() ?? ''; // e.g. "v1.0.58"
         final body = data['body']?.toString() ?? '';
         final cleanTag = tagName.replaceAll('v', '').trim();
 
-        // Extract build number or version comparison
-        final remoteVersionParts = cleanTag.split('.');
-        final localVersionParts = currentVersionName.split('.');
+        final isNewer = isRemoteVersionNewer(
+          remoteVersion: cleanTag,
+          remoteBuild: 0,
+          localVersion: localVersion,
+          localBuild: localBuild,
+        );
 
-        bool hasNewerVersion = false;
-        for (int i = 0; i < remoteVersionParts.length && i < localVersionParts.length; i++) {
-          final r = int.tryParse(remoteVersionParts[i]) ?? 0;
-          final l = int.tryParse(localVersionParts[i]) ?? 0;
-          if (r > l) {
-            hasNewerVersion = true;
-            break;
-          } else if (r < l) {
-            break;
-          }
-        }
+        if (isNewer) {
+          debugPrint('[AppUpdateService] Newer GitHub release found: $cleanTag > $localVersion');
 
-        if (hasNewerVersion) {
-          // Look for APK release asset download URL
           String? apkUrl;
           if (data['assets'] is List) {
             final assets = data['assets'] as List;
@@ -125,7 +147,7 @@ class AppUpdateService {
           return AppUpdateInfo(
             hasUpdate: true,
             version: cleanTag,
-            buildNumber: currentBuildNumber + 1,
+            buildNumber: localBuild + 1,
             releaseNotes: body.isNotEmpty
                 ? body
                 : 'FreeWatch $cleanTag brings offline storage improvements, chat alerts, and player updates.',
@@ -133,12 +155,57 @@ class AppUpdateService {
             directApkUrl: apkUrl,
             isMandatory: false,
           );
+        } else {
+          debugPrint('[AppUpdateService] GitHub release $cleanTag is current or older than installed $localVersion');
         }
       }
     } catch (e) {
       debugPrint('[AppUpdateService] GitHub check notice: $e');
     }
 
+    // 2. Firebase RTDB app_config/update check (secondary / administrative overrides)
+    try {
+      final snap = await FirebaseDatabase.instance
+          .ref('app_config/update')
+          .get()
+          .timeout(const Duration(seconds: 3));
+
+      if (snap.exists && snap.value is Map) {
+        final data = Map<String, dynamic>.from(snap.value as Map);
+        final latestBuild = (data['latest_build'] as num?)?.toInt() ?? 0;
+        final latestVersion = data['latest_version']?.toString() ?? '';
+        final storeUrl = data['store_url']?.toString() ?? defaultStoreListingUrl;
+        final directApkUrl = data['direct_apk_url']?.toString();
+        final releaseNotes = data['release_notes']?.toString() ??
+            'New features, performance enhancements, and stability improvements.';
+        final isMandatory = data['is_mandatory'] == true;
+
+        final isNewer = isRemoteVersionNewer(
+          remoteVersion: latestVersion,
+          remoteBuild: latestBuild,
+          localVersion: localVersion,
+          localBuild: localBuild,
+        );
+
+        // Strictly require that the RTDB release is genuinely newer than local installed app
+        if (isNewer) {
+          debugPrint('[AppUpdateService] Newer RTDB version found: $latestVersion+$latestBuild');
+          return AppUpdateInfo(
+            hasUpdate: true,
+            version: latestVersion.isNotEmpty ? latestVersion : '1.0.59',
+            buildNumber: latestBuild > 0 ? latestBuild : localBuild + 1,
+            releaseNotes: releaseNotes,
+            storeUrl: storeUrl.isNotEmpty ? storeUrl : defaultStoreListingUrl,
+            directApkUrl: directApkUrl,
+            isMandatory: isMandatory,
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('[AppUpdateService] RTDB check notice: $e');
+    }
+
+    // Installed app is up to date! Banner will NOT show.
     return const AppUpdateInfo(hasUpdate: false);
   }
 }

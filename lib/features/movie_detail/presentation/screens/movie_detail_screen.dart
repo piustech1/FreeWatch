@@ -27,6 +27,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../../../shared/widgets/app_toast.dart';
 import '../../../../shared/widgets/tiktok_promo_modal.dart';
+import '../../../../core/services/admob_service.dart';
 import '../providers/movie_detail_providers.dart';
 
 /// Premium iOS Glassmorphic Movie Details Screen:
@@ -93,6 +94,12 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
     if (widget.autoPlay || widget.resumeProgress != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _playTrailer();
+      });
+    } else {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          AdmobService().showRandomInterstitial(chance: 0.35);
+        }
       });
     }
   }

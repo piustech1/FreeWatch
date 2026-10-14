@@ -4,6 +4,7 @@ import '../../features/splash/splash_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/auth/presentation/screens/choose_avatar_screen.dart';
 import '../../features/auth/presentation/screens/banned_account_screen.dart';
+import '../../features/auth/presentation/screens/banned_review_screen.dart';
 import '../../features/movie_detail/presentation/screens/movie_detail_screen.dart';
 import '../../features/notifications/presentation/screens/notifications_screen.dart';
 import '../../features/chat/presentation/screens/developer_chat_screen.dart';
@@ -29,6 +30,16 @@ GoRouter createAppRouter({String initialLocation = '/splash'}) => GoRouter(
         final reason = state.uri.queryParameters['reason'];
         return BannedAccountScreen(initialReason: reason);
       },
+      routes: [
+        GoRoute(
+          path: 'review',
+          name: 'banned-review',
+          builder: (context, state) {
+            final reason = state.uri.queryParameters['reason'];
+            return BannedReviewScreen(banReason: reason);
+          },
+        ),
+      ],
     ),
     GoRoute(
       path: '/onboarding',

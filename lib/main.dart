@@ -8,6 +8,7 @@ import 'core/services/notification_service.dart';
 import 'core/services/movie_notification_tracker.dart';
 import 'core/services/user_presence_service.dart';
 import 'core/services/support_chat_notification_service.dart';
+import 'core/services/admob_service.dart';
 import 'core/router/app_router.dart';
 import 'features/favorites/presentation/providers/favorites_provider.dart';
 import 'features/profile/presentation/providers/watch_history_provider.dart';
@@ -60,6 +61,13 @@ void main() async {
     await SupportChatNotificationService().initialize();
   } catch (e) {
     debugPrint('Support chat notification service initialization notice: $e');
+  }
+
+  // Initialize AdMob Interstitial Ads
+  try {
+    await AdmobService().initialize();
+  } catch (e) {
+    debugPrint('AdMob initialization notice: $e');
   }
 
   // Force portrait orientation

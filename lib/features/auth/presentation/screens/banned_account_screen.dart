@@ -5,6 +5,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../chat/presentation/screens/developer_chat_screen.dart';
+import 'banned_review_screen.dart';
 
 class BannedAccountScreen extends StatefulWidget {
   final String? initialReason;
@@ -82,6 +83,14 @@ class _BannedAccountScreenState extends State<BannedAccountScreen> {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => const DeveloperChatScreen(),
+      ),
+    );
+  }
+
+  void _openReviewScreen() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => BannedReviewScreen(banReason: _reason),
       ),
     );
   }
@@ -185,24 +194,49 @@ class _BannedAccountScreenState extends State<BannedAccountScreen> {
                   ),
                   const SizedBox(height: 28),
 
-                  // Action Button 1: Appeal / Contact Live Support
+                  // Action Button 1: Request a Review (WhatsApp-styled review flow)
                   SizedBox(
                     width: double.infinity,
                     height: 50,
                     child: ElevatedButton.icon(
-                      onPressed: _openLiveChat,
-                      icon: const Icon(Icons.support_agent_rounded, color: Colors.black, size: 20),
+                      onPressed: _openReviewScreen,
+                      icon: const Icon(Icons.assignment_ind_rounded, color: Colors.black, size: 20),
                       label: const Text(
-                        'Appeal via Live Support',
+                        'Request a Review',
                         style: TextStyle(
                           color: Colors.black,
                           fontWeight: FontWeight.w800,
-                          fontSize: 14,
+                          fontSize: 15,
                         ),
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF00E676),
                         elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Action Button 2: Appeal via Live Support
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: OutlinedButton.icon(
+                      onPressed: _openLiveChat,
+                      icon: const Icon(Icons.support_agent_rounded, color: Colors.white, size: 18),
+                      label: const Text(
+                        'Appeal via Live Support',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: Colors.white.withOpacity(0.2)),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
