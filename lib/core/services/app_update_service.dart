@@ -30,9 +30,9 @@ class AppUpdateService {
   factory AppUpdateService() => _instance;
   AppUpdateService._internal();
 
-  // Fallback defaults matching current pubspec version 1.0.59+60
-  static const int defaultBuildNumber = 60;
-  static const String defaultVersionName = '1.0.59';
+  // Fallback defaults matching current pubspec version 1.0.60+61
+  static const int defaultBuildNumber = 61;
+  static const String defaultVersionName = '1.0.60';
   static const String defaultStoreListingUrl = 'https://freewatch-piustech.vercel.app/';
 
   /// Strictly determines if [remoteVersion] or [remoteBuild] is newer than the locally installed app
@@ -192,7 +192,7 @@ class AppUpdateService {
           debugPrint('[AppUpdateService] Newer RTDB version found: $latestVersion+$latestBuild');
           return AppUpdateInfo(
             hasUpdate: true,
-            version: latestVersion.isNotEmpty ? latestVersion : '1.0.59',
+            version: latestVersion.isNotEmpty ? latestVersion : '1.0.60',
             buildNumber: latestBuild > 0 ? latestBuild : localBuild + 1,
             releaseNotes: releaseNotes,
             storeUrl: storeUrl.isNotEmpty ? storeUrl : defaultStoreListingUrl,

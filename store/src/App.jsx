@@ -31,17 +31,17 @@ export default function App() {
 
   // Dynamic Release Config - Mobile Application Features Only
   const [releaseInfo, setReleaseInfo] = useState({
-    version: '1.0.59',
-    buildNumber: 60,
+    version: '1.0.60',
+    buildNumber: 61,
     size: '83.8 MB',
     releaseDate: 'Just now',
-    apkUrl: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.59/FreeWatch-release.apk',
+    apkUrl: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.60/FreeWatch-release.apk',
     notes: [
+      'Ultra-fast MovieMax catalog & streaming engine: immediate access to over 1,530+ Luganda movies and 130+ TV series with zero loading delays.',
       'In-app account review & appeals: WhatsApp-styled appeal process to submit and track account status with instant unban restoration.',
       'Optimized performance & smart ad system: smooth browsing with lightweight Google AdMob interstitial integration.',
       'Smart automated update checker: dynamically compares installed version to ensure zero false update prompts.',
-      'Permanent offline movie downloads: downloaded movies persist safely across sign-outs and guest sessions.',
-      'Instant live support chat alerts: receive prompt lock-screen notifications the moment FreeWatch support responds.'
+      'Permanent offline movie downloads: downloaded movies persist safely across sign-outs and guest sessions.'
     ]
   });
 

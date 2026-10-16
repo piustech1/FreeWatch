@@ -2,24 +2,31 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../data/datasources/moviemax_datasource.dart';
 import '../../data/datasources/munowatch_datasource.dart';
+import '../../data/models/movie.dart';
 import '../../features/notifications/data/models/notification_item.dart';
 import '../../features/notifications/presentation/providers/notifications_provider.dart';
 import 'notification_service.dart';
 
-/// Monitors external MunoWatch database for new movie uploads.
+/// Monitors external MovieMax / MunoWatch database for new movie uploads.
 /// Throws rich device notifications with posters/backdrops and adds them to in-app tray.
 class MovieNotificationTracker {
   static const String _prefKeyKnownIds = 'freewatch_known_movie_ids_v1';
   static const Duration _checkInterval = Duration(minutes: 30);
 
   final ProviderContainer _container;
-  final MunowatchDatasource _datasource;
+  final MovieMaxDatasource _movieMax;
+  final MunowatchDatasource _munowatch;
   Timer? _periodicTimer;
   bool _isChecking = false;
 
-  MovieNotificationTracker(this._container, {MunowatchDatasource? datasource})
-      : _datasource = datasource ?? MunowatchDatasource();
+  MovieNotificationTracker(
+    this._container, {
+    MovieMaxDatasource? movieMaxDatasource,
+    MunowatchDatasource? munowatchDatasource,
+  })  : _movieMax = movieMaxDatasource ?? MovieMaxDatasource(),
+        _munowatch = munowatchDatasource ?? MunowatchDatasource();
 
   void startTracking() {
     // Initial check shortly after app boot
@@ -47,7 +54,10 @@ class MovieNotificationTracker {
       final prefs = await SharedPreferences.getInstance();
       final storedIds = prefs.getStringList(_prefKeyKnownIds)?.toSet();
 
-      final movies = await _datasource.getAllMovies(forceRefresh: true);
+      List<Movie> movies = await _movieMax.getAllMovies(forceRefresh: true);
+      if (movies.isEmpty) {
+        movies = await _munowatch.getAllMovies(forceRefresh: true);
+      }
       if (movies.isEmpty) {
         _isChecking = false;
         return;
