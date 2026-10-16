@@ -5,6 +5,44 @@ import {
   MessageSquare, Sun, Moon, ExternalLink, X, ChevronRight
 } from 'lucide-react';
 
+// Helper: format release date to human-readable relative/calendar time
+function formatReleaseDate(dateInput) {
+  if (!dateInput) return 'Recently';
+  const date = typeof dateInput === 'number' ? new Date(dateInput) : new Date(dateInput);
+  if (isNaN(date.getTime())) return typeof dateInput === 'string' ? dateInput : 'Recently';
+
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHour = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHour / 24);
+
+  if (diffSec < 60) return 'Just now';
+  if (diffMin < 60) return `${diffMin}m ago`;
+  if (diffHour < 24) return `${diffHour}h ago`;
+  if (diffDay === 1) return 'Yesterday';
+  if (diffDay < 7) return `${diffDay}d ago`;
+  if (diffDay < 30) return `${Math.floor(diffDay / 7)}w ago`;
+
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+// Helper: compare semantic versions e.g. "1.0.60" vs "1.0.58"
+function isVersionNewer(newVer, oldVer) {
+  if (!newVer) return false;
+  if (!oldVer) return true;
+  const cleanN = newVer.replace(/[^0-9.]/g, '').split('.').map(Number);
+  const cleanO = oldVer.replace(/[^0-9.]/g, '').split('.').map(Number);
+  for (let i = 0; i < Math.max(cleanN.length, cleanO.length); i++) {
+    const n = cleanN[i] || 0;
+    const o = cleanO[i] || 0;
+    if (n > o) return true;
+    if (n < o) return false;
+  }
+  return false;
+}
+
 export default function App() {
   // Default theme is 'light' as requested
   const [theme, setTheme] = useState('light'); // 'light' | 'dark'
@@ -33,8 +71,8 @@ export default function App() {
   const [releaseInfo, setReleaseInfo] = useState({
     version: '1.0.60',
     buildNumber: 61,
-    size: '83.8 MB',
-    releaseDate: 'Just now',
+    size: '110.5 MB',
+    releaseDate: formatReleaseDate(1792164380000),
     apkUrl: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.60/FreeWatch-release.apk',
     notes: [
       'Ultra-fast MovieMax catalog & streaming engine: immediate access to over 1,530+ Luganda movies and 130+ TV series with zero loading delays.',
@@ -44,6 +82,30 @@ export default function App() {
       'Permanent offline movie downloads: downloaded movies persist safely across sign-outs and guest sessions.'
     ]
   });
+
+  // Dynamic Version History List
+  const [historyReleases, setHistoryReleases] = useState([
+    {
+      version: '1.0.60',
+      date: formatReleaseDate(1792164380000),
+      notes: 'MovieMax primary Luganda streaming engine, WhatsApp ban appeal system, and AdMob integration.'
+    },
+    {
+      version: '1.0.59',
+      date: '2d ago',
+      notes: 'Real-time database optimizations, offline movie storage persistence across sessions, and video player enhancements.'
+    },
+    {
+      version: '1.0.58',
+      date: '3d ago',
+      notes: 'Live support moderator push alerts on lock screen with 1-tap jump to chat.'
+    },
+    {
+      version: '1.0.56',
+      date: '1w ago',
+      notes: 'Real-time user presence tracking and instant ban enforcement.'
+    }
+  ]);
 
   // Ordered Screenshots: Main user flows first (Home, Movie, Series, Search, Category, Favorites, Chat, Profile, Notifications, Splash)
   const screenshots = [
@@ -99,26 +161,89 @@ export default function App() {
     }
   ];
 
-  // Fetch latest release metadata from GitHub
+  // Fetch latest release metadata from Firebase RTDB and GitHub dynamically
   useEffect(() => {
+    const applyReleasePayload = (val) => {
+      if (!val) return;
+      const remoteVer = (val.latest_version || val.version || '').replace('v', '').trim();
+      const remoteBuild = Number(val.latest_build || val.buildNumber || 0);
+      const remoteApk = val.direct_apk_url || val.apkUrl;
+      const remoteNotes = val.release_notes 
+        ? val.release_notes.split('\n').filter(Boolean)
+        : (Array.isArray(val.notes) ? val.notes : null);
+      const remoteDate = val.updated_at || val.published_at;
+
+      setReleaseInfo(prev => {
+        const isNewer = isVersionNewer(remoteVer, prev.version);
+        const isSame = remoteVer === prev.version;
+        if (!isNewer && !isSame) return prev; // Do not overwrite with older version
+
+        return {
+          ...prev,
+          version: remoteVer || prev.version,
+          buildNumber: remoteBuild > 0 ? remoteBuild : prev.buildNumber,
+          apkUrl: remoteApk || prev.apkUrl,
+          size: val.size || prev.size,
+          releaseDate: remoteDate ? formatReleaseDate(remoteDate) : prev.releaseDate,
+          notes: remoteNotes && remoteNotes.length > 0 ? remoteNotes : prev.notes
+        };
+      });
+    };
+
+    // 1. Direct REST fetch to Firebase RTDB for instant (<100ms) metadata loading
+    fetch('https://freewatch-a0bc7-default-rtdb.firebaseio.com/app_config/update.json')
+      .then(res => res.json())
+      .then(val => {
+        if (val) applyReleasePayload(val);
+      })
+      .catch(() => {});
+
+    // 2. Fetch latest release metadata from GitHub
     fetch('https://api.github.com/repos/piustech1/FreeWatch/releases/latest')
       .then(res => res.json())
       .then(data => {
         if (data && data.tag_name) {
           const cleanTag = data.tag_name.replace('v', '').trim();
-          let apk = releaseInfo.apkUrl;
+          let apk = null;
+          let sizeStr = null;
           if (Array.isArray(data.assets)) {
             const asset = data.assets.find(a => a.name && a.name.endsWith('.apk'));
             if (asset && asset.browser_download_url) {
               apk = asset.browser_download_url;
             }
+            if (asset && asset.size) {
+              sizeStr = `${(asset.size / (1024 * 1024)).toFixed(1)} MB`;
+            }
           }
-          setReleaseInfo(prev => ({
-            ...prev,
-            version: cleanTag,
-            apkUrl: apk,
-            notes: data.body ? data.body.split('\n').filter(Boolean) : prev.notes
-          }));
+          applyReleasePayload({
+            latest_version: cleanTag,
+            direct_apk_url: apk,
+            published_at: data.published_at,
+            release_notes: data.body,
+            size: sizeStr
+          });
+        }
+      })
+      .catch(() => {});
+
+    // 3. Fetch release history list from GitHub if available
+    fetch('https://api.github.com/repos/piustech1/FreeWatch/releases?per_page=6')
+      .then(res => res.json())
+      .then(list => {
+        if (Array.isArray(list) && list.length > 0) {
+          const parsed = list.map(item => {
+            const ver = (item.tag_name || '').replace('v', '');
+            const date = formatReleaseDate(item.published_at);
+            const notesLine = item.body
+              ? item.body.split('\n').filter(l => l.trim().startsWith('-') || l.trim().startsWith('•') || l.trim().startsWith('*')).slice(0, 2).map(l => l.replace(/^[-•*]\s*/, '')).join(' ')
+              : 'App update and performance improvements.';
+            return {
+              version: ver,
+              date,
+              notes: notesLine || 'Luganda movies streaming enhancements and stability.'
+            };
+          });
+          setHistoryReleases(parsed);
         }
       })
       .catch(() => {});
@@ -543,35 +668,17 @@ export default function App() {
             </div>
 
             <div className={`overflow-y-auto divide-y py-3 space-y-4 ${isDark ? 'divide-neutral-800' : 'divide-neutral-100'}`}>
-              <div>
-                <div className="flex justify-between items-baseline mb-1">
-                  <span className="font-bold text-sm">Version 1.0.57</span>
-                  <span className={`text-xs ${isDark ? 'text-neutral-400' : 'text-neutral-500'}`}>Just now</span>
+              {historyReleases.map((item, idx) => (
+                <div key={idx} className={idx > 0 ? "pt-3" : ""}>
+                  <div className="flex justify-between items-baseline mb-1">
+                    <span className="font-bold text-sm">Version {item.version}</span>
+                    <span className={`text-xs ${isDark ? 'text-neutral-400' : 'text-neutral-500'}`}>{item.date}</span>
+                  </div>
+                  <p className={`text-xs leading-relaxed ${isDark ? 'text-neutral-300' : 'text-neutral-600'}`}>
+                    {item.notes}
+                  </p>
                 </div>
-                <p className={`text-xs leading-relaxed ${isDark ? 'text-neutral-300' : 'text-neutral-600'}`}>
-                  Permanent offline movie downloads, live chat reply alerts, auto-update prompt, and video player enhancements.
-                </p>
-              </div>
-
-              <div className="pt-3">
-                <div className="flex justify-between items-baseline mb-1">
-                  <span className="font-bold text-sm">Version 1.0.56</span>
-                  <span className={`text-xs ${isDark ? 'text-neutral-400' : 'text-neutral-500'}`}>1w ago</span>
-                </div>
-                <p className={`text-xs leading-relaxed ${isDark ? 'text-neutral-300' : 'text-neutral-600'}`}>
-                  Real-time live presence tracking, WhatsApp style support chat, and ban enforcement.
-                </p>
-              </div>
-
-              <div className="pt-3">
-                <div className="flex justify-between items-baseline mb-1">
-                  <span className="font-bold text-sm">Version 1.0.50</span>
-                  <span className={`text-xs ${isDark ? 'text-neutral-400' : 'text-neutral-500'}`}>2w ago</span>
-                </div>
-                <p className={`text-xs leading-relaxed ${isDark ? 'text-neutral-300' : 'text-neutral-600'}`}>
-                  FreeWatch live streaming engine, MunoWatch synchronization cron, and rich movie catalog.
-                </p>
-              </div>
+              ))}
             </div>
 
             <button

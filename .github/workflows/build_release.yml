@@ -97,3 +97,17 @@ jobs:
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Sync Release to Firebase RTDB for Store Listing & In-App Updates
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        run: |
+          VERSION="${{ steps.app_version.outputs.version }}"
+          BUILD="${{ steps.app_version.outputs.build }}"
+          TAG="${{ steps.app_version.outputs.tag }}"
+          APK_URL="https://github.com/piustech1/FreeWatch/releases/download/$TAG/FreeWatch-release.apk"
+          TIMESTAMP=$(python3 -c 'import time; print(int(time.time()*1000))')
+          echo "Syncing version $VERSION ($BUILD) to Firebase RTDB at $TIMESTAMP..."
+          curl -s -X PATCH -H "Content-Type: application/json" \
+            -d "{\"latest_version\":\"$VERSION\",\"latest_build\":$BUILD,\"direct_apk_url\":\"$APK_URL\",\"updated_at\":$TIMESTAMP}" \
+            "https://freewatch-a0bc7-default-rtdb.firebaseio.com/app_config/update.json"
+          echo "Firebase RTDB sync complete."
