@@ -241,7 +241,7 @@ export default function App() {
     latest_build: 61,
     store_url: 'https://freewatchug.online/',
     direct_apk_url: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.60/FreeWatch-release.apk',
-    release_notes: '• Ultra-fast MovieMax catalog & streaming engine with zero delay\n• In-app account review & appeals with instant unban restoration\n• Smart AdMob integration and automated update verification\n• Permanent offline movie downloads across sessions',
+    release_notes: '• In-App Account Review & Appeals: WhatsApp-styled appeal process to submit and track account status\n• Instant Live Support Chat Alerts: Receive prompt notifications the moment a support moderator responds\n• Permanent Offline Storage: Downloaded items persist safely across sign-outs and guest sessions\n• Smart Automated Update Checker: Dynamically verifies installed version to eliminate false prompts\n• Refined UI & Performance: Faster screen transitions and improved dark/light theme switching',
     is_mandatory: false,
   });
   const [isSavingUpdateConfig, setIsSavingUpdateConfig] = useState(false);
@@ -265,7 +265,7 @@ export default function App() {
             latest_build: val.latest_build || 61,
             store_url: val.store_url || 'https://freewatchug.online/',
             direct_apk_url: val.direct_apk_url || 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.60/FreeWatch-release.apk',
-            release_notes: val.release_notes || '• Ultra-fast MovieMax catalog & streaming engine\n• In-app account review & appeals\n• Smart AdMob integration\n• Permanent offline movie downloads across sessions',
+            release_notes: val.release_notes || '• In-App Account Review & Appeals with instant unban restoration\n• Instant Live Support Chat Alerts with 1-tap jump to chat\n• Permanent Offline Storage persistence across sign-outs\n• Smart Automated Update Checker\n• Refined UI & Performance',
             is_mandatory: val.is_mandatory || false,
           });
         }

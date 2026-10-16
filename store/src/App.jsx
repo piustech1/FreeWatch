@@ -43,6 +43,19 @@ function isVersionNewer(newVer, oldVer) {
   return false;
 }
 
+// Helper: Filter release notes to strictly include pure application features (no admob, moviemax, scrapers/sources, or ads)
+function sanitizeFeatureNotes(rawNotes) {
+  if (!rawNotes) return null;
+  const list = typeof rawNotes === 'string' ? rawNotes.split('\n') : (Array.isArray(rawNotes) ? rawNotes : []);
+  const forbiddenRegex = /moviemax|admob|movie\s*scr|video\s*scr|ad\s*unit|interstitial|monetiz/i;
+
+  const cleaned = list
+    .map(line => line.replace(/^[\s•*-]+/, '').trim())
+    .filter(line => line.length > 5 && !forbiddenRegex.test(line));
+
+  return cleaned.length > 0 ? cleaned : null;
+}
+
 export default function App() {
   // Default theme is 'light' as requested
   const [theme, setTheme] = useState('light'); // 'light' | 'dark'
@@ -75,11 +88,11 @@ export default function App() {
     releaseDate: formatReleaseDate(1792164380000),
     apkUrl: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.60/FreeWatch-release.apk',
     notes: [
-      'Ultra-fast MovieMax catalog & streaming engine: immediate access to over 1,530+ Luganda movies and 130+ TV series with zero loading delays.',
-      'In-app account review & appeals: WhatsApp-styled appeal process to submit and track account status with instant unban restoration.',
-      'Optimized performance & smart ad system: smooth browsing with lightweight Google AdMob interstitial integration.',
-      'Smart automated update checker: dynamically compares installed version to ensure zero false update prompts.',
-      'Permanent offline movie downloads: downloaded movies persist safely across sign-outs and guest sessions.'
+      'In-App Account Review & Appeals: WhatsApp-styled appeal process to submit and track account status with instant unban restoration.',
+      'Instant Live Support Chat Alerts: Receive prompt notifications the moment a support moderator responds, with 1-tap jump to chat.',
+      'Permanent Offline Storage: Downloaded items persist safely across sign-outs, guest sessions, and cache resets.',
+      'Smart Automated Update Checker: Dynamically verifies installed version to eliminate false update prompts.',
+      'Refined UI & Performance: Faster screen transitions, enhanced theme customization, and smoother navigation.'
     ]
   });
 
@@ -88,12 +101,12 @@ export default function App() {
     {
       version: '1.0.60',
       date: formatReleaseDate(1792164380000),
-      notes: 'MovieMax primary Luganda streaming engine, WhatsApp ban appeal system, and AdMob integration.'
+      notes: 'In-app account review & appeals, automated update detection, and offline storage persistence.'
     },
     {
       version: '1.0.59',
       date: '2d ago',
-      notes: 'Real-time database optimizations, offline movie storage persistence across sessions, and video player enhancements.'
+      notes: 'Real-time synchronization optimizations, offline persistence across sessions, and UI enhancements.'
     },
     {
       version: '1.0.58',
@@ -168,9 +181,8 @@ export default function App() {
       const remoteVer = (val.latest_version || val.version || '').replace('v', '').trim();
       const remoteBuild = Number(val.latest_build || val.buildNumber || 0);
       const remoteApk = val.direct_apk_url || val.apkUrl;
-      const remoteNotes = val.release_notes 
-        ? val.release_notes.split('\n').filter(Boolean)
-        : (Array.isArray(val.notes) ? val.notes : null);
+      const rawNotes = val.release_notes || val.notes;
+      const remoteNotes = sanitizeFeatureNotes(rawNotes);
       const remoteDate = val.updated_at || val.published_at;
 
       setReleaseInfo(prev => {
@@ -234,13 +246,19 @@ export default function App() {
           const parsed = list.map(item => {
             const ver = (item.tag_name || '').replace('v', '');
             const date = formatReleaseDate(item.published_at);
-            const notesLine = item.body
-              ? item.body.split('\n').filter(l => l.trim().startsWith('-') || l.trim().startsWith('•') || l.trim().startsWith('*')).slice(0, 2).map(l => l.replace(/^[-•*]\s*/, '')).join(' ')
-              : 'App update and performance improvements.';
+            let notesLine = null;
+            if (item.body) {
+              const lines = item.body.split('\n')
+                .map(l => l.replace(/^[-•*#\s]+/, '').trim())
+                .filter(l => l.length > 8 && !/moviemax|admob|movie\s*scr|video\s*scr|ad\s*unit|interstitial|monetiz/i.test(l));
+              if (lines.length > 0) {
+                notesLine = lines.slice(0, 2).join('; ');
+              }
+            }
             return {
               version: ver,
               date,
-              notes: notesLine || 'Luganda movies streaming enhancements and stability.'
+              notes: notesLine || 'Application stability, navigation enhancements, and performance optimizations.'
             };
           });
           setHistoryReleases(parsed);

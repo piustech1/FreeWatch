@@ -88,10 +88,10 @@ jobs:
             
             ### ✨ Highlights in this release:
             - 🛡️ **WhatsApp-Style Account Review & Appeal**: Submit suspension review requests directly in the app with real-time status updates and automatic instant unban restoration upon admin approval.
-            - 📢 **Smart AdMob Interstitial Ads**: Google Mobile Ads integration with 60-second cooldown protection.
-            - 🔄 **Automated Update Detection**: Dynamic runtime PackageInfo verification ensures the update banner strictly hides when the latest version is installed.
             - 💬 **Live Support Chat Push Notifications**: Admin messages & replies in the admin panel instantly notify users and deep-link directly into the chat screen.
-            - 💾 **Persistent Offline Downloads**: Multi-tier storage persistence keeps downloaded movies intact across user logout, session switches, and guest mode.
+            - 🔄 **Automated Update Detection**: Dynamic runtime verification ensures accurate version updates with zero false prompts.
+            - 💾 **Persistent Offline Storage**: Multi-tier storage persistence keeps downloaded content intact across user logout, session switches, and guest mode.
+            - ⚡ **Enhanced App Performance**: Smoother navigation, refined transitions, and improved theme responsiveness.
           generate_release_notes: true
           draft: false
           prerelease: false
@@ -106,8 +106,9 @@ jobs:
           TAG="${{ steps.app_version.outputs.tag }}"
           APK_URL="https://github.com/piustech1/FreeWatch/releases/download/$TAG/FreeWatch-release.apk"
           TIMESTAMP=$(python3 -c 'import time; print(int(time.time()*1000))')
+          NOTES="• In-App Account Review & Appeals: WhatsApp-styled appeal process to submit and track account status with instant unban restoration.\n• Instant Live Support Chat Alerts: Receive prompt notifications the moment a support moderator responds, with 1-tap jump to chat.\n• Permanent Offline Storage: Downloaded items persist safely across sign-outs, guest sessions, and cache resets.\n• Smart Automated Update Checker: Dynamically verifies installed version to eliminate false update prompts.\n• Refined UI & Performance: Faster screen transitions, enhanced theme customization, and smoother navigation."
           echo "Syncing version $VERSION ($BUILD) to Firebase RTDB at $TIMESTAMP..."
           curl -s -X PATCH -H "Content-Type: application/json" \
-            -d "{\"latest_version\":\"$VERSION\",\"latest_build\":$BUILD,\"direct_apk_url\":\"$APK_URL\",\"updated_at\":$TIMESTAMP}" \
+            -d "{\"latest_version\":\"$VERSION\",\"latest_build\":$BUILD,\"direct_apk_url\":\"$APK_URL\",\"updated_at\":$TIMESTAMP,\"release_notes\":\"$NOTES\"}" \
             "https://freewatch-a0bc7-default-rtdb.firebaseio.com/app_config/update.json"
           echo "Firebase RTDB sync complete."
