@@ -168,29 +168,44 @@ class MovieRepository {
 
   // ── 6. TV Series ────────────────────────────────────────────────────────────
   Future<List<Movie>> getSeries({int page = 1}) async {
+    final List<Movie> combined = [];
+    final Set<int> seenIds = {};
+    final Set<String> seenRoots = {};
+
+    String extractSeriesRoot(String title) {
+      var clean = title.trim();
+      clean = clean.split(RegExp(r'\s+[-:]\s+')).first;
+      clean = clean.split(RegExp(r'\s+season\b', caseSensitive: false)).first;
+      clean = clean.split(RegExp(r'\s+s\d{1,2}\b', caseSensitive: false)).first;
+      clean = clean.split(RegExp(r'\s+ep(?:isode)?\b', caseSensitive: false)).first;
+      return clean.replaceAll(RegExp(r'\s+'), ' ').trim().toLowerCase();
+    }
+
     try {
       final munoSeries = await _munowatch.getSeriesMovies();
-      if (munoSeries.isNotEmpty) {
-        final filtered = munoSeries.where((m) {
-          final t = m.title.toLowerCase();
-          return !t.contains('mob land') && !t.contains('mobland');
-        }).toList();
-        return _paginate(filtered, page, pageSize: 25);
+      for (final m in munoSeries) {
+        final root = extractSeriesRoot(m.title);
+        if (root.contains('mob land') || root.contains('mobland')) continue;
+        if (seenRoots.add(root) && seenIds.add(m.id)) {
+          combined.add(m.copyWith(isTv: true));
+        }
       }
     } catch (_) {}
 
-    try {
-      final series = await _movieMax.getAllSeries();
-      if (series.isNotEmpty) {
-        final filtered = series.where((m) {
-          final t = m.title.toLowerCase();
-          return !t.contains('mob land') && !t.contains('mobland');
-        }).toList();
-        return _paginate(filtered, page, pageSize: 25);
-      }
-    } catch (_) {}
+    if (combined.length < 25) {
+      try {
+        final mmSeries = await _movieMax.getAllSeries();
+        for (final m in mmSeries) {
+          final root = extractSeriesRoot(m.title);
+          if (root.contains('mob land') || root.contains('mobland')) continue;
+          if (seenRoots.add(root) && seenIds.add(m.id)) {
+            combined.add(m.copyWith(isTv: true));
+          }
+        }
+      } catch (_) {}
+    }
 
-    return [];
+    return _paginate(combined, page, pageSize: 25);
   }
 
   // ── 7. Movies by Genre with TMDB Fallback & Cross-Reference ────────────────
@@ -269,7 +284,7 @@ class MovieRepository {
     try {
       final List<String> targetQueries = [];
       if (genreId == 16) {
-        targetQueries.addAll(['panda', 'sonic', 'mario', 'frozen', 'shrek', 'minion', 'moana', 'zootopia', 'coco', 'encanto', 'dragon', 'lion', 'spiderman']);
+        targetQueries.addAll(['panda', 'sonic', 'mario', 'frozen', 'shrek', 'minion', 'moana', 'zootopia', 'coco', 'encanto', 'dragon', 'lion king', 'spiderman', 'toy story', 'cars', 'inside out', 'despicable', 'demon hunters', 'kpop', 'kung fu', 'nemo']);
       } else if (genreId == 10751) {
         targetQueries.addAll(['family', 'kids', 'jumanji', 'narnia', 'wonka', 'home alone', 'stuart little', 'paddington', 'magic']);
       } else if (genreId == 28) {
@@ -283,7 +298,7 @@ class MovieRepository {
       } else if (genreId == 10749) {
         targetQueries.addAll(['love', 'romance', 'heart', 'marry', 'wedding', 'kiss', 'girl']);
       } else if (genreId == 878) {
-        targetQueries.addAll(['sci-fi', 'alien', 'planet', 'future', 'robot', 'space', 'star']);
+        targetQueries.addAll(['alien', 'planet', 'future', 'robot', 'space', 'star', 'matrix', 'terminator', 'avatar', 'galaxy', 'godzilla', 'transformer', 'jurassic', 'sci-fi', 'cyber', 'mars']);
       } else if (genreId == 18) {
         targetQueries.addAll(['drama', 'love', 'life', 'story', 'secret', 'truth', 'heart', 'tears', 'promise', 'woman']);
       } else if (genreId == 80) {
@@ -296,23 +311,32 @@ class MovieRepository {
         targetQueries.add(genreName.toLowerCase());
       }
 
-      final searchFutures = targetQueries.map((q) => _munowatch.searchMovies(q));
+      final searchFutures = targetQueries.map(
+        (q) => _munowatch.searchMovies(q).catchError((_) => <Movie>[]),
+      );
       final searchLists = await Future.wait(searchFutures);
       for (final results in searchLists) {
         for (final rm in results) {
           if (genreId == 16 && _isNonAnimatedLiveAction(rm.title)) continue;
           if (seenIds.add(rm.id)) {
-            matched.add(rm.copyWith(
-              genreIds: [genreId, ...rm.genreIds],
-              genreNames: [genreName, ...rm.genreNames],
-            ));
+            final movieToAdd = (genreId == 16)
+                ? rm.copyWith(
+                    isTv: false,
+                    genreIds: [genreId, ...rm.genreIds],
+                    genreNames: [genreName, ...rm.genreNames],
+                  )
+                : rm.copyWith(
+                    genreIds: [genreId, ...rm.genreIds],
+                    genreNames: [genreName, ...rm.genreNames],
+                  );
+            matched.add(movieToAdd);
           }
         }
       }
     } catch (_) {}
 
-    // If MunoWatch provided movies, return them exclusively (Zero Hybrid Mixing)
-    if (matched.isNotEmpty) {
+    // If MunoWatch provided a healthy rail (>= 15 movies), return them exclusively
+    if (matched.length >= 15) {
       return _paginate(matched, page, pageSize: pageSize);
     }
 
@@ -619,10 +643,13 @@ class MovieRepository {
 
       try {
         final searchFutures = searchQueries.map(
-          (q) => _munowatch.searchMovies(q.trim()).timeout(
+          (q) => _munowatch
+              .searchMovies(q.trim())
+              .timeout(
                 const Duration(milliseconds: 3500),
                 onTimeout: () => [],
-              ),
+              )
+              .catchError((_) => <Movie>[]),
         );
         final resultsList = await Future.wait(searchFutures);
         for (final results in resultsList) {
@@ -635,11 +662,27 @@ class MovieRepository {
       } catch (_) {}
     }
 
+    // Supplement with MovieMax VJ movies if MunoWatch returned fewer than 20
+    if (matching.length < 20) {
+      try {
+        final mmList = await _movieMax.getAllMovies();
+        for (final m in mmList) {
+          if (m.vjName == null || m.vjName!.isEmpty) continue;
+          final cleanMm = normalizeVjName(m.vjName!);
+          if (cleanMm.isNotEmpty && (cleanMm.contains(cleanVjTarget) || cleanVjTarget.contains(cleanMm))) {
+            if (seenIds.add(m.id)) {
+              matching.add(m.copyWith(vjName: rawName));
+            }
+          }
+        }
+      } catch (_) {}
+    }
+
     // Fallback: If still empty, ensure this VJ screen has playable translated releases
     if (matching.isEmpty) {
       try {
         final fallbackCatalog = await getAllUploads();
-        for (final m in fallbackCatalog.take(12)) {
+        for (final m in fallbackCatalog.take(15)) {
           if (seenIds.add(m.id)) {
             matching.add(m.copyWith(vjName: rawName));
           }
@@ -920,25 +963,42 @@ class MovieRepository {
 
   /// Full un-truncated list of series for 'See All'
   Future<List<Movie>> getAllSeriesList() async {
+    final List<Movie> combined = [];
+    final Set<int> seenIds = {};
+    final Set<String> seenRoots = {};
+
+    String extractSeriesRoot(String title) {
+      var clean = title.trim();
+      clean = clean.split(RegExp(r'\s+[-:]\s+')).first;
+      clean = clean.split(RegExp(r'\s+season\b', caseSensitive: false)).first;
+      clean = clean.split(RegExp(r'\s+s\d{1,2}\b', caseSensitive: false)).first;
+      clean = clean.split(RegExp(r'\s+ep(?:isode)?\b', caseSensitive: false)).first;
+      return clean.replaceAll(RegExp(r'\s+'), ' ').trim().toLowerCase();
+    }
+
     try {
       final munoSeries = await _munowatch.getSeriesMovies();
-      if (munoSeries.isNotEmpty) {
-        return munoSeries.where((m) {
-          final t = m.title.toLowerCase();
-          return !t.contains('mob land') && !t.contains('mobland');
-        }).toList();
+      for (final m in munoSeries) {
+        final root = extractSeriesRoot(m.title);
+        if (root.contains('mob land') || root.contains('mobland')) continue;
+        if (seenRoots.add(root) && seenIds.add(m.id)) {
+          combined.add(m.copyWith(isTv: true));
+        }
       }
     } catch (_) {}
+
     try {
-      final series = await _movieMax.getAllSeries();
-      if (series.isNotEmpty) {
-        return series.where((m) {
-          final t = m.title.toLowerCase();
-          return !t.contains('mob land') && !t.contains('mobland');
-        }).toList();
+      final mmSeries = await _movieMax.getAllSeries();
+      for (final m in mmSeries) {
+        final root = extractSeriesRoot(m.title);
+        if (root.contains('mob land') || root.contains('mobland')) continue;
+        if (seenRoots.add(root) && seenIds.add(m.id)) {
+          combined.add(m.copyWith(isTv: true));
+        }
       }
     } catch (_) {}
-    return getSeries(page: 1);
+
+    return combined;
   }
 
   /// Full un-truncated deep list for any of the 20 official MunoWatch genres
@@ -983,19 +1043,19 @@ class MovieRepository {
       queries.addAll(['crime', 'cop', 'police', 'heist', 'kill', 'robber']);
       tmdbId = 80;
     } else if (clean.contains('family')) {
-      queries.addAll(['family', 'kids', 'wonka', 'magic', 'dog', 'home alone']);
+      queries.addAll(['family', 'kids', 'wonka', 'magic', 'dog', 'home alone', 'paddington', 'stuart little']);
       tmdbId = 10751;
     } else if (clean.contains('sci')) {
-      queries.addAll(['sci-fi', 'alien', 'planet', 'future', 'robot', 'space', 'star']);
+      queries.addAll(['alien', 'planet', 'future', 'robot', 'space', 'star', 'matrix', 'terminator', 'avatar', 'galaxy', 'godzilla', 'transformer', 'jurassic', 'sci-fi', 'cyber', 'mars']);
       tmdbId = 878;
     } else if (clean.contains('drama')) {
-      queries.addAll(['drama', 'story', 'life', 'secret', 'truth']);
+      queries.addAll(['drama', 'story', 'life', 'secret', 'truth', 'heart', 'tears', 'promise', 'woman']);
       tmdbId = 18;
     } else if (clean.contains('thriller')) {
       queries.addAll(['thriller', 'stalker', 'danger', 'escape', 'hunt', 'trap']);
       tmdbId = 53;
     } else if (clean.contains('anim') || clean.contains('anime')) {
-      queries.addAll(['animation', 'cartoon', 'anime', 'pixar', 'disney', 'shrek', 'panda', 'sonic', 'mario', 'minions']);
+      queries.addAll(['animation', 'cartoon', 'anime', 'pixar', 'disney', 'shrek', 'panda', 'sonic', 'mario', 'minions', 'moana', 'zootopia', 'coco', 'encanto', 'dragon', 'lion king', 'toy story', 'cars', 'inside out', 'demon hunters', 'kpop', 'kung fu', 'nemo']);
       tmdbId = 16;
     } else {
       queries.add(clean);
@@ -1015,7 +1075,10 @@ class MovieRepository {
         final hasKeywordMatch = queries.any((q) => lower.contains(q));
         if (hasCategoryMatch || hasKeywordMatch) {
           if (seenIds.add(m.id)) {
-            matched.add(m.copyWith(genreNames: [genreName, ...m.genreNames]));
+            final movieToAdd = (tmdbId == 16)
+                ? m.copyWith(isTv: false, genreNames: [genreName, ...m.genreNames])
+                : m.copyWith(genreNames: [genreName, ...m.genreNames]);
+            matched.add(movieToAdd);
           }
         }
       }
@@ -1023,20 +1086,25 @@ class MovieRepository {
 
     // 2. Multi-query parallel search across MunoWatch live API for endless depth
     try {
-      final searchFutures = queries.map((q) => _munowatch.searchMovies(q));
+      final searchFutures = queries.map(
+        (q) => _munowatch.searchMovies(q).catchError((_) => <Movie>[]),
+      );
       final searchLists = await Future.wait(searchFutures);
       for (final results in searchLists) {
         for (final rm in results) {
           if (tmdbId == 16 && _isNonAnimatedLiveAction(rm.title)) continue;
           if (seenIds.add(rm.id)) {
-            matched.add(rm.copyWith(genreNames: [genreName, ...rm.genreNames]));
+            final movieToAdd = (tmdbId == 16)
+                ? rm.copyWith(isTv: false, genreNames: [genreName, ...rm.genreNames])
+                : rm.copyWith(genreNames: [genreName, ...rm.genreNames]);
+            matched.add(movieToAdd);
           }
         }
       }
     } catch (_) {}
 
-    // If MunoWatch matched any movies, return them exclusively (Zero Hybrid Mixing)
-    if (matched.isNotEmpty) {
+    // If MunoWatch provided a deep collection (>= 20 movies), return them exclusively
+    if (matched.length >= 20) {
       return _paginate(matched, page, pageSize: pageSize);
     }
 
@@ -1231,9 +1299,13 @@ class MovieRepository {
     if (_hasCustomApiKey) {
       try {
         var tmdbMeta = await _findTmdbMetadata(currentTitle, isTv: actuallyTv);
-        // If not found in movie endpoint and not explicitly flagged as TV, check TV endpoint
-        if (tmdbMeta == null && !actuallyTv) {
-          tmdbMeta = await _findTmdbMetadata(currentTitle, isTv: true);
+        // If it was thought to be TV but not found, fallback to movie endpoint (never turn a single movie into a TV show!)
+        if (tmdbMeta == null && actuallyTv) {
+          final movieFallback = await _findTmdbMetadata(currentTitle, isTv: false);
+          if (movieFallback != null) {
+            tmdbMeta = movieFallback;
+            actuallyTv = false;
+          }
         }
         if (tmdbMeta != null) {
           tmdbId = tmdbMeta['id'] as int?;
@@ -1254,8 +1326,8 @@ class MovieRepository {
           if (tmdbMeta['genre_ids'] is List && (tmdbMeta['genre_ids'] as List).isNotEmpty) {
             tmdbGenreIds = List<int>.from(tmdbMeta['genre_ids'] as List);
           }
-          // If TMDB confirms it is a TV show, adopt TV mode!
-          if (tmdbMeta['is_tv'] == true) {
+          // Only adopt TV mode if the item is genuinely a TV series
+          if (actuallyTv && tmdbMeta['is_tv'] == true) {
             actuallyTv = true;
           }
 

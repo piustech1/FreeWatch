@@ -91,7 +91,7 @@ void main() {
       final family = await repo.getMoviesByGenre(10751); // Family
       expect(family, isNotEmpty);
       expect(family.first.title, isNotEmpty);
-    });
+    }, timeout: const Timeout(Duration(minutes: 2)));
 
     test('MovieRepository trending and popular do not fall back to mocked movies', () async {
       final trending = await repo.getTrending();

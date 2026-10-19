@@ -65,20 +65,23 @@ jobs:
         run: |
           mkdir -p release-artifacts
           cp build/app/outputs/flutter-apk/app-release.apk release-artifacts/FreeWatch-release.apk
+          cp build/app/outputs/flutter-apk/app-release.apk release-artifacts/FreeWatch-TV-release.apk
           ls -la release-artifacts/
 
       - name: Upload APK as Workflow Artifact
         uses: actions/upload-artifact@v4
         with:
           name: FreeWatch-release-apk
-          path: release-artifacts/FreeWatch-release.apk
+          path: release-artifacts/*
           retention-days: 14
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
-          files: release-artifacts/FreeWatch-release.apk
+          files: |
+            release-artifacts/FreeWatch-release.apk
+            release-artifacts/FreeWatch-TV-release.apk
           tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || steps.app_version.outputs.tag }}
           name: Release ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || steps.app_version.outputs.tag }}
           body: |

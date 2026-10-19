@@ -32,9 +32,9 @@ class AppUpdateService {
   factory AppUpdateService() => _instance;
   AppUpdateService._internal();
 
-  // Fallback defaults matching current pubspec version 1.0.64+65
-  static const int defaultBuildNumber = 65;
-  static const String defaultVersionName = '1.0.64';
+  // Fallback defaults matching current pubspec version 1.0.65+66
+  static const int defaultBuildNumber = 66;
+  static const String defaultVersionName = '1.0.65';
   static const String defaultStoreListingUrl = 'https://freewatchug.online';
 
   Future<void> _notifyUserOfUpdate(String version) async {
@@ -209,10 +209,10 @@ class AppUpdateService {
         // Strictly require that the RTDB release is genuinely newer than local installed app
         if (isNewer) {
           debugPrint('[AppUpdateService] Newer RTDB version found: $latestVersion+$latestBuild');
-          _notifyUserOfUpdate(latestVersion.isNotEmpty ? latestVersion : '1.0.64');
+          _notifyUserOfUpdate(latestVersion.isNotEmpty ? latestVersion : '1.0.65');
           return AppUpdateInfo(
             hasUpdate: true,
-            version: latestVersion.isNotEmpty ? latestVersion : '1.0.64',
+            version: latestVersion.isNotEmpty ? latestVersion : '1.0.65',
             buildNumber: latestBuild > 0 ? latestBuild : localBuild + 1,
             releaseNotes: releaseNotes,
             storeUrl: storeUrl.isNotEmpty ? storeUrl : defaultStoreListingUrl,

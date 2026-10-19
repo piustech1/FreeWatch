@@ -226,18 +226,24 @@ class MunowatchDatasource {
       }
 
       // 4. Seed and enrich catalog with authentic high-confidence MunoWatch titles
-      final seedKeywords = ['the', 'action', 'love', 'man', 'war', 'season', 'life'];
-      for (final kw in seedKeywords) {
-        try {
-          final res = await searchMovies(kw);
+      final seedKeywords = [
+        'the', 'action', 'love', 'man', 'war', 'season', 'life',
+        'space', 'star', 'alien', 'planet', 'robot', 'future',
+        'moana', 'demon hunters', 'kpop', 'frozen', 'shrek', 'sonic', 'mario', 'minion', 'dragon',
+        'king', 'girl', 'boy', 'night', 'world', 'city', 'dead', 'blood', 'dark', 'secret',
+      ];
+      try {
+        final searchFutures = seedKeywords.map((kw) => searchMovies(kw).catchError((_) => <Movie>[]));
+        final searchLists = await Future.wait(searchFutures);
+        for (final res in searchLists) {
           for (final sm in res) {
             if (!movieMap.containsKey(sm.id) && sm.title.isNotEmpty && sm.title != 'Movie') {
               movieMap[sm.id] = sm;
               _knownMoviesMap[sm.id] = sm;
             }
           }
-        } catch (_) {}
-      }
+        }
+      } catch (_) {}
 
       // 5. Parallel-enrich the top latest items so real titles appear immediately
       final toEnrich = latestList
@@ -301,73 +307,82 @@ class MunowatchDatasource {
   }
 
   /// Returns series and episodic releases from MunoWatch
+  /// Returns series and episodic releases from MunoWatch with root title deduplication
   Future<List<Movie>> getSeriesMovies() async {
     final all = await getAllMovies();
-    final List<Movie> series = all.where((m) {
-      if (!m.isTv) return false;
-      final t = m.title.toLowerCase();
-      return !t.contains('mob land') && !t.contains('mobland');
-    }).toList();
-    final Set<int> seenIds = series.map((s) => s.id).toSet();
+    final List<Movie> series = [];
+    final Set<int> seenIds = {};
+    final Set<String> seenRootTitles = {};
 
-    // Query top known Luganda translated series directly from MunoWatch API
-    if (series.length < 15) {
-      final popularSeriesQueries = [
-        'Squid Game',
-        'From',
-        'Reacher',
-        'Loki',
-        'Vikings',
-        'Tulsa King',
-        'Money Heist',
-        'Game of Thrones',
-        'House of the Dragon',
-        'The Boys',
-        'Prison Break',
-        'Sword and Fairy',
-        'Breaking Bad',
-      ];
-      for (final query in popularSeriesQueries) {
-        try {
-          final results = await searchMovies(query);
-          for (final m in results) {
-            final t = m.title.toLowerCase();
-            if (t.contains('mob land') || t.contains('mobland')) continue;
-            final isRealSeries = m.isTv ||
-                (m.seriesCode != null && m.seriesCode!.isNotEmpty && m.seriesCode != '0') ||
-                t.contains('season') ||
-                t.contains('series') ||
-                t.contains('eps ') ||
-                RegExp(r'\b(?:s\d{1,2}|ep?\s*\d+)\b', caseSensitive: false).hasMatch(m.title);
-            if (isRealSeries && seenIds.add(m.id)) {
-              series.add(m.copyWith(isTv: true));
-            }
-          }
-          if (series.length >= 25) break;
-        } catch (_) {}
+    String extractSeriesRoot(String title) {
+      var clean = title.trim();
+      clean = clean.split(RegExp(r'\s+[-:]\s+')).first;
+      clean = clean.split(RegExp(r'\s+season\b', caseSensitive: false)).first;
+      clean = clean.split(RegExp(r'\s+s\d{1,2}\b', caseSensitive: false)).first;
+      clean = clean.split(RegExp(r'\s+ep(?:isode)?\b', caseSensitive: false)).first;
+      clean = clean.replaceAll(RegExp(r'\s+'), ' ').trim().toLowerCase();
+      return clean;
+    }
+
+    for (final m in all) {
+      if (!m.isTv) continue;
+      final root = extractSeriesRoot(m.title);
+      if (root.contains('mob land') || root.contains('mobland')) continue;
+      if (seenRootTitles.add(root) && seenIds.add(m.id)) {
+        series.add(m);
       }
     }
 
-    if (series.isNotEmpty) return series;
+    // Query top known Luganda translated series directly from MunoWatch API in parallel
+    final popularSeriesQueries = [
+      'From',
+      'Squid Game',
+      'Reacher',
+      'Loki',
+      'Vikings',
+      'Tulsa King',
+      'Money Heist',
+      'Game of Thrones',
+      'House of the Dragon',
+      'The Boys',
+      'Prison Break',
+      'Sword and Fairy',
+      'Breaking Bad',
+      'Wednesday',
+      'Halo',
+      'Fallout',
+      'Witcher',
+      'season',
+      'series',
+    ];
 
-    // Search specifically for series if none on dashboard
     try {
-      final searchSeries = await searchMovies('season');
-      for (final s in searchSeries) {
-        final t = s.title.toLowerCase();
-        if (t.contains('mob land') || t.contains('mobland')) continue;
-        final isRealSeries = s.isTv ||
-            (s.seriesCode != null && s.seriesCode!.isNotEmpty && s.seriesCode != '0') ||
-            t.contains('season') ||
-            t.contains('series');
-        if (isRealSeries && seenIds.add(s.id)) {
-          series.add(s.copyWith(isTv: true));
+      final searchFutures = popularSeriesQueries.map(
+        (q) => searchMovies(q).catchError((_) => <Movie>[]),
+      );
+      final searchLists = await Future.wait(searchFutures);
+      for (final results in searchLists) {
+        for (final m in results) {
+          final t = m.title.toLowerCase();
+          if (t.contains('mob land') || t.contains('mobland')) continue;
+          final isRealSeries = m.isTv ||
+              (m.seriesCode != null && m.seriesCode!.isNotEmpty && m.seriesCode != '0' && m.seriesCode != m.id.toString()) ||
+              t.contains('season') ||
+              t.contains('series') ||
+              t.contains('eps ') ||
+              RegExp(r'\b(?:s\d{1,2}|ep?\s*\d+)\b', caseSensitive: false).hasMatch(m.title);
+
+          if (isRealSeries) {
+            final root = extractSeriesRoot(m.title);
+            if (seenRootTitles.add(root) && seenIds.add(m.id)) {
+              series.add(m.copyWith(isTv: true));
+            }
+          }
         }
       }
-      if (series.isNotEmpty) return series;
     } catch (_) {}
 
-    return [];
+    return series;
   }
 
   /// Live search directly on MunoWatch API across 10,000+ movie database
@@ -401,6 +416,7 @@ class MunowatchDatasource {
               if (s is Map) {
                 final sTitle = s['title']?.toString() ?? '';
                 final sCode = s['series_code']?.toString() ?? '';
+                final sVj = (s['vj'] ?? s['vjname'])?.toString();
                 if (s['episodes'] is List) {
                   for (final ep in s['episodes'] as List) {
                     if (ep is Map) {
@@ -412,6 +428,9 @@ class MunowatchDatasource {
                       }
                       if (sCode.isNotEmpty) {
                         epMap['series_code'] = sCode;
+                      }
+                      if ((epMap['vj'] == null || epMap['vj'].toString().isEmpty) && sVj != null) {
+                        epMap['vj'] = sVj;
                       }
                       final movie = _mapToMovie(epMap, defaultCategory: q);
                       if (!resultsMap.containsKey(movie.id)) {
@@ -650,7 +669,12 @@ class MunowatchDatasource {
       }
     }
 
-    final String? seriesCode = (json['series_code'] ?? json['seriesCode'])?.toString().trim();
+    final String? rawSeriesCode = (json['series_code'] ?? json['seriesCode'])?.toString().trim();
+    final bool hasValidSeriesCode = rawSeriesCode != null &&
+        rawSeriesCode.isNotEmpty &&
+        rawSeriesCode != '0' &&
+        rawSeriesCode != id.toString();
+    final String? seriesCode = hasValidSeriesCode ? rawSeriesCode : null;
 
     final int epCount = json['episodes'] is List ? (json['episodes'] as List).length : 1;
     final bool hasExplicitSeasonOrEp =
@@ -658,9 +682,8 @@ class MunowatchDatasource {
         cleanTitle.toLowerCase().contains('eps ') ||
         RegExp(r'\b(?:s\d{1,2}|ep?\s*\d+)\b', caseSensitive: false).hasMatch(cleanTitle);
 
-    final bool isTvShow = (category.toLowerCase().contains('series')) ||
-        hasExplicitSeasonOrEp ||
-        (epCount > 1 && seriesCode != null && seriesCode.isNotEmpty && seriesCode != '0' && seriesCode != json['id']?.toString());
+    // Single movies (even if labeled 'series' in raw category or with epCount<=1) must stay isTv = false!
+    final bool isTvShow = hasExplicitSeasonOrEp || (epCount > 1 && hasValidSeriesCode);
 
     return Movie(
       id: id,

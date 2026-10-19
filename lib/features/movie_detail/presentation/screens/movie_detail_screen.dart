@@ -147,12 +147,21 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
   }
 
   bool _checkIsSeries(Movie movie, MovieDetailsData details) {
-    if (details.isTv || movie.isTv) return true;
     final titleLower = movie.title.toLowerCase();
-    return titleLower.contains('season') ||
-        titleLower.contains('series') ||
+    final hasExplicitSeasonOrEp = titleLower.contains('season') ||
         titleLower.contains('episode') ||
+        titleLower.contains('eps ') ||
         RegExp(r'\b(?:s\d{1,2}|ep?\s*\d+)\b', caseSensitive: false).hasMatch(titleLower);
+
+    if (hasExplicitSeasonOrEp) return true;
+
+    // Must have genuine multi-episode season data to qualify as series
+    if (details.numberOfSeasons > 0 && details.seasons.isNotEmpty) {
+      final totalEpisodes = details.seasons.fold<int>(0, (sum, s) => sum + s.episodeCount);
+      if (totalEpisodes > 1) return true;
+    }
+
+    return false;
   }
 
   @override
@@ -2121,11 +2130,10 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
   }
 
   bool _checkIsSeriesFallback(Movie movie) {
-    if (movie.isTv) return true;
     final titleLower = movie.title.toLowerCase();
     return titleLower.contains('season') ||
-        titleLower.contains('series') ||
         titleLower.contains('episode') ||
+        titleLower.contains('eps ') ||
         RegExp(r'\b(?:s\d{1,2}|ep?\s*\d+)\b', caseSensitive: false).hasMatch(titleLower);
   }
 
@@ -2461,7 +2469,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
             : ((details?.videoUrl?.isNotEmpty == true ? details!.videoUrl! : null) ??
                (widget.movie.videoUrl?.isNotEmpty == true ? widget.movie.videoUrl! : null)));
 
-    // If stream URL is not yet resolved, await the details future on-demand
+    // If stream URL is not yet resolved, await details and deep stream endpoint
     if (!hasLocalFile && (resolvedUrl == null || resolvedUrl.isEmpty)) {
       try {
         final freshDetails = await ref.read(movieDetailsProvider(MovieDetailsParam(
@@ -2475,10 +2483,30 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
       } catch (_) {}
     }
 
-    // High quality cinematic sample stream fallback if stream is not available
-    final String streamToPlay = (resolvedUrl != null && resolvedUrl.isNotEmpty && resolvedUrl.startsWith('http'))
-        ? resolvedUrl
-        : 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
+    if (!hasLocalFile && (resolvedUrl == null || resolvedUrl.isEmpty)) {
+      try {
+        final streamUrl = await ref.read(movieRepositoryProvider).resolveStreamUrl(
+          widget.movie.id,
+          title: widget.movie.title,
+        );
+        if (streamUrl != null && streamUrl.trim().startsWith('http')) {
+          resolvedUrl = streamUrl.trim();
+        }
+      } catch (_) {}
+    }
+
+    if (!hasLocalFile && (resolvedUrl == null || !resolvedUrl.startsWith('http'))) {
+      if (mounted) {
+        setState(() {
+          _isInitializingVideo = false;
+          _isPlayingVideo = false;
+        });
+        AppToast.show(context, 'Video stream is currently being prepared. Please try again shortly.', isSuccess: false);
+      }
+      return;
+    }
+
+    final String streamToPlay = resolvedUrl!;
 
     final rawVjName = widget.movie.vjName ?? details?.vjName;
     final Vj assignedVj = _resolveAssignedVj(rawVjName);
@@ -2578,35 +2606,11 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
       controller.play();
     }).catchError((error) {
       if (!mounted) return;
-      // If primary live stream had an issue, fallback seamlessly to sample video
-      if (!hasLocalFile && streamToPlay != 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4') {
-        final fallbackController = VideoPlayerController.networkUrl(
-          Uri.parse('https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4'),
-        );
-        _videoPlayerController = fallbackController;
-        fallbackController.initialize().then((_) {
-          if (!mounted) return;
-          setState(() {
-            _isInitializingVideo = false;
-            _isPlayingVideo = true;
-          });
-          fallbackController.play();
-        }).catchError((_) {
-          if (!mounted) return;
-          setState(() {
-            _isInitializingVideo = false;
-            _isPlayingVideo = false;
-          });
-          AppToast.show(context, 'Failed to load video stream', isSuccess: false);
-        });
-        return;
-      }
-
       setState(() {
         _isInitializingVideo = false;
         _isPlayingVideo = false;
       });
-      AppToast.show(context, 'Failed to load video stream', isSuccess: false);
+      AppToast.show(context, 'Unable to load video stream. Please check connection and try again.', isSuccess: false);
     });
   }
 

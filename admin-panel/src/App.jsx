@@ -237,11 +237,11 @@ export default function App() {
   // In-App Update Banner Remote Controller State
   const [updateConfig, setUpdateConfig] = useState({
     show_banner: true,
-    latest_version: '1.0.64',
-    latest_build: 65,
+    latest_version: '1.0.65',
+    latest_build: 66,
     store_url: 'https://freewatchug.online/',
-    direct_apk_url: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.64/FreeWatch-release.apk',
-    release_notes: '• Smart Delay & Community Banner Persistence: Remembers interaction and eliminates repetitive prompts\n• VOD Catalog Depth: Real-time Luganda movie catalog with rich titles and instant playback\n• In-App Account Review & Appeals: WhatsApp-styled appeal process to submit and track account status\n• Instant Live Support Chat Alerts: Receive prompt notifications the moment a support moderator responds\n• Permanent Offline Storage: Downloaded items persist safely across sign-outs and guest sessions',
+    direct_apk_url: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.65/FreeWatch-release.apk',
+    release_notes: '• Android TV & Remote D-Pad Navigation: Full Leanback support with focus highlights and 10-foot cinema UI\n• Multiplatform Web Support: Direct in-browser streaming on desktop and mobile web\n• Smart Community Banner Persistence: Remembers interaction and eliminates repetitive prompts\n• Fixed Movie Misclassification: Resolved single animated & live-action films showing fake TV episodes or seasons\n• Direct Stream Playback: BunnyCDN stream resolution eliminates playback stream errors',
     is_mandatory: false,
   });
   const [isSavingUpdateConfig, setIsSavingUpdateConfig] = useState(false);

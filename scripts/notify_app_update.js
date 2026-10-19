@@ -4,8 +4,8 @@ const fs = require('fs');
 
 const RTDB_URL = 'https://freewatch-a0bc7-default-rtdb.firebaseio.com';
 
-const version = process.argv[2] || process.env.APP_VERSION || '1.0.64';
-const build = process.argv[3] || process.env.APP_BUILD || '65';
+const version = process.argv[2] || process.env.APP_VERSION || '1.0.65';
+const build = process.argv[3] || process.env.APP_BUILD || '66';
 const apkUrl = process.argv[4] || `https://github.com/piustech1/FreeWatch/releases/download/v${version}/FreeWatch-release.apk`;
 
 function getFirebaseAdmin() {

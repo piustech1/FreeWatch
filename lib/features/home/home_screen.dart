@@ -19,6 +19,7 @@ import '../downloads/presentation/screens/downloads_screen.dart';
 import '../profile/presentation/screens/profile_screen.dart';
 import '../notifications/presentation/screens/notifications_screen.dart';
 import '../../shared/widgets/tiktok_promo_modal.dart';
+import '../../shared/widgets/tv_navigation_sidebar.dart';
 import 'widgets/app_update_banner.dart';
 
 /// Main Application Shell & Home Screen with persistent top bar across all tabs
@@ -55,6 +56,60 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final selectedNavIndex = ref.watch(bottomNavIndexProvider);
+    final isWideOrTv = MediaQuery.sizeOf(context).width >= 720;
+
+    final Widget tabContent = IndexedStack(
+      index: selectedNavIndex,
+      children: [
+        // Tab 0: Home Feed
+        _buildHomeFeed(context),
+
+        // Tab 1: Dedicated Search Screen
+        const SearchScreen(),
+
+        // Tab 2: Dedicated Favorites / Watchlist Screen
+        FavoritesScreen(
+          onExploreTap: () => navigateToBottomNavTab(context, ref, 0),
+        ),
+
+        // Tab 3: Dedicated Downloads Screen
+        const DownloadsScreen(),
+
+        // Tab 4: Dedicated Profile Screen
+        const ProfileScreen(),
+      ],
+    );
+
+    if (isWideOrTv) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        body: SafeArea(
+          bottom: false,
+          child: Row(
+            children: [
+              TvNavigationSidebar(
+                onTabSelected: (index) {
+                  navigateToBottomNavTab(context, ref, index);
+                },
+              ),
+              Expanded(
+                child: Column(
+                  children: [
+                    FreeWatchTopAppBar(
+                      onSearchTap: () => navigateToBottomNavTab(context, ref, 1),
+                      onNotificationTap: _openNotifications,
+                      onProfileTap: () => navigateToBottomNavTab(context, ref, 4),
+                    ),
+                    const AppUpdateBanner(),
+                    Expanded(child: tabContent),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -75,29 +130,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 const AppUpdateBanner(),
 
                 // ── Tab View ──────────────────────────────────────────
-                Expanded(
-                  child: IndexedStack(
-                    index: selectedNavIndex,
-                    children: [
-                      // Tab 0: Home Feed
-                      _buildHomeFeed(context),
-
-                      // Tab 1: Dedicated Search Screen
-                      const SearchScreen(),
-
-                      // Tab 2: Dedicated Favorites / Watchlist Screen
-                      FavoritesScreen(
-                        onExploreTap: () => navigateToBottomNavTab(context, ref, 0),
-                      ),
-
-                      // Tab 3: Dedicated Downloads Screen
-                      const DownloadsScreen(),
-
-                      // Tab 4: Dedicated Profile Screen
-                      const ProfileScreen(),
-                    ],
-                  ),
-                ),
+                Expanded(child: tabContent),
               ],
             ),
 

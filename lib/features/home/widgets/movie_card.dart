@@ -8,8 +8,8 @@ import '../../../data/models/vj.dart';
 import '../../../shared/widgets/shimmer_loading.dart';
 
 /// Portrait movie poster card with 20px rounded corners, top-right VJ pill,
-/// and modern movie title, star rating, and release year underneath.
-class MovieCard extends StatelessWidget {
+/// modern movie title, star rating, release year, and Android TV D-Pad focus support.
+class MovieCard extends StatefulWidget {
   final Movie movie;
   final VoidCallback? onTap;
   final double width;
@@ -22,108 +22,150 @@ class MovieCard extends StatelessWidget {
   });
 
   @override
+  State<MovieCard> createState() => _MovieCardState();
+}
+
+class _MovieCardState extends State<MovieCard> {
+  bool _isFocused = false;
+
+  @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final cardWidth = (width.isFinite && width > 0)
-            ? width
+        final cardWidth = (widget.width.isFinite && widget.width > 0)
+            ? widget.width
             : (constraints.maxWidth.isFinite ? constraints.maxWidth : 130.0);
         final posterHeight = cardWidth * 1.38;
 
-        final posterUrl = movie.posterPath != null
-            ? (movie.posterPath!.startsWith('http')
-                ? movie.posterPath!
-                : '${ApiConstants.posterW500}${movie.posterPath}')
+        final posterUrl = widget.movie.posterPath != null
+            ? (widget.movie.posterPath!.startsWith('http')
+                ? widget.movie.posterPath!
+                : '${ApiConstants.posterW500}${widget.movie.posterPath}')
             : null;
 
-        return GestureDetector(
-          onTap: onTap,
-          behavior: HitTestBehavior.opaque,
-          child: SizedBox(
-            width: cardWidth,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // ── 1. Poster with 20px Corner Radius & Top-Right VJ Pill ──
-                SizedBox(
-                  width: cardWidth,
-                  height: posterHeight,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        posterUrl != null
-                            ? CachedNetworkImage(
-                                imageUrl: posterUrl,
-                                fit: BoxFit.cover,
-                                placeholder: (_, __) => MovieCardShimmer(
-                                  width: cardWidth,
-                                  height: posterHeight,
+        return FocusableActionDetector(
+          onFocusChange: (focus) {
+            setState(() {
+              _isFocused = focus;
+            });
+          },
+          actions: {
+            ActivateIntent: CallbackAction<ActivateIntent>(
+              onInvoke: (_) => widget.onTap?.call(),
+            ),
+          },
+          child: GestureDetector(
+            onTap: widget.onTap,
+            behavior: HitTestBehavior.opaque,
+            child: AnimatedScale(
+              scale: _isFocused ? 1.05 : 1.0,
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOut,
+              child: SizedBox(
+                width: cardWidth,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // ── 1. Poster with 20px Corner Radius & Top-Right VJ Pill ──
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      width: cardWidth,
+                      height: posterHeight,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: _isFocused ? AppColors.primary : Colors.transparent,
+                          width: _isFocused ? 2.5 : 0.0,
+                        ),
+                        boxShadow: _isFocused
+                            ? [
+                                BoxShadow(
+                                  color: AppColors.primary.withOpacity(0.55),
+                                  blurRadius: 14,
+                                  spreadRadius: 2,
+                                  offset: const Offset(0, 4),
                                 ),
-                                errorWidget: (_, __, ___) => _PlaceholderPoster(
-                                  width: cardWidth,
-                                  height: posterHeight,
-                                  title: movie.title,
-                                ),
-                              )
-                            : _PlaceholderPoster(
-                                width: cardWidth,
-                                height: posterHeight,
-                                title: movie.title,
-                              ),
+                              ]
+                            : null,
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(18),
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            posterUrl != null
+                                ? CachedNetworkImage(
+                                    imageUrl: posterUrl,
+                                    fit: BoxFit.cover,
+                                    placeholder: (_, __) => MovieCardShimmer(
+                                      width: cardWidth,
+                                      height: posterHeight,
+                                    ),
+                                    errorWidget: (_, __, ___) => _PlaceholderPoster(
+                                      width: cardWidth,
+                                      height: posterHeight,
+                                      title: widget.movie.title,
+                                    ),
+                                  )
+                                : _PlaceholderPoster(
+                                    width: cardWidth,
+                                    height: posterHeight,
+                                    title: widget.movie.title,
+                                  ),
 
-                        // Top-Right Purple VJ Badge Pill
-                        Positioned(
-                          top: 6,
-                          right: 6,
-                          child: _buildVjBadge(movie),
+                            // Top-Right Purple VJ Badge Pill
+                            Positioned(
+                              top: 6,
+                              right: 6,
+                              child: _buildVjBadge(widget.movie),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 6),
+
+                    // ── Modern Star Rating & Release Year Row ────────────────
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.star_rounded,
+                          color: Color(0xFFFFB800),
+                          size: 14,
+                        ),
+                        const SizedBox(width: 3),
+                        Text(
+                          widget.movie.ratingDisplay,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          '•',
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.35),
+                            fontSize: 10,
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          widget.movie.year.isNotEmpty ? widget.movie.year : '2024',
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.60),
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ],
                     ),
-                  ),
-                ),
-
-                const SizedBox(height: 6),
-
-                // ── Modern Star Rating & Release Year Row ────────────────
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.star_rounded,
-                      color: Color(0xFFFFB800),
-                      size: 14,
-                    ),
-                    const SizedBox(width: 3),
-                    Text(
-                      movie.ratingDisplay,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(width: 5),
-                    Text(
-                      '•',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.35),
-                        fontSize: 10,
-                      ),
-                    ),
-                    const SizedBox(width: 5),
-                    Text(
-                      movie.year.isNotEmpty ? movie.year : '2024',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.60),
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
                   ],
                 ),
-              ],
+              ),
             ),
           ),
         );
