@@ -101,28 +101,33 @@ export default function App() {
 
   // Dynamic Release Config - Multiplatform Features
   const [releaseInfo, setReleaseInfo] = useState({
-    version: '1.0.65',
-    buildNumber: 66,
+    version: '1.0.66',
+    buildNumber: 67,
     size: '110.5 MB',
     releaseDate: formatReleaseDate(Date.now()),
-    apkUrl: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.65/FreeWatch-release.apk',
-    tvApkUrl: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.65/FreeWatch-TV-release.apk',
-    webUrl: 'https://freewatch-app.web.app',
+    apkUrl: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.66/FreeWatch-release.apk',
+    tvApkUrl: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.66/FreeWatch-TV-release.apk',
+    webUrl: 'https://freewatchug.online',
     notes: [
-      'Android TV & Remote D-Pad Navigation: Full Leanback support with glowing focus states, navigation sidebar, and 10-foot cinema UI.',
-      'Cross-Platform Web Streaming: Stream directly in any modern desktop or mobile browser with zero installation needed.',
-      'Smart Delay & Community Banner: Banner remembers your interaction and never interrupts once you join.',
-      'Fixed Movie Misclassification: Resolved single animated & live-action films showing fake TV episodes, fake seasons, or fake cast.',
-      'Expanded Sci-Fi & Series Catalog: Harvests hundreds of Sci-Fi titles and deduplicated authentic series with VJ translations.'
+      'Android TV 16:9 Landscape UI: Full Leanback support with glowing focus states, navigation sidebar, and 10-foot cinema UI.',
+      'Continue as Guest: Instant streaming on Android TV without remote typing hassle.',
+      'Responsive Grids: Dynamic multi-device columns adapting seamlessly from phones to 4K TVs.',
+      'Coming Soon Web Portal: Minimalist official launch portal with direct store download links.',
+      'Universal Device APKs: Dedicated builds for Phone, Android TV, Fire TV, and multi-architecture devices.'
     ]
   });
 
   // Dynamic Version History List
   const [historyReleases, setHistoryReleases] = useState([
     {
-      version: '1.0.65',
+      version: '1.0.66',
       date: 'Latest',
-      notes: 'Android TV Leanback & D-Pad remote navigation, Web browser platform support, single-movie series-tag fix, deep Sci-Fi catalog harvesting, and playback stability.'
+      notes: 'Android TV 16:9 Landscape Leanback UI, Guest auth, responsive TV grids, dual Phone & TV release APKs, and Coming Soon web portal.'
+    },
+    {
+      version: '1.0.65',
+      date: 'Today',
+      notes: 'Initial Android TV support, Web browser platform support, single-movie series-tag fix, and deep Sci-Fi catalog harvesting.'
     },
     {
       version: '1.0.64',

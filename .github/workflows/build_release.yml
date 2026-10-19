@@ -58,14 +58,19 @@ jobs:
       - name: Run unit & widget tests
         run: flutter test
 
-      - name: Build Android Release APK
-        run: flutter build apk --release --android-skip-build-dependency-validation
-
-      - name: Prepare APK Release Artifact
+      - name: Build Android Release APK (Universal & Per-ABI)
         run: |
+          echo "Building Universal Release APK..."
+          flutter build apk --release --android-skip-build-dependency-validation
           mkdir -p release-artifacts
           cp build/app/outputs/flutter-apk/app-release.apk release-artifacts/FreeWatch-release.apk
           cp build/app/outputs/flutter-apk/app-release.apk release-artifacts/FreeWatch-TV-release.apk
+          echo "Building Split Per-ABI APKs..."
+          flutter build apk --release --split-per-abi --android-skip-build-dependency-validation || true
+          [ -f build/app/outputs/flutter-apk/app-arm64-v8a-release.apk ] && cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk release-artifacts/FreeWatch-arm64-v8a-release.apk || true
+          [ -f build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk ] && cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk release-artifacts/FreeWatch-armeabi-v7a-release.apk || true
+          [ -f build/app/outputs/flutter-apk/app-x86_64-release.apk ] && cp build/app/outputs/flutter-apk/app-x86_64-release.apk release-artifacts/FreeWatch-x86_64-release.apk || true
+          echo "Release artifacts ready:"
           ls -la release-artifacts/
 
       - name: Upload APK as Workflow Artifact
@@ -80,21 +85,27 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
           files: |
-            release-artifacts/FreeWatch-release.apk
-            release-artifacts/FreeWatch-TV-release.apk
+            release-artifacts/*.apk
           tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || steps.app_version.outputs.tag }}
           name: Release ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || steps.app_version.outputs.tag }}
           body: |
             ## 🎬 FreeWatch Release ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || steps.app_version.outputs.tag }}
             
-            Download `FreeWatch-release.apk` below and install it directly on your Android device!
+            Download the appropriate APK below and enjoy high-speed Luganda entertainment!
+            
+            ### 📱 Download Available for All Devices:
+            - 📱 **Phone & Tablet (Universal)**: [`FreeWatch-release.apk`](https://github.com/piustech1/FreeWatch/releases/download/${{ steps.app_version.outputs.tag }}/FreeWatch-release.apk)
+            - 📺 **Android TV & Fire TV (Universal 16:9 Leanback)**: [`FreeWatch-TV-release.apk`](https://github.com/piustech1/FreeWatch/releases/download/${{ steps.app_version.outputs.tag }}/FreeWatch-TV-release.apk)
+            - ⚡ **ARM64-v8a (High-speed 64-bit)**: `FreeWatch-arm64-v8a-release.apk`
+            - ⚡ **ARMv7 (32-bit legacy)**: `FreeWatch-armeabi-v7a-release.apk`
+            - 💻 **x86_64 (Emulators & Intel TVs)**: `FreeWatch-x86_64-release.apk`
             
             ### ✨ Highlights in this release:
-            - ⚡ **Enhanced Streaming Stability**: High-speed stream playback optimization with automatic protocol failover.
-            - 📂 **Rich Category Depth**: Deep catalogs across Drama, Animation, Family, Horror, and regional genres.
-            - 📱 **Smooth Skeleton Shimmer Loaders**: Beautiful transitions when browsing extensive movie collections.
-            - 🚀 **Full-Screen Rocket Update Screen**: Seamless update prompt directly linking to official store releases.
-            - 💾 **Permanent Offline Storage**: Robust storage persistence keeping downloaded content safe across sessions.
+            - 📺 **Android TV 16:9 Landscape UI**: Edge-to-edge leanback TV experience with left navigation rail and zero portrait pillarboxing.
+            - 🍿 **Cinematic TV Hero Billboard**: Netflix-style featured billboard with D-Pad focusable "Watch Now" and "Details" buttons.
+            - 👤 **Continue as Guest Auth**: Instant streaming on Android TV without remote typing hassle.
+            - 📐 **Responsive Multi-Device Grids**: Auto-scaling movie grids from mobile up to 6-column 4K TV screens.
+            - 🌐 **Coming Soon Web Portal**: Pure white minimalist launch portal at `freewatchug.online` with direct store links.
           generate_release_notes: true
           draft: false
           prerelease: false
@@ -110,7 +121,8 @@ jobs:
           BUILD="${{ steps.app_version.outputs.build }}"
           TAG="${{ steps.app_version.outputs.tag }}"
           APK_URL="https://github.com/piustech1/FreeWatch/releases/download/$TAG/FreeWatch-release.apk"
+          TV_APK_URL="https://github.com/piustech1/FreeWatch/releases/download/$TAG/FreeWatch-TV-release.apk"
           echo "Broadcasting update for version $VERSION ($BUILD)..."
           cd scripts && (npm ci || npm install) && cd ..
-          node scripts/notify_app_update.js "$VERSION" "$BUILD" "$APK_URL"
+          node scripts/notify_app_update.js "$VERSION" "$BUILD" "$APK_URL" "$TV_APK_URL"
           echo "Update sync and notification broadcast complete."

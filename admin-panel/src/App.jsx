@@ -252,11 +252,11 @@ export default function App() {
   // In-App Update Banner Remote Controller State
   const [updateConfig, setUpdateConfig] = useState({
     show_banner: true,
-    latest_version: '1.0.65',
-    latest_build: 66,
+    latest_version: '1.0.66',
+    latest_build: 67,
     store_url: 'https://freewatchug.online/store',
-    direct_apk_url: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.65/FreeWatch-release.apk',
-    release_notes: '• Android TV & Remote D-Pad Navigation: Full Leanback support with focus highlights and 10-foot cinema UI\n• Multiplatform Web Support: Direct in-browser streaming on desktop and mobile web\n• Smart Community Banner Persistence: Remembers interaction and eliminates repetitive prompts\n• Fixed Movie Misclassification: Resolved single animated & live-action films showing fake TV episodes or seasons\n• Direct Stream Playback: BunnyCDN stream resolution eliminates playback stream errors',
+    direct_apk_url: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.66/FreeWatch-release.apk',
+    release_notes: '• Android TV 16:9 Landscape UI: Full Leanback support with glowing focus states and navigation sidebar\n• Continue as Guest: Instant streaming on Android TV without remote typing hassle\n• Responsive Grids: Dynamic multi-device columns adapting seamlessly from phones to 4K TVs\n• Coming Soon Web Portal: Minimalist official launch portal with direct store download links\n• Universal Device APKs: Dedicated builds for Phone, Android TV, Fire TV, and multi-architecture devices',
     is_mandatory: false,
   });
   const [isSavingUpdateConfig, setIsSavingUpdateConfig] = useState(false);
@@ -276,10 +276,10 @@ export default function App() {
           const val = snap.val();
           setUpdateConfig({
             show_banner: val.show_banner ?? val.force_show ?? true,
-            latest_version: val.latest_version || '1.0.65',
-            latest_build: val.latest_build || 66,
+            latest_version: val.latest_version || '1.0.66',
+            latest_build: val.latest_build || 67,
             store_url: val.store_url || 'https://freewatchug.online/store',
-            direct_apk_url: val.direct_apk_url || 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.60/FreeWatch-release.apk',
+            direct_apk_url: val.direct_apk_url || 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.66/FreeWatch-release.apk',
             release_notes: val.release_notes || '• In-App Account Review & Appeals with instant unban restoration\n• Instant Live Support Chat Alerts with 1-tap jump to chat\n• Permanent Offline Storage persistence across sign-outs\n• Smart Automated Update Checker\n• Refined UI & Performance',
             is_mandatory: val.is_mandatory || false,
           });

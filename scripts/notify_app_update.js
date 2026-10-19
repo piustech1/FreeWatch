@@ -4,9 +4,10 @@ const fs = require('fs');
 
 const RTDB_URL = 'https://freewatch-a0bc7-default-rtdb.firebaseio.com';
 
-const version = process.argv[2] || process.env.APP_VERSION || '1.0.65';
-const build = process.argv[3] || process.env.APP_BUILD || '66';
+const version = process.argv[2] || process.env.APP_VERSION || '1.0.66';
+const build = process.argv[3] || process.env.APP_BUILD || '67';
 const apkUrl = process.argv[4] || `https://github.com/piustech1/FreeWatch/releases/download/v${version}/FreeWatch-release.apk`;
+const tvApkUrl = process.argv[5] || `https://github.com/piustech1/FreeWatch/releases/download/v${version}/FreeWatch-TV-release.apk`;
 
 function getFirebaseAdmin() {
   if (admin.apps.length > 0) return admin.app();
@@ -56,8 +57,8 @@ async function notifyUpdate() {
   console.log(`🚀 Preparing FreeWatch update broadcast for version ${version} (Build ${build})...`);
   const timestamp = Date.now();
   const title = `🚀 FreeWatch v${version} Released!`;
-  const body = `A new version of FreeWatch (v${version}) is now ready! Tap to update and enjoy smoother streaming & rich catalogs.`;
-  const notes = '• Enhanced Category Browsing: Instant catalog population for Drama, Animation, and Family\n• Smart Delay & Persistent Community Banner\n• In-App Account Review & Appeals\n• Instant Live Support Chat Alerts\n• Permanent Offline Storage';
+  const body = `A new version of FreeWatch (v${version}) is now ready! Tap to update and enjoy Android TV 16:9 UI, instant Guest auth & rich catalogs.`;
+  const notes = '• Android TV 16:9 Landscape UI: Full Leanback support with glowing focus states and navigation sidebar\n• Continue as Guest: Instant streaming on Android TV without remote typing hassle\n• Responsive Grids: Dynamic multi-device columns adapting seamlessly from phones to 4K TVs\n• Coming Soon Web Portal: Minimalist official launch portal with direct store download links\n• Universal Device APKs: Dedicated builds for Phone, Android TV, Fire TV, and multi-architecture devices';
 
   // 1. Sync update config to Firebase RTDB via HTTP REST API
   try {
@@ -68,6 +69,7 @@ async function notifyUpdate() {
         latest_version: version,
         latest_build: Number(build),
         direct_apk_url: apkUrl,
+        tv_apk_url: tvApkUrl,
         store_url: 'https://freewatchug.online/store',
         show_banner: true,
         force_show: true,
