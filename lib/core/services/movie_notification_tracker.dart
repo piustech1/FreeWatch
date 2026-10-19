@@ -78,9 +78,30 @@ class MovieNotificationTracker {
         final newMovies = movies.where((m) => newIds.contains(m.id.toString())).toList();
 
         // Dispatch notification for the new releases (up to 3 at a time)
-        for (final movie in newMovies.take(3)) {
+        for (final rawMovie in newMovies.take(3)) {
+          Movie movie = rawMovie;
+          if (movie.title.trim().isEmpty ||
+              movie.title.toLowerCase() == 'movie' ||
+              movie.title.toLowerCase().startsWith('eps')) {
+            try {
+              final deep = await _munowatch.findMovie(movie.id);
+              if (deep != null &&
+                  deep.title.isNotEmpty &&
+                  deep.title.toLowerCase() != 'movie') {
+                movie = deep;
+              }
+            } catch (_) {}
+          }
+
+          final title = movie.title.trim();
+          if (title.isEmpty ||
+              title.toLowerCase() == 'movie' ||
+              title.toLowerCase() == 'new release' ||
+              RegExp(r'^eps?\s*\d*$', caseSensitive: false).hasMatch(title)) {
+            continue; // Suppress notifications for unverified or placeholder items
+          }
+
           final vj = movie.vjName?.isNotEmpty == true ? movie.vjName! : 'Luganda Dubbed';
-          final title = movie.title;
           final body = 'New Release: $title translated by $vj is now streaming on FreeWatch!';
           final posterOrBackdrop = movie.backdropPath?.isNotEmpty == true
               ? (movie.backdropPath!.startsWith('http')

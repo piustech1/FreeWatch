@@ -1393,6 +1393,39 @@ class MovieRepository {
       }
     } catch (_) {}
 
+    // 0b. Direct seriesCode container lookup on MunoWatch
+    if (seriesCode != null && seriesCode.isNotEmpty && seriesCode != '0') {
+      try {
+        final munoEps = await _munowatch.getSeriesEpisodes(seriesCode);
+        if (munoEps.isNotEmpty) {
+          final List<TvEpisodeData> parsedEpisodes = [];
+          for (int i = 0; i < munoEps.length; i++) {
+            final ep = munoEps[i];
+            final epId = ep['id'] is int
+                ? ep['id'] as int
+                : (int.tryParse(ep['id']?.toString() ?? '') ?? (i + 1));
+            final epTitle = (ep['title'] ?? 'Episode ${i + 1}').toString();
+            final playUrl = (ep['playingurl'] ?? ep['playingUrl'])?.toString();
+            final epImg = (ep['image'] ?? ep['thumbnail'])?.toString();
+            parsedEpisodes.add(TvEpisodeData(
+              id: epId,
+              episodeNumber: i + 1,
+              seasonNumber: seasonNumber,
+              name: epTitle,
+              overview: 'Official Luganda translated episode streaming on FreeWatch',
+              stillPath: epImg,
+              voteAverage: 8.5,
+              videoUrl: (playUrl != null && playUrl.startsWith('http')) ? playUrl : null,
+              runtime: 45,
+            ));
+          }
+          if (parsedEpisodes.isNotEmpty) {
+            return parsedEpisodes;
+          }
+        }
+      } catch (_) {}
+    }
+
     List<TvEpisodeData> officialEpisodes = [];
 
     // 1. Fetch official TMDB season episodes with real backdrops (names, overviews, stills, runtimes)

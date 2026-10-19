@@ -129,11 +129,57 @@ module.exports = async (req, res) => {
 
     const dispatched = [];
     for (const movie of newMovies.slice(0, 3)) {
-      const vj = movie.vj || movie.vjName || 'Luganda Dubbed';
-      const title = movie.title || movie.name || 'New Release';
-      const body = `New Release: ${title} translated by ${vj} is now streaming on FreeWatch!`;
-      const imageUrl = movie.image || movie.poster || movie.backdrop || '';
       const movieId = String(movie.id || movie.vid || '');
+      let title = (movie.title || movie.name || '').trim();
+      let vj = (movie.vj || movie.vjName || '').trim();
+      let imageUrl = movie.image || movie.poster || movie.backdrop || '';
+
+      // Always enrich from /movie/:id to retrieve genuine title and VJ name
+      try {
+        const detailRes = await fetch(`https://mumowatch.ai.studio/movie/${movieId}`, {
+          headers: { 'User-Agent': 'FreeWatch/1.0 (Vercel Cron)' }
+        });
+        if (detailRes.ok) {
+          const detail = await detailRes.json();
+          if (detail) {
+            if (detail.title && detail.title.trim()) {
+              title = detail.title.trim();
+            }
+            if (detail.vj && detail.vj.trim()) {
+              vj = detail.vj.trim();
+            }
+            if (detail.image && detail.image.trim() && !imageUrl) {
+              imageUrl = detail.image.trim();
+            }
+            if (detail.is_series && !title.toLowerCase().includes('episode') && !title.toLowerCase().includes('eps')) {
+              title = `${title} (New Episode)`;
+            }
+          }
+        }
+      } catch (e) {
+        console.warn(`[Vercel Cron] Metadata enrichment failed for ID ${movieId}:`, e.message);
+      }
+
+      // Format VJ name cleanly
+      if (vj && vj !== 'null' && vj !== 'undefined') {
+        if (!vj.toUpperCase().startsWith('VJ ') && !vj.toUpperCase().startsWith('VJ.')) {
+          vj = `VJ ${vj}`;
+        }
+      } else {
+        vj = 'Luganda Dubbed';
+      }
+
+      // Strict guard: Never broadcast blank, placeholder, or bare episode titles
+      if (!title || title.toLowerCase() === 'new release' || title.toLowerCase() === 'movie') {
+        console.log(`⚠️ [Vercel Cron] Suppressing notification for ID ${movieId}: Title could not be resolved ("${title}").`);
+        continue;
+      }
+      if (/^eps?\s*\d*$/i.test(title)) {
+        console.log(`⚠️ [Vercel Cron] Suppressing notification for ID ${movieId}: Bare episode tag with no series name ("${title}").`);
+        continue;
+      }
+
+      const body = `New Release: ${title} translated by ${vj} is now streaming on FreeWatch!`;
 
       const message = {
         topic: 'all_users',

@@ -68,23 +68,52 @@ class MunowatchDatasource {
     try {
       Response? response;
       try {
-        response = await _dio.get('/api/dashboard');
+        response = await _fallbackDio.get('/dashboard');
       } catch (_) {
         try {
           response = await _dio.get('/dashboard');
         } catch (_) {
-          response = await _fallbackDio.get('/dashboard');
+          try {
+            response = await _dio.get('/api/dashboard');
+          } catch (_) {}
         }
       }
-      if (response.data is! Map) {
+      if (response?.data is! Map) {
         return _cachedMovies ?? [];
       }
 
       final Map<String, dynamic> data =
-          Map<String, dynamic>.from(response.data as Map);
+          Map<String, dynamic>.from(response!.data as Map);
+
+      // Guard: If response indicates access token error, fallback immediately to public backend
+      if (data['error'] == true && data['dashboard'] == null && data['movies'] == null) {
+        try {
+          final fb = await _fallbackDio.get('/dashboard');
+          if (fb.data is Map) {
+            data.clear();
+            data.addAll(Map<String, dynamic>.from(fb.data as Map));
+          }
+        } catch (_) {}
+      }
 
       final Map<int, Movie> movieMap = {};
       final List<Movie> latestList = [];
+
+      // Build section categories map
+      final Map<int, String> sectionCategories = {};
+      if (data['sections'] is List) {
+        for (final sec in data['sections'] as List) {
+          if (sec is Map) {
+            final secId = sec['id'] is int
+                ? sec['id'] as int
+                : int.tryParse(sec['id']?.toString() ?? '');
+            final secCat = sec['category']?.toString() ?? '';
+            if (secId != null && secCat.isNotEmpty) {
+              sectionCategories[secId] = secCat;
+            }
+          }
+        }
+      }
 
       // 1. Featured Banner
       if (data['banner'] is Map) {
@@ -148,12 +177,51 @@ class MunowatchDatasource {
                                 ?.toString() ??
                             ''));
             if (mId != null && !movieMap.containsKey(mId)) {
-              final movie = _mapToMovie(movieMapItem);
+              final catId = movieMapItem['category_id'] is int
+                  ? movieMapItem['category_id'] as int
+                  : int.tryParse(movieMapItem['category_id']?.toString() ?? '');
+              final catName = catId != null ? (sectionCategories[catId] ?? 'General') : 'General';
+              final bool isLatestCategory = catName.toLowerCase().contains('latest');
+
+              final movie = _mapToMovie(movieMapItem, defaultCategory: catName);
               movieMap[mId] = movie;
               _knownMoviesMap[mId] = movie;
+              if (isLatestCategory || latestList.length < 15) {
+                latestList.add(movie);
+              }
             }
           }
         }
+      }
+
+      // 4. Parallel-enrich the top latest items so real titles appear immediately
+      final toEnrich = latestList
+          .where((m) => m.title == 'Movie' || m.title.isEmpty)
+          .take(12)
+          .toList();
+      if (toEnrich.isNotEmpty) {
+        try {
+          final enrichedResults = await Future.wait(
+            toEnrich.map((m) async {
+              try {
+                final det = await getStreamDetails(m.id);
+                if (det != null &&
+                    det['title'] != null &&
+                    det['title'].toString().trim().isNotEmpty) {
+                  return _mapToMovie(det,
+                      defaultCategory: m.genreNames.firstOrNull ?? '');
+                }
+              } catch (_) {}
+              return m;
+            }),
+          );
+          for (final em in enrichedResults) {
+            movieMap[em.id] = em;
+            _knownMoviesMap[em.id] = em;
+            final idx = latestList.indexWhere((l) => l.id == em.id);
+            if (idx != -1) latestList[idx] = em;
+          }
+        } catch (_) {}
       }
 
       _cachedMovies = movieMap.values.toList();
@@ -266,13 +334,54 @@ class MunowatchDatasource {
     final Map<int, Movie> resultsMap = {};
 
     for (final q in queryVariations) {
-      // 1. Query primary host (munowatch.ai.studio/api/search)
+      // 1. Query public host (mumowatch.ai.studio/search) first
       try {
-        final response = await _dio.get(
-          '/api/search',
+        final response = await _fallbackDio.get(
+          '/search',
           queryParameters: {'q': q},
         );
-        if (response.data is List) {
+        if (response.data is Map) {
+          final dataMap = response.data as Map;
+          if (dataMap['series'] is List) {
+            for (final s in dataMap['series'] as List) {
+              if (s is Map) {
+                final sTitle = s['title']?.toString() ?? '';
+                final sCode = s['series_code']?.toString() ?? '';
+                if (s['episodes'] is List) {
+                  for (final ep in s['episodes'] as List) {
+                    if (ep is Map) {
+                      final epMap = Map<String, dynamic>.from(ep);
+                      if ((epMap['title'] == null ||
+                              epMap['title'].toString().isEmpty) &&
+                          sTitle.isNotEmpty) {
+                        epMap['title'] = sTitle;
+                      }
+                      if (sCode.isNotEmpty) {
+                        epMap['series_code'] = sCode;
+                      }
+                      final movie = _mapToMovie(epMap);
+                      if (!resultsMap.containsKey(movie.id)) {
+                        resultsMap[movie.id] = movie;
+                        _knownMoviesMap[movie.id] = movie;
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+          if (dataMap['movies'] is List) {
+            for (final item in dataMap['movies'] as List) {
+              if (item is Map) {
+                final movie = _mapToMovie(Map<String, dynamic>.from(item));
+                if (!resultsMap.containsKey(movie.id)) {
+                  resultsMap[movie.id] = movie;
+                  _knownMoviesMap[movie.id] = movie;
+                }
+              }
+            }
+          }
+        } else if (response.data is List) {
           for (final item in response.data as List) {
             if (item is Map) {
               final movie = _mapToMovie(Map<String, dynamic>.from(item));
@@ -284,58 +393,17 @@ class MunowatchDatasource {
           }
         }
       } catch (e) {
-        debugPrint('⚠️ [MunowatchDatasource] Primary search error for "$q": $e');
+        debugPrint('⚠️ [MunowatchDatasource] Fallback search error for "$q": $e');
       }
 
-      // 2. Query fallback host (mumowatch.ai.studio/search) if empty
+      // 2. Query primary host (munowatch.ai.studio/api/search) if empty
       if (resultsMap.isEmpty) {
         try {
-          final response = await _fallbackDio.get(
-            '/search',
+          final response = await _dio.get(
+            '/api/search',
             queryParameters: {'q': q},
           );
-          if (response.data is Map) {
-            final dataMap = response.data as Map;
-            if (dataMap['series'] is List) {
-              for (final s in dataMap['series'] as List) {
-                if (s is Map) {
-                  final sTitle = s['title']?.toString() ?? '';
-                  final sCode = s['series_code']?.toString() ?? '';
-                  if (s['episodes'] is List) {
-                    for (final ep in s['episodes'] as List) {
-                      if (ep is Map) {
-                        final epMap = Map<String, dynamic>.from(ep);
-                        if ((epMap['title'] == null ||
-                                epMap['title'].toString().isEmpty) &&
-                            sTitle.isNotEmpty) {
-                          epMap['title'] = sTitle;
-                        }
-                        if (sCode.isNotEmpty) {
-                          epMap['series_code'] = sCode;
-                        }
-                        final movie = _mapToMovie(epMap);
-                        if (!resultsMap.containsKey(movie.id)) {
-                          resultsMap[movie.id] = movie;
-                          _knownMoviesMap[movie.id] = movie;
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-            if (dataMap['movies'] is List) {
-              for (final item in dataMap['movies'] as List) {
-                if (item is Map) {
-                  final movie = _mapToMovie(Map<String, dynamic>.from(item));
-                  if (!resultsMap.containsKey(movie.id)) {
-                    resultsMap[movie.id] = movie;
-                    _knownMoviesMap[movie.id] = movie;
-                  }
-                }
-              }
-            }
-          } else if (response.data is List) {
+          if (response.data is List) {
             for (final item in response.data as List) {
               if (item is Map) {
                 final movie = _mapToMovie(Map<String, dynamic>.from(item));

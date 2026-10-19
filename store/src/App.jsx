@@ -43,17 +43,32 @@ function isVersionNewer(newVer, oldVer) {
   return false;
 }
 
+const DEFAULT_FEATURE_NOTES = [
+  'In-App Account Review & Appeals: WhatsApp-styled appeal process to submit and track account status with instant unban restoration.',
+  'Instant Live Support Chat Alerts: Receive prompt notifications the moment a support moderator responds, with 1-tap jump to chat.',
+  'Permanent Offline Storage: Downloaded items persist safely across sign-outs, guest sessions, and cache resets.',
+  'Smart Automated Update Checker: Dynamically verifies installed version to eliminate false update prompts.',
+  'Refined UI & Performance: Faster screen transitions, enhanced theme customization, and smoother navigation.'
+];
+
 // Helper: Filter release notes to strictly include pure application features (no admob, moviemax, scrapers/sources, or ads)
 function sanitizeFeatureNotes(rawNotes) {
-  if (!rawNotes) return null;
+  if (!rawNotes) return DEFAULT_FEATURE_NOTES;
   const list = typeof rawNotes === 'string' ? rawNotes.split('\n') : (Array.isArray(rawNotes) ? rawNotes : []);
-  const forbiddenRegex = /moviemax|admob|movie\s*scr|video\s*scr|ad\s*unit|interstitial|monetiz/i;
+  const forbiddenRegex = /moviemax|admob|movie|video|film|cinema|scr|stream|ad\s*unit|interstitial|monetiz|apk|download|changelog|highlights|release\s*v/i;
 
   const cleaned = list
-    .map(line => line.replace(/^[\s•*-]+/, '').trim())
-    .filter(line => line.length > 5 && !forbiddenRegex.test(line));
+    .map(line => line.replace(/^[\s•*#-]+/, '').trim())
+    .map(line => line.replace(/\*\*([^*]+)\*\*/g, '$1').trim())
+    .filter(line => {
+      if (line.length <= 15) return false;
+      if (line.startsWith('#') || line.startsWith('http')) return false;
+      if (/release\s*v|highlights|key features|download.*apk|full changelog/i.test(line)) return false;
+      if (forbiddenRegex.test(line)) return false;
+      return true;
+    });
 
-  return cleaned.length > 0 ? cleaned : null;
+  return cleaned.length > 0 ? cleaned : DEFAULT_FEATURE_NOTES;
 }
 
 export default function App() {
