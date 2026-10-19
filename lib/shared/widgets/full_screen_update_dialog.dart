@@ -284,7 +284,7 @@ class FullScreenUpdateDialog extends StatelessWidget {
 
                     // Store listing info note
                     Text(
-                      'Official release available at freewatchug.online',
+                      'Official release available at freewatchug.online/store',
                       style: TextStyle(
                         color: Colors.white.withOpacity(0.40),
                         fontSize: 12,

@@ -4,8 +4,6 @@ import {
   Smartphone, Film, Tv, Play, HardDrive, 
   MessageSquare, Sun, Moon, ExternalLink, X, ChevronRight
 } from 'lucide-react';
-import { ref, onValue } from 'firebase/database';
-import { rtdb } from '../firebase';
 
 // Helper: format release date to human-readable relative/calendar time
 function formatReleaseDate(dateInput) {
@@ -45,28 +43,50 @@ function isVersionNewer(newVer, oldVer) {
   return false;
 }
 
+const DEFAULT_FEATURE_NOTES = [
+  'In-App Account Review & Appeals: WhatsApp-styled appeal process to submit and track account status with instant unban restoration.',
+  'Instant Live Support Chat Alerts: Receive prompt notifications the moment a support moderator responds, with 1-tap jump to chat.',
+  'Permanent Offline Storage: Downloaded items persist safely across sign-outs, guest sessions, and cache resets.',
+  'Smart Automated Update Checker: Dynamically verifies installed version to eliminate false update prompts.',
+  'Refined UI & Performance: Faster screen transitions, enhanced theme customization, and smoother navigation.'
+];
+
 // Helper: Filter release notes to strictly include pure application features (no admob, moviemax, scrapers/sources, or ads)
 function sanitizeFeatureNotes(rawNotes) {
-  if (!rawNotes) return null;
+  if (!rawNotes) return DEFAULT_FEATURE_NOTES;
   const list = typeof rawNotes === 'string' ? rawNotes.split('\n') : (Array.isArray(rawNotes) ? rawNotes : []);
-  const forbiddenRegex = /moviemax|admob|movie\s*scr|video\s*scr|ad\s*unit|interstitial|monetiz/i;
+  const forbiddenRegex = /moviemax|admob|movie|video|film|cinema|scr|stream|ad\s*unit|interstitial|monetiz|apk|download|changelog|highlights|release\s*v/i;
 
   const cleaned = list
-    .map(line => line.replace(/^[\s•*-]+/, '').trim())
-    .filter(line => line.length > 5 && !forbiddenRegex.test(line));
+    .map(line => line.replace(/^[\s•*#-]+/, '').trim())
+    .map(line => line.replace(/\*\*([^*]+)\*\*/g, '$1').trim())
+    .filter(line => {
+      if (line.length <= 15) return false;
+      if (line.startsWith('#') || line.startsWith('http')) return false;
+      if (/release\s*v|highlights|key features|download.*apk|full changelog/i.test(line)) return false;
+      if (forbiddenRegex.test(line)) return false;
+      return true;
+    });
 
-  return cleaned.length > 0 ? cleaned : null;
+  return cleaned.length > 0 ? cleaned : DEFAULT_FEATURE_NOTES;
 }
 
-export default function AppStoreLanding() {
+export default function AppStoreLanding({ onNavigateToAdmin, onNavigateToWeb }) {
   // Default theme is 'light' as requested
   const [theme, setTheme] = useState('light'); // 'light' | 'dark'
-  const [downloadProgress, setDownloadProgress] = useState(0);
-  const [downloadState, setDownloadState] = useState('idle'); // 'idle' | 'downloading' | 'completed'
+  const [downloadState, setDownloadState] = useState({
+    isDownloading: false,
+    target: null, // 'phone' | 'tv'
+    progress: 0,
+    completedTarget: null,
+  });
   const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [isNotesExpanded, setIsNotesExpanded] = useState(false);
   const [shareToast, setShareToast] = useState(false);
   const [activeLightboxImage, setActiveLightboxImage] = useState(null);
+
+  // 3-Platform switcher: 'phone' | 'tv' | 'web'
+  const [selectedPlatform, setSelectedPlatform] = useState('phone');
 
   // Intelligent Button Label: Shows 'INSTALL' on first visit, 'UPDATE' if visited/installed before
   const [hasVisitedBefore, setHasVisitedBefore] = useState(false);
@@ -82,24 +102,46 @@ export default function AppStoreLanding() {
     } catch (_) {}
   }, []);
 
-  // Dynamic Release Config - Mobile Application Features Only
+  // Dynamic Release Config - Multiplatform Features
   const [releaseInfo, setReleaseInfo] = useState({
-    version: '1.0.60',
-    buildNumber: 61,
+    version: '1.0.65',
+    buildNumber: 66,
     size: '110.5 MB',
-    releaseDate: formatReleaseDate(1792164380000),
-    apkUrl: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.60/FreeWatch-release.apk',
+    releaseDate: formatReleaseDate(Date.now()),
+    apkUrl: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.65/FreeWatch-release.apk',
+    tvApkUrl: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.65/FreeWatch-TV-release.apk',
+    webUrl: 'https://freewatch-app.web.app',
     notes: [
-      'In-App Account Review & Appeals: WhatsApp-styled appeal process to submit and track account status with instant unban restoration.',
-      'Instant Live Support Chat Alerts: Receive prompt notifications the moment a support moderator responds, with 1-tap jump to chat.',
-      'Permanent Offline Storage: Downloaded items persist safely across sign-outs, guest sessions, and cache resets.',
-      'Smart Automated Update Checker: Dynamically verifies installed version to eliminate false update prompts.',
-      'Refined UI & Performance: Faster screen transitions, enhanced theme customization, and smoother navigation.'
+      'Android TV & Remote D-Pad Navigation: Full Leanback support with glowing focus states, navigation sidebar, and 10-foot cinema UI.',
+      'Cross-Platform Web Streaming: Stream directly in any modern desktop or mobile browser with zero installation needed.',
+      'Smart Delay & Community Banner: Banner remembers your interaction and never interrupts once you join.',
+      'Fixed Movie Misclassification: Resolved single animated & live-action films showing fake TV episodes, fake seasons, or fake cast.',
+      'Expanded Sci-Fi & Series Catalog: Harvests hundreds of Sci-Fi titles and deduplicated authentic series with VJ translations.'
     ]
   });
 
   // Dynamic Version History List
   const [historyReleases, setHistoryReleases] = useState([
+    {
+      version: '1.0.65',
+      date: 'Latest',
+      notes: 'Android TV Leanback & D-Pad remote navigation, Web browser platform support, single-movie series-tag fix, deep Sci-Fi catalog harvesting, and playback stability.'
+    },
+    {
+      version: '1.0.64',
+      date: '1d ago',
+      notes: 'Smart community banner persistence, enhanced VOD catalog depth, automated update alert notifications, and smoother playback.'
+    },
+    {
+      version: '1.0.63',
+      date: '1d ago',
+      notes: 'Enhanced category browsing for Drama, Animation, and Family, optimized catalog performance, and smoother playback.'
+    },
+    {
+      version: '1.0.62',
+      date: '2d ago',
+      notes: 'Deep category catalog restoration, resilient failover streaming, and smooth loading transitions.'
+    },
     {
       version: '1.0.60',
       date: formatReleaseDate(1792164380000),
@@ -155,7 +197,7 @@ export default function AppStoreLanding() {
       caption: 'Personal watchlist to bookmark your favorite blockbusters and resume later'
     },
     {
-      url: '/screenshots/photo_2026-10-14_02-13-23.jpg',
+      url: '/screenshots/photo_2026-10-13_02-13-23.jpg',
       title: 'Chat Page',
       caption: 'Direct 24/7 live support with WhatsApp-styled messaging and instant alerts'
     },
@@ -176,14 +218,15 @@ export default function AppStoreLanding() {
     }
   ];
 
+  // Fetch latest release metadata from Firebase RTDB and GitHub dynamically
   useEffect(() => {
-    let unsub = () => {};
-
     const applyReleasePayload = (val) => {
       if (!val) return;
       const remoteVer = (val.latest_version || val.version || '').replace('v', '').trim();
       const remoteBuild = Number(val.latest_build || val.buildNumber || 0);
       const remoteApk = val.direct_apk_url || val.apkUrl;
+      const remoteTvApk = val.tv_apk_url || val.tvApkUrl;
+      const remoteWebUrl = val.web_url || val.webUrl;
       const rawNotes = val.release_notes || val.notes;
       const remoteNotes = sanitizeFeatureNotes(rawNotes);
       const remoteDate = val.updated_at || val.published_at;
@@ -198,6 +241,8 @@ export default function AppStoreLanding() {
           version: remoteVer || prev.version,
           buildNumber: remoteBuild > 0 ? remoteBuild : prev.buildNumber,
           apkUrl: remoteApk || prev.apkUrl,
+          tvApkUrl: remoteTvApk || prev.tvApkUrl || remoteApk || prev.apkUrl,
+          webUrl: remoteWebUrl || prev.webUrl || 'https://freewatch-app.web.app',
           size: val.size || prev.size,
           releaseDate: remoteDate ? formatReleaseDate(remoteDate) : prev.releaseDate,
           notes: remoteNotes && remoteNotes.length > 0 ? remoteNotes : prev.notes
@@ -213,36 +258,32 @@ export default function AppStoreLanding() {
       })
       .catch(() => {});
 
-    // 2. Realtime listener to Firebase RTDB app_config/update for live push sync
-    try {
-      const updateRef = ref(rtdb, 'app_config/update');
-      unsub = onValue(updateRef, (snapshot) => {
-        if (snapshot.exists()) {
-          applyReleasePayload(snapshot.val());
-        }
-      });
-    } catch (_) {}
-
-    // 3. Fallback / supplement from GitHub Releases API
+    // 2. Fetch latest release metadata from GitHub
     fetch('https://api.github.com/repos/piustech1/FreeWatch/releases/latest')
       .then(res => res.json())
       .then(data => {
         if (data && data.tag_name) {
           const cleanTag = data.tag_name.replace('v', '').trim();
           let apk = null;
+          let tvApk = null;
           let sizeStr = null;
           if (Array.isArray(data.assets)) {
-            const asset = data.assets.find(a => a.name && a.name.endsWith('.apk'));
-            if (asset && asset.browser_download_url) {
-              apk = asset.browser_download_url;
+            const phoneAsset = data.assets.find(a => a.name === 'FreeWatch-release.apk') || data.assets.find(a => a.name && a.name.endsWith('.apk'));
+            const tvAsset = data.assets.find(a => a.name === 'FreeWatch-TV-release.apk') || phoneAsset;
+            if (phoneAsset && phoneAsset.browser_download_url) {
+              apk = phoneAsset.browser_download_url;
             }
-            if (asset && asset.size) {
-              sizeStr = `${(asset.size / (1024 * 1024)).toFixed(1)} MB`;
+            if (tvAsset && tvAsset.browser_download_url) {
+              tvApk = tvAsset.browser_download_url;
+            }
+            if (phoneAsset && phoneAsset.size) {
+              sizeStr = `${(phoneAsset.size / (1024 * 1024)).toFixed(1)} MB`;
             }
           }
           applyReleasePayload({
             latest_version: cleanTag,
             direct_apk_url: apk,
+            tv_apk_url: tvApk,
             published_at: data.published_at,
             release_notes: data.body,
             size: sizeStr
@@ -251,7 +292,7 @@ export default function AppStoreLanding() {
       })
       .catch(() => {});
 
-    // 4. Fetch release history list from GitHub if available
+    // 3. Fetch release history list from GitHub if available
     fetch('https://api.github.com/repos/piustech1/FreeWatch/releases?per_page=6')
       .then(res => res.json())
       .then(list => {
@@ -278,43 +319,56 @@ export default function AppStoreLanding() {
         }
       })
       .catch(() => {});
-
-    return () => unsub();
   }, []);
 
-  const handleDownload = () => {
+  const handleDownload = (target = 'phone') => {
     try {
       localStorage.setItem('freewatch_store_visited', 'true');
       setHasVisitedBefore(true);
     } catch (_) {}
 
-    if (downloadState === 'downloading') return;
+    if (downloadState.isDownloading) return;
 
-    if (downloadState === 'completed') {
-      window.location.href = releaseInfo.apkUrl;
+    const isTv = target === 'tv';
+    const targetUrl = isTv
+      ? (releaseInfo.tvApkUrl || releaseInfo.apkUrl)
+      : releaseInfo.apkUrl;
+
+    const targetFileName = isTv
+      ? `FreeWatch_TV_Release_v${releaseInfo.version}.apk`
+      : `FreeWatch_Release_v${releaseInfo.version}.apk`;
+
+    if (downloadState.completedTarget === target) {
+      window.location.href = targetUrl;
       return;
     }
 
-    setDownloadState('downloading');
-    setDownloadProgress(12);
+    setDownloadState({ isDownloading: true, target, progress: 12, completedTarget: null });
 
     const interval = setInterval(() => {
-      setDownloadProgress(prev => {
-        if (prev >= 92) {
+      setDownloadState(prev => {
+        if (prev.progress >= 92) {
           clearInterval(interval);
-          setDownloadState('completed');
           // Trigger actual APK download
           const link = document.createElement('a');
-          link.href = releaseInfo.apkUrl;
-          link.setAttribute('download', `FreeWatch_Release_v${releaseInfo.version}.apk`);
+          link.href = targetUrl;
+          link.setAttribute('download', targetFileName);
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
-          return 100;
+          return { isDownloading: false, target, progress: 100, completedTarget: target };
         }
-        return prev + 16;
+        return { ...prev, progress: prev.progress + 16 };
       });
     }, 200);
+  };
+
+  const handleOpenWeb = () => {
+    if (onNavigateToWeb) {
+      onNavigateToWeb();
+    } else {
+      window.location.href = '/';
+    }
   };
 
   const handleShare = async () => {
@@ -404,33 +458,146 @@ export default function AppStoreLanding() {
               Luganda Dubbed Movies & Series
             </p>
 
-            <div className="flex items-center space-x-3 mt-3">
-              {/* Intelligent iOS Pill Button: 'INSTALL' for new visitors, 'UPDATE' for returning users */}
-              <button
-                onClick={handleDownload}
-                disabled={downloadState === 'downloading'}
-                className="relative overflow-hidden px-6 py-1.5 rounded-full bg-[#0071E3] hover:bg-blue-600 active:scale-95 text-white font-bold text-xs uppercase tracking-wider shadow-md transition-all flex items-center justify-center min-w-[96px] h-8"
-              >
-                {downloadState === 'idle' && (hasVisitedBefore ? 'UPDATE' : 'INSTALL')}
-                {downloadState === 'downloading' && (
-                  <div className="flex items-center space-x-1.5">
-                    <svg className="animate-spin h-3.5 w-3.5 text-white" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <span>{downloadProgress}%</span>
-                  </div>
-                )}
-                {downloadState === 'completed' && 'OPEN'}
-              </button>
-
-              <button 
-                onClick={handleShare}
-                className={`p-1.5 rounded-full transition-colors ${isDark ? 'text-blue-400 hover:bg-neutral-800' : 'text-blue-600 hover:bg-neutral-100'}`}
-              >
-                <Share2 className="w-4 h-4" />
-              </button>
+            <div className="flex items-center space-x-2 mt-2">
+              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-500/10 text-[#0071E3] border border-blue-500/20">
+                v{releaseInfo.version}
+              </span>
+              <span className={`text-[11px] font-medium ${isDark ? 'text-neutral-400' : 'text-neutral-500'}`}>
+                {releaseInfo.size}
+              </span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500 font-semibold border border-emerald-500/20">
+                Official
+              </span>
             </div>
+          </div>
+        </div>
+
+        {/* ── 2.1 Dedicated Direct Download Buttons (Phone & Android TV) ── */}
+        <div className="px-5 pb-3 pt-1">
+          <div className="grid grid-cols-2 gap-2.5">
+            {/* Button 1: Download for Phone */}
+            <button
+              onClick={() => handleDownload('phone')}
+              disabled={downloadState.isDownloading && downloadState.target === 'phone'}
+              className="relative overflow-hidden px-3.5 py-3 rounded-2xl bg-[#0071E3] hover:bg-blue-600 active:scale-95 text-white font-bold text-xs shadow-md transition-all flex items-center justify-center space-x-2"
+            >
+              {downloadState.isDownloading && downloadState.target === 'phone' ? (
+                <div className="flex items-center space-x-1.5">
+                  <svg className="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span>{downloadState.progress}%</span>
+                </div>
+              ) : (
+                <>
+                  <Smartphone className="w-4 h-4 flex-shrink-0" />
+                  <span className="truncate">Download for Phone</span>
+                </>
+              )}
+            </button>
+
+            {/* Button 2: Download for TV */}
+            <button
+              onClick={() => handleDownload('tv')}
+              disabled={downloadState.isDownloading && downloadState.target === 'tv'}
+              className={`relative overflow-hidden px-3.5 py-3 rounded-2xl border font-bold text-xs shadow-md transition-all flex items-center justify-center space-x-2 active:scale-95 ${
+                isDark 
+                  ? 'bg-neutral-900 hover:bg-neutral-800 border-neutral-700 text-white' 
+                  : 'bg-neutral-900 hover:bg-neutral-800 border-neutral-800 text-white'
+              }`}
+            >
+              {downloadState.isDownloading && downloadState.target === 'tv' ? (
+                <div className="flex items-center space-x-1.5">
+                  <svg className="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span>{downloadState.progress}%</span>
+                </div>
+              ) : (
+                <>
+                  <Tv className="w-4 h-4 flex-shrink-0 text-emerald-400" />
+                  <span className="truncate">Download for TV</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Quick Platform Bar: Watch on Web & Share */}
+          <div className="mt-2.5 flex items-center justify-between px-1">
+            <button
+              onClick={handleOpenWeb}
+              className={`text-xs font-semibold flex items-center space-x-1.5 px-3 py-1.5 rounded-full border transition-all ${
+                isDark
+                  ? 'border-neutral-800 bg-neutral-900 text-neutral-300 hover:text-white hover:border-neutral-700'
+                  : 'border-neutral-200 bg-neutral-50 text-neutral-700 hover:text-black hover:bg-neutral-100'
+              }`}
+            >
+              <Play className="w-3.5 h-3.5 fill-[#0071E3] text-[#0071E3]" />
+              <span>Watch on Web Cinema</span>
+              <ExternalLink className="w-3 h-3 text-neutral-400 ml-0.5" />
+            </button>
+
+            <button
+              onClick={handleShare}
+              className={`p-2 rounded-full transition-colors ${isDark ? 'text-blue-400 hover:bg-neutral-800' : 'text-blue-600 hover:bg-neutral-100'}`}
+              title="Share FreeWatch"
+            >
+              <Share2 className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* ── 2.5 Multiplatform Switcher Tabs (Phone | Android TV | Web Browser) ── */}
+        <div className="px-5 pb-3">
+          <div className={`p-1 rounded-2xl flex items-center space-x-1 border ${
+            isDark ? 'bg-neutral-900/90 border-neutral-800' : 'bg-neutral-100 border-neutral-200/90'
+          }`}>
+            <button
+              onClick={() => setSelectedPlatform('phone')}
+              className={`flex-1 py-2 px-1.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center space-x-1.5 ${
+                selectedPlatform === 'phone'
+                  ? 'bg-[#0071E3] text-white shadow-md'
+                  : isDark ? 'text-neutral-400 hover:text-white' : 'text-neutral-600 hover:text-black'
+              }`}
+            >
+              <Smartphone className="w-3.5 h-3.5" />
+              <span>Phone</span>
+            </button>
+
+            <button
+              onClick={() => setSelectedPlatform('tv')}
+              className={`flex-1 py-2 px-1.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center space-x-1.5 ${
+                selectedPlatform === 'tv'
+                  ? 'bg-[#0071E3] text-white shadow-md'
+                  : isDark ? 'text-neutral-400 hover:text-white' : 'text-neutral-600 hover:text-black'
+              }`}
+            >
+              <Tv className="w-3.5 h-3.5" />
+              <span>Android TV</span>
+            </button>
+
+            <button
+              onClick={() => setSelectedPlatform('web')}
+              className={`flex-1 py-2 px-1.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center space-x-1.5 ${
+                selectedPlatform === 'web'
+                  ? 'bg-[#0071E3] text-white shadow-md'
+                  : isDark ? 'text-neutral-400 hover:text-white' : 'text-neutral-600 hover:text-black'
+              }`}
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              <span>Web App</span>
+            </button>
+          </div>
+
+          {/* Platform Capability Tagline */}
+          <div className="mt-2 text-center">
+            <span className={`text-[11px] font-medium ${isDark ? 'text-neutral-400' : 'text-neutral-500'}`}>
+              {selectedPlatform === 'phone' && '📱 Android Phones & Tablets • Full Touch Controls & Downloads'}
+              {selectedPlatform === 'tv' && '📺 Android TV / Google TV / Fire TV • D-Pad Remote Ready'}
+              {selectedPlatform === 'web' && '🌐 Instant In-Browser Cinema • Works on Chrome, Safari & Edge'}
+            </span>
           </div>
         </div>
 
@@ -592,7 +759,11 @@ export default function AppStoreLanding() {
             </div>
             <div className="py-2.5 flex justify-between">
               <span className={isDark ? 'text-neutral-500' : 'text-neutral-400'}>Compatibility</span>
-              <span className="font-semibold text-right">Android 6.0 and later</span>
+              <span className="font-semibold text-right">
+                {selectedPlatform === 'phone' && 'Android 6.0 and later'}
+                {selectedPlatform === 'tv' && 'Android TV 7.0+, Google TV, Fire TV'}
+                {selectedPlatform === 'web' && 'Chrome, Safari, Edge, Firefox'}
+              </span>
             </div>
             <div className="py-2.5 flex justify-between">
               <span className={isDark ? 'text-neutral-500' : 'text-neutral-400'}>Languages</span>

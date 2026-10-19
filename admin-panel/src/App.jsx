@@ -58,6 +58,7 @@ import {
 import { rtdb, auth, signInAnonymously } from './firebase';
 import { ref, onValue, push, set, update, remove, get } from 'firebase/database';
 import AppStoreLanding from './pages/AppStoreLanding';
+import WebCinemaApp from './pages/WebCinemaApp';
 
 export default function App() {
   const [currentPath, setCurrentPath] = useState(() => {
@@ -91,6 +92,15 @@ export default function App() {
     }
   };
 
+  const isStoreRoute = 
+    currentPath.startsWith('/store') ||
+    currentPath.startsWith('/download') ||
+    currentPath.startsWith('/downloads') ||
+    currentPath.startsWith('/apk') ||
+    currentPath.startsWith('/app') ||
+    searchParams.includes('view=store') ||
+    searchParams.includes('view=download');
+
   const isAdminRoute = 
     currentPath.startsWith('/pickle') ||
     currentPath.startsWith('/admin') ||
@@ -99,9 +109,24 @@ export default function App() {
     searchParams.includes('view=pickle') ||
     searchParams.includes('view=admin');
 
-  // When visiting root ('/') or any public URL, render the App Store Product Listing Page as MAIN!
+  // Dedicated Store Listing: /store
+  if (isStoreRoute) {
+    return (
+      <AppStoreLanding 
+        onNavigateToAdmin={() => navigateTo('/pickle')} 
+        onNavigateToWeb={() => navigateTo('/')} 
+      />
+    );
+  }
+
+  // Web Cinema Application: root ('/') and all non-admin public pages
   if (!isAdminRoute) {
-    return <AppStoreLanding onNavigateToAdmin={() => navigateTo('/pickle')} />;
+    return (
+      <WebCinemaApp 
+        onNavigateToStore={() => navigateTo('/store')} 
+        onNavigateToAdmin={() => navigateTo('/pickle')} 
+      />
+    );
   }
 
   // Navigation: 'dashboard' | 'users' | 'videos' | 'chat' | 'notifications' | 'munowatch' | 'audit' | 'store'
@@ -239,7 +264,7 @@ export default function App() {
     show_banner: true,
     latest_version: '1.0.65',
     latest_build: 66,
-    store_url: 'https://freewatchug.online/',
+    store_url: 'https://freewatchug.online/store',
     direct_apk_url: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.65/FreeWatch-release.apk',
     release_notes: '• Android TV & Remote D-Pad Navigation: Full Leanback support with focus highlights and 10-foot cinema UI\n• Multiplatform Web Support: Direct in-browser streaming on desktop and mobile web\n• Smart Community Banner Persistence: Remembers interaction and eliminates repetitive prompts\n• Fixed Movie Misclassification: Resolved single animated & live-action films showing fake TV episodes or seasons\n• Direct Stream Playback: BunnyCDN stream resolution eliminates playback stream errors',
     is_mandatory: false,
@@ -261,9 +286,9 @@ export default function App() {
           const val = snap.val();
           setUpdateConfig({
             show_banner: val.show_banner ?? val.force_show ?? true,
-            latest_version: val.latest_version || '1.0.60',
-            latest_build: val.latest_build || 61,
-            store_url: val.store_url || 'https://freewatchug.online/',
+            latest_version: val.latest_version || '1.0.65',
+            latest_build: val.latest_build || 66,
+            store_url: val.store_url || 'https://freewatchug.online/store',
             direct_apk_url: val.direct_apk_url || 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.60/FreeWatch-release.apk',
             release_notes: val.release_notes || '• In-App Account Review & Appeals with instant unban restoration\n• Instant Live Support Chat Alerts with 1-tap jump to chat\n• Permanent Offline Storage persistence across sign-outs\n• Smart Automated Update Checker\n• Refined UI & Performance',
             is_mandatory: val.is_mandatory || false,
@@ -1308,15 +1333,24 @@ export default function App() {
             </button>
           </form>
 
-          {/* Quick link back to public storefront */}
-          <div className="mt-6 pt-5 border-t border-white/[0.1] text-center">
+          {/* Quick link back to web cinema & store */}
+          <div className="mt-6 pt-5 border-t border-white/[0.1] flex items-center justify-center gap-4 text-center">
             <button
               type="button"
               onClick={() => navigateTo('/')}
               className="text-xs font-semibold text-slate-400 hover:text-white transition-colors inline-flex items-center gap-1.5 cursor-pointer"
             >
+              <Film size={13} />
+              <span>Web Cinema</span>
+            </button>
+            <span className="text-white/20">•</span>
+            <button
+              type="button"
+              onClick={() => navigateTo('/store')}
+              className="text-xs font-semibold text-slate-400 hover:text-white transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+            >
               <ExternalLink size={13} />
-              <span>Return to Public App Store Page</span>
+              <span>Store Listing (/store)</span>
             </button>
           </div>
         </div>
@@ -1390,8 +1424,18 @@ export default function App() {
               })}
             </div>
 
-            {/* Drawer Footer with View Store & Sign Out */}
+            {/* Drawer Footer with View Store & Web Cinema & Sign Out */}
             <div className="p-3 border-t border-slate-100 space-y-2">
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  navigateTo('/store');
+                }}
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 transition-colors cursor-pointer"
+              >
+                <ExternalLink size={14} />
+                <span>View Store Listing (/store)</span>
+              </button>
               <button
                 onClick={() => {
                   setMobileMenuOpen(false);
@@ -1399,8 +1443,8 @@ export default function App() {
                 }}
                 className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer"
               >
-                <ExternalLink size={14} />
-                <span>View Public Storefront</span>
+                <Film size={14} />
+                <span>Open Web Cinema</span>
               </button>
               <button
                 onClick={handleAdminLogout}
@@ -1535,6 +1579,15 @@ export default function App() {
 
             <button
               onClick={() => navigateTo('/')}
+              className="inline-flex items-center px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 transition-colors shadow-xs cursor-pointer"
+              title="Open FreeWatch Web Cinema"
+            >
+              <Film size={13} className="sm:mr-1.5 text-emerald-600" />
+              <span className="hidden sm:inline">Web Cinema</span>
+            </button>
+
+            <button
+              onClick={() => navigateTo('/store')}
               className="inline-flex items-center px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition-colors shadow-xs cursor-pointer"
               title="Open public App Store listing page"
             >
@@ -3213,7 +3266,10 @@ export default function App() {
 
               {/* Public Storefront Preview */}
               <div className="pt-2">
-                <AppStoreLanding onNavigateToAdmin={() => setActiveTab('dashboard')} />
+                <AppStoreLanding 
+                  onNavigateToAdmin={() => setActiveTab('dashboard')} 
+                  onNavigateToWeb={() => navigateTo('/')}
+                />
               </div>
             </div>
           )}

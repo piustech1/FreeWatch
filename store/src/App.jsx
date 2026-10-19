@@ -71,11 +71,15 @@ function sanitizeFeatureNotes(rawNotes) {
   return cleaned.length > 0 ? cleaned : DEFAULT_FEATURE_NOTES;
 }
 
-export default function App() {
+export default function App({ onNavigateToAdmin, onNavigateToWeb }) {
   // Default theme is 'light' as requested
   const [theme, setTheme] = useState('light'); // 'light' | 'dark'
-  const [downloadProgress, setDownloadProgress] = useState(0);
-  const [downloadState, setDownloadState] = useState('idle'); // 'idle' | 'downloading' | 'completed'
+  const [downloadState, setDownloadState] = useState({
+    isDownloading: false,
+    target: null, // 'phone' | 'tv'
+    progress: 0,
+    completedTarget: null,
+  });
   const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [isNotesExpanded, setIsNotesExpanded] = useState(false);
   const [shareToast, setShareToast] = useState(false);
@@ -317,40 +321,34 @@ export default function App() {
       .catch(() => {});
   }, []);
 
-  const handleDownload = () => {
-    if (selectedPlatform === 'web') {
-      window.open(releaseInfo.webUrl || 'https://freewatch-app.web.app', '_blank');
-      return;
-    }
-
+  const handleDownload = (target = 'phone') => {
     try {
       localStorage.setItem('freewatch_store_visited', 'true');
       setHasVisitedBefore(true);
     } catch (_) {}
 
-    if (downloadState === 'downloading') return;
+    if (downloadState.isDownloading) return;
 
-    const targetUrl = selectedPlatform === 'tv'
+    const isTv = target === 'tv';
+    const targetUrl = isTv
       ? (releaseInfo.tvApkUrl || releaseInfo.apkUrl)
       : releaseInfo.apkUrl;
 
-    const targetFileName = selectedPlatform === 'tv'
+    const targetFileName = isTv
       ? `FreeWatch_TV_Release_v${releaseInfo.version}.apk`
       : `FreeWatch_Release_v${releaseInfo.version}.apk`;
 
-    if (downloadState === 'completed') {
+    if (downloadState.completedTarget === target) {
       window.location.href = targetUrl;
       return;
     }
 
-    setDownloadState('downloading');
-    setDownloadProgress(12);
+    setDownloadState({ isDownloading: true, target, progress: 12, completedTarget: null });
 
     const interval = setInterval(() => {
-      setDownloadProgress(prev => {
-        if (prev >= 92) {
+      setDownloadState(prev => {
+        if (prev.progress >= 92) {
           clearInterval(interval);
-          setDownloadState('completed');
           // Trigger actual APK download
           const link = document.createElement('a');
           link.href = targetUrl;
@@ -358,11 +356,19 @@ export default function App() {
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
-          return 100;
+          return { isDownloading: false, target, progress: 100, completedTarget: target };
         }
-        return prev + 16;
+        return { ...prev, progress: prev.progress + 16 };
       });
     }, 200);
+  };
+
+  const handleOpenWeb = () => {
+    if (onNavigateToWeb) {
+      onNavigateToWeb();
+    } else {
+      window.location.href = '/';
+    }
   };
 
   const handleShare = async () => {
@@ -452,44 +458,94 @@ export default function App() {
               Luganda Dubbed Movies & Series
             </p>
 
-            <div className="flex items-center space-x-3 mt-3">
-              {/* Intelligent Pill Button: Adapts to Phone, Android TV, and Web */}
-              <button
-                onClick={handleDownload}
-                disabled={downloadState === 'downloading'}
-                className="relative overflow-hidden px-6 py-1.5 rounded-full bg-[#0071E3] hover:bg-blue-600 active:scale-95 text-white font-bold text-xs uppercase tracking-wider shadow-md transition-all flex items-center justify-center min-w-[96px] h-8"
-              >
-                {selectedPlatform === 'web' ? (
-                  <div className="flex items-center space-x-1.5">
-                    <span>LAUNCH</span>
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </div>
-                ) : (
-                  <>
-                    {downloadState === 'idle' && (
-                      selectedPlatform === 'tv' ? 'GET TV APK' : (hasVisitedBefore ? 'UPDATE' : 'INSTALL')
-                    )}
-                    {downloadState === 'downloading' && (
-                      <div className="flex items-center space-x-1.5">
-                        <svg className="animate-spin h-3.5 w-3.5 text-white" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        <span>{downloadProgress}%</span>
-                      </div>
-                    )}
-                    {downloadState === 'completed' && 'OPEN'}
-                  </>
-                )}
-              </button>
-
-              <button 
-                onClick={handleShare}
-                className={`p-1.5 rounded-full transition-colors ${isDark ? 'text-blue-400 hover:bg-neutral-800' : 'text-blue-600 hover:bg-neutral-100'}`}
-              >
-                <Share2 className="w-4 h-4" />
-              </button>
+            <div className="flex items-center space-x-2 mt-2">
+              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-500/10 text-[#0071E3] border border-blue-500/20">
+                v{releaseInfo.version}
+              </span>
+              <span className={`text-[11px] font-medium ${isDark ? 'text-neutral-400' : 'text-neutral-500'}`}>
+                {releaseInfo.size}
+              </span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500 font-semibold border border-emerald-500/20">
+                Official
+              </span>
             </div>
+          </div>
+        </div>
+
+        {/* ── 2.1 Dedicated Direct Download Buttons (Phone & Android TV) ── */}
+        <div className="px-5 pb-3 pt-1">
+          <div className="grid grid-cols-2 gap-2.5">
+            {/* Button 1: Download for Phone */}
+            <button
+              onClick={() => handleDownload('phone')}
+              disabled={downloadState.isDownloading && downloadState.target === 'phone'}
+              className="relative overflow-hidden px-3.5 py-3 rounded-2xl bg-[#0071E3] hover:bg-blue-600 active:scale-95 text-white font-bold text-xs shadow-md transition-all flex items-center justify-center space-x-2"
+            >
+              {downloadState.isDownloading && downloadState.target === 'phone' ? (
+                <div className="flex items-center space-x-1.5">
+                  <svg className="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span>{downloadState.progress}%</span>
+                </div>
+              ) : (
+                <>
+                  <Smartphone className="w-4 h-4 flex-shrink-0" />
+                  <span className="truncate">Download for Phone</span>
+                </>
+              )}
+            </button>
+
+            {/* Button 2: Download for TV */}
+            <button
+              onClick={() => handleDownload('tv')}
+              disabled={downloadState.isDownloading && downloadState.target === 'tv'}
+              className={`relative overflow-hidden px-3.5 py-3 rounded-2xl border font-bold text-xs shadow-md transition-all flex items-center justify-center space-x-2 active:scale-95 ${
+                isDark 
+                  ? 'bg-neutral-900 hover:bg-neutral-800 border-neutral-700 text-white' 
+                  : 'bg-neutral-900 hover:bg-neutral-800 border-neutral-800 text-white'
+              }`}
+            >
+              {downloadState.isDownloading && downloadState.target === 'tv' ? (
+                <div className="flex items-center space-x-1.5">
+                  <svg className="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span>{downloadState.progress}%</span>
+                </div>
+              ) : (
+                <>
+                  <Tv className="w-4 h-4 flex-shrink-0 text-emerald-400" />
+                  <span className="truncate">Download for TV</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Quick Platform Bar: Watch on Web & Share */}
+          <div className="mt-2.5 flex items-center justify-between px-1">
+            <button
+              onClick={handleOpenWeb}
+              className={`text-xs font-semibold flex items-center space-x-1.5 px-3 py-1.5 rounded-full border transition-all ${
+                isDark
+                  ? 'border-neutral-800 bg-neutral-900 text-neutral-300 hover:text-white hover:border-neutral-700'
+                  : 'border-neutral-200 bg-neutral-50 text-neutral-700 hover:text-black hover:bg-neutral-100'
+              }`}
+            >
+              <Play className="w-3.5 h-3.5 fill-[#0071E3] text-[#0071E3]" />
+              <span>Watch on Web Cinema</span>
+              <ExternalLink className="w-3 h-3 text-neutral-400 ml-0.5" />
+            </button>
+
+            <button
+              onClick={handleShare}
+              className={`p-2 rounded-full transition-colors ${isDark ? 'text-blue-400 hover:bg-neutral-800' : 'text-blue-600 hover:bg-neutral-100'}`}
+              title="Share FreeWatch"
+            >
+              <Share2 className="w-4 h-4" />
+            </button>
           </div>
         </div>
 
@@ -499,7 +555,7 @@ export default function App() {
             isDark ? 'bg-neutral-900/90 border-neutral-800' : 'bg-neutral-100 border-neutral-200/90'
           }`}>
             <button
-              onClick={() => { setSelectedPlatform('phone'); setDownloadState('idle'); }}
+              onClick={() => setSelectedPlatform('phone')}
               className={`flex-1 py-2 px-1.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center space-x-1.5 ${
                 selectedPlatform === 'phone'
                   ? 'bg-[#0071E3] text-white shadow-md'
@@ -511,7 +567,7 @@ export default function App() {
             </button>
 
             <button
-              onClick={() => { setSelectedPlatform('tv'); setDownloadState('idle'); }}
+              onClick={() => setSelectedPlatform('tv')}
               className={`flex-1 py-2 px-1.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center space-x-1.5 ${
                 selectedPlatform === 'tv'
                   ? 'bg-[#0071E3] text-white shadow-md'
@@ -523,7 +579,7 @@ export default function App() {
             </button>
 
             <button
-              onClick={() => { setSelectedPlatform('web'); setDownloadState('idle'); }}
+              onClick={() => setSelectedPlatform('web')}
               className={`flex-1 py-2 px-1.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center space-x-1.5 ${
                 selectedPlatform === 'web'
                   ? 'bg-[#0071E3] text-white shadow-md'

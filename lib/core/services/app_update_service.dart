@@ -19,7 +19,7 @@ class AppUpdateInfo {
     this.version = '',
     this.buildNumber = 0,
     this.releaseNotes = '',
-    this.storeUrl = 'https://freewatchug.online',
+    this.storeUrl = 'https://freewatchug.online/store',
     this.directApkUrl,
     this.isMandatory = false,
   });
@@ -35,7 +35,7 @@ class AppUpdateService {
   // Fallback defaults matching current pubspec version 1.0.65+66
   static const int defaultBuildNumber = 66;
   static const String defaultVersionName = '1.0.65';
-  static const String defaultStoreListingUrl = 'https://freewatchug.online';
+  static const String defaultStoreListingUrl = 'https://freewatchug.online/store';
 
   Future<void> _notifyUserOfUpdate(String version) async {
     try {

@@ -68,7 +68,7 @@ async function notifyUpdate() {
         latest_version: version,
         latest_build: Number(build),
         direct_apk_url: apkUrl,
-        store_url: 'https://freewatchug.online/',
+        store_url: 'https://freewatchug.online/store',
         show_banner: true,
         force_show: true,
         release_notes: notes,
