@@ -17,7 +17,7 @@ class AppUpdateInfo {
     this.version = '',
     this.buildNumber = 0,
     this.releaseNotes = '',
-    this.storeUrl = 'https://freewatch-piustech.vercel.app/download',
+    this.storeUrl = 'https://freewatchug.online',
     this.directApkUrl,
     this.isMandatory = false,
   });
@@ -30,10 +30,10 @@ class AppUpdateService {
   factory AppUpdateService() => _instance;
   AppUpdateService._internal();
 
-  // Fallback defaults matching current pubspec version 1.0.60+61
-  static const int defaultBuildNumber = 61;
-  static const String defaultVersionName = '1.0.60';
-  static const String defaultStoreListingUrl = 'https://freewatch-piustech.vercel.app/';
+  // Fallback defaults matching current pubspec version 1.0.62+63
+  static const int defaultBuildNumber = 63;
+  static const String defaultVersionName = '1.0.62';
+  static const String defaultStoreListingUrl = 'https://freewatchug.online';
 
   /// Strictly determines if [remoteVersion] or [remoteBuild] is newer than the locally installed app
   static bool isRemoteVersionNewer({

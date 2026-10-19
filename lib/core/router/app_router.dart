@@ -9,6 +9,8 @@ import '../../features/movie_detail/presentation/screens/movie_detail_screen.dar
 import '../../features/notifications/presentation/screens/notifications_screen.dart';
 import '../../features/chat/presentation/screens/developer_chat_screen.dart';
 import '../../data/models/movie.dart';
+import '../services/app_update_service.dart';
+import '../../shared/widgets/full_screen_update_dialog.dart';
 
 GoRouter createAppRouter({String initialLocation = '/splash'}) => GoRouter(
   initialLocation: initialLocation,
@@ -45,6 +47,16 @@ GoRouter createAppRouter({String initialLocation = '/splash'}) => GoRouter(
       path: '/onboarding',
       name: 'onboarding',
       builder: (context, state) => const OnboardingScreen(),
+    ),
+    GoRoute(
+      path: '/update',
+      name: 'update',
+      builder: (context, state) {
+        final updateInfo = state.extra is AppUpdateInfo
+            ? state.extra as AppUpdateInfo
+            : const AppUpdateInfo(hasUpdate: true);
+        return FullScreenUpdateDialog(updateInfo: updateInfo);
+      },
     ),
     GoRoute(
       path: '/home',

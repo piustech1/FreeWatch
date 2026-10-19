@@ -97,11 +97,11 @@ export default function App() {
 
   // Dynamic Release Config - Mobile Application Features Only
   const [releaseInfo, setReleaseInfo] = useState({
-    version: '1.0.61',
-    buildNumber: 62,
+    version: '1.0.62',
+    buildNumber: 63,
     size: '110.5 MB',
     releaseDate: formatReleaseDate(Date.now()),
-    apkUrl: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.61/FreeWatch-release.apk',
+    apkUrl: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.62/FreeWatch-release.apk',
     notes: [
       'In-App Account Review & Appeals: WhatsApp-styled appeal process to submit and track account status with instant unban restoration.',
       'Instant Live Support Chat Alerts: Receive prompt notifications the moment a support moderator responds, with 1-tap jump to chat.',
@@ -114,8 +114,13 @@ export default function App() {
   // Dynamic Version History List
   const [historyReleases, setHistoryReleases] = useState([
     {
-      version: '1.0.61',
+      version: '1.0.62',
       date: 'Latest',
+      notes: 'Deep category catalog restoration, resilient failover streaming, and smooth loading transitions.'
+    },
+    {
+      version: '1.0.61',
+      date: '1d ago',
       notes: 'Optimized high-speed catalog streaming, resilient multi-server failover, and improved cloud sync reliability.'
     },
     {

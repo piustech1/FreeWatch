@@ -87,11 +87,11 @@ jobs:
             Download `FreeWatch-release.apk` below and install it directly on your Android device!
             
             ### ✨ Highlights in this release:
-            - 🛡️ **WhatsApp-Style Account Review & Appeal**: Submit suspension review requests directly in the app with real-time status updates and automatic instant unban restoration upon admin approval.
-            - 💬 **Live Support Chat Push Notifications**: Admin messages & replies in the admin panel instantly notify users and deep-link directly into the chat screen.
-            - 🔄 **Automated Update Detection**: Dynamic runtime verification ensures accurate version updates with zero false prompts.
-            - 💾 **Persistent Offline Storage**: Multi-tier storage persistence keeps downloaded content intact across user logout, session switches, and guest mode.
-            - ⚡ **Enhanced App Performance**: Smoother navigation, refined transitions, and improved theme responsiveness.
+            - ⚡ **Enhanced Streaming Stability**: High-speed stream playback optimization with automatic protocol failover.
+            - 📂 **Rich Category Depth**: Deep catalogs across Drama, Animation, Family, Horror, and regional genres.
+            - 📱 **Smooth Skeleton Shimmer Loaders**: Beautiful transitions when browsing extensive movie collections.
+            - 🚀 **Full-Screen Rocket Update Screen**: Seamless update prompt directly linking to official store releases.
+            - 💾 **Permanent Offline Storage**: Robust storage persistence keeping downloaded content safe across sessions.
           generate_release_notes: true
           draft: false
           prerelease: false
@@ -106,7 +106,7 @@ jobs:
           TAG="${{ steps.app_version.outputs.tag }}"
           APK_URL="https://github.com/piustech1/FreeWatch/releases/download/$TAG/FreeWatch-release.apk"
           TIMESTAMP=$(python3 -c 'import time; print(int(time.time()*1000))')
-          NOTES="• In-App Account Review & Appeals: WhatsApp-styled appeal process to submit and track account status with instant unban restoration.\n• Instant Live Support Chat Alerts: Receive prompt notifications the moment a support moderator responds, with 1-tap jump to chat.\n• Permanent Offline Storage: Downloaded items persist safely across sign-outs, guest sessions, and cache resets.\n• Smart Automated Update Checker: Dynamically verifies installed version to eliminate false update prompts.\n• Refined UI & Performance: Faster screen transitions, enhanced theme customization, and smoother navigation."
+          NOTES="• Enhanced Streaming Stability: High-speed stream playback optimization with automatic protocol failover.\n• Rich Category Depth: Deep catalogs across Drama, Animation, Family, Horror, and regional genres.\n• Smooth Skeleton Shimmer Loaders: Beautiful transitions when browsing extensive movie collections.\n• Full-Screen Rocket Update Screen: Seamless update prompt directly linking to official store releases.\n• Permanent Offline Storage: Robust storage persistence keeping downloaded content safe across sessions."
           echo "Syncing version $VERSION ($BUILD) to Firebase RTDB at $TIMESTAMP..."
           curl -s -X PATCH -H "Content-Type: application/json" \
             -d "{\"latest_version\":\"$VERSION\",\"latest_build\":$BUILD,\"direct_apk_url\":\"$APK_URL\",\"updated_at\":$TIMESTAMP,\"release_notes\":\"$NOTES\"}" \

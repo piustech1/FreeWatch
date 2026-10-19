@@ -13,15 +13,29 @@ export default async function handler(req, res) {
   }
 
   try {
-    const response = await fetch('https://mumowatch.ai.studio/dashboard', {
-      headers: {
-        'User-Agent': 'FreeWatch/1.0 (WebAdmin)',
-        'Accept': 'application/json',
-      },
-    });
+    let response;
+    try {
+      response = await fetch('https://mumowatch.ai.studio/dashboard', {
+        headers: {
+          'User-Agent': 'FreeWatch/1.0 (WebAdmin)',
+          'Accept': 'application/json',
+        },
+      });
+    } catch (_) {}
 
-    if (!response.ok) {
-      throw new Error(`MunoWatch responded with HTTP ${response.status}`);
+    if (!response || !response.ok) {
+      try {
+        response = await fetch('https://pearlpix-api.onrender.com/dashboard', {
+          headers: {
+            'User-Agent': 'FreeWatch/1.0 (WebAdmin)',
+            'Accept': 'application/json',
+          },
+        });
+      } catch (_) {}
+    }
+
+    if (!response || !response.ok) {
+      throw new Error(`MunoWatch responded with HTTP ${response?.status || 'network error'}`);
     }
 
     const data = await response.json();

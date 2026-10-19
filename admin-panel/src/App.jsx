@@ -237,10 +237,10 @@ export default function App() {
   // In-App Update Banner Remote Controller State
   const [updateConfig, setUpdateConfig] = useState({
     show_banner: true,
-    latest_version: '1.0.60',
-    latest_build: 61,
+    latest_version: '1.0.62',
+    latest_build: 63,
     store_url: 'https://freewatchug.online/',
-    direct_apk_url: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.60/FreeWatch-release.apk',
+    direct_apk_url: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.62/FreeWatch-release.apk',
     release_notes: '• In-App Account Review & Appeals: WhatsApp-styled appeal process to submit and track account status\n• Instant Live Support Chat Alerts: Receive prompt notifications the moment a support moderator responds\n• Permanent Offline Storage: Downloaded items persist safely across sign-outs and guest sessions\n• Smart Automated Update Checker: Dynamically verifies installed version to eliminate false prompts\n• Refined UI & Performance: Faster screen transitions and improved dark/light theme switching',
     is_mandatory: false,
   });
@@ -941,6 +941,15 @@ export default function App() {
 
       if (!d || (!d.movies && !d.dashboard)) {
         try {
+          const resp = await fetch('https://pearlpix-api.onrender.com/dashboard');
+          if (resp.ok) {
+            d = await resp.json();
+          }
+        } catch (_) {}
+      }
+
+      if (!d || (!d.movies && !d.dashboard)) {
+        try {
           const resp = await fetch('/api/munowatch-catalog');
           if (resp.ok) {
             d = await resp.json();
@@ -948,40 +957,52 @@ export default function App() {
         } catch (_) {}
       }
 
-      if (!d) {
-        throw new Error('Unable to connect to MunoWatch server. Please check internet connection.');
-      }
-
       let list = [];
       const seenIds = new Set();
 
-      if (d.banner && (d.banner.id || d.banner.vid)) {
-        list.push(d.banner);
-        seenIds.add(String(d.banner.id || d.banner.vid));
-      }
+      if (d && (d.movies || d.dashboard || d.banner)) {
+        if (d.banner && (d.banner.id || d.banner.vid)) {
+          list.push(d.banner);
+          seenIds.add(String(d.banner.id || d.banner.vid));
+        }
 
-      if (Array.isArray(d.movies)) {
-        for (const m of d.movies) {
-          const mId = String(m.id || m.vid || '');
-          if (mId && !seenIds.has(mId)) {
-            seenIds.add(mId);
-            list.push(m);
+        if (Array.isArray(d.movies)) {
+          for (const m of d.movies) {
+            const mId = String(m.id || m.vid || '');
+            if (mId && !seenIds.has(mId)) {
+              seenIds.add(mId);
+              list.push(m);
+            }
           }
+        }
+
+        if (Array.isArray(d.dashboard)) {
+          d.dashboard.forEach(c => {
+            if (Array.isArray(c.movies)) {
+              for (const m of c.movies) {
+                const mId = String(m.id || m.vid || '');
+                if (mId && !seenIds.has(mId)) {
+                  seenIds.add(mId);
+                  list.push(m);
+                }
+              }
+            }
+          });
         }
       }
 
-      if (Array.isArray(d.dashboard)) {
-        d.dashboard.forEach(c => {
-          if (Array.isArray(c.movies)) {
-            for (const m of c.movies) {
-              const mId = String(m.id || m.vid || '');
-              if (mId && !seenIds.has(mId)) {
-                seenIds.add(mId);
-                list.push(m);
-              }
+      // If remote mirror had CORS or network block, fall back to cached Firebase RTDB catalog
+      if (list.length === 0) {
+        try {
+          const snap = await get(ref(rtdb, 'munowatch/catalog'));
+          if (snap.exists()) {
+            const val = snap.val();
+            if (Array.isArray(val) && val.length > 0) {
+              list = val;
+              val.forEach(m => seenIds.add(String(m.id || m.vid || '')));
             }
           }
-        });
+        } catch (_) {}
       }
 
       syncedCount = list.length;

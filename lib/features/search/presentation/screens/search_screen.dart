@@ -134,7 +134,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     },
     {
       'title': 'Animation',
-      'poster': 'https://image.tmdb.org/t/p/w500/8cdWjvZQUExUUTzyp4t6EDMubfO.jpg',
+      'poster': 'https://image.tmdb.org/t/p/w500/vpnVM9B6NMmQpWeZvzLvDESb2QY.jpg',
       'query': 'Animation',
     },
     {
@@ -1599,12 +1599,13 @@ class _FolderCardItem extends ConsumerWidget {
     final posterToDisplay = moviesAsync.when(
       data: (movies) {
         if (movies.isNotEmpty) {
-          final withPoster = movies.firstWhere(
-            (m) => m.posterUrl.isNotEmpty && !m.posterUrl.contains('placeholder'),
-            orElse: () => movies.first,
-          );
-          if (withPoster.posterUrl.isNotEmpty) {
-            return withPoster.posterUrl;
+          for (final m in movies) {
+            final url = m.posterUrl.trim();
+            if (url.isNotEmpty &&
+                url.startsWith('http') &&
+                !url.contains('placeholder')) {
+              return url;
+            }
           }
         }
         return fallbackPoster;
@@ -1612,6 +1613,9 @@ class _FolderCardItem extends ConsumerWidget {
       loading: () => fallbackPoster,
       error: (_, __) => fallbackPoster,
     );
+    final validPoster = (posterToDisplay.isNotEmpty && posterToDisplay.startsWith('http'))
+        ? posterToDisplay
+        : fallbackPoster;
 
     return GestureDetector(
       onTap: onTap,
@@ -1705,19 +1709,23 @@ class _FolderCardItem extends ConsumerWidget {
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(16),
                           child: CachedNetworkImage(
-                            imageUrl: posterToDisplay,
+                            imageUrl: validPoster,
                             fit: BoxFit.cover,
                             placeholder: (_, __) => Shimmer.fromColors(
                               baseColor: const Color(0xFF181B24),
                               highlightColor: const Color(0xFF262C3A),
                               child: Container(color: const Color(0xFF181B24)),
                             ),
-                            errorWidget: (_, __, ___) => Container(
-                              color: const Color(0xFF181B24),
-                              child: const Icon(
-                                Icons.movie_rounded,
-                                color: Colors.white24,
-                                size: 36,
+                            errorWidget: (_, __, ___) => CachedNetworkImage(
+                              imageUrl: fallbackPoster,
+                              fit: BoxFit.cover,
+                              errorWidget: (_, __, ___) => Container(
+                                color: const Color(0xFF181B24),
+                                child: const Icon(
+                                  Icons.movie_rounded,
+                                  color: Colors.white24,
+                                  size: 36,
+                                ),
                               ),
                             ),
                           ),

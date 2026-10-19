@@ -276,6 +276,80 @@ class MovieRepository {
       }
     } catch (_) {}
 
+    // ── Resilient MovieMax RTDB Fallback (Guarantees rich catalogs for Drama, Animation, Family, Horror) ──
+    if (matched.length < 15) {
+      try {
+        final movieMaxList = await _movieMax.getAllMovies();
+        for (final m in movieMaxList) {
+          if (genreId == 16 && _isNonAnimatedLiveAction(m.title)) continue;
+          final hasId = m.genreIds.contains(genreId);
+          final hasName = m.genreNames.any((g) =>
+              g.toLowerCase().contains(genreName.toLowerCase()) ||
+              genreName.toLowerCase().contains(g.toLowerCase()));
+
+          bool keywordMatch = false;
+          final lowerTitle = m.title.toLowerCase();
+          if (genreId == 16) {
+            keywordMatch = lowerTitle.contains('panda') ||
+                lowerTitle.contains('dragon') ||
+                lowerTitle.contains('sonic') ||
+                lowerTitle.contains('mario') ||
+                lowerTitle.contains('lion king') ||
+                lowerTitle.contains('shrek') ||
+                lowerTitle.contains('frozen') ||
+                lowerTitle.contains('minion') ||
+                lowerTitle.contains('toy story') ||
+                lowerTitle.contains('anime') ||
+                lowerTitle.contains('naruto') ||
+                lowerTitle.contains('demon slayer') ||
+                lowerTitle.contains('jujutsu') ||
+                lowerTitle.contains('spider-verse') ||
+                lowerTitle.contains('moana') ||
+                lowerTitle.contains('zootopia') ||
+                lowerTitle.contains('coco') ||
+                lowerTitle.contains('encanto') ||
+                lowerTitle.contains('madagascar') ||
+                lowerTitle.contains('ice age') ||
+                lowerTitle.contains('incredibles');
+          } else if (genreId == 10751) {
+            keywordMatch = lowerTitle.contains('home alone') ||
+                lowerTitle.contains('wonka') ||
+                lowerTitle.contains('charlie and the chocolate factory') ||
+                lowerTitle.contains('paddington') ||
+                lowerTitle.contains('night at the museum') ||
+                lowerTitle.contains('jumanji') ||
+                lowerTitle.contains('narnia') ||
+                lowerTitle.contains('alvin and the chipmunks') ||
+                lowerTitle.contains('stuart little');
+          } else if (genreId == 27) {
+            keywordMatch = lowerTitle.contains('horror') ||
+                lowerTitle.contains('conjuring') ||
+                lowerTitle.contains('insidious') ||
+                lowerTitle.contains('annabelle') ||
+                lowerTitle.contains('evil dead') ||
+                lowerTitle.contains('saw') ||
+                lowerTitle.contains('nun') ||
+                lowerTitle.contains('exorcist') ||
+                lowerTitle.contains('halloween') ||
+                lowerTitle.contains('scream') ||
+                lowerTitle.contains('ghost') ||
+                lowerTitle.contains('dead');
+          } else if (genreId == 18) {
+            keywordMatch = m.genreNames.any((g) => g.toLowerCase().contains('drama'));
+          }
+
+          if (hasId || hasName || keywordMatch) {
+            if (seenIds.add(m.id)) {
+              matched.add(m.copyWith(
+                genreIds: [genreId, ...m.genreIds],
+                genreNames: [genreName, ...m.genreNames],
+              ));
+            }
+          }
+        }
+      } catch (_) {}
+    }
+
     if (matched.isNotEmpty) {
       return _paginate(matched, page, pageSize: pageSize);
     }
@@ -800,18 +874,18 @@ class MovieRepository {
   /// Full un-truncated list of series for 'See All'
   Future<List<Movie>> getAllSeriesList() async {
     try {
-      final series = await _movieMax.getAllSeries();
-      if (series.isNotEmpty) {
-        return series.where((m) {
+      final munoSeries = await _munowatch.getSeriesMovies();
+      if (munoSeries.isNotEmpty) {
+        return munoSeries.where((m) {
           final t = m.title.toLowerCase();
           return !t.contains('mob land') && !t.contains('mobland');
         }).toList();
       }
     } catch (_) {}
     try {
-      final munoSeries = await _munowatch.getSeriesMovies();
-      if (munoSeries.isNotEmpty) {
-        return munoSeries.where((m) {
+      final series = await _movieMax.getAllSeries();
+      if (series.isNotEmpty) {
+        return series.where((m) {
           final t = m.title.toLowerCase();
           return !t.contains('mob land') && !t.contains('mobland');
         }).toList();
@@ -914,6 +988,72 @@ class MovieRepository {
       }
     } catch (_) {}
 
+    // 3. MovieMax RTDB deep enrichment for regional and niche categories
+    if (matched.length < 15) {
+      try {
+        final movieMaxList = await _movieMax.getAllMovies();
+        for (final m in movieMaxList) {
+          if (tmdbId == 16 && _isNonAnimatedLiveAction(m.title)) continue;
+          final lower = m.title.toLowerCase();
+          final overview = m.overview?.toLowerCase() ?? '';
+
+          bool isRegionalOrGenreMatch = false;
+          if (clean.contains('korean')) {
+            isRegionalOrGenreMatch = lower.contains('korean') ||
+                lower.contains('korea') ||
+                lower.contains('seoul') ||
+                overview.contains('korea') ||
+                m.genreNames.any((g) => g.toLowerCase().contains('korean'));
+          } else if (clean.contains('filipino')) {
+            isRegionalOrGenreMatch = lower.contains('filipino') ||
+                lower.contains('philippines') ||
+                lower.contains('tagalog') ||
+                lower.contains('pinoy') ||
+                overview.contains('philippines') ||
+                m.genreNames.any((g) => g.toLowerCase().contains('filipino'));
+          } else if (clean.contains('indian')) {
+            isRegionalOrGenreMatch = lower.contains('indian') ||
+                lower.contains('india') ||
+                lower.contains('bollywood') ||
+                lower.contains('hindi') ||
+                lower.contains('tamil') ||
+                overview.contains('india') ||
+                m.genreNames.any((g) => g.toLowerCase().contains('indian'));
+          } else if (clean.contains('chinese')) {
+            isRegionalOrGenreMatch = lower.contains('chinese') ||
+                lower.contains('china') ||
+                lower.contains('mandarin') ||
+                lower.contains('hong kong') ||
+                overview.contains('china') ||
+                m.genreNames.any((g) => g.toLowerCase().contains('chinese'));
+          } else if (clean.contains('ugandan')) {
+            isRegionalOrGenreMatch = (m.vjName != null && m.vjName!.trim().isNotEmpty) ||
+                lower.contains('uganda') ||
+                lower.contains('kampala') ||
+                lower.contains('kadama');
+          } else if (clean.contains('kungu') || clean.contains('martial')) {
+            isRegionalOrGenreMatch = lower.contains('kung fu') ||
+                lower.contains('kungu') ||
+                lower.contains('shaolin') ||
+                lower.contains('karate') ||
+                lower.contains('martial') ||
+                lower.contains('ip man');
+          } else if (tmdbId != null) {
+            isRegionalOrGenreMatch = m.genreIds.contains(tmdbId) ||
+                m.genreNames.any((g) => g.toLowerCase().contains(clean));
+          } else {
+            isRegionalOrGenreMatch = queries.any((q) => lower.contains(q) || overview.contains(q));
+          }
+
+          if (isRegionalOrGenreMatch) {
+            if (seenIds.add(m.id)) {
+              matched.add(m.copyWith(genreNames: [genreName, ...m.genreNames]));
+            }
+          }
+        }
+      } catch (_) {}
+    }
+
     if (matched.isNotEmpty) {
       return _paginate(matched, page, pageSize: pageSize);
     }
@@ -922,7 +1062,7 @@ class MovieRepository {
       return getAllMoviesByGenre(tmdbId);
     }
 
-    return getAllUploads();
+    return [];
   }
 
   // ── 10. Movie Details with Strict VOD & Preserved Identity ──────────────────

@@ -30,6 +30,21 @@ class MunowatchDatasource {
       id != null ? '$_baseUrl/movie/play?id=$id' : '$_baseUrl/movie/play';
   static String seriesWebUrl(String seriesCode) => '$_baseUrl/series/$seriesCode';
 
+  /// Sanitize and upgrade video stream URLs (convert cleartext http to https on CDNs & encode spaces)
+  static String? sanitizeStreamUrl(String? raw) {
+    if (raw == null) return null;
+    var trimmed = raw.trim();
+    if (trimmed.isEmpty || !trimmed.startsWith('http')) return null;
+    if (trimmed.startsWith('http://') &&
+        (trimmed.contains('b-cdn.net') || trimmed.contains('r2.dev') || trimmed.contains('pearlpix'))) {
+      trimmed = trimmed.replaceFirst('http://', 'https://');
+    }
+    if (trimmed.contains(' ')) {
+      trimmed = trimmed.replaceAll(' ', '%20');
+    }
+    return trimmed;
+  }
+
   MunowatchDatasource({Dio? dio, Dio? fallbackDio})
       : _dio = dio ??
             Dio(
@@ -435,13 +450,8 @@ class MunowatchDatasource {
 
       if (response.data is Map) {
         final map = Map<String, dynamic>.from(response.data as Map);
-        final rawUrl = (map['playingurl'] ?? map['playingUrl'])?.toString().trim();
-        // Strict VOD verification: Must be a non-empty valid URL
-        if (rawUrl != null && rawUrl.startsWith('http')) {
-          map['playingurl'] = rawUrl;
-        } else {
-          map['playingurl'] = null;
-        }
+        final rawUrl = (map['playingurl'] ?? map['playingUrl'])?.toString();
+        map['playingurl'] = sanitizeStreamUrl(rawUrl);
         final rawSeriesCode = (map['series_code'] ?? map['seriesCode'])?.toString().trim();
         if (rawSeriesCode != null && rawSeriesCode.isNotEmpty && rawSeriesCode != '0') {
           map['series_code'] = rawSeriesCode;
@@ -457,9 +467,9 @@ class MunowatchDatasource {
       final response = await _fallbackDio.get('/movie/$vid');
       if (response.data is Map) {
         final map = Map<String, dynamic>.from(response.data as Map);
-        String? rawUrl = (map['playingurl'] ?? map['playingUrl'])?.toString().trim();
-        if (rawUrl != null && rawUrl.startsWith('http')) {
-          map['playingurl'] = rawUrl;
+        String? rawUrl = (map['playingurl'] ?? map['playingUrl'])?.toString();
+        if (rawUrl != null && rawUrl.trim().startsWith('http')) {
+          map['playingurl'] = sanitizeStreamUrl(rawUrl);
         } else {
           // Check if GET /movie/$vid/play redirects to direct stream URL
           try {
@@ -472,8 +482,7 @@ class MunowatchDatasource {
             );
             final location = redirectResponse.headers.value('location');
             if (location != null && location.trim().startsWith('http')) {
-              rawUrl = location.trim();
-              map['playingurl'] = rawUrl;
+              map['playingurl'] = sanitizeStreamUrl(location);
             } else {
               map['playingurl'] = null;
             }
@@ -505,7 +514,10 @@ class MunowatchDatasource {
           final List<Map<String, dynamic>> episodes = [];
           for (final ep in data['episodes'] as List) {
             if (ep is Map) {
-              episodes.add(Map<String, dynamic>.from(ep));
+              final map = Map<String, dynamic>.from(ep);
+              final rawPlay = (map['playingurl'] ?? map['playingUrl'])?.toString();
+              map['playingurl'] = sanitizeStreamUrl(rawPlay);
+              episodes.add(map);
             }
           }
           return episodes;
@@ -615,9 +627,7 @@ class MunowatchDatasource {
       genreIds: genreMapping.ids,
       genreNames: genreMapping.names,
       isTv: isTvShow,
-      videoUrl: (playingUrl?.isNotEmpty == true && playingUrl!.startsWith('http'))
-          ? playingUrl
-          : null,
+      videoUrl: sanitizeStreamUrl(playingUrl),
       vjName: rawVj,
       seriesCode: seriesCode,
       firebaseKey: 'munowatch_$id',

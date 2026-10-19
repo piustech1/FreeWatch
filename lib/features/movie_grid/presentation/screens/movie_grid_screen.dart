@@ -73,8 +73,11 @@ class MovieGridScreen extends ConsumerWidget {
         ? ref.watch(vjMoviesObjProvider(vj!))
         : ref.watch(categoryFullMoviesProvider(title));
 
-    final bool isLoading = moviesAsync.isLoading && movies.isEmpty;
-    final displayMovies = moviesAsync.valueOrNull ?? (movies.isNotEmpty ? movies : <Movie>[]);
+    final bool isLoading = moviesAsync.isLoading;
+    final asyncList = moviesAsync.valueOrNull;
+    final displayMovies = (asyncList != null && asyncList.isNotEmpty)
+        ? asyncList
+        : (movies.isNotEmpty ? movies : <Movie>[]);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -527,7 +530,7 @@ class MovieGridScreen extends ConsumerWidget {
         crossAxisSpacing: 10,
         mainAxisSpacing: 16,
       ),
-      itemCount: 9,
+      itemCount: 12,
       itemBuilder: (_, __) => Shimmer.fromColors(
         baseColor: const Color(0xFF161822),
         highlightColor: const Color(0xFF232736),

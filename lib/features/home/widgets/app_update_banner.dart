@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/services/app_update_service.dart';
+import '../../../../shared/widgets/full_screen_update_dialog.dart';
 
 class AppUpdateBanner extends StatefulWidget {
   const AppUpdateBanner({super.key});
@@ -120,7 +121,7 @@ class _AppUpdateBannerState extends State<AppUpdateBanner> {
                 // Text Information & Tap Target
                 Expanded(
                   child: GestureDetector(
-                    onTap: _launchStoreListing,
+                    onTap: () => FullScreenUpdateDialog.show(context, update),
                     behavior: HitTestBehavior.opaque,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,

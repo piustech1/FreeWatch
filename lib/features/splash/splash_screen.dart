@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/services/app_update_service.dart';
 
 /// Modern Mobile Splash Screen:
 /// - Pure OLED black background
@@ -59,6 +60,17 @@ class _SplashScreenState extends State<SplashScreen>
 
     // Auto-navigate after animations complete: /home if logged in, /onboarding if not
     _navigationTimer = Timer(const Duration(milliseconds: 2800), () async {
+      if (!mounted) return;
+
+      // 1. Check for application update (blocks navigation if newer version available)
+      try {
+        final updateInfo = await AppUpdateService().checkForUpdate();
+        if (updateInfo.hasUpdate && mounted) {
+          context.go('/update', extra: updateInfo);
+          return;
+        }
+      } catch (_) {}
+
       if (mounted) {
         final user = FirebaseAuth.instance.currentUser;
         if (user != null) {

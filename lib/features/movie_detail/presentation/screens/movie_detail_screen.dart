@@ -1630,6 +1630,23 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
       if (targetUrl == null && episodeId != null && episodeId > 0) {
         targetUrl = await ref.read(movieRepositoryProvider).getEpisodeStreamUrl(episodeId);
       }
+      if (targetUrl == null || targetUrl.isEmpty) {
+        final currentDetails = ref
+            .read(movieDetailsProvider(MovieDetailsParam(
+                movieId: widget.movie.id,
+                isTv: widget.movie.isTv,
+                initialMovie: widget.movie)))
+            .valueOrNull;
+        targetUrl = (widget.movie.videoUrl != null && widget.movie.videoUrl!.isNotEmpty)
+            ? widget.movie.videoUrl
+            : currentDetails?.videoUrl;
+      }
+      if (targetUrl == null || targetUrl.isEmpty) {
+        targetUrl = await ref.read(movieRepositoryProvider).resolveStreamUrl(
+          widget.movie.id,
+          title: widget.movie.title,
+        );
+      }
     }
 
     if (!context.mounted) return;
@@ -2472,11 +2489,15 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
     );
 
     Uri safeParseStreamUri(String url) {
-      final trimmed = url.trim();
-      if (trimmed.contains(' ')) {
-        return Uri.parse(trimmed.replaceAll(' ', '%20'));
+      String clean = url.trim();
+      if (clean.startsWith('http://') &&
+          (clean.contains('b-cdn.net') || clean.contains('r2.dev') || clean.contains('pearlpix'))) {
+        clean = clean.replaceFirst('http://', 'https://');
       }
-      return Uri.parse(trimmed);
+      if (clean.contains(' ')) {
+        clean = clean.replaceAll(' ', '%20');
+      }
+      return Uri.parse(clean);
     }
 
     final VideoPlayerController controller = hasLocalFile
