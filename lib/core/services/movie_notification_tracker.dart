@@ -54,9 +54,9 @@ class MovieNotificationTracker {
       final prefs = await SharedPreferences.getInstance();
       final storedIds = prefs.getStringList(_prefKeyKnownIds)?.toSet();
 
-      List<Movie> movies = await _movieMax.getAllMovies(forceRefresh: true);
+      List<Movie> movies = await _munowatch.getAllMovies(forceRefresh: true);
       if (movies.isEmpty) {
-        movies = await _munowatch.getAllMovies(forceRefresh: true);
+        movies = await _movieMax.getAllMovies(forceRefresh: true);
       }
       if (movies.isEmpty) {
         _isChecking = false;

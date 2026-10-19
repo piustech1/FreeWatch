@@ -30,20 +30,20 @@ class MovieRepository {
       ApiConstants.tmdbApiKey != 'YOUR_TMDB_API_KEY' &&
       ApiConstants.tmdbApiKey.trim().isNotEmpty;
 
-  /// Full live Luganda catalog sourced primarily from MovieMax RTDB (1,531+ items)
-  /// with MunoWatch fallback
+  /// Full live Luganda catalog sourced primarily from MunoWatch API (live catalog)
+  /// with resilient MovieMax RTDB fallback (1,531+ items)
   Future<List<Movie>> _getAllLugandaMovies({bool forceRefresh = false}) async {
-    try {
-      final movieMaxList = await _movieMax.getAllMovies(forceRefresh: forceRefresh);
-      if (movieMaxList.isNotEmpty) {
-        return movieMaxList;
-      }
-    } catch (_) {}
-
     try {
       final munoList = await _munowatch.getAllMovies(forceRefresh: forceRefresh);
       if (munoList.isNotEmpty) {
         return munoList;
+      }
+    } catch (_) {}
+
+    try {
+      final movieMaxList = await _movieMax.getAllMovies(forceRefresh: forceRefresh);
+      if (movieMaxList.isNotEmpty) {
+        return movieMaxList;
       }
     } catch (_) {}
 
@@ -134,9 +134,9 @@ class MovieRepository {
   // ── 6. TV Series ────────────────────────────────────────────────────────────
   Future<List<Movie>> getSeries({int page = 1}) async {
     try {
-      final series = await _movieMax.getAllSeries();
-      if (series.isNotEmpty) {
-        final filtered = series.where((m) {
+      final munoSeries = await _munowatch.getSeriesMovies();
+      if (munoSeries.isNotEmpty) {
+        final filtered = munoSeries.where((m) {
           final t = m.title.toLowerCase();
           return !t.contains('mob land') && !t.contains('mobland');
         }).toList();
@@ -145,9 +145,9 @@ class MovieRepository {
     } catch (_) {}
 
     try {
-      final munoSeries = await _munowatch.getSeriesMovies();
-      if (munoSeries.isNotEmpty) {
-        final filtered = munoSeries.where((m) {
+      final series = await _movieMax.getAllSeries();
+      if (series.isNotEmpty) {
+        final filtered = series.where((m) {
           final t = m.title.toLowerCase();
           return !t.contains('mob land') && !t.contains('mobland');
         }).toList();
@@ -285,7 +285,7 @@ class MovieRepository {
         .toList();
   }
 
-  // ── 8. Search Movies across Live MovieMax & MunoWatch Databases ────────────
+  // ── 8. Search Movies across Live MunoWatch & MovieMax Databases ────────────
   Future<List<Movie>> searchMovies(String query, {int page = 1}) async {
     final cleanQuery = query.toLowerCase().trim();
     if (cleanQuery.isEmpty) return [];
@@ -293,7 +293,17 @@ class MovieRepository {
     final List<Movie> combinedResults = [];
     final Set<int> seenIds = {};
 
-    // 1. Fast in-memory tokenized word matching across full MovieMax catalog (movies + series)
+    // 1. MunoWatch backend live search (primary search engine)
+    try {
+      final munoSearchResults = await _munowatch.searchMovies(cleanQuery);
+      for (final m in munoSearchResults) {
+        if (seenIds.add(m.id)) {
+          combinedResults.add(m);
+        }
+      }
+    } catch (_) {}
+
+    // 2. In-memory tokenized word matching across full catalog & MovieMax series (resilient fallback/supplement)
     try {
       final movies = await _getAllLugandaMovies();
       final series = await _movieMax.getAllSeries();
@@ -321,16 +331,6 @@ class MovieRepository {
       });
 
       for (final m in localMatches) {
-        if (seenIds.add(m.id)) {
-          combinedResults.add(m);
-        }
-      }
-    } catch (_) {}
-
-    // 2. MunoWatch backend search fallback / supplement
-    try {
-      final munoSearchResults = await _munowatch.searchMovies(cleanQuery);
-      for (final m in munoSearchResults) {
         if (seenIds.add(m.id)) {
           combinedResults.add(m);
         }
@@ -937,14 +937,14 @@ class MovieRepository {
         lugandaMovie.title.trim().isEmpty ||
         lugandaMovie.title == 'Loading...') {
       try {
-        final fetched = await _movieMax.findMovie(movieId);
+        final fetched = await _munowatch.findMovie(movieId);
         if (fetched != null) {
           lugandaMovie = fetched;
         }
       } catch (_) {}
       if (lugandaMovie == null) {
         try {
-          final fetched = await _munowatch.findMovie(movieId);
+          final fetched = await _movieMax.findMovie(movieId);
           if (fetched != null) {
             lugandaMovie = fetched;
           }

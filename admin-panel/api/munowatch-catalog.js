@@ -13,7 +13,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const response = await fetch('https://munowatch.ai.studio/api/dashboard', {
+    const response = await fetch('https://mumowatch.ai.studio/dashboard', {
       headers: {
         'User-Agent': 'FreeWatch/1.0 (WebAdmin)',
         'Accept': 'application/json',

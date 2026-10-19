@@ -442,15 +442,36 @@ export default function App() {
           setMunowatchCatalog(Object.values(val));
         }
       } else {
-        // Fallback: Fetch directly from serverless proxy if not yet in RTDB
-        fetch('/api/munowatch-catalog')
+        // Fallback: Fetch directly from public mirror or proxy if not yet in RTDB
+        fetch('https://mumowatch.ai.studio/dashboard')
           .then(res => res.json())
           .then(data => {
             let list = [];
-            if (data.banner) list.push(data.banner);
-            if (data.dashboard) {
+            const seen = new Set();
+            if (data.banner && (data.banner.id || data.banner.vid)) {
+              list.push(data.banner);
+              seen.add(String(data.banner.id || data.banner.vid));
+            }
+            if (Array.isArray(data.movies)) {
+              for (const m of data.movies) {
+                const id = String(m.id || m.vid || '');
+                if (id && !seen.has(id)) {
+                  seen.add(id);
+                  list.push(m);
+                }
+              }
+            }
+            if (Array.isArray(data.dashboard)) {
               data.dashboard.forEach(c => {
-                if (c.movies) list.push(...c.movies);
+                if (Array.isArray(c.movies)) {
+                  for (const m of c.movies) {
+                    const id = String(m.id || m.vid || '');
+                    if (id && !seen.has(id)) {
+                      seen.add(id);
+                      list.push(m);
+                    }
+                  }
+                }
               });
             }
             if (list.length > 0) {
@@ -907,37 +928,90 @@ export default function App() {
   // Trigger MunoWatch Sync
   const handleTriggerMunowatchSync = async () => {
     setIsSyncingMunowatch(true);
+    let syncedCount = 0;
     try {
-      const res = await fetch('/api/cron-munowatch');
-      const data = await res.json();
-      await logAudit(
-        'MUNOWATCH_SYNC',
-        'MunoWatch Catalog',
-        `Manual sync triggered. ${data.message || 'Catalog updated.'}`,
-        'System Poller'
-      );
-      alert('Sync executed successfully: ' + (data.message || 'Catalog refreshed'));
-    } catch (e) {
-      // Fallback: Refresh catalog via client fetch
+      // 1. Fetch live MunoWatch dashboard directly or via proxy
+      let d = null;
       try {
-        const resp = await fetch('/api/munowatch-catalog');
-        const d = await resp.json();
-        let list = [];
-        if (d.banner) list.push(d.banner);
-        if (d.dashboard) {
-          d.dashboard.forEach(c => {
-            if (c.movies) list.push(...c.movies);
-          });
+        const resp = await fetch('https://mumowatch.ai.studio/dashboard');
+        if (resp.ok) {
+          d = await resp.json();
         }
-        if (list.length > 0) {
-          setMunowatchCatalog(list);
-          await set(ref(rtdb, 'munowatch/catalog'), list);
-          await logAudit('MUNOWATCH_SYNC', 'MunoWatch Catalog', `Client refreshed ${list.length} catalog releases.`, 'System Poller');
-          alert(`Successfully synced ${list.length} movies from MunoWatch!`);
-        }
-      } catch (err) {
-        alert('Sync error: ' + err.message);
+      } catch (_) {}
+
+      if (!d || (!d.movies && !d.dashboard)) {
+        try {
+          const resp = await fetch('/api/munowatch-catalog');
+          if (resp.ok) {
+            d = await resp.json();
+          }
+        } catch (_) {}
       }
+
+      if (!d) {
+        throw new Error('Unable to connect to MunoWatch server. Please check internet connection.');
+      }
+
+      let list = [];
+      const seenIds = new Set();
+
+      if (d.banner && (d.banner.id || d.banner.vid)) {
+        list.push(d.banner);
+        seenIds.add(String(d.banner.id || d.banner.vid));
+      }
+
+      if (Array.isArray(d.movies)) {
+        for (const m of d.movies) {
+          const mId = String(m.id || m.vid || '');
+          if (mId && !seenIds.has(mId)) {
+            seenIds.add(mId);
+            list.push(m);
+          }
+        }
+      }
+
+      if (Array.isArray(d.dashboard)) {
+        d.dashboard.forEach(c => {
+          if (Array.isArray(c.movies)) {
+            for (const m of c.movies) {
+              const mId = String(m.id || m.vid || '');
+              if (mId && !seenIds.has(mId)) {
+                seenIds.add(mId);
+                list.push(m);
+              }
+            }
+          }
+        });
+      }
+
+      syncedCount = list.length;
+
+      if (syncedCount > 0) {
+        setMunowatchCatalog(list);
+        setMunowatchSyncMeta({
+          count: syncedCount,
+          lastCheck: Date.now()
+        });
+
+        // Cache in Firebase Realtime Database
+        await set(ref(rtdb, 'munowatch/catalog'), list).catch(() => {});
+        await set(ref(rtdb, 'munowatch/known_movie_ids'), {
+          count: syncedCount,
+          lastCheck: Date.now(),
+          list: Array.from(seenIds)
+        }).catch(() => {});
+
+        await logAudit('MUNOWATCH_SYNC', 'MunoWatch Catalog', `Manually synced ${syncedCount} releases directly from MunoWatch.`, 'System Poller');
+
+        // Fire poller in background (safe non-blocking)
+        fetch('/api/cron-munowatch').catch(() => {});
+
+        alert(`Successfully synced ${syncedCount} movies from MunoWatch!`);
+      } else {
+        alert('Sync completed, but 0 movies were returned by MunoWatch.');
+      }
+    } catch (err) {
+      alert('MunoWatch sync notice: ' + err.message);
     } finally {
       setIsSyncingMunowatch(false);
     }
