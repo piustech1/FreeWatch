@@ -71,6 +71,22 @@ class MunowatchDatasource {
               ),
             );
 
+  /// Health check verifying MunoWatch API is active and responsive
+  Future<bool> isHealthy() async {
+    if (_cachedMovies != null && _cachedMovies!.isNotEmpty) return true;
+    try {
+      final response = await _fallbackDio.get('/dashboard').timeout(const Duration(seconds: 4));
+      return response.statusCode == 200 && response.data is Map;
+    } catch (_) {
+      try {
+        final response = await _dio.get('/dashboard').timeout(const Duration(seconds: 4));
+        return response.statusCode == 200;
+      } catch (_) {
+        return false;
+      }
+    }
+  }
+
   /// Fetch all movies across all 13 MunoWatch categories
   Future<List<Movie>> getAllMovies({bool forceRefresh = false}) async {
     if (!forceRefresh &&
@@ -374,7 +390,7 @@ class MunowatchDatasource {
                       if (sCode.isNotEmpty) {
                         epMap['series_code'] = sCode;
                       }
-                      final movie = _mapToMovie(epMap);
+                      final movie = _mapToMovie(epMap, defaultCategory: q);
                       if (!resultsMap.containsKey(movie.id)) {
                         resultsMap[movie.id] = movie;
                         _knownMoviesMap[movie.id] = movie;
@@ -388,7 +404,7 @@ class MunowatchDatasource {
           if (dataMap['movies'] is List) {
             for (final item in dataMap['movies'] as List) {
               if (item is Map) {
-                final movie = _mapToMovie(Map<String, dynamic>.from(item));
+                final movie = _mapToMovie(Map<String, dynamic>.from(item), defaultCategory: q);
                 if (!resultsMap.containsKey(movie.id)) {
                   resultsMap[movie.id] = movie;
                   _knownMoviesMap[movie.id] = movie;
@@ -399,7 +415,7 @@ class MunowatchDatasource {
         } else if (response.data is List) {
           for (final item in response.data as List) {
             if (item is Map) {
-              final movie = _mapToMovie(Map<String, dynamic>.from(item));
+              final movie = _mapToMovie(Map<String, dynamic>.from(item), defaultCategory: q);
               if (!resultsMap.containsKey(movie.id)) {
                 resultsMap[movie.id] = movie;
                 _knownMoviesMap[movie.id] = movie;
@@ -579,10 +595,15 @@ class MunowatchDatasource {
     final String cleanTitle =
         rawTitle.replaceAll(RegExp(r'\s+'), ' ').trim();
 
+    final dynamic rawCatId = json['category_id'] ?? json['categoryId'];
+    final int? catId = rawCatId is int
+        ? rawCatId
+        : int.tryParse(rawCatId?.toString() ?? '');
+
     final String category = (json['category'] ?? defaultCategory).toString();
 
-    // Map category name to TMDB genre IDs
-    final genreMapping = _mapCategoryToGenres(category);
+    // Map category name and numeric ID to TMDB genre IDs
+    final genreMapping = _mapCategoryToGenres(category, categoryId: catId);
 
     final String? image = (json['thumbnail'] ?? json['image'])?.toString();
     final String? playingUrl =
@@ -608,12 +629,15 @@ class MunowatchDatasource {
 
     final String? seriesCode = (json['series_code'] ?? json['seriesCode'])?.toString().trim();
 
-    final bool isTvShow = (category.toLowerCase().contains('series')) ||
-        (seriesCode != null && seriesCode.isNotEmpty && seriesCode != '0' && seriesCode != json['id']?.toString()) ||
+    final int epCount = json['episodes'] is List ? (json['episodes'] as List).length : 1;
+    final bool hasExplicitSeasonOrEp =
         cleanTitle.toLowerCase().contains('season') ||
-        cleanTitle.toLowerCase().contains('series') ||
         cleanTitle.toLowerCase().contains('eps ') ||
         RegExp(r'\b(?:s\d{1,2}|ep?\s*\d+)\b', caseSensitive: false).hasMatch(cleanTitle);
+
+    final bool isTvShow = (category.toLowerCase().contains('series')) ||
+        hasExplicitSeasonOrEp ||
+        (epCount > 1 && seriesCode != null && seriesCode.isNotEmpty && seriesCode != '0' && seriesCode != json['id']?.toString());
 
     return Movie(
       id: id,
@@ -634,29 +658,75 @@ class MunowatchDatasource {
     );
   }
 
-  /// Helper to map category names to TMDB genre IDs and names
-  _GenreData _mapCategoryToGenres(String category) {
+  /// Helper to map category names and MunoWatch numeric category IDs to TMDB genre IDs and names
+  _GenreData _mapCategoryToGenres(String category, {int? categoryId}) {
+    if (categoryId != null) {
+      switch (categoryId) {
+        case 8:
+          return const _GenreData([18], ['Drama']);
+        case 10:
+          return const _GenreData([27], ['Horror']);
+        case 3:
+          return const _GenreData([10749], ['Romance']);
+        case 5:
+          return const _GenreData([28], ['Action']);
+        case 9:
+          return const _GenreData([878], ['Science Fiction']);
+        case 1:
+          return const _GenreData([28, 53], ['Action', 'Thriller']);
+        case 2:
+          return const _GenreData([878, 14], ['Science Fiction', 'Fantasy']);
+        case 14:
+          return const _GenreData([27, 53], ['Horror', 'Thriller']);
+        case 15:
+          return const _GenreData([18, 10749], ['Drama', 'Romance']);
+        case 16:
+          return const _GenreData([16], ['Animation']);
+        case 20:
+          return const _GenreData([10751, 16], ['Family', 'Animation']);
+        case 25:
+          return const _GenreData([], ['Ugandan']);
+      }
+    }
     final lower = category.toLowerCase();
     if (lower.contains('action')) {
       return const _GenreData([28], ['Action']);
     } else if (lower.contains('sci') || lower.contains('fiction')) {
       return const _GenreData([878], ['Science Fiction']);
-    } else if (lower.contains('romance')) {
+    } else if (lower.contains('romance') || lower.contains('love')) {
       return const _GenreData([10749], ['Romance']);
     } else if (lower.contains('horror')) {
       return const _GenreData([27], ['Horror']);
-    } else if (lower.contains('drama')) {
+    } else if (lower.contains('drama') || lower.contains('story') || lower.contains('life')) {
       return const _GenreData([18], ['Drama']);
-    } else if (lower.contains('animation') || lower.contains('anime')) {
+    } else if (lower.contains('animation') || lower.contains('anime') || lower.contains('cartoon') ||
+               lower.contains('panda') || lower.contains('sonic') || lower.contains('mario') ||
+               lower.contains('shrek') || lower.contains('frozen') || lower.contains('minion')) {
       return const _GenreData([16], ['Animation']);
+    } else if (lower.contains('family') || lower.contains('kids') || lower.contains('wonka') || lower.contains('narnia')) {
+      return const _GenreData([10751], ['Family']);
     } else if (lower.contains('comedy')) {
       return const _GenreData([35], ['Comedy']);
     } else if (lower.contains('thriller')) {
       return const _GenreData([53], ['Thriller']);
     } else if (lower.contains('adventure')) {
       return const _GenreData([12], ['Adventure']);
-    } else if (lower.contains('family')) {
-      return const _GenreData([10751], ['Family']);
+    } else if (lower.contains('crime')) {
+      return const _GenreData([80], ['Crime']);
+    } else if (lower.contains('fantasy')) {
+      return const _GenreData([14], ['Fantasy']);
+    } else if (lower.contains('korean')) {
+      return const _GenreData([], ['Korean']);
+    } else if (lower.contains('filipino')) {
+      return const _GenreData([], ['Filipino']);
+    } else if (lower.contains('indian')) {
+      return const _GenreData([], ['Indian']);
+    } else if (lower.contains('chinese')) {
+      return const _GenreData([], ['Chinese']);
+    } else if (lower.contains('ugandan')) {
+      return const _GenreData([], ['Ugandan']);
+    } else if (lower.contains('kungu') || lower.contains('kung fu') || lower.contains('martial')) {
+      return const _GenreData([28], ['Kungu Fu', 'Action']);
     }
     return const _GenreData([28, 12], ['Action', 'Adventure']);
   }

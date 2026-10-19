@@ -234,9 +234,9 @@ class MovieRepository {
     try {
       final List<String> targetQueries = [];
       if (genreId == 16) {
-        targetQueries.addAll(['animation', 'cartoon', 'anime', 'pixar', 'disney', 'shrek', 'panda', 'sonic', 'mario', 'minions']);
+        targetQueries.addAll(['panda', 'sonic', 'mario', 'frozen', 'shrek', 'minion', 'moana', 'zootopia', 'coco', 'encanto', 'dragon', 'lion', 'spiderman']);
       } else if (genreId == 10751) {
-        targetQueries.addAll(['family', 'kids', 'wonka', 'magic', 'dog', 'home alone', 'friend']);
+        targetQueries.addAll(['family', 'kids', 'jumanji', 'narnia', 'wonka', 'home alone', 'stuart little', 'paddington', 'magic']);
       } else if (genreId == 28) {
         targetQueries.addAll(['action', 'war', 'fighter', 'battle', 'gun', 'agent', 'dead']);
       } else if (genreId == 12) {
@@ -244,13 +244,13 @@ class MovieRepository {
       } else if (genreId == 35) {
         targetQueries.addAll(['comedy', 'funny', 'laugh', 'crazy', 'holiday', 'party']);
       } else if (genreId == 27) {
-        targetQueries.addAll(['horror', 'evil', 'ghost', 'dead', 'blood', 'fear', 'witch']);
+        targetQueries.addAll(['horror', 'evil', 'ghost', 'dead', 'blood', 'fear', 'witch', 'amityville']);
       } else if (genreId == 10749) {
         targetQueries.addAll(['love', 'romance', 'heart', 'marry', 'wedding', 'kiss', 'girl']);
       } else if (genreId == 878) {
         targetQueries.addAll(['sci-fi', 'alien', 'planet', 'future', 'robot', 'space', 'star']);
       } else if (genreId == 18) {
-        targetQueries.addAll(['drama', 'story', 'life', 'secret', 'truth', 'family']);
+        targetQueries.addAll(['drama', 'love', 'life', 'story', 'secret', 'truth', 'heart', 'tears', 'promise', 'woman']);
       } else if (genreId == 80) {
         targetQueries.addAll(['crime', 'cop', 'police', 'heist', 'kill', 'robber']);
       } else if (genreId == 53) {
@@ -276,79 +276,82 @@ class MovieRepository {
       }
     } catch (_) {}
 
-    // ── Resilient MovieMax RTDB Fallback (Guarantees rich catalogs for Drama, Animation, Family, Horror) ──
-    if (matched.length < 15) {
-      try {
-        final movieMaxList = await _movieMax.getAllMovies();
-        for (final m in movieMaxList) {
-          if (genreId == 16 && _isNonAnimatedLiveAction(m.title)) continue;
-          final hasId = m.genreIds.contains(genreId);
-          final hasName = m.genreNames.any((g) =>
-              g.toLowerCase().contains(genreName.toLowerCase()) ||
-              genreName.toLowerCase().contains(g.toLowerCase()));
+    // If MunoWatch provided movies, return them exclusively (Zero Hybrid Mixing)
+    if (matched.isNotEmpty) {
+      return _paginate(matched, page, pageSize: pageSize);
+    }
 
-          bool keywordMatch = false;
-          final lowerTitle = m.title.toLowerCase();
-          if (genreId == 16) {
-            keywordMatch = lowerTitle.contains('panda') ||
-                lowerTitle.contains('dragon') ||
-                lowerTitle.contains('sonic') ||
-                lowerTitle.contains('mario') ||
-                lowerTitle.contains('lion king') ||
-                lowerTitle.contains('shrek') ||
-                lowerTitle.contains('frozen') ||
-                lowerTitle.contains('minion') ||
-                lowerTitle.contains('toy story') ||
-                lowerTitle.contains('anime') ||
-                lowerTitle.contains('naruto') ||
-                lowerTitle.contains('demon slayer') ||
-                lowerTitle.contains('jujutsu') ||
-                lowerTitle.contains('spider-verse') ||
-                lowerTitle.contains('moana') ||
-                lowerTitle.contains('zootopia') ||
-                lowerTitle.contains('coco') ||
-                lowerTitle.contains('encanto') ||
-                lowerTitle.contains('madagascar') ||
-                lowerTitle.contains('ice age') ||
-                lowerTitle.contains('incredibles');
-          } else if (genreId == 10751) {
-            keywordMatch = lowerTitle.contains('home alone') ||
-                lowerTitle.contains('wonka') ||
-                lowerTitle.contains('charlie and the chocolate factory') ||
-                lowerTitle.contains('paddington') ||
-                lowerTitle.contains('night at the museum') ||
-                lowerTitle.contains('jumanji') ||
-                lowerTitle.contains('narnia') ||
-                lowerTitle.contains('alvin and the chipmunks') ||
-                lowerTitle.contains('stuart little');
-          } else if (genreId == 27) {
-            keywordMatch = lowerTitle.contains('horror') ||
-                lowerTitle.contains('conjuring') ||
-                lowerTitle.contains('insidious') ||
-                lowerTitle.contains('annabelle') ||
-                lowerTitle.contains('evil dead') ||
-                lowerTitle.contains('saw') ||
-                lowerTitle.contains('nun') ||
-                lowerTitle.contains('exorcist') ||
-                lowerTitle.contains('halloween') ||
-                lowerTitle.contains('scream') ||
-                lowerTitle.contains('ghost') ||
-                lowerTitle.contains('dead');
-          } else if (genreId == 18) {
-            keywordMatch = m.genreNames.any((g) => g.toLowerCase().contains('drama'));
-          }
+    // ── Complete MovieMax RTDB Disaster Failover (ONLY when MunoWatch fails completely) ──
+    try {
+      final movieMaxList = await _movieMax.getAllMovies();
+      for (final m in movieMaxList) {
+        if (genreId == 16 && _isNonAnimatedLiveAction(m.title)) continue;
+        final hasId = m.genreIds.contains(genreId);
+        final hasName = m.genreNames.any((g) =>
+            g.toLowerCase().contains(genreName.toLowerCase()) ||
+            genreName.toLowerCase().contains(g.toLowerCase()));
 
-          if (hasId || hasName || keywordMatch) {
-            if (seenIds.add(m.id)) {
-              matched.add(m.copyWith(
-                genreIds: [genreId, ...m.genreIds],
-                genreNames: [genreName, ...m.genreNames],
-              ));
-            }
+        bool keywordMatch = false;
+        final lowerTitle = m.title.toLowerCase();
+        if (genreId == 16) {
+          keywordMatch = lowerTitle.contains('panda') ||
+              lowerTitle.contains('dragon') ||
+              lowerTitle.contains('sonic') ||
+              lowerTitle.contains('mario') ||
+              lowerTitle.contains('lion king') ||
+              lowerTitle.contains('shrek') ||
+              lowerTitle.contains('frozen') ||
+              lowerTitle.contains('minion') ||
+              lowerTitle.contains('toy story') ||
+              lowerTitle.contains('anime') ||
+              lowerTitle.contains('naruto') ||
+              lowerTitle.contains('demon slayer') ||
+              lowerTitle.contains('jujutsu') ||
+              lowerTitle.contains('spider-verse') ||
+              lowerTitle.contains('moana') ||
+              lowerTitle.contains('zootopia') ||
+              lowerTitle.contains('coco') ||
+              lowerTitle.contains('encanto') ||
+              lowerTitle.contains('madagascar') ||
+              lowerTitle.contains('ice age') ||
+              lowerTitle.contains('incredibles');
+        } else if (genreId == 10751) {
+          keywordMatch = lowerTitle.contains('home alone') ||
+              lowerTitle.contains('wonka') ||
+              lowerTitle.contains('charlie and the chocolate factory') ||
+              lowerTitle.contains('paddington') ||
+              lowerTitle.contains('night at the museum') ||
+              lowerTitle.contains('jumanji') ||
+              lowerTitle.contains('narnia') ||
+              lowerTitle.contains('alvin and the chipmunks') ||
+              lowerTitle.contains('stuart little');
+        } else if (genreId == 27) {
+          keywordMatch = lowerTitle.contains('horror') ||
+              lowerTitle.contains('conjuring') ||
+              lowerTitle.contains('insidious') ||
+              lowerTitle.contains('annabelle') ||
+              lowerTitle.contains('evil dead') ||
+              lowerTitle.contains('saw') ||
+              lowerTitle.contains('nun') ||
+              lowerTitle.contains('exorcist') ||
+              lowerTitle.contains('halloween') ||
+              lowerTitle.contains('scream') ||
+              lowerTitle.contains('ghost') ||
+              lowerTitle.contains('dead');
+        } else if (genreId == 18) {
+          keywordMatch = m.genreNames.any((g) => g.toLowerCase().contains('drama'));
+        }
+
+        if (hasId || hasName || keywordMatch) {
+          if (seenIds.add(m.id)) {
+            matched.add(m.copyWith(
+              genreIds: [genreId, ...m.genreIds],
+              genreNames: [genreName, ...m.genreNames],
+            ));
           }
         }
-      } catch (_) {}
-    }
+      }
+    } catch (_) {}
 
     if (matched.isNotEmpty) {
       return _paginate(matched, page, pageSize: pageSize);
@@ -377,9 +380,45 @@ class MovieRepository {
       }
     } catch (_) {}
 
-    // 2. In-memory tokenized word matching across full catalog & MovieMax series (resilient fallback/supplement)
+    // 2. In-memory tokenized word matching across active MunoWatch catalog
     try {
       final movies = await _getAllLugandaMovies();
+      final qTokens = cleanQuery
+          .replaceAll(RegExp(r'[^a-zA-Z0-9\s]'), ' ')
+          .toLowerCase()
+          .split(RegExp(r'\s+'))
+          .where((t) => t.isNotEmpty)
+          .toList();
+
+      final localMatches = movies.where((m) {
+        if (seenIds.contains(m.id)) return false;
+        final title = m.title.toLowerCase();
+        final overview = (m.overview ?? '').toLowerCase();
+        final vj = (m.vjName ?? '').toLowerCase();
+        final combined = '$title $overview $vj';
+
+        if (combined.contains(cleanQuery)) return true;
+        if (qTokens.isNotEmpty && qTokens.every((t) => combined.contains(t))) {
+          return true;
+        }
+        return false;
+      });
+
+      for (final m in localMatches) {
+        if (seenIds.add(m.id)) {
+          combinedResults.add(m);
+        }
+      }
+    } catch (_) {}
+
+    // If MunoWatch live search or catalog returned results, return them exclusively (Zero Hybrid Mixing)
+    if (combinedResults.isNotEmpty) {
+      return _paginate(combinedResults, page, pageSize: 30);
+    }
+
+    // 3. Emergency Disaster-Recovery search across MovieMax (ONLY if MunoWatch fails completely)
+    try {
+      final movies = await _movieMax.getAllMovies();
       final series = await _movieMax.getAllSeries();
       final allCatalog = [...movies, ...series];
 
@@ -988,71 +1027,74 @@ class MovieRepository {
       }
     } catch (_) {}
 
-    // 3. MovieMax RTDB deep enrichment for regional and niche categories
-    if (matched.length < 15) {
-      try {
-        final movieMaxList = await _movieMax.getAllMovies();
-        for (final m in movieMaxList) {
-          if (tmdbId == 16 && _isNonAnimatedLiveAction(m.title)) continue;
-          final lower = m.title.toLowerCase();
-          final overview = m.overview?.toLowerCase() ?? '';
+    // If MunoWatch matched any movies, return them exclusively (Zero Hybrid Mixing)
+    if (matched.isNotEmpty) {
+      return _paginate(matched, page, pageSize: pageSize);
+    }
 
-          bool isRegionalOrGenreMatch = false;
-          if (clean.contains('korean')) {
-            isRegionalOrGenreMatch = lower.contains('korean') ||
-                lower.contains('korea') ||
-                lower.contains('seoul') ||
-                overview.contains('korea') ||
-                m.genreNames.any((g) => g.toLowerCase().contains('korean'));
-          } else if (clean.contains('filipino')) {
-            isRegionalOrGenreMatch = lower.contains('filipino') ||
-                lower.contains('philippines') ||
-                lower.contains('tagalog') ||
-                lower.contains('pinoy') ||
-                overview.contains('philippines') ||
-                m.genreNames.any((g) => g.toLowerCase().contains('filipino'));
-          } else if (clean.contains('indian')) {
-            isRegionalOrGenreMatch = lower.contains('indian') ||
-                lower.contains('india') ||
-                lower.contains('bollywood') ||
-                lower.contains('hindi') ||
-                lower.contains('tamil') ||
-                overview.contains('india') ||
-                m.genreNames.any((g) => g.toLowerCase().contains('indian'));
-          } else if (clean.contains('chinese')) {
-            isRegionalOrGenreMatch = lower.contains('chinese') ||
-                lower.contains('china') ||
-                lower.contains('mandarin') ||
-                lower.contains('hong kong') ||
-                overview.contains('china') ||
-                m.genreNames.any((g) => g.toLowerCase().contains('chinese'));
-          } else if (clean.contains('ugandan')) {
-            isRegionalOrGenreMatch = (m.vjName != null && m.vjName!.trim().isNotEmpty) ||
-                lower.contains('uganda') ||
-                lower.contains('kampala') ||
-                lower.contains('kadama');
-          } else if (clean.contains('kungu') || clean.contains('martial')) {
-            isRegionalOrGenreMatch = lower.contains('kung fu') ||
-                lower.contains('kungu') ||
-                lower.contains('shaolin') ||
-                lower.contains('karate') ||
-                lower.contains('martial') ||
-                lower.contains('ip man');
-          } else if (tmdbId != null) {
-            isRegionalOrGenreMatch = m.genreIds.contains(tmdbId) ||
-                m.genreNames.any((g) => g.toLowerCase().contains(clean));
-          } else {
-            isRegionalOrGenreMatch = queries.any((q) => lower.contains(q) || overview.contains(q));
-          }
+    // ── Complete MovieMax RTDB Disaster Failover (ONLY when MunoWatch fails completely) ──
+    try {
+      final movieMaxList = await _movieMax.getAllMovies();
+      for (final m in movieMaxList) {
+        if (tmdbId == 16 && _isNonAnimatedLiveAction(m.title)) continue;
+        final lower = m.title.toLowerCase();
+        final overview = m.overview?.toLowerCase() ?? '';
 
-          if (isRegionalOrGenreMatch) {
-            if (seenIds.add(m.id)) {
-              matched.add(m.copyWith(genreNames: [genreName, ...m.genreNames]));
-            }
+        bool isRegionalOrGenreMatch = false;
+        if (clean.contains('korean')) {
+          isRegionalOrGenreMatch = lower.contains('korean') ||
+              lower.contains('korea') ||
+              lower.contains('seoul') ||
+              overview.contains('korea') ||
+              m.genreNames.any((g) => g.toLowerCase().contains('korean'));
+        } else if (clean.contains('filipino')) {
+          isRegionalOrGenreMatch = lower.contains('filipino') ||
+              lower.contains('philippines') ||
+              lower.contains('tagalog') ||
+              lower.contains('pinoy') ||
+              overview.contains('philippines') ||
+              m.genreNames.any((g) => g.toLowerCase().contains('filipino'));
+        } else if (clean.contains('indian')) {
+          isRegionalOrGenreMatch = lower.contains('indian') ||
+              lower.contains('india') ||
+              lower.contains('bollywood') ||
+              lower.contains('hindi') ||
+              lower.contains('tamil') ||
+              overview.contains('india') ||
+              m.genreNames.any((g) => g.toLowerCase().contains('indian'));
+        } else if (clean.contains('chinese')) {
+          isRegionalOrGenreMatch = lower.contains('chinese') ||
+              lower.contains('china') ||
+              lower.contains('mandarin') ||
+              lower.contains('hong kong') ||
+              overview.contains('china') ||
+              m.genreNames.any((g) => g.toLowerCase().contains('chinese'));
+        } else if (clean.contains('ugandan')) {
+          isRegionalOrGenreMatch = (m.vjName != null && m.vjName!.trim().isNotEmpty) ||
+              lower.contains('uganda') ||
+              lower.contains('kampala') ||
+              lower.contains('kadama');
+        } else if (clean.contains('kungu') || clean.contains('martial')) {
+          isRegionalOrGenreMatch = lower.contains('kung fu') ||
+              lower.contains('kungu') ||
+              lower.contains('shaolin') ||
+              lower.contains('karate') ||
+              lower.contains('martial') ||
+              lower.contains('ip man');
+        } else if (tmdbId != null) {
+          isRegionalOrGenreMatch = m.genreIds.contains(tmdbId) ||
+              m.genreNames.any((g) => g.toLowerCase().contains(clean));
+        } else {
+          isRegionalOrGenreMatch = queries.any((q) => lower.contains(q) || overview.contains(q));
+        }
+
+        if (isRegionalOrGenreMatch) {
+          if (seenIds.add(m.id)) {
+            matched.add(m.copyWith(genreNames: [genreName, ...m.genreNames]));
           }
         }
-      } catch (_) {}
-    }
+      }
+    } catch (_) {}
 
     if (matched.isNotEmpty) {
       return _paginate(matched, page, pageSize: pageSize);

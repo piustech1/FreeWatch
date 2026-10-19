@@ -237,11 +237,11 @@ export default function App() {
   // In-App Update Banner Remote Controller State
   const [updateConfig, setUpdateConfig] = useState({
     show_banner: true,
-    latest_version: '1.0.62',
-    latest_build: 63,
+    latest_version: '1.0.63',
+    latest_build: 64,
     store_url: 'https://freewatchug.online/',
-    direct_apk_url: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.62/FreeWatch-release.apk',
-    release_notes: '• In-App Account Review & Appeals: WhatsApp-styled appeal process to submit and track account status\n• Instant Live Support Chat Alerts: Receive prompt notifications the moment a support moderator responds\n• Permanent Offline Storage: Downloaded items persist safely across sign-outs and guest sessions\n• Smart Automated Update Checker: Dynamically verifies installed version to eliminate false prompts\n• Refined UI & Performance: Faster screen transitions and improved dark/light theme switching',
+    direct_apk_url: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.63/FreeWatch-release.apk',
+    release_notes: '• Enhanced Category Browsing: Rich catalog population for Drama, Animation, and Family\n• In-App Account Review & Appeals: WhatsApp-styled appeal process to submit and track account status\n• Instant Live Support Chat Alerts: Receive prompt notifications the moment a support moderator responds\n• Permanent Offline Storage: Downloaded items persist safely across sign-outs and guest sessions\n• Refined UI & Performance: Faster screen transitions and improved dark/light theme switching',
     is_mandatory: false,
   });
   const [isSavingUpdateConfig, setIsSavingUpdateConfig] = useState(false);

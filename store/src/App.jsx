@@ -97,16 +97,16 @@ export default function App() {
 
   // Dynamic Release Config - Mobile Application Features Only
   const [releaseInfo, setReleaseInfo] = useState({
-    version: '1.0.62',
-    buildNumber: 63,
+    version: '1.0.63',
+    buildNumber: 64,
     size: '110.5 MB',
     releaseDate: formatReleaseDate(Date.now()),
-    apkUrl: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.62/FreeWatch-release.apk',
+    apkUrl: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.63/FreeWatch-release.apk',
     notes: [
+      'Enhanced Category Browsing: Instant catalog population for Drama, Animation, and Family with rich metadata.',
       'In-App Account Review & Appeals: WhatsApp-styled appeal process to submit and track account status with instant unban restoration.',
       'Instant Live Support Chat Alerts: Receive prompt notifications the moment a support moderator responds, with 1-tap jump to chat.',
       'Permanent Offline Storage: Downloaded items persist safely across sign-outs, guest sessions, and cache resets.',
-      'Smart Automated Update Checker: Dynamically verifies installed version to eliminate false update prompts.',
       'Refined UI & Performance: Faster screen transitions, enhanced theme customization, and smoother navigation.'
     ]
   });
@@ -114,13 +114,18 @@ export default function App() {
   // Dynamic Version History List
   const [historyReleases, setHistoryReleases] = useState([
     {
-      version: '1.0.62',
+      version: '1.0.63',
       date: 'Latest',
+      notes: 'Enhanced category browsing for Drama, Animation, and Family, optimized catalog performance, and smoother playback.'
+    },
+    {
+      version: '1.0.62',
+      date: '1d ago',
       notes: 'Deep category catalog restoration, resilient failover streaming, and smooth loading transitions.'
     },
     {
       version: '1.0.61',
-      date: '1d ago',
+      date: '2d ago',
       notes: 'Optimized high-speed catalog streaming, resilient multi-server failover, and improved cloud sync reliability.'
     },
     {

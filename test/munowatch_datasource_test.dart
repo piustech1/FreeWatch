@@ -71,5 +71,24 @@ void main() {
       final episodes = await repo.getTvSeasonEpisodes(1, 1, seriesTitle: 'Wednesday');
       expect(episodes, isA<List>());
     });
+
+    test('MunowatchDatasource isHealthy check operates reliably', () async {
+      final healthy = await munowatchDatasource.isHealthy();
+      expect(healthy, isA<bool>());
+    });
+
+    test('MovieRepository getMoviesByGenre fetches rich lists for Drama, Animation, and Family', () async {
+      final drama = await repo.getMoviesByGenre(18); // Drama
+      expect(drama, isNotEmpty);
+      expect(drama.first.title, isNotEmpty);
+
+      final animation = await repo.getMoviesByGenre(16); // Animation
+      expect(animation, isNotEmpty);
+      expect(animation.first.title, isNotEmpty);
+
+      final family = await repo.getMoviesByGenre(10751); // Family
+      expect(family, isNotEmpty);
+      expect(family.first.title, isNotEmpty);
+    });
   });
 }

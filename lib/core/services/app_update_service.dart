@@ -30,9 +30,9 @@ class AppUpdateService {
   factory AppUpdateService() => _instance;
   AppUpdateService._internal();
 
-  // Fallback defaults matching current pubspec version 1.0.62+63
-  static const int defaultBuildNumber = 63;
-  static const String defaultVersionName = '1.0.62';
+  // Fallback defaults matching current pubspec version 1.0.63+64
+  static const int defaultBuildNumber = 64;
+  static const String defaultVersionName = '1.0.63';
   static const String defaultStoreListingUrl = 'https://freewatchug.online';
 
   /// Strictly determines if [remoteVersion] or [remoteBuild] is newer than the locally installed app
