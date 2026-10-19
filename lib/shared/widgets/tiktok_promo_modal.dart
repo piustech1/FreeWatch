@@ -1,15 +1,17 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/api_constants.dart';
 import 'app_toast.dart';
 
 /// Modal dialog presenting the FreeWatch TikTok Community Banner.
 ///
-/// Displayed:
-/// 1. Once per session upon launching the app (home screen).
-/// 2. Prior to starting movie/episode playback.
-/// 3. At 50% and 75% video progress as playback intermissions.
+/// Features:
+/// 1. Persistent click detection: If the user ever clicked the Join button,
+///    the banner is marked in SharedPreferences and NEVER shown again.
+/// 2. Graceful delay: If the user hasn't joined, enforces a minimum 6-minute
+///    cooldown between prompts and a 4-second initial home screen delay.
 class TiktokPromoModal extends StatelessWidget {
   final VoidCallback? onDismiss;
 
@@ -18,24 +20,61 @@ class TiktokPromoModal extends StatelessWidget {
     this.onDismiss,
   });
 
+  static const String _prefHasClickedJoin = 'has_clicked_join_community_v1';
   static bool _sessionShown = false;
+  static DateTime? _lastModalShownTime;
+  static const Duration minIntervalBetweenModals = Duration(minutes: 6);
 
-  /// Shows the promo banner once per user session.
+  /// Checks if the user has previously tapped the Join button
+  static Future<bool> hasJoinedCommunity() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getBool(_prefHasClickedJoin) ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Records that the user tapped the Join button and was redirected
+  static Future<void> markCommunityJoined() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_prefHasClickedJoin, true);
+    } catch (_) {}
+  }
+
+  /// Shows the promo banner once per user session with a graceful initial delay.
   static void showOncePerSession(BuildContext context) {
     if (_sessionShown) return;
     _sessionShown = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (context.mounted) {
-        show(context);
-      }
+    Future.delayed(const Duration(seconds: 4), () async {
+      if (!context.mounted) return;
+      if (await hasJoinedCommunity()) return;
+      if (!context.mounted) return;
+      show(context);
     });
   }
 
-  /// Displays the TikTok promo dialog.
+  /// Displays the TikTok promo dialog if not already joined and cooldown passed.
   static Future<void> show(
     BuildContext context, {
     VoidCallback? onDismiss,
+    bool force = false,
   }) async {
+    if (await hasJoinedCommunity()) {
+      onDismiss?.call();
+      return;
+    }
+    if (!force && _lastModalShownTime != null) {
+      final elapsed = DateTime.now().difference(_lastModalShownTime!);
+      if (elapsed < minIntervalBetweenModals) {
+        onDismiss?.call();
+        return;
+      }
+    }
+    _lastModalShownTime = DateTime.now();
+
+    if (!context.mounted) return;
     await showDialog(
       context: context,
       barrierDismissible: true,
@@ -46,9 +85,13 @@ class TiktokPromoModal extends StatelessWidget {
   }
 
   Future<void> _openTiktok(BuildContext context) async {
+    await markCommunityJoined();
     final uri = Uri.parse(ApiConstants.tiktokUrl);
     try {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (context.mounted && Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
     } catch (_) {
       if (context.mounted) {
         AppToast.show(

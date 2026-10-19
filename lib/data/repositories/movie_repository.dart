@@ -47,10 +47,10 @@ class MovieRepository {
       }
     } catch (_) {}
 
-    return MockData.getAllMovies();
+    return const <Movie>[];
   }
 
-  // ── 1. Trending / Hero Banner Movies (Populated with MovieMax Latest) ──────
+  // ── 1. Trending / Hero Banner Movies (Populated with MunoWatch / MovieMax) ─
   Future<List<Movie>> getTrending({int page = 1}) async {
     try {
       final all = await _getAllLugandaMovies();
@@ -66,7 +66,14 @@ class MovieRepository {
       }
     } catch (_) {}
 
-    return MockData.trendingMovies;
+    try {
+      final fallback = await _movieMax.getAllMovies();
+      if (fallback.isNotEmpty) {
+        return _paginate(fallback, page, pageSize: 25);
+      }
+    } catch (_) {}
+
+    return const <Movie>[];
   }
 
   // ── 2. Popular Movies ───────────────────────────────────────────────────────
@@ -80,7 +87,14 @@ class MovieRepository {
       }
     } catch (_) {}
 
-    return MockData.popularMovies;
+    try {
+      final fallback = await _movieMax.getAllMovies();
+      if (fallback.isNotEmpty) {
+        return _paginate(fallback, page, pageSize: 25);
+      }
+    } catch (_) {}
+
+    return const <Movie>[];
   }
 
   // ── 3. Top Rated Movies ─────────────────────────────────────────────────────
@@ -94,7 +108,14 @@ class MovieRepository {
       }
     } catch (_) {}
 
-    return MockData.popularMovies;
+    try {
+      final fallback = await _movieMax.getAllMovies();
+      if (fallback.isNotEmpty) {
+        return _paginate(fallback, page, pageSize: 25);
+      }
+    } catch (_) {}
+
+    return const <Movie>[];
   }
 
   // ── 4. Now Playing / Latest Uploads ─────────────────────────────────────────
@@ -113,7 +134,14 @@ class MovieRepository {
       }
     } catch (_) {}
 
-    return MockData.newMovies;
+    try {
+      final fallback = await _movieMax.getAllMovies();
+      if (fallback.isNotEmpty) {
+        return _paginate(fallback, page, pageSize: 25);
+      }
+    } catch (_) {}
+
+    return const <Movie>[];
   }
 
   // ── 5. Upcoming Movies ──────────────────────────────────────────────────────
@@ -128,7 +156,14 @@ class MovieRepository {
       }
     } catch (_) {}
 
-    return MockData.newMovies;
+    try {
+      final fallback = await _movieMax.getAllMovies();
+      if (fallback.isNotEmpty) {
+        return _paginate(fallback, page, pageSize: 25);
+      }
+    } catch (_) {}
+
+    return const <Movie>[];
   }
 
   // ── 6. TV Series ────────────────────────────────────────────────────────────
@@ -357,9 +392,7 @@ class MovieRepository {
       return _paginate(matched, page, pageSize: pageSize);
     }
 
-    return MockData.getAllMovies()
-        .where((m) => m.genreIds.contains(genreId))
-        .toList();
+    return const <Movie>[];
   }
 
   // ── 8. Search Movies across Live MunoWatch & MovieMax Databases ────────────
@@ -454,9 +487,7 @@ class MovieRepository {
       return _paginate(combinedResults, page, pageSize: 30);
     }
 
-    return MockData.popularMovies
-        .where((m) => m.title.toLowerCase().contains(cleanQuery))
-        .toList();
+    return const <Movie>[];
   }
 
   static bool _isNonAnimatedLiveAction(String title) {
@@ -504,7 +535,6 @@ class MovieRepository {
   /// Returns all movies translated by a specific VJ directly from MunoWatch
   Future<List<Movie>> getMoviesByVj(dynamic vjOrId) async {
     final String rawName = vjOrId is Vj ? vjOrId.name : vjOrId.toString();
-    final String vjId = vjOrId is Vj ? vjOrId.id : vjOrId.toString();
     final cleanVjTarget = normalizeVjName(rawName);
 
     // Fast-path: Check in-memory VJ cache
@@ -532,31 +562,9 @@ class MovieRepository {
     // Check translatedMovieIds if Vj object was passed
     if (vjOrId is Vj && vjOrId.translatedMovieIds.isNotEmpty) {
       try {
-        final allMockAndDashboard = [
-          ...await _getAllLugandaMovies(),
-          ...MockData.getAllMovies(),
-        ];
-        for (final m in allMockAndDashboard) {
+        final allCatalog = await _getAllLugandaMovies();
+        for (final m in allCatalog) {
           if (vjOrId.translatedMovieIds.contains(m.id)) {
-            if (seenIds.add(m.id)) {
-              matching.add(m.copyWith(vjName: rawName));
-            }
-          }
-        }
-      } catch (_) {}
-    }
-
-    // Check MockData by VJ ID or normalized name
-    if (matching.isEmpty) {
-      try {
-        final mockVj = MockData.vjs.where((v) =>
-          v.id.toLowerCase() == vjId.toLowerCase() ||
-          normalizeVjName(v.name) == cleanVjTarget ||
-          v.name.toLowerCase() == rawName.toLowerCase()
-        ).firstOrNull;
-        if (mockVj != null) {
-          final mockList = MockData.getMoviesByVj(mockVj.id);
-          for (final m in mockList) {
             if (seenIds.add(m.id)) {
               matching.add(m.copyWith(vjName: rawName));
             }
@@ -1132,14 +1140,6 @@ class MovieRepository {
           }
         } catch (_) {}
       }
-    }
-    if (lugandaMovie == null || lugandaMovie.title.trim().isEmpty) {
-      try {
-        lugandaMovie = MockData.trendingMovies
-            .followedBy(MockData.newMovies)
-            .followedBy(MockData.popularMovies)
-            .firstWhere((m) => m.id == movieId);
-      } catch (_) {}
     }
 
     // 2. Resolve VOD stream URL and full metadata

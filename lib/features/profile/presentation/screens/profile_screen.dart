@@ -21,6 +21,7 @@ import '../../../movie_grid/presentation/screens/movie_grid_screen.dart';
 import '../providers/user_profile_provider.dart';
 import '../providers/watch_history_provider.dart';
 import '../../../chat/presentation/screens/developer_chat_screen.dart';
+import '../../../../shared/widgets/tiktok_promo_modal.dart';
 
 /// Pure iOS Glassmorphic Profile Screen:
 /// - Pitch black background (AppColors.background)
@@ -527,6 +528,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           const SizedBox(width: 12),
           GestureDetector(
             onTap: () async {
+              await TiktokPromoModal.markCommunityJoined();
               final uri = Uri.parse(ApiConstants.tiktokUrl);
               try {
                 await launchUrl(uri, mode: LaunchMode.externalApplication);

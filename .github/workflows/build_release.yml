@@ -98,17 +98,16 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Sync Release to Firebase RTDB for Store Listing & In-App Updates
+      - name: Sync Release & Broadcast Update Notification
         if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: |
           VERSION="${{ steps.app_version.outputs.version }}"
           BUILD="${{ steps.app_version.outputs.build }}"
           TAG="${{ steps.app_version.outputs.tag }}"
           APK_URL="https://github.com/piustech1/FreeWatch/releases/download/$TAG/FreeWatch-release.apk"
-          TIMESTAMP=$(python3 -c 'import time; print(int(time.time()*1000))')
-          NOTES="• Enhanced Streaming Stability: High-speed stream playback optimization with automatic protocol failover.\n• Rich Category Depth: Deep catalogs across Drama, Animation, Family, Horror, and regional genres.\n• Smooth Skeleton Shimmer Loaders: Beautiful transitions when browsing extensive movie collections.\n• Full-Screen Rocket Update Screen: Seamless update prompt directly linking to official store releases.\n• Permanent Offline Storage: Robust storage persistence keeping downloaded content safe across sessions."
-          echo "Syncing version $VERSION ($BUILD) to Firebase RTDB at $TIMESTAMP..."
-          curl -s -X PATCH -H "Content-Type: application/json" \
-            -d "{\"latest_version\":\"$VERSION\",\"latest_build\":$BUILD,\"direct_apk_url\":\"$APK_URL\",\"updated_at\":$TIMESTAMP,\"release_notes\":\"$NOTES\"}" \
-            "https://freewatch-a0bc7-default-rtdb.firebaseio.com/app_config/update.json"
-          echo "Firebase RTDB sync complete."
+          echo "Broadcasting update for version $VERSION ($BUILD)..."
+          cd scripts && (npm ci || npm install) && cd ..
+          node scripts/notify_app_update.js "$VERSION" "$BUILD" "$APK_URL"
+          echo "Update sync and notification broadcast complete."

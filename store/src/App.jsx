@@ -97,36 +97,36 @@ export default function App() {
 
   // Dynamic Release Config - Mobile Application Features Only
   const [releaseInfo, setReleaseInfo] = useState({
-    version: '1.0.63',
-    buildNumber: 64,
+    version: '1.0.64',
+    buildNumber: 65,
     size: '110.5 MB',
     releaseDate: formatReleaseDate(Date.now()),
-    apkUrl: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.63/FreeWatch-release.apk',
+    apkUrl: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.64/FreeWatch-release.apk',
     notes: [
-      'Enhanced Category Browsing: Instant catalog population for Drama, Animation, and Family with rich metadata.',
+      'Smart Delay & Community Banner Persistence: Community banner remembers user interaction and never interrupts once joined.',
+      'VOD Catalog Depth: Real-time Luganda movie catalog with rich titles, VJ translations, and high-speed streaming.',
       'In-App Account Review & Appeals: WhatsApp-styled appeal process to submit and track account status with instant unban restoration.',
       'Instant Live Support Chat Alerts: Receive prompt notifications the moment a support moderator responds, with 1-tap jump to chat.',
-      'Permanent Offline Storage: Downloaded items persist safely across sign-outs, guest sessions, and cache resets.',
-      'Refined UI & Performance: Faster screen transitions, enhanced theme customization, and smoother navigation.'
+      'Permanent Offline Storage: Downloaded items persist safely across sign-outs, guest sessions, and cache resets.'
     ]
   });
 
   // Dynamic Version History List
   const [historyReleases, setHistoryReleases] = useState([
     {
-      version: '1.0.63',
+      version: '1.0.64',
       date: 'Latest',
+      notes: 'Smart community banner persistence, enhanced VOD catalog depth, automated update alert notifications, and smoother playback.'
+    },
+    {
+      version: '1.0.63',
+      date: '1d ago',
       notes: 'Enhanced category browsing for Drama, Animation, and Family, optimized catalog performance, and smoother playback.'
     },
     {
       version: '1.0.62',
-      date: '1d ago',
-      notes: 'Deep category catalog restoration, resilient failover streaming, and smooth loading transitions.'
-    },
-    {
-      version: '1.0.61',
       date: '2d ago',
-      notes: 'Optimized high-speed catalog streaming, resilient multi-server failover, and improved cloud sync reliability.'
+      notes: 'Deep category catalog restoration, resilient failover streaming, and smooth loading transitions.'
     },
     {
       version: '1.0.60',

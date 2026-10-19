@@ -2,6 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:freewatch/data/datasources/moviemax_datasource.dart';
 import 'package:freewatch/data/datasources/munowatch_datasource.dart';
 import 'package:freewatch/data/repositories/movie_repository.dart';
+import 'package:freewatch/shared/widgets/tiktok_promo_modal.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   group('MovieMax & MunoWatch Datasource Tests', () {
@@ -89,6 +91,33 @@ void main() {
       final family = await repo.getMoviesByGenre(10751); // Family
       expect(family, isNotEmpty);
       expect(family.first.title, isNotEmpty);
+    });
+
+    test('MovieRepository trending and popular do not fall back to mocked movies', () async {
+      final trending = await repo.getTrending();
+      final popular = await repo.getPopular();
+
+      // Ensure that mock IDs from MockData (e.g. 1011985 Beekeeper, 693134 Dune 2, 66732 Stranger Things)
+      // are not returned as synthetic fallback placeholders.
+      final mockTitles = {'The Beekeeper', 'Dune: Part Two', 'Stranger Things'};
+      final mockIds = {1011985, 693134, 66732};
+
+      for (final m in trending) {
+        expect(m.title, isNot(isIn(mockTitles)));
+        expect(m.id, isNot(isIn(mockIds)));
+      }
+      for (final m in popular) {
+        expect(m.title, isNot(isIn(mockTitles)));
+        expect(m.id, isNot(isIn(mockIds)));
+      }
+    });
+
+    test('TiktokPromoModal persists join status in SharedPreferences', () async {
+      SharedPreferences.setMockInitialValues({});
+      expect(await TiktokPromoModal.hasJoinedCommunity(), isFalse);
+
+      await TiktokPromoModal.markCommunityJoined();
+      expect(await TiktokPromoModal.hasJoinedCommunity(), isTrue);
     });
   });
 }

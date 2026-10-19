@@ -237,11 +237,11 @@ export default function App() {
   // In-App Update Banner Remote Controller State
   const [updateConfig, setUpdateConfig] = useState({
     show_banner: true,
-    latest_version: '1.0.63',
-    latest_build: 64,
+    latest_version: '1.0.64',
+    latest_build: 65,
     store_url: 'https://freewatchug.online/',
-    direct_apk_url: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.63/FreeWatch-release.apk',
-    release_notes: '• Enhanced Category Browsing: Rich catalog population for Drama, Animation, and Family\n• In-App Account Review & Appeals: WhatsApp-styled appeal process to submit and track account status\n• Instant Live Support Chat Alerts: Receive prompt notifications the moment a support moderator responds\n• Permanent Offline Storage: Downloaded items persist safely across sign-outs and guest sessions\n• Refined UI & Performance: Faster screen transitions and improved dark/light theme switching',
+    direct_apk_url: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.64/FreeWatch-release.apk',
+    release_notes: '• Smart Delay & Community Banner Persistence: Remembers interaction and eliminates repetitive prompts\n• VOD Catalog Depth: Real-time Luganda movie catalog with rich titles and instant playback\n• In-App Account Review & Appeals: WhatsApp-styled appeal process to submit and track account status\n• Instant Live Support Chat Alerts: Receive prompt notifications the moment a support moderator responds\n• Permanent Offline Storage: Downloaded items persist safely across sign-outs and guest sessions',
     is_mandatory: false,
   });
   const [isSavingUpdateConfig, setIsSavingUpdateConfig] = useState(false);
@@ -279,12 +279,28 @@ export default function App() {
     setIsSavingUpdateConfig(true);
     setUpdateConfigSavedMsg('');
     try {
+      const now = Date.now();
       await set(ref(rtdb, 'app_config/update'), {
         ...updateConfig,
         force_show: updateConfig.show_banner,
-        updated_at: Date.now(),
+        updated_at: now,
       });
-      setUpdateConfigSavedMsg('Update Banner config saved live to Firebase RTDB! All devices will receive it.');
+
+      // Broadcast update notification to notification history for all user devices
+      try {
+        await push(ref(rtdb, 'push_notifications/history'), {
+          id: `update_${updateConfig.latest_version}_${now}`,
+          title: `🚀 FreeWatch Update v${updateConfig.latest_version} Available!`,
+          body: `A new update is available. Tap here to upgrade for smoother streaming & rich catalogs.`,
+          route: '/update',
+          link: '/update',
+          targetTopic: 'all_users',
+          timestamp: now,
+          dispatchedBy: 'Admin Panel Live Controller',
+        });
+      } catch (_) {}
+
+      setUpdateConfigSavedMsg('Update config saved live to Firebase RTDB & broadcast alert queued for all devices!');
       setTimeout(() => setUpdateConfigSavedMsg(''), 4500);
     } catch (err) {
       alert('Failed to save update configuration: ' + err.message);

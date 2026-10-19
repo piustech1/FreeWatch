@@ -2,6 +2,8 @@ import 'package:dio/dio.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'notification_service.dart';
 
 class AppUpdateInfo {
   final bool hasUpdate;
@@ -30,10 +32,26 @@ class AppUpdateService {
   factory AppUpdateService() => _instance;
   AppUpdateService._internal();
 
-  // Fallback defaults matching current pubspec version 1.0.63+64
-  static const int defaultBuildNumber = 64;
-  static const String defaultVersionName = '1.0.63';
+  // Fallback defaults matching current pubspec version 1.0.64+65
+  static const int defaultBuildNumber = 65;
+  static const String defaultVersionName = '1.0.64';
   static const String defaultStoreListingUrl = 'https://freewatchug.online';
+
+  Future<void> _notifyUserOfUpdate(String version) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final key = 'notified_update_$version';
+      if (prefs.getBool(key) == true) return;
+      await prefs.setBool(key, true);
+
+      await NotificationService().showMovieNotification(
+        id: 999999,
+        title: '🚀 FreeWatch Update (v$version) Available',
+        body: 'A new version of FreeWatch is ready! Tap here to update and enjoy smoother streaming.',
+        payload: '/update',
+      );
+    } catch (_) {}
+  }
 
   /// Strictly determines if [remoteVersion] or [remoteBuild] is newer than the locally installed app
   static bool isRemoteVersionNewer({
@@ -144,6 +162,7 @@ class AppUpdateService {
             }
           }
 
+          _notifyUserOfUpdate(cleanTag);
           return AppUpdateInfo(
             hasUpdate: true,
             version: cleanTag,
@@ -190,9 +209,10 @@ class AppUpdateService {
         // Strictly require that the RTDB release is genuinely newer than local installed app
         if (isNewer) {
           debugPrint('[AppUpdateService] Newer RTDB version found: $latestVersion+$latestBuild');
+          _notifyUserOfUpdate(latestVersion.isNotEmpty ? latestVersion : '1.0.64');
           return AppUpdateInfo(
             hasUpdate: true,
-            version: latestVersion.isNotEmpty ? latestVersion : '1.0.60',
+            version: latestVersion.isNotEmpty ? latestVersion : '1.0.64',
             buildNumber: latestBuild > 0 ? latestBuild : localBuild + 1,
             releaseNotes: releaseNotes,
             storeUrl: storeUrl.isNotEmpty ? storeUrl : defaultStoreListingUrl,

@@ -225,10 +225,24 @@ class MunowatchDatasource {
         }
       }
 
-      // 4. Parallel-enrich the top latest items so real titles appear immediately
+      // 4. Seed and enrich catalog with authentic high-confidence MunoWatch titles
+      final seedKeywords = ['the', 'action', 'love', 'man', 'war', 'season', 'life'];
+      for (final kw in seedKeywords) {
+        try {
+          final res = await searchMovies(kw);
+          for (final sm in res) {
+            if (!movieMap.containsKey(sm.id) && sm.title.isNotEmpty && sm.title != 'Movie') {
+              movieMap[sm.id] = sm;
+              _knownMoviesMap[sm.id] = sm;
+            }
+          }
+        } catch (_) {}
+      }
+
+      // 5. Parallel-enrich the top latest items so real titles appear immediately
       final toEnrich = latestList
           .where((m) => m.title == 'Movie' || m.title.isEmpty)
-          .take(12)
+          .take(20)
           .toList();
       if (toEnrich.isNotEmpty) {
         try {
@@ -255,10 +269,19 @@ class MunowatchDatasource {
         } catch (_) {}
       }
 
-      _cachedMovies = movieMap.values.toList();
-      _latestMovies = latestList.isNotEmpty
-          ? latestList
-          : _cachedMovies!.take(15).toList();
+      // Filter out any lingering blank/unresolved placeholder titles from public cached feed
+      _cachedMovies = movieMap.values
+          .where((m) => m.title.trim().isNotEmpty && m.title.trim() != 'Movie')
+          .toList();
+      if (_cachedMovies!.isEmpty) {
+        _cachedMovies = movieMap.values.toList();
+      }
+      _latestMovies = latestList
+          .where((m) => m.title.trim().isNotEmpty && m.title.trim() != 'Movie')
+          .toList();
+      if (_latestMovies!.isEmpty) {
+        _latestMovies = _cachedMovies!.take(15).toList();
+      }
       _lastFetch = DateTime.now();
       debugPrint('🎬 [MunowatchDatasource] Loaded ${_cachedMovies!.length} movies (Latest: ${_latestMovies!.length}) from MumoWatch/MunoWatch');
       return _cachedMovies!;
