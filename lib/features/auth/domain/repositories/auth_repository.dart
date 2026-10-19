@@ -99,6 +99,27 @@ class AuthRepository {
     return credential;
   }
 
+  /// Sign in as Guest (Anonymous) for quick 1-click access without password entry
+  Future<UserCredential> signInAsGuest() async {
+    final credential = await _firebaseAuth.signInAnonymously();
+    final user = credential.user;
+    if (user != null) {
+      final userRef = _database.ref('users/${user.uid}/profile');
+      userRef.set({
+        'uid': user.uid,
+        'email': 'guest@freewatch.app',
+        'name': 'Guest User',
+        'avatar': 'assets/avatars/avatar_mirabel.png',
+        'createdAt': DateTime.now().toIso8601String(),
+        'lastLogin': DateTime.now().toIso8601String(),
+        'bio': 'Streaming as Guest • FreeWatch',
+        'role': 'Member',
+        'status': 'Active',
+      }).catchError((_) {});
+    }
+    return credential;
+  }
+
   /// Sign out current user
   Future<void> signOut() async {
     await _firebaseAuth.signOut();

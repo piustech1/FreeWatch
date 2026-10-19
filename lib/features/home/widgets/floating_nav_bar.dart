@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iconly/iconly.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/services/device_type_service.dart';
 
 /// Docked bottom navigation bar matching the modern reference layout:
 /// pure black background, subtle hairline top divider, zero container outlines,
@@ -18,6 +19,9 @@ class FloatingNavBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isWideOrTv = MediaQuery.sizeOf(context).width >= 720 || DeviceTypeService().isTv;
+    if (isWideOrTv) return const SizedBox.shrink();
+
     return Container(
       decoration: const BoxDecoration(
         color: Color(0xFF000000),

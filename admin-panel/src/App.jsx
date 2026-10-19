@@ -58,7 +58,7 @@ import {
 import { rtdb, auth, signInAnonymously } from './firebase';
 import { ref, onValue, push, set, update, remove, get } from 'firebase/database';
 import AppStoreLanding from './pages/AppStoreLanding';
-import WebCinemaApp from './pages/WebCinemaApp';
+import WebSplashScreen from './pages/WebSplashScreen';
 
 export default function App() {
   const [currentPath, setCurrentPath] = useState(() => {
@@ -109,24 +109,14 @@ export default function App() {
     searchParams.includes('view=pickle') ||
     searchParams.includes('view=admin');
 
-  // Dedicated Store Listing: /store
+  // Dedicated Store Listing: /store (Strictly no admin panel links or redirects)
   if (isStoreRoute) {
-    return (
-      <AppStoreLanding 
-        onNavigateToAdmin={() => navigateTo('/pickle')} 
-        onNavigateToWeb={() => navigateTo('/')} 
-      />
-    );
+    return <AppStoreLanding />;
   }
 
-  // Web Cinema Application: root ('/') and all non-admin public pages
+  // Official Web Splash Screen: root ('/') with plain white background, app logo, and "COMING SOON" in bold white text
   if (!isAdminRoute) {
-    return (
-      <WebCinemaApp 
-        onNavigateToStore={() => navigateTo('/store')} 
-        onNavigateToAdmin={() => navigateTo('/pickle')} 
-      />
-    );
+    return <WebSplashScreen />;
   }
 
   // Navigation: 'dashboard' | 'users' | 'videos' | 'chat' | 'notifications' | 'munowatch' | 'audit' | 'store'

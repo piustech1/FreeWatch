@@ -28,6 +28,7 @@ import 'package:permission_handler/permission_handler.dart';
 import '../../../../shared/widgets/app_toast.dart';
 import '../../../../shared/widgets/tiktok_promo_modal.dart';
 import '../../../../core/services/admob_service.dart';
+import '../../../../core/services/device_type_service.dart';
 import '../providers/movie_detail_providers.dart';
 
 /// Premium iOS Glassmorphic Movie Details Screen:
@@ -109,7 +110,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
     _landscapeControlsTimer?.cancel();
     _hudDismissTimer?.cancel();
     if (_isFullscreen) {
-      SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+      DeviceTypeService().restoreDefaultOrientations();
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     }
     _videoPlayerController?.dispose();
@@ -2654,9 +2655,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
     } else {
       _landscapeControlsTimer?.cancel();
       _hudDismissTimer?.cancel();
-      SystemChrome.setPreferredOrientations([
-        DeviceOrientation.portraitUp,
-      ]);
+      DeviceTypeService().restoreDefaultOrientations();
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     }
   }

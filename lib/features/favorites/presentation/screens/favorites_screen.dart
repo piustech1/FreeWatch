@@ -279,17 +279,25 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
             else
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    childAspectRatio: 0.62,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 16,
-                  ),
-                  itemCount: favorites.length,
-                  itemBuilder: (context, i) {
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final width = constraints.maxWidth;
+                    final crossAxisCount = width >= 1100
+                        ? 6
+                        : (width >= 800 ? 5 : (width >= 560 ? 4 : 3));
+                    final childAspectRatio = width >= 560 ? 0.65 : 0.62;
+
+                    return GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: crossAxisCount,
+                        childAspectRatio: childAspectRatio,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 16,
+                      ),
+                      itemCount: favorites.length,
+                      itemBuilder: (context, i) {
                     final movie = favorites[i];
                     final posterUrl = movie.posterPath != null &&
                             movie.posterPath!.isNotEmpty
@@ -410,8 +418,10 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                       ),
                     );
                   },
-                ),
-              ),
+                );
+              },
+            ),
+          ),
           ],
         ),
       ),

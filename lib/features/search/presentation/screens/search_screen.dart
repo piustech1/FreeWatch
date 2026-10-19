@@ -737,19 +737,25 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     );
   }
 
-  /// 3-Column Movie Grid matching MovieGridScreen (Arrangement Mode)
+  /// Responsive Movie Grid matching MovieGridScreen (Arrangement Mode)
   Widget _buildGridView(List<Movie> results) {
-    return GridView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 120),
-      physics: const BouncingScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        childAspectRatio: 0.52,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 16,
-      ),
-      itemCount: results.length,
-      itemBuilder: (context, index) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final crossAxisCount = width >= 1100 ? 6 : (width >= 800 ? 5 : (width >= 560 ? 4 : 3));
+        final childAspectRatio = width >= 560 ? 0.58 : 0.52;
+
+        return GridView.builder(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 120),
+          physics: const BouncingScrollPhysics(),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            childAspectRatio: childAspectRatio,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 16,
+          ),
+          itemCount: results.length,
+          itemBuilder: (context, index) {
         final movie = results[index];
         final posterUrl = movie.posterPath != null && movie.posterPath!.isNotEmpty
             ? (movie.posterPath!.startsWith('http')
@@ -936,7 +942,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         );
       },
     );
-  }
+  },
+);
+}
 
   Widget _buildListLoadingSkeleton() {
     return ListView.separated(
@@ -997,41 +1005,49 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   Widget _buildGridLoadingSkeleton() {
-    return GridView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 120),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        childAspectRatio: 0.52,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 16,
-      ),
-      itemCount: 6,
-      itemBuilder: (_, __) => Shimmer.fromColors(
-        baseColor: const Color(0xFF141722),
-        highlightColor: const Color(0xFF222838),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final crossAxisCount = width >= 1100 ? 6 : (width >= 800 ? 5 : (width >= 560 ? 4 : 3));
+        final childAspectRatio = width >= 560 ? 0.58 : 0.52;
+
+        return GridView.builder(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 120),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            childAspectRatio: childAspectRatio,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 16,
+          ),
+          itemCount: crossAxisCount * 2,
+          itemBuilder: (_, __) => Shimmer.fromColors(
+            baseColor: const Color(0xFF141722),
+            highlightColor: const Color(0xFF222838),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
                 ),
-              ),
+                const SizedBox(height: 6),
+                Container(
+                  width: 60,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 6),
-            Container(
-              width: 60,
-              height: 12,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(4),
-              ),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 

@@ -124,6 +124,22 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     );
   }
 
+  Future<void> _handleGuestSignIn() async {
+    if (_isLoadingAuth) return;
+    setState(() => _isLoadingAuth = true);
+    try {
+      await ref.read(authRepositoryProvider).signInAsGuest();
+      if (mounted) {
+        context.go('/home');
+      }
+    } catch (e) {
+      if (mounted) {
+        AppToast.show(context, 'Guest access notice: $e', isSuccess: false);
+      }
+    } finally {
+      if (mounted) setState(() => _isLoadingAuth = false);
+    }
+  }
 
   Future<void> _handleSubmitAuth() async {
     if (_isLoadingAuth) return;
@@ -293,6 +309,120 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     return SafeArea(
       child: LayoutBuilder(
         builder: (context, constraints) {
+          final isWide = constraints.maxWidth >= 650;
+          if (isWide) {
+            return Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 56, vertical: 32),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Left Column: Brand & Tagline
+                    Expanded(
+                      flex: 6,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Image.asset(
+                            'assets/images/logo_initials.png',
+                            height: 60,
+                            fit: BoxFit.contain,
+                          ),
+                          const SizedBox(height: 24),
+                          const Text(
+                            'The greatest stories,\nall in one place.',
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 34,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -0.8,
+                              height: 1.15,
+                              shadows: [
+                                Shadow(
+                                  color: Colors.black,
+                                  blurRadius: 16,
+                                  offset: Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Unlimited streaming for movies, series & exclusive hits translated by top Ugandan VJs.',
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.85),
+                              fontSize: 15,
+                              fontWeight: FontWeight.w400,
+                              height: 1.45,
+                              shadows: const [
+                                Shadow(
+                                  color: Colors.black,
+                                  blurRadius: 10,
+                                  offset: Offset(0, 1),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(width: 48),
+
+                    // Right Column: Action Buttons & Indicator
+                    Expanded(
+                      flex: 4,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SmoothPageIndicator(
+                            controller: _pageController,
+                            count: 2,
+                            effect: const ExpandingDotsEffect(
+                              dotWidth: 8,
+                              dotHeight: 8,
+                              expansionFactor: 3.5,
+                              spacing: 8,
+                              activeDotColor: AppColors.accent,
+                              dotColor: Color(0xFF383D4A),
+                            ),
+                          ),
+                          const SizedBox(height: 28),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 52,
+                            child: ElevatedButton(
+                              onPressed: _goToAuthPage,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.accent,
+                                foregroundColor: Colors.black,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(26),
+                                ),
+                                shadowColor: AppColors.accentGlow,
+                              ),
+                              child: const Text(
+                                'Get Started',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 0.3,
+                                ),
+                              ),
+                            ),
+                          ),
+                          _buildGuestButton(),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
           return SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
             child: ConstrainedBox(
@@ -447,6 +577,124 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     return SafeArea(
       child: LayoutBuilder(
         builder: (context, constraints) {
+          final isWide = constraints.maxWidth >= 650;
+          if (isWide) {
+            return Center(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.fromLTRB(
+                  56,
+                  24,
+                  56,
+                  bottomInset > 0 ? bottomInset + 16 : 28,
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Left Column: Branding, Title, Switch
+                    Expanded(
+                      flex: 5,
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: 36),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Image.asset(
+                              'assets/images/logo_initials.png',
+                              height: 56,
+                              fit: BoxFit.contain,
+                            ),
+                            const SizedBox(height: 20),
+                            Text(
+                              _isSignUp ? 'Create Account' : 'Welcome Back',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 30,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              _isSignUp
+                                  ? 'Join FreeWatch to save your watchlist, download blockbusters, and chat with translators.'
+                                  : 'Sign in to sync your favorites and continue watching where you left off.',
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.75),
+                                fontSize: 14.5,
+                                height: 1.45,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            // Switch link
+                            Wrap(
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                Text(
+                                  _isSignUp
+                                      ? 'Already have an account? '
+                                      : "Don't have an account? ",
+                                  style: TextStyle(
+                                    color: Colors.white.withOpacity(0.65),
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                GestureDetector(
+                                  onTap: () => setState(() => _isSignUp = !_isSignUp),
+                                  child: Text(
+                                    _isSignUp ? 'Log In' : 'Create Account',
+                                    style: const TextStyle(
+                                      color: AppColors.primary,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // Right Column: Floating Auth Card
+                    Expanded(
+                      flex: 5,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(24),
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 26),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(24),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.35),
+                                  blurRadius: 28,
+                                  offset: const Offset(0, 10),
+                                ),
+                              ],
+                            ),
+                            child: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 250),
+                              switchInCurve: Curves.easeOutCubic,
+                              switchOutCurve: Curves.easeInCubic,
+                              child: _isSignUp
+                                  ? _buildSignUpContent()
+                                  : _buildLogInContent(),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
           return SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
             padding: EdgeInsets.fromLTRB(
@@ -666,6 +914,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
         // Solid FreeWatch Red LOG IN Button
         _buildSolidSubmitButton('LOG IN'),
+        _buildGuestButton(),
       ],
     );
   }
@@ -816,6 +1065,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
         // Solid FreeWatch Red SIGN UP Button
         _buildSolidSubmitButton('SIGN UP'),
+        _buildGuestButton(),
       ],
     );
   }
@@ -934,6 +1184,51 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       letterSpacing: 0.6,
                     ),
                   ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGuestButton() {
+    return Container(
+      width: double.infinity,
+      height: 48,
+      margin: const EdgeInsets.only(top: 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.18),
+          width: 1,
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(24),
+          onTap: _handleGuestSignIn,
+          child: Center(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.tv_rounded,
+                  size: 18,
+                  color: Colors.white.withOpacity(0.85),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Continue as Guest',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.9),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

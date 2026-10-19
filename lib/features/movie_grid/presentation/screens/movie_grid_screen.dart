@@ -211,23 +211,31 @@ class MovieGridScreen extends ConsumerWidget {
                       ? _buildShimmerGrid()
                       : (displayMovies.isEmpty
                           ? _buildEmptyState(context)
-                          : GridView.builder(
-                              physics: const BouncingScrollPhysics(),
-                              padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
-                              gridDelegate:
-                                  const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 3,
-                                childAspectRatio: 0.52,
-                                crossAxisSpacing: 10,
-                                mainAxisSpacing: 16,
-                              ),
-                              itemCount: displayMovies.length,
-                              itemBuilder: (context, index) {
-                                final movie = displayMovies[index];
-                                final vjName = vj?.name ??
-                                    movie.vjName ??
-                                    _resolveVjNameForMovie(movie, index);
-                                return _buildMovieCard(context, movie, vjName);
+                          : LayoutBuilder(
+                              builder: (context, constraints) {
+                                final width = constraints.maxWidth;
+                                final crossAxisCount = width >= 1100 ? 6 : (width >= 800 ? 5 : (width >= 560 ? 4 : 3));
+                                final childAspectRatio = width >= 560 ? 0.58 : 0.52;
+
+                                return GridView.builder(
+                                  physics: const BouncingScrollPhysics(),
+                                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
+                                  gridDelegate:
+                                      SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: crossAxisCount,
+                                    childAspectRatio: childAspectRatio,
+                                    crossAxisSpacing: 10,
+                                    mainAxisSpacing: 16,
+                                  ),
+                                  itemCount: displayMovies.length,
+                                  itemBuilder: (context, index) {
+                                    final movie = displayMovies[index];
+                                    final vjName = vj?.name ??
+                                        movie.vjName ??
+                                        _resolveVjNameForMovie(movie, index);
+                                    return _buildMovieCard(context, movie, vjName);
+                                  },
+                                );
                               },
                             )),
                 ),
@@ -521,26 +529,34 @@ class MovieGridScreen extends ConsumerWidget {
   }
 
   Widget _buildShimmerGrid() {
-    return GridView.builder(
-      physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        childAspectRatio: 0.52,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 16,
-      ),
-      itemCount: 12,
-      itemBuilder: (_, __) => Shimmer.fromColors(
-        baseColor: const Color(0xFF161822),
-        highlightColor: const Color(0xFF232736),
-        child: Container(
-          decoration: BoxDecoration(
-            color: const Color(0xFF161822),
-            borderRadius: BorderRadius.circular(14),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final crossAxisCount = width >= 1100 ? 6 : (width >= 800 ? 5 : (width >= 560 ? 4 : 3));
+        final childAspectRatio = width >= 560 ? 0.58 : 0.52;
+
+        return GridView.builder(
+          physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            childAspectRatio: childAspectRatio,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 16,
           ),
-        ),
-      ),
+          itemCount: crossAxisCount * 4,
+          itemBuilder: (_, __) => Shimmer.fromColors(
+            baseColor: const Color(0xFF161822),
+            highlightColor: const Color(0xFF232736),
+            child: Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFF161822),
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 

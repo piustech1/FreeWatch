@@ -20,7 +20,9 @@ import '../profile/presentation/screens/profile_screen.dart';
 import '../notifications/presentation/screens/notifications_screen.dart';
 import '../../shared/widgets/tiktok_promo_modal.dart';
 import '../../shared/widgets/tv_navigation_sidebar.dart';
+import '../../core/services/device_type_service.dart';
 import 'widgets/app_update_banner.dart';
+import 'widgets/tv_hero_billboard.dart';
 
 /// Main Application Shell & Home Screen with persistent top bar across all tabs
 class HomeScreen extends ConsumerStatefulWidget {
@@ -56,13 +58,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final selectedNavIndex = ref.watch(bottomNavIndexProvider);
-    final isWideOrTv = MediaQuery.sizeOf(context).width >= 720;
+    final isWideOrTv = MediaQuery.sizeOf(context).width >= 720 || DeviceTypeService().isTv;
 
     final Widget tabContent = IndexedStack(
       index: selectedNavIndex,
       children: [
         // Tab 0: Home Feed
-        _buildHomeFeed(context),
+        _buildHomeFeed(context, isWideOrTv: isWideOrTv),
 
         // Tab 1: Dedicated Search Screen
         const SearchScreen(),
@@ -83,30 +85,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (isWideOrTv) {
       return Scaffold(
         backgroundColor: AppColors.background,
-        body: SafeArea(
-          bottom: false,
-          child: Row(
-            children: [
-              TvNavigationSidebar(
-                onTabSelected: (index) {
-                  navigateToBottomNavTab(context, ref, index);
-                },
+        body: Row(
+          children: [
+            TvNavigationSidebar(
+              onTabSelected: (index) {
+                navigateToBottomNavTab(context, ref, index);
+              },
+            ),
+            Expanded(
+              child: Stack(
+                children: [
+                  tabContent,
+                  const Positioned(
+                    top: 14,
+                    right: 24,
+                    child: AppUpdateBanner(),
+                  ),
+                ],
               ),
-              Expanded(
-                child: Column(
-                  children: [
-                    FreeWatchTopAppBar(
-                      onSearchTap: () => navigateToBottomNavTab(context, ref, 1),
-                      onNotificationTap: _openNotifications,
-                      onProfileTap: () => navigateToBottomNavTab(context, ref, 4),
-                    ),
-                    const AppUpdateBanner(),
-                    Expanded(child: tabContent),
-                  ],
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       );
     }
@@ -153,7 +151,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   // ── Tab 0: Home Feed ───────────────────────────────────────────────────────
-  Widget _buildHomeFeed(BuildContext context) {
+  Widget _buildHomeFeed(BuildContext context, {bool isWideOrTv = false}) {
     final trendingAsync = ref.watch(trendingMoviesProvider);
     final latestUploadsAsync = ref.watch(latestUploadsProvider);
     final seriesAsync = ref.watch(seriesProvider);
@@ -170,24 +168,37 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
       slivers: [
-        const SliverToBoxAdapter(child: SizedBox(height: 6)),
+        SliverToBoxAdapter(child: SizedBox(height: isWideOrTv ? 0 : 6)),
 
-        // ── Hero Banner Carousel ───────────────────────────────────
+        // ── Hero Banner (Phone: 4-Poster Stacked Deck | TV: 16:9 Cinematic Billboard) ──
         SliverToBoxAdapter(
           child: trendingAsync.when(
-            data: (movies) => HeroBanner(
-              movies: movies,
-              onTap: _openMovieDetail,
-              onSeeAll: () {
-                Navigator.of(context).push(
-                  MovieGridScreen.routeForCategory(
-                    title: 'Trending',
+            data: (movies) => isWideOrTv
+                ? TvHeroBillboard(
                     movies: movies,
+                    onPlay: _openMovieDetail,
+                    onDetails: _openMovieDetail,
+                  )
+                : HeroBanner(
+                    movies: movies,
+                    onTap: _openMovieDetail,
+                    onSeeAll: () {
+                      Navigator.of(context).push(
+                        MovieGridScreen.routeForCategory(
+                          title: 'Trending',
+                          movies: movies,
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
-            loading: () => const HeroBannerShimmer(),
+            loading: () => isWideOrTv
+                ? const SizedBox(
+                    height: 380,
+                    child: Center(
+                      child: CircularProgressIndicator(color: AppColors.accent),
+                    ),
+                  )
+                : const HeroBannerShimmer(),
             error: (_, __) => const SizedBox.shrink(),
           ),
         ),
