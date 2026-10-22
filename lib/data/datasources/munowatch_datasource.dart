@@ -632,10 +632,35 @@ class MunowatchDatasource {
             : int.tryParse((json['id'] ?? json['vid'])?.toString() ?? '0') ??
                 0);
 
-    final String rawTitle =
-        (json['video_title'] ?? json['title'] ?? '').toString().trim();
-    final String cleanTitle =
-        rawTitle.replaceAll(RegExp(r'\s+'), ' ').trim();
+    // ── Title extraction: try all known MunoWatch field names, strip garbage ──
+    const kGarbageTitles = {
+      'eps', 'ep', 'episode', 'untitled', 'movie', 'video', 'n/a', 'na',
+      'null', 'none', 'unknown', '0', '',
+    };
+
+    String extractBestTitle(Map<String, dynamic> m) {
+      // Priority: video_title → name → title → movie_name → series_name → movie_title
+      final candidates = [
+        m['video_title'],
+        m['name'],
+        m['title'],
+        m['movie_name'],
+        m['series_name'],
+        m['movie_title'],
+      ];
+      for (final c in candidates) {
+        if (c == null) continue;
+        final s = c.toString().trim().replaceAll(RegExp(r'\s+'), ' ');
+        if (s.isEmpty) continue;
+        if (kGarbageTitles.contains(s.toLowerCase())) continue;
+        // Reject bare "EPS" with optional number (e.g. "EPS 12", "EPS12")
+        if (RegExp(r'^(?:eps?|episode)\s*\d*$', caseSensitive: false).hasMatch(s)) continue;
+        return s;
+      }
+      return '';
+    }
+
+    final String cleanTitle = extractBestTitle(json);
 
     final dynamic rawCatId = json['category_id'] ?? json['categoryId'];
     final int? catId = rawCatId is int
@@ -652,20 +677,42 @@ class MunowatchDatasource {
         (json['playingUrl'] ?? json['playingurl'])?.toString();
     final String? description = json['description']?.toString();
 
-    // Clean VJ Name (Strict analysis: only use genuine VJ if present, NEVER mimic fake VJ)
-    String? rawVj = (json['vjname'] ?? json['vj'])?.toString().trim();
-    if (rawVj != null && rawVj.isNotEmpty && rawVj != 'null') {
-      if (!rawVj.toUpperCase().startsWith('VJ ') &&
-          !rawVj.toUpperCase().startsWith('VJ.')) {
-        rawVj = 'VJ $rawVj';
+    // ── VJ Name extraction: blocklist meaningless values, extract real name from title ──
+    const kGarbageVjNames = {
+      'universal', 'vj universal', 'vj.universal',
+      'na', 'n/a', 'null', 'none', 'unknown', 'general', '0', '',
+      'vj na', 'vj n/a', 'vj null', 'vj none', 'vj unknown', 'vj 0',
+    };
+
+    String? rawVj;
+    final apiVjRaw = (json['vjname'] ?? json['vj'] ?? json['translator'] ?? json['vj_name'])
+        ?.toString()
+        .trim();
+
+    if (apiVjRaw != null && apiVjRaw.isNotEmpty && apiVjRaw != 'null') {
+      // Normalize to "VJ Xxx" form
+      final normalized = apiVjRaw.toUpperCase().startsWith('VJ ')
+          ? apiVjRaw
+          : 'VJ $apiVjRaw';
+      // Only keep if not in the garbage blocklist
+      if (!kGarbageVjNames.contains(normalized.toLowerCase())) {
+        rawVj = normalized;
       }
-    } else {
-      // Extract from raw title if present (e.g. "HOKUM VJ JINGO.2026")
-      final vjMatch = RegExp(r'\b(VJ\s+[A-Za-z0-9]+)\b', caseSensitive: false).firstMatch(rawTitle);
+    }
+
+    // Fallback: extract VJ name from the title text (e.g. "Spider Man VJ JINGO.2024")
+    if (rawVj == null) {
+      final vjMatch = RegExp(
+        r'\b(VJ\s+[A-Za-z][A-Za-z0-9]{1,})\b',
+        caseSensitive: false,
+      ).firstMatch(cleanTitle);
       if (vjMatch != null) {
-        rawVj = vjMatch.group(1);
-      } else {
-        rawVj = null; // No VJ: leave null! Do not mimic or invent VJ Junior.
+        final extracted = vjMatch.group(1)!.trim();
+        if (!kGarbageVjNames.contains(extracted.toLowerCase())) {
+          rawVj = extracted.toUpperCase().startsWith('VJ ')
+              ? extracted
+              : 'VJ $extracted';
+        }
       }
     }
 

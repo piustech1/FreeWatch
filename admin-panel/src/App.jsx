@@ -58,6 +58,7 @@ import {
 import { rtdb, auth, signInAnonymously } from './firebase';
 import { ref, onValue, push, set, update, remove, get } from 'firebase/database';
 import AppStoreLanding from './pages/AppStoreLanding';
+import FreeWatchWebApp from './pages/FreeWatchWebApp';
 import WebSplashScreen from './pages/WebSplashScreen';
 
 export default function App() {
@@ -114,9 +115,9 @@ export default function App() {
     return <AppStoreLanding />;
   }
 
-  // Official Web Splash Screen: root ('/') with plain white background, app logo, and "COMING SOON" in bold white text
+  // Official FreeWatch Web Application: Exact mirror of FreeWatch Flutter Mobile & TV UI (A to Z)
   if (!isAdminRoute) {
-    return <WebSplashScreen />;
+    return <FreeWatchWebApp onNavigateToStore={() => navigateTo('/store')} />;
   }
 
   // Navigation: 'dashboard' | 'users' | 'videos' | 'chat' | 'notifications' | 'munowatch' | 'audit' | 'store'
@@ -252,11 +253,11 @@ export default function App() {
   // In-App Update Banner Remote Controller State
   const [updateConfig, setUpdateConfig] = useState({
     show_banner: true,
-    latest_version: '1.0.66',
-    latest_build: 67,
+    latest_version: '1.0.67',
+    latest_build: 68,
     store_url: 'https://freewatchug.online/store',
-    direct_apk_url: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.66/FreeWatch-release.apk',
-    release_notes: '• Android TV 16:9 Landscape UI: Full Leanback support with glowing focus states and navigation sidebar\n• Continue as Guest: Instant streaming on Android TV without remote typing hassle\n• Responsive Grids: Dynamic multi-device columns adapting seamlessly from phones to 4K TVs\n• Coming Soon Web Portal: Minimalist official launch portal with direct store download links\n• Universal Device APKs: Dedicated builds for Phone, Android TV, Fire TV, and multi-architecture devices',
+    direct_apk_url: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.67/FreeWatch-release.apk',
+    release_notes: '• Android TV v1/v2 APK Signature Scheme enabled for instant error-free TV installation\n• Lightweight Android TV performance: Hardware acceleration, large heap, and capped image cache\n• Web Version A to Z: Full interactive streaming portal mirroring app UI on freewatchug.online\n• MunoWatch movie details: Authentic titles, TMDB cast photos, series episodes, & related movies',
     is_mandatory: false,
   });
   const [isSavingUpdateConfig, setIsSavingUpdateConfig] = useState(false);

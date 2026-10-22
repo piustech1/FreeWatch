@@ -103,6 +103,7 @@ class MovieSection extends StatelessWidget {
                       scrollDirection: Axis.horizontal,
                       padding: const EdgeInsets.symmetric(horizontal: 18),
                       physics: const BouncingScrollPhysics(),
+                      cacheExtent: 280,
                       itemCount: movies!.length,
                       separatorBuilder: (_, __) => const SizedBox(width: 14),
                       itemBuilder: (context, index) => MovieCard(

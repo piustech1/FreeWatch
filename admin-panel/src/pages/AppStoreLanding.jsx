@@ -101,28 +101,32 @@ export default function AppStoreLanding() {
 
   // Dynamic Release Config - Multiplatform Features
   const [releaseInfo, setReleaseInfo] = useState({
-    version: '1.0.66',
-    buildNumber: 67,
+    version: '1.0.67',
+    buildNumber: 68,
     size: '110.5 MB',
     releaseDate: formatReleaseDate(Date.now()),
-    apkUrl: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.66/FreeWatch-release.apk',
-    tvApkUrl: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.66/FreeWatch-TV-release.apk',
+    apkUrl: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.67/FreeWatch-release.apk',
+    tvApkUrl: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.67/FreeWatch-TV-release.apk',
     webUrl: 'https://freewatchug.online',
     notes: [
-      'Android TV 16:9 Landscape UI: Full Leanback support with glowing focus states, navigation sidebar, and 10-foot cinema UI.',
-      'Continue as Guest: Instant streaming on Android TV without remote typing hassle.',
-      'Responsive Grids: Dynamic multi-device columns adapting seamlessly from phones to 4K TVs.',
-      'Coming Soon Web Portal: Minimalist official launch portal with direct store download links.',
-      'Universal Device APKs: Dedicated builds for Phone, Android TV, Fire TV, and multi-architecture devices.'
+      'Android TV APK Signature Scheme: Fully enabled v1 and v2 signing schemes to guarantee smooth 1-tap installation across all Android TV boxes and Fire OS devices without install errors.',
+      'Android TV Lightness & Zero-Freeze: Hardware accelerated rendering, large heap allocation, bounded 60MB image cache, and 260px downsampled poster decoding to eliminate RAM bloat and freezing on low-RAM TV boxes.',
+      'Web Version A to Z App Mirror: Public web streaming portal on freewatchug.online completely mirrors the FreeWatch Flutter app with OLED dark UI, hero billboard, category rails, movie modal, and web player.',
+      'MunoWatch Movie Details & Cast: Accurate titles without raw VJ prefix clutter, authentic TMDB cast with real actor photos, real synopsis, series episodes selector, and You Might Also Like related movies carousel.'
     ]
   });
 
   // Dynamic Version History List
   const [historyReleases, setHistoryReleases] = useState([
     {
-      version: '1.0.66',
+      version: '1.0.67',
       date: 'Latest',
-      notes: 'Android TV 16:9 Landscape Leanback UI, Guest auth, responsive TV grids, dual Phone & TV release APKs, and Coming Soon web portal.'
+      notes: 'Android TV v1/v2 signature fix, hardware-accelerated TV memory lightness, full A-to-Z web app mirror, and MunoWatch authentic details with related movies.'
+    },
+    {
+      version: '1.0.66',
+      date: 'Earlier',
+      notes: 'Android TV 16:9 Landscape Leanback UI, Guest auth, responsive TV grids, and dual Phone & TV release APKs.'
     },
     {
       version: '1.0.65',

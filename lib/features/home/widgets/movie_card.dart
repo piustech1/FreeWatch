@@ -98,6 +98,8 @@ class _MovieCardState extends State<MovieCard> {
                                 ? CachedNetworkImage(
                                     imageUrl: posterUrl,
                                     fit: BoxFit.cover,
+                                    memCacheWidth: 260,
+                                    memCacheHeight: 380,
                                     placeholder: (_, __) => MovieCardShimmer(
                                       width: cardWidth,
                                       height: posterHeight,

@@ -186,7 +186,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       Navigator.of(context).push(
                         MovieGridScreen.routeForCategory(
                           title: 'Trending',
-                          movies: movies,
+                          movies: const [],
                         ),
                       );
                     },
@@ -324,7 +324,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               Navigator.of(context).push(
                 MovieGridScreen.routeForCategory(
                   title: title,
-                  movies: movies,
+                  movies: const [],
                   icon: icon,
                   iconColor: iconColor,
                 ),

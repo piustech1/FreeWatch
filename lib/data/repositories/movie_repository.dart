@@ -13,7 +13,6 @@ import '../mock/mock_movies.dart';
 /// and TMDB enrichment.
 class MovieRepository {
   final TmdbDatasource _datasource;
-  final MovieMaxDatasource _movieMax;
   final MunowatchDatasource _munowatch;
 
   MovieRepository({
@@ -21,7 +20,6 @@ class MovieRepository {
     MovieMaxDatasource? movieMaxDatasource,
     MunowatchDatasource? munowatchDatasource,
   })  : _datasource = datasource ?? TmdbDatasource(),
-        _movieMax = movieMaxDatasource ?? MovieMaxDatasource(),
         _munowatch = munowatchDatasource ?? MunowatchDatasource();
 
   final Map<String, List<Movie>> _vjMoviesCache = {};
@@ -30,8 +28,7 @@ class MovieRepository {
       ApiConstants.tmdbApiKey != 'YOUR_TMDB_API_KEY' &&
       ApiConstants.tmdbApiKey.trim().isNotEmpty;
 
-  /// Full live Luganda catalog sourced primarily from MunoWatch API (live catalog)
-  /// with resilient MovieMax RTDB fallback (1,531+ items)
+  /// Full live Luganda catalog sourced exclusively from MunoWatch API
   Future<List<Movie>> _getAllLugandaMovies({bool forceRefresh = false}) async {
     try {
       final munoList = await _munowatch.getAllMovies(forceRefresh: forceRefresh);
@@ -40,17 +37,10 @@ class MovieRepository {
       }
     } catch (_) {}
 
-    try {
-      final movieMaxList = await _movieMax.getAllMovies(forceRefresh: forceRefresh);
-      if (movieMaxList.isNotEmpty) {
-        return movieMaxList;
-      }
-    } catch (_) {}
-
     return const <Movie>[];
   }
 
-  // ── 1. Trending / Hero Banner Movies (Populated with MunoWatch / MovieMax) ─
+  // ── 1. Trending / Hero Banner Movies (MunoWatch only) ─
   Future<List<Movie>> getTrending({int page = 1}) async {
     try {
       final all = await _getAllLugandaMovies();
@@ -66,17 +56,10 @@ class MovieRepository {
       }
     } catch (_) {}
 
-    try {
-      final fallback = await _movieMax.getAllMovies();
-      if (fallback.isNotEmpty) {
-        return _paginate(fallback, page, pageSize: 25);
-      }
-    } catch (_) {}
-
     return const <Movie>[];
   }
 
-  // ── 2. Popular Movies ───────────────────────────────────────────────────────
+  // ── 2. Popular Movies (MunoWatch only) ─────────────────────────────────────
   Future<List<Movie>> getPopular({int page = 1}) async {
     try {
       final all = await _getAllLugandaMovies();
@@ -87,17 +70,10 @@ class MovieRepository {
       }
     } catch (_) {}
 
-    try {
-      final fallback = await _movieMax.getAllMovies();
-      if (fallback.isNotEmpty) {
-        return _paginate(fallback, page, pageSize: 25);
-      }
-    } catch (_) {}
-
     return const <Movie>[];
   }
 
-  // ── 3. Top Rated Movies ─────────────────────────────────────────────────────
+  // ── 3. Top Rated Movies (MunoWatch only) ───────────────────────────────────
   Future<List<Movie>> getTopRated({int page = 1}) async {
     try {
       final all = await _getAllLugandaMovies();
@@ -108,17 +84,10 @@ class MovieRepository {
       }
     } catch (_) {}
 
-    try {
-      final fallback = await _movieMax.getAllMovies();
-      if (fallback.isNotEmpty) {
-        return _paginate(fallback, page, pageSize: 25);
-      }
-    } catch (_) {}
-
     return const <Movie>[];
   }
 
-  // ── 4. Now Playing / Latest Uploads ─────────────────────────────────────────
+  // ── 4. Now Playing / Latest Uploads (MunoWatch only) ───────────────────────
   Future<List<Movie>> getNowPlaying({int page = 1}) async {
     try {
       final all = await _getAllLugandaMovies();
@@ -134,17 +103,10 @@ class MovieRepository {
       }
     } catch (_) {}
 
-    try {
-      final fallback = await _movieMax.getAllMovies();
-      if (fallback.isNotEmpty) {
-        return _paginate(fallback, page, pageSize: 25);
-      }
-    } catch (_) {}
-
     return const <Movie>[];
   }
 
-  // ── 5. Upcoming Movies ──────────────────────────────────────────────────────
+  // ── 5. Upcoming Movies (MunoWatch only) ────────────────────────────────────
   Future<List<Movie>> getUpcoming({int page = 1}) async {
     try {
       final all = await _getAllLugandaMovies();
@@ -156,17 +118,10 @@ class MovieRepository {
       }
     } catch (_) {}
 
-    try {
-      final fallback = await _movieMax.getAllMovies();
-      if (fallback.isNotEmpty) {
-        return _paginate(fallback, page, pageSize: 25);
-      }
-    } catch (_) {}
-
     return const <Movie>[];
   }
 
-  // ── 6. TV Series ────────────────────────────────────────────────────────────
+  // ── 6. TV Series (MunoWatch only) ──────────────────────────────────────────
   Future<List<Movie>> getSeries({int page = 1}) async {
     final List<Movie> combined = [];
     final Set<int> seenIds = {};
@@ -191,19 +146,6 @@ class MovieRepository {
         }
       }
     } catch (_) {}
-
-    if (combined.length < 25) {
-      try {
-        final mmSeries = await _movieMax.getAllSeries();
-        for (final m in mmSeries) {
-          final root = extractSeriesRoot(m.title);
-          if (root.contains('mob land') || root.contains('mobland')) continue;
-          if (seenRoots.add(root) && seenIds.add(m.id)) {
-            combined.add(m.copyWith(isTv: true));
-          }
-        }
-      } catch (_) {}
-    }
 
     return _paginate(combined, page, pageSize: 25);
   }
@@ -335,83 +277,6 @@ class MovieRepository {
       }
     } catch (_) {}
 
-    // If MunoWatch provided a healthy rail (>= 15 movies), return them exclusively
-    if (matched.length >= 15) {
-      return _paginate(matched, page, pageSize: pageSize);
-    }
-
-    // ── Complete MovieMax RTDB Disaster Failover (ONLY when MunoWatch fails completely) ──
-    try {
-      final movieMaxList = await _movieMax.getAllMovies();
-      for (final m in movieMaxList) {
-        if (genreId == 16 && _isNonAnimatedLiveAction(m.title)) continue;
-        final hasId = m.genreIds.contains(genreId);
-        final hasName = m.genreNames.any((g) =>
-            g.toLowerCase().contains(genreName.toLowerCase()) ||
-            genreName.toLowerCase().contains(g.toLowerCase()));
-
-        bool keywordMatch = false;
-        final lowerTitle = m.title.toLowerCase();
-        if (genreId == 16) {
-          keywordMatch = lowerTitle.contains('panda') ||
-              lowerTitle.contains('dragon') ||
-              lowerTitle.contains('sonic') ||
-              lowerTitle.contains('mario') ||
-              lowerTitle.contains('lion king') ||
-              lowerTitle.contains('shrek') ||
-              lowerTitle.contains('frozen') ||
-              lowerTitle.contains('minion') ||
-              lowerTitle.contains('toy story') ||
-              lowerTitle.contains('anime') ||
-              lowerTitle.contains('naruto') ||
-              lowerTitle.contains('demon slayer') ||
-              lowerTitle.contains('jujutsu') ||
-              lowerTitle.contains('spider-verse') ||
-              lowerTitle.contains('moana') ||
-              lowerTitle.contains('zootopia') ||
-              lowerTitle.contains('coco') ||
-              lowerTitle.contains('encanto') ||
-              lowerTitle.contains('madagascar') ||
-              lowerTitle.contains('ice age') ||
-              lowerTitle.contains('incredibles');
-        } else if (genreId == 10751) {
-          keywordMatch = lowerTitle.contains('home alone') ||
-              lowerTitle.contains('wonka') ||
-              lowerTitle.contains('charlie and the chocolate factory') ||
-              lowerTitle.contains('paddington') ||
-              lowerTitle.contains('night at the museum') ||
-              lowerTitle.contains('jumanji') ||
-              lowerTitle.contains('narnia') ||
-              lowerTitle.contains('alvin and the chipmunks') ||
-              lowerTitle.contains('stuart little');
-        } else if (genreId == 27) {
-          keywordMatch = lowerTitle.contains('horror') ||
-              lowerTitle.contains('conjuring') ||
-              lowerTitle.contains('insidious') ||
-              lowerTitle.contains('annabelle') ||
-              lowerTitle.contains('evil dead') ||
-              lowerTitle.contains('saw') ||
-              lowerTitle.contains('nun') ||
-              lowerTitle.contains('exorcist') ||
-              lowerTitle.contains('halloween') ||
-              lowerTitle.contains('scream') ||
-              lowerTitle.contains('ghost') ||
-              lowerTitle.contains('dead');
-        } else if (genreId == 18) {
-          keywordMatch = m.genreNames.any((g) => g.toLowerCase().contains('drama'));
-        }
-
-        if (hasId || hasName || keywordMatch) {
-          if (seenIds.add(m.id)) {
-            matched.add(m.copyWith(
-              genreIds: [genreId, ...m.genreIds],
-              genreNames: [genreName, ...m.genreNames],
-            ));
-          }
-        }
-      }
-    } catch (_) {}
-
     if (matched.isNotEmpty) {
       return _paginate(matched, page, pageSize: pageSize);
     }
@@ -448,45 +313,6 @@ class MovieRepository {
           .toList();
 
       final localMatches = movies.where((m) {
-        if (seenIds.contains(m.id)) return false;
-        final title = m.title.toLowerCase();
-        final overview = (m.overview ?? '').toLowerCase();
-        final vj = (m.vjName ?? '').toLowerCase();
-        final combined = '$title $overview $vj';
-
-        if (combined.contains(cleanQuery)) return true;
-        if (qTokens.isNotEmpty && qTokens.every((t) => combined.contains(t))) {
-          return true;
-        }
-        return false;
-      });
-
-      for (final m in localMatches) {
-        if (seenIds.add(m.id)) {
-          combinedResults.add(m);
-        }
-      }
-    } catch (_) {}
-
-    // If MunoWatch live search or catalog returned results, return them exclusively (Zero Hybrid Mixing)
-    if (combinedResults.isNotEmpty) {
-      return _paginate(combinedResults, page, pageSize: 30);
-    }
-
-    // 3. Emergency Disaster-Recovery search across MovieMax (ONLY if MunoWatch fails completely)
-    try {
-      final movies = await _movieMax.getAllMovies();
-      final series = await _movieMax.getAllSeries();
-      final allCatalog = [...movies, ...series];
-
-      final qTokens = cleanQuery
-          .replaceAll(RegExp(r'[^a-zA-Z0-9\s]'), ' ')
-          .toLowerCase()
-          .split(RegExp(r'\s+'))
-          .where((t) => t.isNotEmpty)
-          .toList();
-
-      final localMatches = allCatalog.where((m) {
         if (seenIds.contains(m.id)) return false;
         final title = m.title.toLowerCase();
         final overview = (m.overview ?? '').toLowerCase();
@@ -662,21 +488,7 @@ class MovieRepository {
       } catch (_) {}
     }
 
-    // Supplement with MovieMax VJ movies if MunoWatch returned fewer than 20
-    if (matching.length < 20) {
-      try {
-        final mmList = await _movieMax.getAllMovies();
-        for (final m in mmList) {
-          if (m.vjName == null || m.vjName!.isEmpty) continue;
-          final cleanMm = normalizeVjName(m.vjName!);
-          if (cleanMm.isNotEmpty && (cleanMm.contains(cleanVjTarget) || cleanVjTarget.contains(cleanMm))) {
-            if (seenIds.add(m.id)) {
-              matching.add(m.copyWith(vjName: rawName));
-            }
-          }
-        }
-      } catch (_) {}
-    }
+
 
     // Fallback: If still empty, ensure this VJ screen has playable translated releases
     if (matching.isEmpty) {
@@ -752,6 +564,29 @@ class MovieRepository {
     } catch (_) {
       return MockData.vjs;
     }
+  }
+
+  /// Validates whether a title string is invalid, empty, or a known placeholder
+  static bool _isInvalidOrGarbageTitle(String? t) {
+    if (t == null) return true;
+    final s = t.trim().toLowerCase();
+    if (s.isEmpty ||
+        s == 'movie' ||
+        s == 'untitled' ||
+        s == 'loading...' ||
+        s == 'eps' ||
+        s == 'episode' ||
+        s == 'video' ||
+        s == 'null' ||
+        s == 'none' ||
+        s == 'general' ||
+        s == '0') {
+      return true;
+    }
+    if (RegExp(r'^(?:eps?|episode)\s*\d*$', caseSensitive: false).hasMatch(s)) {
+      return true;
+    }
+    return false;
   }
 
   /// Clean movie titles for TMDB search (removes VJ names, episode/season markers, Luganda tags)
@@ -941,10 +776,25 @@ class MovieRepository {
         }
       }
 
+      // 5. Fallback to catalog so "More Like This" is NEVER empty
+      if (related.length < 6) {
+        for (final m in all) {
+          if (seenIds.add(m.id)) {
+            related.add(m);
+          }
+          if (related.length >= 10) break;
+        }
+      }
+
       if (related.isNotEmpty) return related;
     } catch (_) {}
 
-    return [];
+    try {
+      final popular = await getPopular();
+      return popular.where((m) => m.id != movie.id).take(10).toList();
+    } catch (_) {
+      return [];
+    }
   }
 
   /// Full un-truncated list for 'See All' category pages (endless 50-80+ movie catalog)
@@ -987,16 +837,7 @@ class MovieRepository {
       }
     } catch (_) {}
 
-    try {
-      final mmSeries = await _movieMax.getAllSeries();
-      for (final m in mmSeries) {
-        final root = extractSeriesRoot(m.title);
-        if (root.contains('mob land') || root.contains('mobland')) continue;
-        if (seenRoots.add(root) && seenIds.add(m.id)) {
-          combined.add(m.copyWith(isTv: true));
-        }
-      }
-    } catch (_) {}
+
 
     return combined;
   }
@@ -1103,84 +944,23 @@ class MovieRepository {
       }
     } catch (_) {}
 
-    // If MunoWatch provided a deep collection (>= 20 movies), return them exclusively
-    if (matched.length >= 20) {
-      return _paginate(matched, page, pageSize: pageSize);
-    }
-
-    // ── Complete MovieMax RTDB Disaster Failover (ONLY when MunoWatch fails completely) ──
-    try {
-      final movieMaxList = await _movieMax.getAllMovies();
-      for (final m in movieMaxList) {
-        if (tmdbId == 16 && _isNonAnimatedLiveAction(m.title)) continue;
-        final lower = m.title.toLowerCase();
-        final overview = m.overview?.toLowerCase() ?? '';
-
-        bool isRegionalOrGenreMatch = false;
-        if (clean.contains('korean')) {
-          isRegionalOrGenreMatch = lower.contains('korean') ||
-              lower.contains('korea') ||
-              lower.contains('seoul') ||
-              overview.contains('korea') ||
-              m.genreNames.any((g) => g.toLowerCase().contains('korean'));
-        } else if (clean.contains('filipino')) {
-          isRegionalOrGenreMatch = lower.contains('filipino') ||
-              lower.contains('philippines') ||
-              lower.contains('tagalog') ||
-              lower.contains('pinoy') ||
-              overview.contains('philippines') ||
-              m.genreNames.any((g) => g.toLowerCase().contains('filipino'));
-        } else if (clean.contains('indian')) {
-          isRegionalOrGenreMatch = lower.contains('indian') ||
-              lower.contains('india') ||
-              lower.contains('bollywood') ||
-              lower.contains('hindi') ||
-              lower.contains('tamil') ||
-              overview.contains('india') ||
-              m.genreNames.any((g) => g.toLowerCase().contains('indian'));
-        } else if (clean.contains('chinese')) {
-          isRegionalOrGenreMatch = lower.contains('chinese') ||
-              lower.contains('china') ||
-              lower.contains('mandarin') ||
-              lower.contains('hong kong') ||
-              overview.contains('china') ||
-              m.genreNames.any((g) => g.toLowerCase().contains('chinese'));
-        } else if (clean.contains('ugandan')) {
-          isRegionalOrGenreMatch = (m.vjName != null && m.vjName!.trim().isNotEmpty) ||
-              lower.contains('uganda') ||
-              lower.contains('kampala') ||
-              lower.contains('kadama');
-        } else if (clean.contains('kungu') || clean.contains('martial')) {
-          isRegionalOrGenreMatch = lower.contains('kung fu') ||
-              lower.contains('kungu') ||
-              lower.contains('shaolin') ||
-              lower.contains('karate') ||
-              lower.contains('martial') ||
-              lower.contains('ip man');
-        } else if (tmdbId != null) {
-          isRegionalOrGenreMatch = m.genreIds.contains(tmdbId) ||
-              m.genreNames.any((g) => g.toLowerCase().contains(clean));
-        } else {
-          isRegionalOrGenreMatch = queries.any((q) => lower.contains(q) || overview.contains(q));
-        }
-
-        if (isRegionalOrGenreMatch) {
+    // Deep catalog lookup: If we have a TMDB genre ID, enrich from MunoWatch multi-query search
+    if (tmdbId != null) {
+      try {
+        final deepList = await getMoviesByGenre(tmdbId, page: 1, pageSize: pageSize);
+        for (final m in deepList) {
           if (seenIds.add(m.id)) {
-            matched.add(m.copyWith(genreNames: [genreName, ...m.genreNames]));
+            matched.add(m);
           }
         }
-      }
-    } catch (_) {}
+      } catch (_) {}
+    }
 
     if (matched.isNotEmpty) {
       return _paginate(matched, page, pageSize: pageSize);
     }
 
-    if (tmdbId != null) {
-      return getAllMoviesByGenre(tmdbId);
-    }
-
-    return [];
+    return getAllUploads();
   }
 
   // ── 10. Movie Details with Strict VOD & Preserved Identity ──────────────────
@@ -1189,39 +969,34 @@ class MovieRepository {
     Movie? initialMovie,
     bool isTv = false,
   }) async {
-    // 1. Identify movie from initialMovie or MovieMax / MunoWatch deep registry
     Movie? lugandaMovie = initialMovie;
     if (lugandaMovie == null ||
-        lugandaMovie.title.trim().isEmpty ||
-        lugandaMovie.title == 'Loading...') {
+        _isInvalidOrGarbageTitle(lugandaMovie.title)) {
       try {
         final fetched = await _munowatch.findMovie(movieId);
-        if (fetched != null) {
+        if (fetched != null && !_isInvalidOrGarbageTitle(fetched.title)) {
           lugandaMovie = fetched;
         }
       } catch (_) {}
-      if (lugandaMovie == null) {
-        try {
-          final fetched = await _movieMax.findMovie(movieId);
-          if (fetched != null) {
-            lugandaMovie = fetched;
-          }
-        } catch (_) {}
-      }
     }
 
     // 2. Resolve VOD stream URL and full metadata
     String? resolvedVideoUrl = lugandaMovie?.videoUrl;
     int? resolvedRuntime = lugandaMovie?.runtime;
     String? resolvedOverview = lugandaMovie?.overview;
-    String? resolvedTitle = (lugandaMovie != null && lugandaMovie.title.isNotEmpty && lugandaMovie.title != 'Movie')
+    String? resolvedTitle = (lugandaMovie != null && !_isInvalidOrGarbageTitle(lugandaMovie.title))
         ? lugandaMovie.title
         : null;
     String? resolvedBackdrop = lugandaMovie?.backdropPath ?? lugandaMovie?.posterPath;
-    String? resolvedVj = lugandaMovie?.vjName;
+    String? resolvedVj = (lugandaMovie?.vjName != null && !lugandaMovie!.vjName!.toLowerCase().contains('universal'))
+        ? lugandaMovie.vjName
+        : null;
 
-    // Check MunoWatch stream details if videoUrl is still not resolved
-    if (resolvedVideoUrl == null || !resolvedVideoUrl.startsWith('http')) {
+    // Check MunoWatch stream details if videoUrl or title is still not resolved
+    if (resolvedVideoUrl == null ||
+        !resolvedVideoUrl.startsWith('http') ||
+        resolvedTitle == null ||
+        _isInvalidOrGarbageTitle(resolvedTitle)) {
       try {
         final streamDetails = await _munowatch.getStreamDetails(movieId);
         if (streamDetails != null) {
@@ -1231,7 +1006,7 @@ class MovieRepository {
           }
 
           final rawTitle = (streamDetails['title'] ?? streamDetails['video_title'])?.toString().trim();
-          if (rawTitle != null && rawTitle.isNotEmpty && resolvedTitle == null) {
+          if (rawTitle != null && rawTitle.isNotEmpty && !_isInvalidOrGarbageTitle(rawTitle)) {
             resolvedTitle = rawTitle;
           }
 
@@ -1241,7 +1016,7 @@ class MovieRepository {
           }
 
           final rawVj = (streamDetails['vj'] ?? streamDetails['vjname'])?.toString().trim();
-          if (rawVj != null && rawVj.isNotEmpty && resolvedVj == null) {
+          if (rawVj != null && rawVj.isNotEmpty && !rawVj.toLowerCase().contains('universal')) {
             resolvedVj = rawVj.toUpperCase().startsWith('VJ ')
                 ? rawVj
                 : 'VJ $rawVj';
@@ -1263,19 +1038,11 @@ class MovieRepository {
       } catch (_) {}
     }
 
-    // Check MovieMax by title fallback if videoUrl is still not resolved
-    if (resolvedVideoUrl == null || !resolvedVideoUrl.startsWith('http')) {
-      try {
-        final found = await _movieMax.findMovie(movieId, title: resolvedTitle ?? lugandaMovie?.title);
-        if (found?.videoUrl != null && found!.videoUrl!.startsWith('http')) {
-          resolvedVideoUrl = found.videoUrl;
-        }
-      } catch (_) {}
-    }
-
-    final currentTitle = resolvedTitle ?? ((lugandaMovie != null && lugandaMovie.title.isNotEmpty && lugandaMovie.title != 'Movie')
-        ? lugandaMovie.title
-        : 'Movie');
+    final currentTitle = (resolvedTitle != null && !_isInvalidOrGarbageTitle(resolvedTitle))
+        ? resolvedTitle
+        : ((lugandaMovie != null && !_isInvalidOrGarbageTitle(lugandaMovie.title))
+            ? lugandaMovie.title
+            : 'Movie');
 
     // 3. Smart TMDB Name-Based Enrichment ("Shares Its Name")
     int? tmdbId;
@@ -1514,17 +1281,7 @@ class MovieRepository {
     int episodeNumber, {
     int? episodeId,
   }) async {
-    // 0. Try MovieMax first (direct Pearlpix/R2 links)
-    try {
-      final mmEpisodes = await _movieMax.getSeriesEpisodes(episodeId ?? 0, seasonNumber, seriesTitle: seriesTitle);
-      final match = mmEpisodes.firstWhere(
-        (e) => e.episodeNumber == episodeNumber || (episodeId != null && e.id == episodeId),
-        orElse: () => const TvEpisodeData(id: -1, episodeNumber: -1, seasonNumber: -1, name: '', overview: '', runtime: 0, voteAverage: 0),
-      );
-      if (match.videoUrl != null && match.videoUrl!.startsWith('http')) {
-        return match.videoUrl;
-      }
-    } catch (_) {}
+
 
     // 1. If episodeId is provided and > 0, try resolving directly first
     if (episodeId != null && episodeId > 0) {
@@ -1616,36 +1373,7 @@ class MovieRepository {
     String? seriesTitle,
     String? seriesCode,
   }) async {
-    // 0. Check MovieMax first for instant direct streaming links
-    try {
-      final mmEpisodes = await _movieMax.getSeriesEpisodes(tvId, seasonNumber, seriesTitle: seriesTitle);
-      if (mmEpisodes.isNotEmpty) {
-        if (seriesTitle != null && seriesTitle.isNotEmpty && _hasCustomApiKey) {
-          try {
-            final tmdbMeta = await _findTmdbMetadata(seriesTitle, isTv: true);
-            final tmdbTvId = tmdbMeta?['id'] as int?;
-            if (tmdbTvId != null) {
-              final tmdbEpisodes = await _datasource.getTvSeasonEpisodes(tmdbTvId, seasonNumber);
-              if (tmdbEpisodes.isNotEmpty) {
-                final Map<int, TvEpisodeData> tmdbMap = {for (final e in tmdbEpisodes) e.episodeNumber: e};
-                return mmEpisodes.map((ep) {
-                  final tmdbEp = tmdbMap[ep.episodeNumber];
-                  if (tmdbEp != null) {
-                    return ep.copyWith(
-                      stillPath: ep.stillPath ?? tmdbEp.stillPath,
-                      overview: ep.overview.isNotEmpty ? ep.overview : tmdbEp.overview,
-                      name: (ep.name.isNotEmpty && !ep.name.startsWith('Episode ')) ? ep.name : tmdbEp.name,
-                    );
-                  }
-                  return ep;
-                }).toList();
-              }
-            }
-          } catch (_) {}
-        }
-        return mmEpisodes;
-      }
-    } catch (_) {}
+
 
     // 0b. Direct seriesCode container lookup on MunoWatch
     if (seriesCode != null && seriesCode.isNotEmpty && seriesCode != '0') {
@@ -1871,17 +1599,8 @@ class MovieRepository {
     return [];
   }
 
-  /// On-demand stream URL resolution for playback and downloads
+  /// On-demand stream URL resolution for playback and downloads (MunoWatch exclusive)
   Future<String?> resolveStreamUrl(int movieId, {String? title}) async {
-    // 1. Check MovieMax first for instant direct streaming URL
-    try {
-      final found = await _movieMax.findMovie(movieId, title: title);
-      if (found?.videoUrl != null && found!.videoUrl!.startsWith('http')) {
-        return found.videoUrl;
-      }
-    } catch (_) {}
-
-    // 2. Fallback to MunoWatch stream details
     try {
       final streamDetails = await _munowatch.getStreamDetails(movieId);
       final playingUrl = streamDetails?['playingurl']?.toString().trim();

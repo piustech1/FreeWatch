@@ -42,6 +42,8 @@ android {
             keyPassword keystoreProperties['keyPassword'] ?: 'freewatch2026'
             storeFile keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : file('freewatch-release.jks')
             storePassword keystoreProperties['storePassword'] ?: 'freewatch2026'
+            v1SigningEnabled true
+            v2SigningEnabled true
         }
     }
 

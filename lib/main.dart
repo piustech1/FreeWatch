@@ -19,6 +19,10 @@ import 'app.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // TV & Low-Memory Optimization: Cap imageCache to 60MB to avoid freezing / GC lag
+  PaintingBinding.instance.imageCache.maximumSizeBytes = 60 * 1024 * 1024;
+  PaintingBinding.instance.imageCache.maximumSize = 100;
+
   // Initialize Firebase with FreeWatch project configuration
   try {
     await Firebase.initializeApp(

@@ -1206,12 +1206,17 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
     MovieDetailsData? details,
   ]) {
     final seriesCode = details?.seriesCode ?? widget.movie.seriesCode;
+    final effectiveSeriesTitle = (details != null &&
+            details.title.isNotEmpty &&
+            !details.title.toLowerCase().startsWith('eps'))
+        ? details.title
+        : widget.movie.title;
     final episodesAsync = ref.watch(
       tvSeasonEpisodesProvider(
         TvSeasonParam(
           tvId: widget.movie.id,
           seasonNumber: _selectedSeason,
-          seriesTitle: widget.movie.title,
+          seriesTitle: effectiveSeriesTitle,
           seriesCode: seriesCode,
         ),
       ),

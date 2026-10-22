@@ -160,6 +160,16 @@ final relatedMoviesProvider = FutureProvider.family<List<Movie>, Movie>((ref, mo
 /// Comprehensive full-collection provider for 'See All' category screens
 final categoryFullMoviesProvider = FutureProvider.family<List<Movie>, String>((ref, title) async {
   final repo = ref.watch(movieRepositoryProvider);
-  return repo.getMoviesByGenreName(title);
+  final clean = title.toLowerCase().trim();
+  if (clean.contains('trending')) {
+    return repo.getTrending(page: 1);
+  }
+  if (clean.contains('latest') || clean.contains('rewatch') || clean.contains('upload')) {
+    return repo.getAllUploads();
+  }
+  if (clean.contains('series')) {
+    return repo.getAllSeriesList();
+  }
+  return repo.getMoviesByGenreName(title, pageSize: 120);
 });
 
