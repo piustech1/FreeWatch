@@ -1,26 +1,31 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import '../../core/constants/api_constants.dart';
 import '../datasources/tmdb_datasource.dart';
 import '../datasources/moviemax_datasource.dart';
 import '../datasources/munowatch_datasource.dart';
+import '../datasources/firebase_catalog_datasource.dart';
 import '../models/movie.dart';
 import '../models/genre.dart';
 import '../models/movie_details_data.dart';
 import '../models/vj.dart';
 import '../mock/mock_movies.dart';
 
-/// Unified MovieRepository utilizing MovieMax RTDB as the primary live Luganda
-/// video and catalog authority (1,531+ movies & 131+ TV series), with MunoWatch
-/// and TMDB enrichment.
+/// Unified MovieRepository utilizing Firebase Realtime Database (/munowatch) as the
+/// primary high-speed Luganda video and catalog authority, backed by MunoWatch live API.
 class MovieRepository {
   final TmdbDatasource _datasource;
   final MunowatchDatasource _munowatch;
+  final FirebaseCatalogDatasource _firebaseCatalog;
 
   MovieRepository({
     TmdbDatasource? datasource,
     MovieMaxDatasource? movieMaxDatasource,
     MunowatchDatasource? munowatchDatasource,
+    FirebaseCatalogDatasource? firebaseCatalogDatasource,
   })  : _datasource = datasource ?? TmdbDatasource(),
-        _munowatch = munowatchDatasource ?? MunowatchDatasource();
+        _munowatch = munowatchDatasource ?? MunowatchDatasource(),
+        _firebaseCatalog = firebaseCatalogDatasource ?? FirebaseCatalogDatasource();
 
   final Map<String, List<Movie>> _vjMoviesCache = {};
 
@@ -28,8 +33,18 @@ class MovieRepository {
       ApiConstants.tmdbApiKey != 'YOUR_TMDB_API_KEY' &&
       ApiConstants.tmdbApiKey.trim().isNotEmpty;
 
-  /// Full live Luganda catalog sourced exclusively from MunoWatch API
+  /// Full live Luganda catalog sourced primarily from fast Firebase RTDB (<50ms),
+  /// with live MunoWatch API fallback
   Future<List<Movie>> _getAllLugandaMovies({bool forceRefresh = false}) async {
+    try {
+      final rtdbList = await _firebaseCatalog.getCatalog(forceRefresh: forceRefresh);
+      if (rtdbList.isNotEmpty) {
+        return rtdbList;
+      }
+    } catch (e) {
+      debugPrint('⚠️ [MovieRepository] RTDB catalog notice: $e');
+    }
+
     try {
       final munoList = await _munowatch.getAllMovies(forceRefresh: forceRefresh);
       if (munoList.isNotEmpty) {
@@ -40,8 +55,15 @@ class MovieRepository {
     return const <Movie>[];
   }
 
-  // ── 1. Trending / Hero Banner Movies (MunoWatch only) ─
+  // ── 1. Trending / Hero Banner Movies (Firebase RTDB first) ─────────────────
   Future<List<Movie>> getTrending({int page = 1}) async {
+    try {
+      final rtdbTrending = await _firebaseCatalog.getCategoryMovies('Latest on FreeWatch');
+      if (rtdbTrending.isNotEmpty) {
+        return _paginate(rtdbTrending, page, pageSize: 25);
+      }
+    } catch (_) {}
+
     try {
       final all = await _getAllLugandaMovies();
       if (all.isNotEmpty) {
@@ -59,8 +81,15 @@ class MovieRepository {
     return const <Movie>[];
   }
 
-  // ── 2. Popular Movies (MunoWatch only) ─────────────────────────────────────
+  // ── 2. Popular Movies (Firebase RTDB first) ─────────────────────────────────
   Future<List<Movie>> getPopular({int page = 1}) async {
+    try {
+      final rtdbUploads = await _firebaseCatalog.getCategoryMovies('Latest Uploads');
+      if (rtdbUploads.isNotEmpty) {
+        return _paginate(rtdbUploads, page, pageSize: 25);
+      }
+    } catch (_) {}
+
     try {
       final all = await _getAllLugandaMovies();
       if (all.isNotEmpty) {
@@ -121,8 +150,15 @@ class MovieRepository {
     return const <Movie>[];
   }
 
-  // ── 6. TV Series (MunoWatch only) ──────────────────────────────────────────
+  // ── 6. TV Series (Firebase RTDB first) ──────────────────────────────────────
   Future<List<Movie>> getSeries({int page = 1}) async {
+    try {
+      final seriesList = await _firebaseCatalog.getCategoryMovies('Series');
+      if (seriesList.isNotEmpty) {
+        return _paginate(seriesList, page, pageSize: 25);
+      }
+    } catch (_) {}
+
     final List<Movie> combined = [];
     final Set<int> seenIds = {};
     final Set<String> seenRoots = {};
@@ -150,9 +186,16 @@ class MovieRepository {
     return _paginate(combined, page, pageSize: 25);
   }
 
-  // ── 7. Movies by Genre with TMDB Fallback & Cross-Reference ────────────────
+  // ── 7. Movies by Genre with Firebase RTDB first ───────────────────────────
   Future<List<Movie>> getMoviesByGenre(int genreId, {int page = 1, int pageSize = 25}) async {
     final genreName = _mapGenreIdToName(genreId);
+    try {
+      final rtdbGenre = await _firebaseCatalog.getCategoryMovies(genreName);
+      if (rtdbGenre.isNotEmpty) {
+        return _paginate(rtdbGenre, page, pageSize: pageSize);
+      }
+    } catch (_) {}
+
     final List<Movie> matched = [];
     final Set<int> seenIds = {};
 
@@ -292,17 +335,7 @@ class MovieRepository {
     final List<Movie> combinedResults = [];
     final Set<int> seenIds = {};
 
-    // 1. MunoWatch backend live search (primary search engine)
-    try {
-      final munoSearchResults = await _munowatch.searchMovies(cleanQuery);
-      for (final m in munoSearchResults) {
-        if (seenIds.add(m.id)) {
-          combinedResults.add(m);
-        }
-      }
-    } catch (_) {}
-
-    // 2. In-memory tokenized word matching across active MunoWatch catalog
+    // 1. Instant in-memory tokenized word matching across enriched Firebase RTDB catalog (<1ms)
     try {
       final movies = await _getAllLugandaMovies();
       final qTokens = cleanQuery
@@ -317,7 +350,8 @@ class MovieRepository {
         final title = m.title.toLowerCase();
         final overview = (m.overview ?? '').toLowerCase();
         final vj = (m.vjName ?? '').toLowerCase();
-        final combined = '$title $overview $vj';
+        final genreStr = m.genreNames.join(' ').toLowerCase();
+        final combined = '$title $overview $vj $genreStr';
 
         if (combined.contains(cleanQuery)) return true;
         if (qTokens.isNotEmpty && qTokens.every((t) => combined.contains(t))) {
@@ -327,6 +361,16 @@ class MovieRepository {
       });
 
       for (final m in localMatches) {
+        if (seenIds.add(m.id)) {
+          combinedResults.add(m);
+        }
+      }
+    } catch (_) {}
+
+    // 2. MunoWatch backend live search to supplement for newly added items
+    try {
+      final munoSearchResults = await _munowatch.searchMovies(cleanQuery);
+      for (final m in munoSearchResults) {
         if (seenIds.add(m.id)) {
           combinedResults.add(m);
         }
@@ -1375,10 +1419,23 @@ class MovieRepository {
   }) async {
 
 
-    // 0b. Direct seriesCode container lookup on MunoWatch
-    if (seriesCode != null && seriesCode.isNotEmpty && seriesCode != '0') {
+    // 0a. Primary high-speed Firebase RTDB series episodes lookup (<50ms)
+    try {
+      final rtdbEps = await _firebaseCatalog.getSeriesEpisodes(tvId, seriesCode: seriesCode);
+      if (rtdbEps.isNotEmpty) {
+        return rtdbEps;
+      }
+    } catch (_) {}
+
+    // 0b. Direct series lookup on MunoWatch by movie ID first, then seriesCode
+    final lookupCandidates = <dynamic>[tvId];
+    if (seriesCode != null && seriesCode.isNotEmpty && seriesCode != '0' && seriesCode != tvId.toString()) {
+      lookupCandidates.add(seriesCode);
+    }
+
+    for (final identifier in lookupCandidates) {
       try {
-        final munoEps = await _munowatch.getSeriesEpisodes(seriesCode);
+        final munoEps = await _munowatch.getSeriesEpisodes(identifier);
         if (munoEps.isNotEmpty) {
           final List<TvEpisodeData> parsedEpisodes = [];
           for (int i = 0; i < munoEps.length; i++) {
@@ -1599,17 +1656,42 @@ class MovieRepository {
     return [];
   }
 
-  /// On-demand stream URL resolution for playback and downloads (MunoWatch exclusive)
+  /// On-demand stream URL resolution with RTDB caching and live self-healing
   Future<String?> resolveStreamUrl(int movieId, {String? title}) async {
+    // 1. Fast-path: Check if the movie already has a valid stream URL in Firebase RTDB
+    try {
+      final all = await _getAllLugandaMovies();
+      final match = all.where((m) => m.id == movieId).firstOrNull;
+      if (match?.videoUrl != null && match!.videoUrl!.startsWith('http')) {
+        return match.videoUrl;
+      }
+    } catch (_) {}
+
+    // 2. On-demand resolution from MunoWatch API
     try {
       final streamDetails = await _munowatch.getStreamDetails(movieId);
       final playingUrl = streamDetails?['playingurl']?.toString().trim();
       if (playingUrl != null && playingUrl.startsWith('http')) {
+        unawaited(_firebaseCatalog.updateLiveStreamUrl(movieId, playingUrl));
         return playingUrl;
       }
       final found = await _munowatch.findMovie(movieId, title: title);
       if (found?.videoUrl != null && found!.videoUrl!.startsWith('http')) {
+        unawaited(_firebaseCatalog.updateLiveStreamUrl(movieId, found.videoUrl!));
         return found.videoUrl;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// Self-healing: Refresh an expired streaming link on playback failure and update RTDB
+  Future<String?> refreshExpiredStreamUrl(int movieId) async {
+    try {
+      final streamDetails = await _munowatch.getStreamDetails(movieId);
+      final playingUrl = streamDetails?['playingurl']?.toString().trim();
+      if (playingUrl != null && playingUrl.startsWith('http')) {
+        await _firebaseCatalog.updateLiveStreamUrl(movieId, playingUrl);
+        return playingUrl;
       }
     } catch (_) {}
     return null;

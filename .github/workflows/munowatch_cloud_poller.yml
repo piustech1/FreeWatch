@@ -26,6 +26,12 @@ jobs:
         run: |
           cd scripts && npm ci || npm install
 
+      - name: Sync MunoWatch Catalog & Series to Firebase RTDB
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          node scripts/sync_munowatch_to_rtdb.js
+
       - name: Check MunoWatch & Broadcast New Movies
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}

@@ -297,7 +297,23 @@ async function checkMunowatchForNewMovies() {
   }
 }
 
+const { syncCatalogToRtdb } = require('./sync_munowatch_to_rtdb');
+
+// Periodic catalog sync wrapper
+async function runCatalogSyncSafely() {
+  try {
+    console.log('🔄 [Daemon] Running automated MunoWatch -> RTDB catalog sync...');
+    await syncCatalogToRtdb({ checkStreams: false });
+  } catch (err) {
+    console.warn('⚠️ [Daemon] Background catalog sync error:', err.message);
+  }
+}
+
 // Start polling on startup after 3 seconds, then every 15 minutes
 setTimeout(checkMunowatchForNewMovies, 3000);
 setInterval(checkMunowatchForNewMovies, 15 * 60 * 1000);
+
+// Run full catalog sync on boot after 10s, then every 30 minutes
+setTimeout(runCatalogSyncSafely, 10000);
+setInterval(runCatalogSyncSafely, 30 * 60 * 1000);
 

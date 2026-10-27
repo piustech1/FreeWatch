@@ -80,6 +80,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
   bool _hasShownIntermission50 = false;
   bool _hasShownIntermission75 = false;
   bool _isIntermissionActive = false;
+  bool _hasAttemptedHealing = false;
 
   @override
   void initState() {
@@ -2542,6 +2543,25 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
 
     controller.addListener(() {
       if (!mounted) return;
+      if (controller.value.hasError) {
+        if (!hasLocalFile && !_hasAttemptedHealing) {
+          _hasAttemptedHealing = true;
+          ref
+              .read(movieRepositoryProvider)
+              .refreshExpiredStreamUrl(widget.movie.id)
+              .then((refreshedUrl) {
+            if (refreshedUrl != null &&
+                refreshedUrl.trim().startsWith('http') &&
+                mounted) {
+              _playTrailer(
+                streamUrl: refreshedUrl.trim(),
+                isEpisodeSwitch: isEpisodeSwitch,
+              );
+            }
+          }).catchError((_) {});
+        }
+        return;
+      }
       if (controller.value.isInitialized) {
         final duration = controller.value.duration;
         final position = controller.value.position;
@@ -2587,6 +2607,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
 
     controller.initialize().then((_) {
       if (!mounted) return;
+      _hasAttemptedHealing = false;
       setState(() {
         _isInitializingVideo = false;
         _isPlayingVideo = true;
@@ -2610,7 +2631,25 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
         }
       }
       controller.play();
-    }).catchError((error) {
+    }).catchError((error) async {
+      // Self-healing: if stream failed to initialize, attempt refreshExpiredStreamUrl once
+      if (!hasLocalFile && !_hasAttemptedHealing) {
+        _hasAttemptedHealing = true;
+        try {
+          final refreshedUrl = await ref
+              .read(movieRepositoryProvider)
+              .refreshExpiredStreamUrl(widget.movie.id);
+          if (refreshedUrl != null &&
+              refreshedUrl.trim().startsWith('http') &&
+              mounted) {
+            _playTrailer(
+              streamUrl: refreshedUrl.trim(),
+              isEpisodeSwitch: isEpisodeSwitch,
+            );
+            return;
+          }
+        } catch (_) {}
+      }
       if (!mounted) return;
       setState(() {
         _isInitializingVideo = false;

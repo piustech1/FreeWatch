@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'data/datasources/firebase_catalog_datasource.dart';
 import 'core/services/notification_service.dart';
 import 'core/services/movie_notification_tracker.dart';
 import 'core/services/user_presence_service.dart';
@@ -30,6 +32,8 @@ void main() async {
     );
     // Register background messaging handler
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    // Warm up high-speed Firebase RTDB catalog with offline persistence
+    unawaited(FirebaseCatalogDatasource().initialize());
   } catch (e) {
     debugPrint('Firebase initialization notice: $e');
   }
