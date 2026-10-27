@@ -9,6 +9,13 @@ import '../models/movie_details_data.dart';
 /// Loads pre-ingested, deeply-enriched Luganda movies and series in <50ms with
 /// offline disk caching, zero-delay hero slider loading, and self-healing stream links.
 class FirebaseCatalogDatasource {
+  static final FirebaseCatalogDatasource _instance = FirebaseCatalogDatasource._internal();
+  factory FirebaseCatalogDatasource({FirebaseDatabase? database}) {
+    if (database != null) _instance._dbInstance = database;
+    return _instance;
+  }
+  FirebaseCatalogDatasource._internal();
+
   FirebaseDatabase? _dbInstance;
   
   // In-memory cache for sub-millisecond synchronous access once loaded
@@ -19,10 +26,6 @@ class FirebaseCatalogDatasource {
   
   bool _isInitialized = false;
   Completer<void>? _initCompleter;
-  StreamSubscription<DatabaseEvent>? _catalogSubscription;
-
-  FirebaseCatalogDatasource({FirebaseDatabase? database})
-      : _dbInstance = database;
 
   FirebaseDatabase? get _db {
     if (_dbInstance != null) return _dbInstance;
@@ -34,7 +37,7 @@ class FirebaseCatalogDatasource {
     return _dbInstance;
   }
 
-  /// Ensure RTDB offline disk persistence is enabled and initial catalog is loaded
+  /// Ensure initial catalog is loaded into in-memory cache safely without native exceptions
   Future<void> initialize() async {
     if (_isInitialized) return;
     if (_initCompleter != null) return _initCompleter!.future;
@@ -49,47 +52,30 @@ class FirebaseCatalogDatasource {
     }
 
     try {
-      // Enable disk persistence if not already set
-      try {
-        database.setPersistenceEnabled(true);
-        database.setPersistenceCacheSizeBytes(50 * 1024 * 1024); // 50MB disk cache
-      } catch (_) {}
-
-      // Keep RTDB munowatch node synced offline
-      try {
-        database.ref('munowatch').keepSynced(true);
-      } catch (_) {}
-
       await _loadFromRtdb();
-
-      // Listen for real-time background catalog updates from cloud poller
-      _catalogSubscription = database.ref('munowatch').onValue.listen((event) {
-        if (event.snapshot.exists && event.snapshot.value is Map) {
-          _parseSnapshot(event.snapshot.value as Map);
-        }
-      }, onError: (e) {
-        debugPrint('⚠️ [FirebaseCatalogDatasource] Realtime sync notice: $e');
-      });
-
       _isInitialized = true;
       _initCompleter?.complete();
     } catch (e) {
-      debugPrint('⚠️ [FirebaseCatalogDatasource] Initialization error: $e');
+      debugPrint('⚠️ [FirebaseCatalogDatasource] Initialization notice: $e');
+      _isInitialized = true;
       _initCompleter?.complete();
     }
   }
 
-  /// One-time fetch of full catalog node from RTDB
+  /// One-time fetch of full catalog node from RTDB with safe timeout
   Future<void> _loadFromRtdb() async {
     final database = _db;
     if (database == null) return;
     try {
-      final snapshot = await database.ref('munowatch').get();
+      final snapshot = await database
+          .ref('munowatch')
+          .get()
+          .timeout(const Duration(seconds: 4));
       if (snapshot.exists && snapshot.value is Map) {
         _parseSnapshot(snapshot.value as Map);
       }
     } catch (e) {
-      debugPrint('⚠️ [FirebaseCatalogDatasource] Initial fetch error: $e');
+      debugPrint('⚠️ [FirebaseCatalogDatasource] Initial fetch notice: $e');
     }
   }
 
@@ -124,7 +110,13 @@ class FirebaseCatalogDatasource {
         rawCategories.forEach((catKey, idList) {
           if (idList is List) {
             final ids = idList
-                .map((e) => int.tryParse(e.toString()))
+                .map((e) => int.tryParse(e?.toString() ?? ''))
+                .whereType<int>()
+                .toList();
+            _byCategory[catKey.toString()] = ids;
+          } else if (idList is Map) {
+            final ids = idList.values
+                .map((e) => int.tryParse(e?.toString() ?? ''))
                 .whereType<int>()
                 .toList();
             _byCategory[catKey.toString()] = ids;
@@ -142,7 +134,14 @@ class FirebaseCatalogDatasource {
             final idList = vjObj['movies'];
             if (idList is List) {
               final ids = idList
-                  .map((e) => int.tryParse(e.toString()))
+                  .map((e) => int.tryParse(e?.toString() ?? ''))
+                  .whereType<int>()
+                  .toList();
+              _byVj[name] = ids;
+              _byVj[vjKey.toString()] = ids;
+            } else if (idList is Map) {
+              final ids = idList.values
+                  .map((e) => int.tryParse(e?.toString() ?? ''))
                   .whereType<int>()
                   .toList();
               _byVj[name] = ids;
@@ -160,10 +159,17 @@ class FirebaseCatalogDatasource {
           final sId = int.tryParse(seriesKey.toString());
           if (sId != null && sObj is Map) {
             final rawEps = sObj['episodes'];
+            List? epList;
             if (rawEps is List) {
+              epList = rawEps;
+            } else if (rawEps is Map) {
+              epList = rawEps.values.toList();
+            }
+
+            if (epList != null) {
               final List<TvEpisodeData> eps = [];
-              for (var i = 0; i < rawEps.length; i++) {
-                final ep = rawEps[i];
+              for (var i = 0; i < epList.length; i++) {
+                final ep = epList[i];
                 if (ep is Map) {
                   final epNum = (ep['episodeNumber'] is int)
                       ? ep['episodeNumber'] as int
@@ -195,7 +201,7 @@ class FirebaseCatalogDatasource {
 
       debugPrint('🎬 [FirebaseCatalogDatasource] Parsed ${_catalog.length} movies, ${_seriesEpisodes.length} series from RTDB.');
     } catch (e) {
-      debugPrint('⚠️ [FirebaseCatalogDatasource] Parse snapshot error: $e');
+      debugPrint('⚠️ [FirebaseCatalogDatasource] Parse snapshot notice: $e');
     }
   }
 
@@ -414,8 +420,13 @@ class FirebaseCatalogDatasource {
     }
   }
 
-  /// Dispose listeners
+  /// Dispose cache
   void dispose() {
-    _catalogSubscription?.cancel();
+    _catalog.clear();
+    _byCategory.clear();
+    _byVj.clear();
+    _seriesEpisodes.clear();
+    _isInitialized = false;
+    _initCompleter = null;
   }
 }

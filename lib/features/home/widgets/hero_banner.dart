@@ -337,15 +337,7 @@ class _HeroBannerState extends ConsumerState<HeroBanner>
                                   0.2126, 0.7152, 0.0722, 0, 0,
                                   0,      0,      0,      1, 0,
                                 ]),
-                                child: Image.asset(
-                                  assignedVj.imageUrl,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => Container(
-                                    color: const Color(0xFF1E2130),
-                                    child: const Icon(Icons.mic_rounded,
-                                        color: Colors.white, size: 14),
-                                  ),
-                                ),
+                                child: _buildVjAvatar(assignedVj.imageUrl),
                               ),
                             ),
                           ),
@@ -359,6 +351,34 @@ class _HeroBannerState extends ConsumerState<HeroBanner>
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildVjAvatar(String imageUrl) {
+    final cleanUrl = imageUrl.trim();
+    if (cleanUrl.isEmpty) {
+      return Container(
+        color: const Color(0xFF1E2130),
+        child: const Icon(Icons.mic_rounded, color: Colors.white, size: 14),
+      );
+    }
+    if (cleanUrl.startsWith('http')) {
+      return CachedNetworkImage(
+        imageUrl: cleanUrl,
+        fit: BoxFit.cover,
+        errorWidget: (_, __, ___) => Container(
+          color: const Color(0xFF1E2130),
+          child: const Icon(Icons.mic_rounded, color: Colors.white, size: 14),
+        ),
+      );
+    }
+    return Image.asset(
+      cleanUrl,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => Container(
+        color: const Color(0xFF1E2130),
+        child: const Icon(Icons.mic_rounded, color: Colors.white, size: 14),
+      ),
     );
   }
 

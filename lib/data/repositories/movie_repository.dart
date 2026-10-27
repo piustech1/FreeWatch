@@ -594,7 +594,7 @@ class MovieRepository {
             name: raw.toUpperCase().startsWith('VJ') ? raw : 'VJ $raw',
             nickname: raw.toUpperCase().startsWith('VJ') ? raw.substring(2).trim() : raw,
             specialty: 'Luganda Translation',
-            imageUrl: '',
+            imageUrl: 'assets/vjs/vj_universal.png',
             movieCount: entry.value,
             translatedMovieIds: const [],
           ));

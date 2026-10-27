@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -20,6 +21,16 @@ import 'app.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Global Crash Shields: Prevent any unhandled async or framework exceptions from force-closing the app
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
+    debugPrint('🛡️ [FreeWatch CrashShield] Framework error: ${details.exceptionAsString()}');
+  };
+  PlatformDispatcher.instance.onError = (Object error, StackTrace stack) {
+    debugPrint('🛡️ [FreeWatch CrashShield] Unhandled platform error: $error');
+    return true; // Mark as handled so the Android OS does not kill or close the process
+  };
 
   // TV & Low-Memory Optimization: Cap imageCache to 60MB to avoid freezing / GC lag
   PaintingBinding.instance.imageCache.maximumSizeBytes = 60 * 1024 * 1024;

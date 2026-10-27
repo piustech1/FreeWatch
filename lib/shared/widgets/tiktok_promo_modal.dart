@@ -47,11 +47,13 @@ class TiktokPromoModal extends StatelessWidget {
   static void showOncePerSession(BuildContext context) {
     if (_sessionShown) return;
     _sessionShown = true;
-    Future.delayed(const Duration(seconds: 4), () async {
-      if (!context.mounted) return;
-      if (await hasJoinedCommunity()) return;
-      if (!context.mounted) return;
-      show(context);
+    Future.delayed(const Duration(seconds: 12), () async {
+      try {
+        if (!context.mounted) return;
+        if (await hasJoinedCommunity()) return;
+        if (!context.mounted) return;
+        show(context);
+      } catch (_) {}
     });
   }
 
@@ -61,27 +63,31 @@ class TiktokPromoModal extends StatelessWidget {
     VoidCallback? onDismiss,
     bool force = false,
   }) async {
-    if (await hasJoinedCommunity()) {
-      onDismiss?.call();
-      return;
-    }
-    if (!force && _lastModalShownTime != null) {
-      final elapsed = DateTime.now().difference(_lastModalShownTime!);
-      if (elapsed < minIntervalBetweenModals) {
+    try {
+      if (await hasJoinedCommunity()) {
         onDismiss?.call();
         return;
       }
-    }
-    _lastModalShownTime = DateTime.now();
+      if (!force && _lastModalShownTime != null) {
+        final elapsed = DateTime.now().difference(_lastModalShownTime!);
+        if (elapsed < minIntervalBetweenModals) {
+          onDismiss?.call();
+          return;
+        }
+      }
+      _lastModalShownTime = DateTime.now();
 
-    if (!context.mounted) return;
-    await showDialog(
-      context: context,
-      barrierDismissible: true,
-      barrierColor: Colors.black.withOpacity(0.75),
-      builder: (ctx) => TiktokPromoModal(onDismiss: onDismiss),
-    );
-    onDismiss?.call();
+      if (!context.mounted) return;
+      await showDialog(
+        context: context,
+        barrierDismissible: true,
+        barrierColor: Colors.black.withOpacity(0.75),
+        builder: (ctx) => TiktokPromoModal(onDismiss: onDismiss),
+      );
+      onDismiss?.call();
+    } catch (_) {
+      onDismiss?.call();
+    }
   }
 
   Future<void> _openTiktok(BuildContext context) async {

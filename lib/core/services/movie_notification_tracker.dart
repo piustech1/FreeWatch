@@ -29,15 +29,23 @@ class MovieNotificationTracker {
         _munowatch = munowatchDatasource ?? MunowatchDatasource();
 
   void startTracking() {
-    // Initial check shortly after app boot
-    Future.delayed(const Duration(seconds: 4), () {
-      checkForNewMovies();
+    // Initial check delayed to 15s after app boot to keep startup lightweight & fast
+    Future.delayed(const Duration(seconds: 15), () {
+      try {
+        checkForNewMovies();
+      } catch (e) {
+        debugPrint('⚠️ [MovieNotificationTracker] Initial check notice: $e');
+      }
     });
 
     // Periodic background checking interval
     _periodicTimer?.cancel();
     _periodicTimer = Timer.periodic(_checkInterval, (_) {
-      checkForNewMovies();
+      try {
+        checkForNewMovies();
+      } catch (e) {
+        debugPrint('⚠️ [MovieNotificationTracker] Periodic check notice: $e');
+      }
     });
   }
 
