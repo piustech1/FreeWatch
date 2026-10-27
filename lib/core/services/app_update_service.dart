@@ -32,9 +32,9 @@ class AppUpdateService {
   factory AppUpdateService() => _instance;
   AppUpdateService._internal();
 
-  // Fallback defaults matching current pubspec version 1.0.66+67
-  static const int defaultBuildNumber = 67;
-  static const String defaultVersionName = '1.0.66';
+  // Fallback defaults matching current pubspec version 1.0.68+69
+  static const int defaultBuildNumber = 69;
+  static const String defaultVersionName = '1.0.68';
   static const String defaultStoreListingUrl = 'https://freewatchug.online/store';
 
   Future<void> _notifyUserOfUpdate(String version) async {

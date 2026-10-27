@@ -101,28 +101,37 @@ export default function App() {
 
   // Dynamic Release Config - Multiplatform Features
   const [releaseInfo, setReleaseInfo] = useState({
-    version: '1.0.66',
-    buildNumber: 67,
+    version: '1.0.68',
+    buildNumber: 69,
     size: '110.5 MB',
     releaseDate: formatReleaseDate(Date.now()),
-    apkUrl: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.66/FreeWatch-release.apk',
-    tvApkUrl: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.66/FreeWatch-TV-release.apk',
+    apkUrl: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.68/FreeWatch-release.apk',
+    tvApkUrl: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.68/FreeWatch-TV-release.apk',
     webUrl: 'https://freewatchug.online',
     notes: [
-      'Android TV 16:9 Landscape UI: Full Leanback support with glowing focus states, navigation sidebar, and 10-foot cinema UI.',
-      'Continue as Guest: Instant streaming on Android TV without remote typing hassle.',
-      'Responsive Grids: Dynamic multi-device columns adapting seamlessly from phones to 4K TVs.',
-      'Coming Soon Web Portal: Minimalist official launch portal with direct store download links.',
-      'Universal Device APKs: Dedicated builds for Phone, Android TV, Fire TV, and multi-architecture devices.'
+      'Automated Firebase RTDB Ingestion: Pre-ingested catalog with instant local startup (<50ms) and offline disk persistence.',
+      'Complete Series Episodes: Comprehensive season episode discovery indexing all episodes directly from MunoWatch.',
+      'Self-Healing Streaming Playback: Automatic renewal of expired streaming links on the fly with live RTDB updates.',
+      'Zero Disappearing Sections: Reliable hero billboard and category rails with eliminated network timeouts.'
     ]
   });
 
   // Dynamic Version History List
   const [historyReleases, setHistoryReleases] = useState([
     {
-      version: '1.0.66',
+      version: '1.0.68',
       date: 'Latest',
-      notes: 'Android TV 16:9 Landscape Leanback UI, Guest auth, responsive TV grids, dual Phone & TV release APKs, and Coming Soon web portal.'
+      notes: 'Automated Firebase RTDB catalog sync, instant mobile startup (<50ms), complete series episode indexing, and self-healing playback.'
+    },
+    {
+      version: '1.0.67',
+      date: 'Earlier',
+      notes: 'Android TV v1/v2 signature fix, hardware-accelerated TV memory lightness, full A-to-Z web app mirror, and MunoWatch authentic details with related movies.'
+    },
+    {
+      version: '1.0.66',
+      date: 'Earlier',
+      notes: 'Android TV 16:9 Landscape Leanback UI, Guest auth, responsive TV grids, and dual Phone & TV release APKs.'
     },
     {
       version: '1.0.65',

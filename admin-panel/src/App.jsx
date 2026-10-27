@@ -253,11 +253,11 @@ export default function App() {
   // In-App Update Banner Remote Controller State
   const [updateConfig, setUpdateConfig] = useState({
     show_banner: true,
-    latest_version: '1.0.67',
-    latest_build: 68,
+    latest_version: '1.0.68',
+    latest_build: 69,
     store_url: 'https://freewatchug.online/store',
-    direct_apk_url: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.67/FreeWatch-release.apk',
-    release_notes: '• Android TV v1/v2 APK Signature Scheme enabled for instant error-free TV installation\n• Lightweight Android TV performance: Hardware acceleration, large heap, and capped image cache\n• Web Version A to Z: Full interactive streaming portal mirroring app UI on freewatchug.online\n• MunoWatch movie details: Authentic titles, TMDB cast photos, series episodes, & related movies',
+    direct_apk_url: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.68/FreeWatch-release.apk',
+    release_notes: '• Automated Firebase RTDB catalog sync with instant mobile app startup (<50ms)\n• Complete series episode indexing with full season episode discovery\n• Self-healing streaming playback with automatic URL refresh and RTDB live syncing\n• Zero cold-start delays, eliminated disappearing banners and missing sections',
     is_mandatory: false,
   });
   const [isSavingUpdateConfig, setIsSavingUpdateConfig] = useState(false);

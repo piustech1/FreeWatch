@@ -4,8 +4,8 @@ const fs = require('fs');
 
 const RTDB_URL = 'https://freewatch-a0bc7-default-rtdb.firebaseio.com';
 
-const version = process.argv[2] || process.env.APP_VERSION || '1.0.66';
-const build = process.argv[3] || process.env.APP_BUILD || '67';
+const version = process.argv[2] || process.env.APP_VERSION || '1.0.68';
+const build = process.argv[3] || process.env.APP_BUILD || '69';
 const apkUrl = process.argv[4] || `https://github.com/piustech1/FreeWatch/releases/download/v${version}/FreeWatch-release.apk`;
 const tvApkUrl = process.argv[5] || `https://github.com/piustech1/FreeWatch/releases/download/v${version}/FreeWatch-TV-release.apk`;
 

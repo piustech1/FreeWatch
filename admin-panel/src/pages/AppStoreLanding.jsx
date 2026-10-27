@@ -101,26 +101,31 @@ export default function AppStoreLanding() {
 
   // Dynamic Release Config - Multiplatform Features
   const [releaseInfo, setReleaseInfo] = useState({
-    version: '1.0.67',
-    buildNumber: 68,
+    version: '1.0.68',
+    buildNumber: 69,
     size: '110.5 MB',
     releaseDate: formatReleaseDate(Date.now()),
-    apkUrl: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.67/FreeWatch-release.apk',
-    tvApkUrl: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.67/FreeWatch-TV-release.apk',
+    apkUrl: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.68/FreeWatch-release.apk',
+    tvApkUrl: 'https://github.com/piustech1/FreeWatch/releases/download/v1.0.68/FreeWatch-TV-release.apk',
     webUrl: 'https://freewatchug.online',
     notes: [
-      'Android TV APK Signature Scheme: Fully enabled v1 and v2 signing schemes to guarantee smooth 1-tap installation across all Android TV boxes and Fire OS devices without install errors.',
-      'Android TV Lightness & Zero-Freeze: Hardware accelerated rendering, large heap allocation, bounded 60MB image cache, and 260px downsampled poster decoding to eliminate RAM bloat and freezing on low-RAM TV boxes.',
-      'Web Version A to Z App Mirror: Public web streaming portal on freewatchug.online completely mirrors the FreeWatch Flutter app with OLED dark UI, hero billboard, category rails, movie modal, and web player.',
-      'MunoWatch Movie Details & Cast: Accurate titles without raw VJ prefix clutter, authentic TMDB cast with real actor photos, real synopsis, series episodes selector, and You Might Also Like related movies carousel.'
+      'Automated Firebase RTDB Ingestion: Pre-ingested catalog with instant local startup (<50ms) and offline disk persistence.',
+      'Complete Series Episodes: Comprehensive season episode discovery indexing all episodes directly from MunoWatch.',
+      'Self-Healing Streaming Playback: Automatic renewal of expired streaming links on the fly with live RTDB updates.',
+      'Zero Disappearing Sections: Reliable hero billboard and category rails with eliminated network timeouts.'
     ]
   });
 
   // Dynamic Version History List
   const [historyReleases, setHistoryReleases] = useState([
     {
-      version: '1.0.67',
+      version: '1.0.68',
       date: 'Latest',
+      notes: 'Automated Firebase RTDB catalog sync, instant mobile startup (<50ms), complete series episode indexing, and self-healing playback.'
+    },
+    {
+      version: '1.0.67',
+      date: 'Earlier',
       notes: 'Android TV v1/v2 signature fix, hardware-accelerated TV memory lightness, full A-to-Z web app mirror, and MunoWatch authentic details with related movies.'
     },
     {
