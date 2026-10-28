@@ -295,11 +295,46 @@ export default function FreeWatchWebApp({ onNavigateToStore }) {
     }
   });
 
-  // Sync catalog from Firebase RTDB (munowatch/catalog)
+  // Sync catalog with primary high-speed FreeWatch API (/api/v1/dashboard) and RTDB
   useEffect(() => {
+    let isMounted = true;
+
+    async function loadFromApi() {
+      try {
+        const res = await fetch('/api/v1/dashboard');
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success && json.data && isMounted) {
+            const { featured, latest, categories } = json.data;
+            const allItems = [
+              ...(featured ? [featured] : []),
+              ...(Array.isArray(latest) ? latest : []),
+              ...Object.values(categories || {}).flat()
+            ];
+            const seen = new Set();
+            const unique = [];
+            for (const item of allItems) {
+              if (item && item.id && !seen.has(item.id)) {
+                seen.add(item.id);
+                unique.push(item);
+              }
+            }
+            if (unique.length > 0) {
+              setCatalog(unique);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('API fetch fallback to RTDB:', err);
+      }
+    }
+
+    loadFromApi();
+
+    // Secondary real-time updates from Firebase RTDB
     const catalogRef = ref(rtdb, 'munowatch/catalog');
     const unsubscribe = onValue(catalogRef, (snapshot) => {
-      if (snapshot.exists()) {
+      if (snapshot.exists() && isMounted) {
         const val = snapshot.val();
         let items = [];
         if (Array.isArray(val)) {
@@ -338,7 +373,6 @@ export default function FreeWatchWebApp({ onNavigateToStore }) {
             });
 
           if (normalized.length > 0) {
-            // Keep Spider-Man at top if not present
             const hasSpiderman = normalized.some(m => /spider-man/i.test(m.title));
             if (!hasSpiderman) {
               setCatalog([INITIAL_MOVIES[0], ...normalized]);
@@ -350,7 +384,10 @@ export default function FreeWatchWebApp({ onNavigateToStore }) {
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
   }, []);
 
   // Save favorites to local storage

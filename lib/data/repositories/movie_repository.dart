@@ -5,27 +5,31 @@ import '../datasources/tmdb_datasource.dart';
 import '../datasources/moviemax_datasource.dart';
 import '../datasources/munowatch_datasource.dart';
 import '../datasources/firebase_catalog_datasource.dart';
+import '../datasources/freewatch_api_datasource.dart';
 import '../models/movie.dart';
 import '../models/genre.dart';
 import '../models/movie_details_data.dart';
 import '../models/vj.dart';
 import '../mock/mock_movies.dart';
 
-/// Unified MovieRepository utilizing Firebase Realtime Database (/munowatch) as the
-/// primary high-speed Luganda video and catalog authority, backed by MunoWatch live API.
+/// Unified MovieRepository utilizing FreeWatch Backend API & Firebase Realtime Database
+/// (/munowatch) as the primary high-speed Luganda video authority, backed by MunoWatch live API.
 class MovieRepository {
   final TmdbDatasource _datasource;
   final MunowatchDatasource _munowatch;
   final FirebaseCatalogDatasource _firebaseCatalog;
+  final FreewatchApiDatasource _apiDatasource;
 
   MovieRepository({
     TmdbDatasource? datasource,
     MovieMaxDatasource? movieMaxDatasource,
     MunowatchDatasource? munowatchDatasource,
     FirebaseCatalogDatasource? firebaseCatalogDatasource,
+    FreewatchApiDatasource? freewatchApiDatasource,
   })  : _datasource = datasource ?? TmdbDatasource(),
         _munowatch = munowatchDatasource ?? MunowatchDatasource(),
-        _firebaseCatalog = firebaseCatalogDatasource ?? FirebaseCatalogDatasource();
+        _firebaseCatalog = firebaseCatalogDatasource ?? FirebaseCatalogDatasource(),
+        _apiDatasource = freewatchApiDatasource ?? FreewatchApiDatasource();
 
   final Map<String, List<Movie>> _vjMoviesCache = {};
 
@@ -33,9 +37,18 @@ class MovieRepository {
       ApiConstants.tmdbApiKey != 'YOUR_TMDB_API_KEY' &&
       ApiConstants.tmdbApiKey.trim().isNotEmpty;
 
-  /// Full live Luganda catalog sourced primarily from fast Firebase RTDB (<50ms),
-  /// with live MunoWatch API fallback
+  /// Full live Luganda catalog sourced primarily from fast FreeWatch API (<50ms)
+  /// and Firebase RTDB, with live MunoWatch API fallback
   Future<List<Movie>> _getAllLugandaMovies({bool forceRefresh = false}) async {
+    try {
+      final apiList = await _apiDatasource.getCatalog(forceRefresh: forceRefresh);
+      if (apiList.isNotEmpty) {
+        return apiList;
+      }
+    } catch (e) {
+      debugPrint('⚠️ [MovieRepository] FreeWatch API catalog notice: $e');
+    }
+
     try {
       final rtdbList = await _firebaseCatalog.getCatalog(forceRefresh: forceRefresh);
       if (rtdbList.isNotEmpty) {
@@ -55,8 +68,14 @@ class MovieRepository {
     return const <Movie>[];
   }
 
-  // ── 1. Trending / Hero Banner Movies (Firebase RTDB first) ─────────────────
+  // ── 1. Trending / Hero Banner Movies (FreeWatch API & Firebase RTDB first) ──
   Future<List<Movie>> getTrending({int page = 1}) async {
+    try {
+      if (_apiDatasource.latestMovies.isNotEmpty) {
+        return _paginate(_apiDatasource.latestMovies, page, pageSize: 25);
+      }
+    } catch (_) {}
+
     try {
       final rtdbTrending = await _firebaseCatalog.getCategoryMovies('Latest on FreeWatch');
       if (rtdbTrending.isNotEmpty) {
@@ -367,7 +386,17 @@ class MovieRepository {
       }
     } catch (_) {}
 
-    // 2. MunoWatch backend live search to supplement for newly added items
+    // 2. High-speed FreeWatch API search
+    try {
+      final apiResults = await _apiDatasource.searchMovies(cleanQuery);
+      for (final m in apiResults) {
+        if (seenIds.add(m.id)) {
+          combinedResults.add(m);
+        }
+      }
+    } catch (_) {}
+
+    // 3. MunoWatch backend live search to supplement for newly added items
     try {
       final munoSearchResults = await _munowatch.searchMovies(cleanQuery);
       for (final m in munoSearchResults) {
