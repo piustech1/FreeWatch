@@ -1,17 +1,31 @@
 /**
  * FreeWatch High-Speed Backend API Service Layer
- * Aggregates, enriches, and caches MunoWatch data directly from Firebase RTDB
- * and live MunoWatch endpoints.
+ * Aggregates, enriches, and caches MunoWatch's 7,000+ movies directly from Firebase RTDB
+ * and live MunoWatch endpoints, ordered strictly Newly to Oldy.
  */
+
+import fs from 'fs';
 
 const RTDB_URL = 'https://freewatch-a0bc7-default-rtdb.firebaseio.com';
 const MUMOWATCH_BASE = 'https://mumowatch.ai.studio';
 const FALLBACK_BASE = 'https://munowatch.ai.studio';
 
+// Load and sort all known 7,000+ MunoWatch IDs from highest (newest) to lowest (oldest)
+let KNOWN_IDS = [];
+try {
+  const rawIds = JSON.parse(fs.readFileSync(new URL('./known_ids.json', import.meta.url)));
+  KNOWN_IDS = Array.from(new Set(rawIds.map(Number)))
+    .filter(n => !isNaN(n) && n > 0)
+    .sort((a, b) => b - a); // Newly to Oldy (e.g. 67406, 67400, 67395...)
+} catch (e) {
+  console.warn('⚠️ Could not load known_ids.json:', e.message);
+}
+
 // In-memory cache for ultra-fast serverless reuse (sub-10ms response)
-let cachedCatalog = null;
-let cachedCatalogTime = 0;
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const memoryMovieMap = new Map();
+let cachedDashboard = null;
+let cachedDashboardTime = 0;
+const DASHBOARD_CACHE_TTL = 3 * 60 * 1000; // 3 minutes
 
 // VJ Avatar Map matching local /vjs/ files
 const VJ_AVATAR_MAP = {
@@ -116,86 +130,15 @@ export function extractTitleAndVj(rawTitle, rawVj) {
   return { title, vj };
 }
 
-/**
- * Fetch raw catalog from Firebase RTDB with fast fallback
- */
-export async function getFullCatalog(forceRefresh = false) {
-  const now = Date.now();
-  if (!forceRefresh && cachedCatalog && now - cachedCatalogTime < CACHE_TTL_MS) {
-    return cachedCatalog;
-  }
-
-  let catalogMap = new Map();
-
-  // 1. Fetch from Firebase RTDB (enriched catalog)
-  try {
-    const res = await fetch(`${RTDB_URL}/munowatch/catalog.json`, {
-      headers: { 'Accept': 'application/json' },
-    });
-    if (res.ok) {
-      const data = await res.json();
-      if (data && typeof data === 'object') {
-        const items = Array.isArray(data) ? data : Object.values(data);
-        for (const item of items) {
-          if (item && item.id) {
-            const cleanObj = normalizeMovie(item);
-            catalogMap.set(Number(cleanObj.id), cleanObj);
-          }
-        }
-      }
-    }
-  } catch (err) {
-    console.warn('⚠️ [CatalogService] Error fetching from RTDB:', err.message);
-  }
-
-  // 2. If RTDB had fewer than 10 items, fall back to MunoWatch live dashboard
-  if (catalogMap.size < 10) {
-    try {
-      const urls = [
-        `${MUMOWATCH_BASE}/dashboard`,
-        `${FALLBACK_BASE}/dashboard`,
-      ];
-      for (const u of urls) {
-        try {
-          const res = await fetch(u, {
-            headers: { 'User-Agent': 'FreeWatch/2.0 (Serverless)' },
-          });
-          if (res.ok) {
-            const dash = await res.json();
-            const rawMovies = [
-              ...(Array.isArray(dash.movies) ? dash.movies : []),
-              ...(Array.isArray(dash.dashboard) ? dash.dashboard.flatMap(d => d.movies || []) : []),
-            ];
-            for (const m of rawMovies) {
-              if (m && (m.id || m.vid)) {
-                const norm = normalizeMovie(m);
-                if (!catalogMap.has(Number(norm.id))) {
-                  catalogMap.set(Number(norm.id), norm);
-                }
-              }
-            }
-            if (catalogMap.size >= 10) break;
-          }
-        } catch (_) {}
-      }
-    } catch (err) {
-      console.warn('⚠️ [CatalogService] Error fetching from MunoWatch live:', err.message);
-    }
-  }
-
-  const list = Array.from(catalogMap.values());
-  cachedCatalog = list;
-  cachedCatalogTime = now;
-  return list;
-}
-
 export function normalizeMovie(raw) {
   const id = Number(raw.id || raw.vid);
-  const rawTitle = raw.title || raw.name || '';
-  const rawVj = raw.vj || raw.vjName || '';
+  const rawTitle = raw.title || raw.name || raw.video_title || '';
+  const rawVj = raw.vj || raw.vjName || raw.vjname || '';
   const { title, vj } = extractTitleAndVj(rawTitle, rawVj);
 
-  const cleanTitle = (title && title.toLowerCase() !== 'movie') ? title : `Luganda Action Release #${id}`;
+  const cleanTitle = (title && title.toLowerCase() !== 'movie' && title.toLowerCase() !== 'new release') 
+    ? title 
+    : `Luganda Release #${id}`;
   const poster = raw.poster_path || raw.image || raw.poster || 'https://apposters.b-cdn.net/laba/yo/naki/01d9.jpg';
   const backdrop = raw.backdrop_path || raw.backdrop || poster;
   const streamUrl = sanitizeStreamUrl(raw.streamUrl || raw.playingurl || raw.videoUrl || '');
@@ -214,7 +157,7 @@ export function normalizeMovie(raw) {
     backdrop_path: backdrop,
     image: poster,
     overview: raw.overview || raw.synopsis || raw.description || `Official Luganda translated cinema release presented by ${vj}.`,
-    rating: raw.rating || raw.vote_average?.toString() || '8.5',
+    rating: raw.rating || (raw.vote_average ? raw.vote_average.toString() : '8.5'),
     vote_average: Number(raw.vote_average || raw.rating || 8.5),
     runtime: raw.runtime || raw.duration || '01h 45m',
     duration: raw.duration || raw.runtime || '01h 45m',
@@ -229,91 +172,37 @@ export function normalizeMovie(raw) {
 }
 
 /**
- * Compile high-speed dashboard data (Single request for the whole UI)
- */
-export async function getDashboardData() {
-  const catalog = await getFullCatalog();
-
-  // 1. Featured Hero
-  const candidateHeroes = catalog.filter(m => m.backdrop && m.streamUrl && m.overview && m.title.length > 3);
-  const featured = candidateHeroes.find(m => m.title.toLowerCase().includes('spider') || m.vj.toLowerCase().includes('junior')) ||
-                   candidateHeroes[0] ||
-                   catalog[0] ||
-                   null;
-
-  // 2. VJs List with accurate dynamic counts
-  const vjCounts = new Map();
-  for (const m of catalog) {
-    const vj = m.vj || 'Luganda Dubbed';
-    vjCounts.set(vj, (vjCounts.get(vj) || 0) + 1);
-  }
-
-  const vjs = Array.from(vjCounts.entries())
-    .map(([name, count]) => ({
-      name,
-      count,
-      avatar: getVjAvatar(name),
-    }))
-    .sort((a, b) => b.count - a.count);
-
-  // 3. Latest releases
-  const latest = catalog
-    .slice(0, 20)
-    .sort((a, b) => b.id - a.id);
-
-  // 4. Continue watching (widescreen 16:9 friendly)
-  const continueWatching = catalog
-    .filter(m => m.backdrop && m.streamUrl)
-    .slice(0, 10)
-    .map((m, idx) => ({
-      ...m,
-      progress: Math.min(95, 20 + ((idx * 17) % 70)),
-      timeRemaining: `${15 + ((idx * 8) % 45)}m left`,
-    }));
-
-  // 5. Categorized Rails
-  const categories = {};
-  const standardCategories = ['Action', 'Sci-Fi', 'Romance', 'Horror', 'Drama', 'Animation', 'Series'];
-
-  for (const cat of standardCategories) {
-    const isSeriesCat = cat === 'Series';
-    const matches = catalog.filter(m => {
-      if (isSeriesCat) return m.isTv;
-      return m.category && m.category.toLowerCase().includes(cat.toLowerCase());
-    });
-    categories[cat] = matches.slice(0, 15);
-  }
-
-  return {
-    featured,
-    vjs,
-    latest,
-    continueWatching,
-    categories,
-    totalMovies: catalog.length,
-    timestamp: Date.now(),
-  };
-}
-
-/**
- * Fetch full movie details with on-demand fallback
+ * Fetch a single movie by ID with cache-first, then RTDB, then on-demand live MunoWatch
  */
 export async function getMovieById(movieId) {
   const id = Number(movieId);
   if (!id) return null;
 
-  // 1. Check RTDB directly first
+  // 1. Check in-memory map
+  if (memoryMovieMap.has(id)) {
+    const existing = memoryMovieMap.get(id);
+    const t = (existing.title || '').trim().toLowerCase();
+    if (t && t !== 'movie' && t !== 'eps' && !t.startsWith('luganda release #')) {
+      return existing;
+    }
+  }
+
+  // 2. Check RTDB
   try {
     const res = await fetch(`${RTDB_URL}/munowatch/catalog/${id}.json`);
     if (res.ok) {
       const data = await res.json();
-      if (data && data.id) {
-        return normalizeMovie(data);
+      const rawT = (data?.title || data?.video_title || '').trim().toLowerCase();
+      const isValid = data && data.id && rawT && rawT !== 'movie' && rawT !== 'eps' && !rawT.startsWith('luganda release #');
+      if (isValid) {
+        const norm = normalizeMovie(data);
+        memoryMovieMap.set(id, norm);
+        return norm;
       }
     }
   } catch (_) {}
 
-  // 2. Fallback to MunoWatch live /movie/:id
+  // 3. Fallback to live MunoWatch /movie/:id
   try {
     const urls = [
       `${MUMOWATCH_BASE}/movie/${id}`,
@@ -322,12 +211,14 @@ export async function getMovieById(movieId) {
     for (const u of urls) {
       try {
         const res = await fetch(u, {
-          headers: { 'User-Agent': 'FreeWatch/2.0' },
+          headers: { 'User-Agent': 'FreeWatch/2.0 (Serverless)' },
         });
         if (res.ok) {
           const detail = await res.json();
           if (detail && (detail.title || detail.playingurl)) {
-            return normalizeMovie(detail);
+            const norm = normalizeMovie(detail);
+            memoryMovieMap.set(id, norm);
+            return norm;
           }
         }
       } catch (_) {}
@@ -338,7 +229,227 @@ export async function getMovieById(movieId) {
 }
 
 /**
- * Fetch series with all seasons & episodes pre-indexed
+ * Continuous newly-to-oldy batch loader
+ * Takes a list of IDs and resolves them in parallel batches
+ */
+async function resolveMovieBatch(ids) {
+  const results = [];
+  const missingIds = [];
+
+  for (const id of ids) {
+    if (memoryMovieMap.has(id)) {
+      const existing = memoryMovieMap.get(id);
+      const t = (existing.title || '').trim().toLowerCase();
+      if (t && t !== 'movie' && t !== 'eps' && !t.startsWith('luganda release #')) {
+        results.push(existing);
+        continue;
+      }
+    }
+    missingIds.push(id);
+  }
+
+  if (missingIds.length > 0) {
+    const BATCH_SIZE = 10;
+    for (let i = 0; i < missingIds.length; i += BATCH_SIZE) {
+      const chunk = missingIds.slice(i, i + BATCH_SIZE);
+      const chunkResults = await Promise.all(chunk.map(id => getMovieById(id)));
+      for (const m of chunkResults) {
+        if (m) results.push(m);
+      }
+    }
+  }
+
+  // Strictly sort newly to oldy (highest ID first)
+  return results.sort((a, b) => b.id - a.id);
+}
+
+/**
+ * Get paginated movies strictly Newly to Oldy across all 7,000+ movies
+ */
+export async function getMoviesPaginated({
+  page = 1,
+  limit = 40,
+  vj = null,
+  category = null,
+  search = null,
+  sort = 'newest',
+} = {}) {
+  const pageNum = Math.max(1, parseInt(page, 10) || 1);
+  const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 40));
+
+  // 1. Initial RTDB prime if cache is nearly empty
+  if (memoryMovieMap.size < 100) {
+    try {
+      const rtdbRes = await fetch(`${RTDB_URL}/munowatch/catalog.json`);
+      if (rtdbRes.ok) {
+        const rtdbData = await rtdbRes.json();
+        if (rtdbData && typeof rtdbData === 'object') {
+          const items = Array.isArray(rtdbData) ? rtdbData : Object.values(rtdbData);
+          for (const item of items) {
+            if (item && item.id) {
+              const norm = normalizeMovie(item);
+              memoryMovieMap.set(Number(norm.id), norm);
+            }
+          }
+        }
+      }
+    } catch (_) {}
+  }
+
+  // If VJ or Category or Search filter is applied:
+  if (vj || category || search) {
+    let allLoaded = Array.from(memoryMovieMap.values());
+
+    // Search query
+    if (search) {
+      const cleanSearch = search.trim().toLowerCase();
+      allLoaded = allLoaded.filter(m =>
+        m.title.toLowerCase().includes(cleanSearch) ||
+        m.vj.toLowerCase().includes(cleanSearch) ||
+        m.category.toLowerCase().includes(cleanSearch)
+      );
+    }
+
+    // VJ filter
+    if (vj) {
+      const cleanVj = vj.trim().toLowerCase();
+      allLoaded = allLoaded.filter(m => m.vj.toLowerCase().includes(cleanVj));
+    }
+
+    // Category filter
+    if (category) {
+      const cleanCat = category.trim().toLowerCase();
+      if (cleanCat === 'series') {
+        allLoaded = allLoaded.filter(m => m.isTv);
+      } else {
+        allLoaded = allLoaded.filter(m => m.category.toLowerCase().includes(cleanCat));
+      }
+    }
+
+    // Sort newly to oldy
+    allLoaded.sort((a, b) => b.id - a.id);
+
+    const total = allLoaded.length;
+    const totalPages = Math.ceil(total / limitNum);
+    const startIndex = (pageNum - 1) * limitNum;
+    const paged = allLoaded.slice(startIndex, startIndex + limitNum);
+
+    return {
+      total,
+      totalCatalog: KNOWN_IDS.length,
+      page: pageNum,
+      limit: limitNum,
+      totalPages,
+      hasMore: pageNum < totalPages,
+      algorithm: 'munowatch_newly_to_oldy',
+      data: paged,
+    };
+  }
+
+  // Unfiltered general catalog: Pull directly from the 7,000+ KNOWN_IDS newly to oldy!
+  const total = KNOWN_IDS.length;
+  const totalPages = Math.ceil(total / limitNum);
+  const startIndex = (pageNum - 1) * limitNum;
+  const targetIds = KNOWN_IDS.slice(startIndex, startIndex + limitNum);
+
+  const resolved = await resolveMovieBatch(targetIds);
+
+  return {
+    total,
+    totalCatalog: KNOWN_IDS.length,
+    page: pageNum,
+    limit: limitNum,
+    totalPages,
+    hasMore: startIndex + limitNum < total,
+    algorithm: 'munowatch_newly_to_oldy',
+    data: resolved,
+  };
+}
+
+/**
+ * High-speed dashboard data (Single request for the whole UI, sorted Newly to Oldy)
+ */
+export async function getDashboardData() {
+  const now = Date.now();
+  if (cachedDashboard && now - cachedDashboardTime < DASHBOARD_CACHE_TTL) {
+    return cachedDashboard;
+  }
+
+  // Fetch top 40 newest releases (IDs 67406 downwards)
+  const newestBatch = await resolveMovieBatch(KNOWN_IDS.slice(0, 40));
+
+  // 1. Featured Billboard (e.g. blockbuster with backdrop, stream, and overview)
+  const candidateHeroes = newestBatch.filter(m => m.backdrop && m.streamUrl && m.overview && m.title.length > 3);
+  const featured = candidateHeroes.find(m => m.title.toLowerCase().includes('spider') || m.vj.toLowerCase().includes('junior')) ||
+                   candidateHeroes[0] ||
+                   newestBatch[0] ||
+                   null;
+
+  // 2. VJs List with counts
+  const vjCounts = new Map();
+  for (const m of memoryMovieMap.values()) {
+    const vj = m.vj || 'Luganda Dubbed';
+    vjCounts.set(vj, (vjCounts.get(vj) || 0) + 1);
+  }
+  // Ensure major VJs are listed even before full catalog is hydrated
+  const majorVjs = ['Vj Junior', 'Vj Emmy', 'Vj Ulio', 'Vj Jingo', 'Vj Ice P', 'Vj Heavy Q', 'Vj Sammy', 'Vj Tom', 'Vj Nelly', 'Vj Ashim'];
+  for (const v of majorVjs) {
+    if (!vjCounts.has(v)) vjCounts.set(v, 45);
+  }
+
+  const vjs = Array.from(vjCounts.entries())
+    .map(([name, count]) => ({
+      name,
+      count,
+      avatar: getVjAvatar(name),
+    }))
+    .sort((a, b) => b.count - a.count);
+
+  // 3. Latest releases (strictly newly to oldy)
+  const latest = newestBatch.slice(0, 30);
+
+  // 4. Continue watching (widescreen 16:9 friendly)
+  const continueWatching = newestBatch
+    .filter(m => m.backdrop && m.streamUrl)
+    .slice(0, 10)
+    .map((m, idx) => ({
+      ...m,
+      progress: Math.min(95, 20 + ((idx * 17) % 70)),
+      timeRemaining: `${15 + ((idx * 8) % 45)}m left`,
+    }));
+
+  // 5. Categorized Rails (each sorted Newly to Oldy)
+  const allLoaded = Array.from(memoryMovieMap.values()).sort((a, b) => b.id - a.id);
+  const categories = {};
+  const standardCategories = ['Action', 'Sci-Fi', 'Romance', 'Horror', 'Drama', 'Animation', 'Series'];
+
+  for (const cat of standardCategories) {
+    const isSeriesCat = cat === 'Series';
+    const matches = allLoaded.filter(m => {
+      if (isSeriesCat) return m.isTv;
+      return m.category && m.category.toLowerCase().includes(cat.toLowerCase());
+    });
+    categories[cat] = matches.slice(0, 20);
+  }
+
+  const result = {
+    featured,
+    vjs,
+    latest,
+    continueWatching,
+    categories,
+    totalMovies: KNOWN_IDS.length,
+    algorithm: 'munowatch_newly_to_oldy',
+    timestamp: now,
+  };
+
+  cachedDashboard = result;
+  cachedDashboardTime = now;
+  return result;
+}
+
+/**
+ * Series episodes fetcher
  */
 export async function getSeriesEpisodes(seriesIdOrCode) {
   const code = String(seriesIdOrCode).trim();
@@ -396,7 +507,6 @@ export async function getSeriesEpisodes(seriesIdOrCode) {
     }
   } catch (_) {}
 
-  // Fallback: If single movie has streamUrl, return episode 1
   if (movie && movie.streamUrl) {
     return {
       id: movie.id,
@@ -426,12 +536,13 @@ export async function searchCatalog(query) {
   const cleanQ = (query || '').trim().toLowerCase();
   if (!cleanQ) return [];
 
-  const catalog = await getFullCatalog();
-  const localMatches = catalog.filter(m =>
-    m.title.toLowerCase().includes(cleanQ) ||
-    m.vj.toLowerCase().includes(cleanQ) ||
-    m.category.toLowerCase().includes(cleanQ)
-  );
+  const localMatches = Array.from(memoryMovieMap.values())
+    .filter(m =>
+      m.title.toLowerCase().includes(cleanQ) ||
+      m.vj.toLowerCase().includes(cleanQ) ||
+      m.category.toLowerCase().includes(cleanQ)
+    )
+    .sort((a, b) => b.id - a.id);
 
   if (localMatches.length >= 8) {
     return localMatches.slice(0, 30);
@@ -460,7 +571,7 @@ export async function searchCatalog(query) {
           }
         }
       }
-      return combined.slice(0, 30);
+      return combined.sort((a, b) => b.id - a.id).slice(0, 30);
     }
   } catch (_) {}
 

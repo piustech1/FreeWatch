@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { 
   Play, Search, Bell, User, Star, Sparkles, Tv, Film, 
-  Flame, Heart, Ghost, Zap, Rocket, ChevronRight, X, 
+  Flame, Heart, Ghost, Zap, Rocket, ChevronRight, ChevronDown, X, 
   ArrowLeft, Volume2, Share2, Plus, Check, Clock, Eye,
   ExternalLink, Mic, Grid, Info, ShieldCheck, Download,
-  Home, LayoutGrid, Settings, Compass, SlidersHorizontal
+  Home, LayoutGrid, Settings, Compass, SlidersHorizontal, Loader2
 } from 'lucide-react';
 import { ref, onValue } from 'firebase/database';
 import { rtdb } from '../firebase';
@@ -278,6 +278,12 @@ const CURATED_VJS = [
 
 export default function FreeWatchWebApp({ onNavigateToStore }) {
   const [catalog, setCatalog] = useState(INITIAL_MOVIES);
+  const [catalogPage, setCatalogPage] = useState(1);
+  const [hasMoreCatalog, setHasMoreCatalog] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [totalCatalogCount, setTotalCatalogCount] = useState(7074);
+  const mainScrollRef = useRef(null);
+
   const [activeTab, setActiveTab] = useState('home'); // 'home' | 'search' | 'vjs' | 'categories' | 'favorites' | 'settings'
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedVj, setSelectedVj] = useState('All');
@@ -295,43 +301,107 @@ export default function FreeWatchWebApp({ onNavigateToStore }) {
     }
   });
 
-  // Sync catalog with primary high-speed FreeWatch API (/api/v1/dashboard) and RTDB
+  // Strictly sort array descending by movie ID (Newly to Oldy algorithm)
+  const sortNewlyToOldy = useCallback((items) => {
+    return [...items].sort((a, b) => {
+      const idA = typeof a.id === 'number' ? a.id : parseInt(a.id, 10) || 0;
+      const idB = typeof b.id === 'number' ? b.id : parseInt(b.id, 10) || 0;
+      return idB - idA;
+    });
+  }, []);
+
+  // Fetch paginated movie batches from FreeWatch API (/api/v1/movies)
+  const fetchMoviePage = useCallback(async (pageToLoad, isInitial = false) => {
+    try {
+      if (!isInitial) setLoadingMore(true);
+      const res = await fetch(`/api/v1/movies?page=${pageToLoad}&limit=40&sort=newest`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+          setCatalog((prev) => {
+            const seen = new Set();
+            const merged = [];
+
+            // Add new page items
+            for (const item of json.data) {
+              if (item && item.id && !seen.has(item.id)) {
+                seen.add(item.id);
+                merged.push(item);
+              }
+            }
+
+            // Append previous items if not initial replacement
+            const sourcePrev = isInitial && prev === INITIAL_MOVIES ? [] : prev;
+            for (const item of sourcePrev) {
+              if (item && item.id && !seen.has(item.id)) {
+                seen.add(item.id);
+                merged.push(item);
+              }
+            }
+
+            // Preserve hero Spider-Man release if not yet in set
+            const hasSpiderman = merged.some(m => /spider-man/i.test(m.title));
+            if (!hasSpiderman) {
+              merged.push(INITIAL_MOVIES[0]);
+            }
+
+            // Strictly sort newly to oldy (highest ID to lowest ID)
+            return sortNewlyToOldy(merged);
+          });
+
+          setCatalogPage(pageToLoad);
+          setHasMoreCatalog(Boolean(json.hasMore));
+          if (json.total) {
+            setTotalCatalogCount(json.total);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Error fetching movies page:', err);
+    } finally {
+      if (!isInitial) setLoadingMore(false);
+    }
+  }, [sortNewlyToOldy]);
+
+  const loadMoreMovies = useCallback(() => {
+    if (loadingMore || !hasMoreCatalog) return;
+    fetchMoviePage(catalogPage + 1, false);
+  }, [catalogPage, hasMoreCatalog, loadingMore, fetchMoviePage]);
+
+  // Continuous infinite scroll listener (triggers when user scrolls near the bottom)
+  useEffect(() => {
+    const handleScroll = (e) => {
+      const el = e.target === document ? document.documentElement : e.target;
+      if (!el) return;
+      const scrollHeight = el.scrollHeight || document.documentElement.scrollHeight;
+      const scrollTop = el.scrollTop || window.scrollY || document.documentElement.scrollTop;
+      const clientHeight = el.clientHeight || window.innerHeight;
+
+      if (scrollHeight - (scrollTop + clientHeight) < 950) {
+        loadMoreMovies();
+      }
+    };
+
+    const container = mainScrollRef.current;
+    if (container) {
+      container.addEventListener('scroll', handleScroll, { passive: true });
+    }
+    window.addEventListener('scroll', handleScroll, { passive: true });
+
+    return () => {
+      if (container) container.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [loadMoreMovies]);
+
+  // Sync catalog with primary high-speed FreeWatch API & RTDB
   useEffect(() => {
     let isMounted = true;
 
-    async function loadFromApi() {
-      try {
-        const res = await fetch('/api/v1/dashboard');
-        if (res.ok) {
-          const json = await res.json();
-          if (json.success && json.data && isMounted) {
-            const { featured, latest, categories } = json.data;
-            const allItems = [
-              ...(featured ? [featured] : []),
-              ...(Array.isArray(latest) ? latest : []),
-              ...Object.values(categories || {}).flat()
-            ];
-            const seen = new Set();
-            const unique = [];
-            for (const item of allItems) {
-              if (item && item.id && !seen.has(item.id)) {
-                seen.add(item.id);
-                unique.push(item);
-              }
-            }
-            if (unique.length > 0) {
-              setCatalog(unique);
-            }
-          }
-        }
-      } catch (err) {
-        console.warn('API fetch fallback to RTDB:', err);
-      }
-    }
+    // 1. Initial high-speed newly-to-oldy fetch (Page 1: 40 movies)
+    fetchMoviePage(1, true);
 
-    loadFromApi();
-
-    // Secondary real-time updates from Firebase RTDB
+    // 2. Secondary real-time updates from Firebase RTDB
     const catalogRef = ref(rtdb, 'munowatch/catalog');
     const unsubscribe = onValue(catalogRef, (snapshot) => {
       if (snapshot.exists() && isMounted) {
@@ -373,12 +443,17 @@ export default function FreeWatchWebApp({ onNavigateToStore }) {
             });
 
           if (normalized.length > 0) {
-            const hasSpiderman = normalized.some(m => /spider-man/i.test(m.title));
-            if (!hasSpiderman) {
-              setCatalog([INITIAL_MOVIES[0], ...normalized]);
-            } else {
-              setCatalog(normalized);
-            }
+            setCatalog(prev => {
+              const seen = new Set();
+              const list = [];
+              for (const m of [...normalized, ...prev]) {
+                if (m && m.id && !seen.has(m.id)) {
+                  seen.add(m.id);
+                  list.push(m);
+                }
+              }
+              return sortNewlyToOldy(list);
+            });
           }
         }
       }
@@ -388,7 +463,7 @@ export default function FreeWatchWebApp({ onNavigateToStore }) {
       isMounted = false;
       unsubscribe();
     };
-  }, []);
+  }, [fetchMoviePage, sortNewlyToOldy]);
 
   // Save favorites to local storage
   const toggleMyList = (movie) => {
@@ -410,29 +485,29 @@ export default function FreeWatchWebApp({ onNavigateToStore }) {
     return catalog[0];
   }, [catalog]);
 
-  // Section rails
+  // Section rails (Strictly Newly to Oldy)
   const rails = useMemo(() => {
-    const latest = catalog.slice(0, 15);
-    const trending = [...catalog].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 15);
-    const series = catalog.filter(m => m.isTv || /series|season|episode/i.test(m.category + ' ' + m.title)).slice(0, 15);
-    const action = catalog.filter(m => /action|war|agent|fighter|gun/i.test(m.category + ' ' + m.title)).slice(0, 15);
-    const sciFi = catalog.filter(m => /sci-fi|alien|future|dune|space/i.test(m.category + ' ' + m.title)).slice(0, 15);
-    const romance = catalog.filter(m => /romance|love|heart|wedding/i.test(m.category + ' ' + m.title)).slice(0, 15);
-    const horror = catalog.filter(m => /horror|demon|evil|dead|ghost|conjuring/i.test(m.category + ' ' + m.title)).slice(0, 15);
-    const drama = catalog.filter(m => /drama|story|life|biography|fight/i.test(m.category + ' ' + m.title)).slice(0, 15);
-    const animation = catalog.filter(m => /animation|cartoon|k-pop|moana|inside out/i.test(m.category + ' ' + m.title)).slice(0, 15);
+    const sorted = sortNewlyToOldy(catalog);
+    const latest = sorted.slice(0, 18);
+    const series = sorted.filter(m => m.isTv || /series|season|episode/i.test(m.category + ' ' + m.title)).slice(0, 18);
+    const action = sorted.filter(m => /action|war|agent|fighter|gun/i.test(m.category + ' ' + m.title)).slice(0, 18);
+    const sciFi = sorted.filter(m => /sci-fi|alien|future|dune|space/i.test(m.category + ' ' + m.title)).slice(0, 18);
+    const romance = sorted.filter(m => /romance|love|heart|wedding/i.test(m.category + ' ' + m.title)).slice(0, 18);
+    const horror = sorted.filter(m => /horror|demon|evil|dead|ghost|conjuring/i.test(m.category + ' ' + m.title)).slice(0, 18);
+    const drama = sorted.filter(m => /drama|story|life|biography|fight/i.test(m.category + ' ' + m.title)).slice(0, 18);
+    const animation = sorted.filter(m => /animation|cartoon|k-pop|moana|inside out/i.test(m.category + ' ' + m.title)).slice(0, 18);
 
     return [
-      { id: 'latest', title: 'LATEST ON FREEWATCH', icon: Sparkles, color: '#00E676', movies: latest.length ? latest : catalog.slice(0, 10) },
-      { id: 'series', title: 'SERIES', icon: Tv, color: '#E50914', movies: series.length ? series : catalog.slice(0, 8) },
-      { id: 'action', title: 'ACTION', icon: Zap, color: '#F97316', movies: action.length ? action : catalog.slice(0, 8) },
-      { id: 'scifi', title: 'SCI-FI', icon: Rocket, color: '#A855F7', movies: sciFi.length ? sciFi : catalog.slice(0, 8) },
-      { id: 'romance', title: 'ROMANCE', icon: Heart, color: '#EC4899', movies: romance.length ? romance : catalog.slice(0, 8) },
-      { id: 'horror', title: 'HORROR', icon: Ghost, color: '#EF4444', movies: horror.length ? horror : catalog.slice(0, 8) },
-      { id: 'drama', title: 'DRAMA', icon: Film, color: '#EAB308', movies: drama.length ? drama : catalog.slice(0, 8) },
-      { id: 'animation', title: 'ANIMATION', icon: Film, color: '#06B6D4', movies: animation.length ? animation : catalog.slice(0, 8) },
+      { id: 'latest', title: 'LATEST ON FREEWATCH', icon: Sparkles, color: '#00E676', movies: latest.length ? latest : sorted.slice(0, 12) },
+      { id: 'series', title: 'SERIES', icon: Tv, color: '#E50914', movies: series.length ? series : sorted.slice(0, 12) },
+      { id: 'action', title: 'ACTION', icon: Zap, color: '#F97316', movies: action.length ? action : sorted.slice(0, 12) },
+      { id: 'scifi', title: 'SCI-FI', icon: Rocket, color: '#A855F7', movies: sciFi.length ? sciFi : sorted.slice(0, 12) },
+      { id: 'romance', title: 'ROMANCE', icon: Heart, color: '#EC4899', movies: romance.length ? romance : sorted.slice(0, 12) },
+      { id: 'horror', title: 'HORROR', icon: Ghost, color: '#EF4444', movies: horror.length ? horror : sorted.slice(0, 12) },
+      { id: 'drama', title: 'DRAMA', icon: Film, color: '#EAB308', movies: drama.length ? drama : sorted.slice(0, 12) },
+      { id: 'animation', title: 'ANIMATION', icon: Film, color: '#06B6D4', movies: animation.length ? animation : sorted.slice(0, 12) },
     ];
-  }, [catalog]);
+  }, [catalog, sortNewlyToOldy]);
 
   // Handle Play Stream
   const handlePlay = async (movie) => {
@@ -463,16 +538,17 @@ export default function FreeWatchWebApp({ onNavigateToStore }) {
     setResolvingStream(false);
   };
 
-  // Search Results
+  // Search Results (Sorted Newly to Oldy)
   const searchResults = useMemo(() => {
-    if (!searchQuery.trim()) return catalog;
+    const sorted = sortNewlyToOldy(catalog);
+    if (!searchQuery.trim()) return sorted;
     const q = searchQuery.toLowerCase().trim();
-    return catalog.filter(m => 
+    return sorted.filter(m => 
       m.title.toLowerCase().includes(q) ||
       m.vj.toLowerCase().includes(q) ||
       (m.category && m.category.toLowerCase().includes(q))
     );
-  }, [catalog, searchQuery]);
+  }, [catalog, searchQuery, sortNewlyToOldy]);
 
   return (
     <div className="min-h-screen bg-[#08090C] text-white flex flex-row font-sans select-none antialiased overflow-x-hidden">
@@ -593,7 +669,7 @@ export default function FreeWatchWebApp({ onNavigateToStore }) {
       </header>
 
       {/* ── 3. Main Viewing Canvas (Left padding 80px for persistent rail) ───── */}
-      <main className="flex-1 pl-20 min-h-screen overflow-y-auto overflow-x-hidden cinema-scroll">
+      <main ref={mainScrollRef} className="flex-1 pl-20 min-h-screen overflow-y-auto overflow-x-hidden cinema-scroll">
         {/* VIEW A: Search */}
         {activeTab === 'search' && !gridCategory && (
           <div className="max-w-6xl mx-auto px-6 lg:px-12 pt-10 pb-24">
@@ -756,7 +832,7 @@ export default function FreeWatchWebApp({ onNavigateToStore }) {
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-              {gridCategory.movies.map((movie) => (
+              {sortNewlyToOldy(gridCategory.movies).map((movie) => (
                 <MoviePosterCard key={movie.id} movie={movie} onClick={() => setSelectedMovie(movie)} />
               ))}
             </div>
@@ -1005,6 +1081,67 @@ export default function FreeWatchWebApp({ onNavigateToStore }) {
                   </div>
                 </div>
               ))}
+
+              {/* SECTION 4: ALL LUGANDA MOVIES (Continuous Newly to Oldy Catalog) */}
+              <div className="pt-8 border-t border-white/10">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+                  <div>
+                    <h2 className="text-sm lg:text-base font-black uppercase tracking-wider text-white flex items-center gap-2.5">
+                      <Film className="w-4 h-4 text-[#00E676]" />
+                      ALL LUGANDA MOVIES (NEWEST TO OLDEST)
+                    </h2>
+                    <p className="text-xs text-white/50 mt-1">
+                      Continuous catalog tapping MunoWatch server, sorted freshly uploaded to oldest.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-3.5 py-1.5 rounded-full bg-[#00E676]/10 border border-[#00E676]/30 text-[#00E676] text-xs font-black tracking-wide">
+                      Showing {catalog.length} of {totalCatalogCount.toLocaleString()} Movies
+                    </span>
+                  </div>
+                </div>
+
+                {/* Continuous Responsive Grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                  {catalog.map((movie) => (
+                    <MoviePosterCard 
+                      key={movie.id} 
+                      movie={movie} 
+                      isFocused={focusedMovieId === movie.id}
+                      onClick={() => {
+                        setFocusedMovieId(movie.id);
+                        setSelectedMovie(movie);
+                      }}
+                      onMouseEnter={() => setFocusedMovieId(movie.id)}
+                    />
+                  ))}
+                </div>
+
+                {/* Load More Button / Indicator */}
+                <div className="mt-10 flex flex-col items-center justify-center gap-3">
+                  {loadingMore ? (
+                    <div className="flex items-center gap-3 px-6 py-3 rounded-full bg-white/10 border border-white/15 text-white text-sm font-bold backdrop-blur-md shadow-xl">
+                      <Loader2 className="w-5 h-5 text-[#00E676] animate-spin" />
+                      Loading next 40 movies (Newly to Oldy)...
+                    </div>
+                  ) : hasMoreCatalog ? (
+                    <button
+                      onClick={loadMoreMovies}
+                      className="group flex items-center gap-2.5 px-8 py-3.5 rounded-full bg-[#151821] hover:bg-[#1E2230] border border-white/15 hover:border-[#00E676]/60 text-white font-extrabold text-sm tracking-wide transition-all shadow-xl hover:scale-105"
+                    >
+                      <span>Load More Movies (Newly to Oldy)</span>
+                      <ChevronDown className="w-4 h-4 text-[#00E676] group-hover:translate-y-0.5 transition-transform" />
+                    </button>
+                  ) : (
+                    <div className="text-xs font-bold text-white/40 uppercase tracking-widest py-4">
+                      ✓ All {totalCatalogCount.toLocaleString()} Luganda movies loaded
+                    </div>
+                  )}
+                  <span className="text-[11px] text-white/40">
+                    Scroll down or click button to continuously load next batches of 40 movies
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         )}
