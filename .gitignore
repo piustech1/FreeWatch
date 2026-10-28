@@ -48,6 +48,7 @@ app.*.map.json
 /scripts/node_modules/
 /scripts/*.log
 /scripts/.known_munowatch_ids.json
+/scripts/.munowatch_full_catalog.json
 *.apk
 node_modules/
 dist/

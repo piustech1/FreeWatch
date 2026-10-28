@@ -1,75 +1,42 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { 
-  Play, Search, Bell, Star, Sparkles, Tv, Film, 
-  Heart, ChevronDown, X, ArrowLeft, Plus, Check,
-  Download, Menu, MessageCircle, ExternalLink,
-  Loader2, Filter, RotateCcw
+  Play, Search, Bell, Star, Film, ChevronDown, X, 
+  ArrowLeft, Plus, Check, Loader2, RotateCcw, Menu
 } from 'lucide-react';
 import { ref, onValue } from 'firebase/database';
 import { rtdb } from '../firebase';
 
-// High-impact initial MunoWatch Luganda catalog
+// Initial fallback catalog
 const INITIAL_MOVIES = [
   {
-    id: 533535,
-    title: 'Spider-Man: Brand New Day',
-    vj: 'VJ Junior',
-    category: 'Latest on FreeWatch',
-    image: 'https://image.tmdb.org/t/p/w780/8cdWjvZQUExUUTzyp4t6EDMubfO.jpg',
-    backdrop: 'https://images.unsplash.com/photo-1635805737707-575885ab0820?w=1600&auto=format&fit=crop&q=80',
-    rating: 9.4,
-    year: '2026',
-    runtime: '2h 15min',
-    isTv: false,
-    synopsis: 'Massive cinematic blurred backdrop of Spider-Man with suits new and classic, featuring his electric badge and daring multiverse battles in New York City.',
-    streamUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4'
-  },
-  {
-    id: 67342,
-    title: 'Self Made: Inspired by the Life of Madam C.J. Walker',
-    vj: 'VJ Aaron',
+    id: 67421,
+    title: 'Mirzapur 16',
+    vj: 'VJ Ashim',
     category: 'Series',
-    image: 'https://apposters.b-cdn.net/laba/yo/naki/YaVQ3808.jpg',
-    backdrop: 'https://apposters.b-cdn.net/laba/yo/naki/YaVQ3808.jpg',
-    rating: 8.8,
-    year: '2024',
-    runtime: '46m',
+    image: 'https://apposters.b-cdn.net/laba/yo/naki/gNxs2151.jpg',
+    backdrop: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1600&auto=format&fit=crop&q=80',
+    rating: '9.2',
+    year: '2025',
+    runtime: '50m',
     isTv: true,
-    seriesCode: '26058',
-    synopsis: 'The inspiring story of trailblazing African American entrepreneur Madam C.J. Walker who built a haircare empire and became America\'s first self-made female millionaire.',
-    streamUrl: 'https://lunoluno.b-cdn.net/timo28/tyu/Self.Made.Inspired.by.the.Life.of.Madam.C.J.Walker.S01E01.mp4',
-    episodes: [
-      { id: 67342, episodeNumber: 1, name: 'The Fight for the Crown', streamUrl: 'https://lunoluno.b-cdn.net/timo28/tyu/Self.Made.Inspired.by.the.Life.of.Madam.C.J.Walker.S01E01.mp4' },
-      { id: 67343, episodeNumber: 2, name: 'Bootstrapping', streamUrl: 'https://lunoluno.b-cdn.net/timo28/tyu/Self.Made.Inspired.by.the.Life.of.Madam.C.J.Walker.S01E01.mp4' }
-    ]
-  },
-  {
-    id: 67185,
-    title: 'Just Say It: Lillian Mbabazi',
-    vj: 'VJ Junior',
-    category: 'Latest on FreeWatch',
-    image: 'https://apposters.b-cdn.net/laba/yo/naki/SbSf9164.jpg',
-    backdrop: 'https://apposters.b-cdn.net/laba/yo/naki/SbSf9164.jpg',
-    rating: 8.5,
-    year: '2024',
-    runtime: '1h 50m',
-    isTv: false,
-    synopsis: 'Beyond the Music: Frank Ntambi sits down with Lillian Mbabazi for an intimate exploration of her musical legacy, resilience, and personal triumphs.',
-    streamUrl: 'https://munotek-vault.b-cdn.net/ugmvs/ug2/Final_JSI_2_2.mp4'
+    seriesCode: '33624',
+    synopsis: 'The thrilling climax of Mirzapur season in high-definition Luganda voice-over translation by VJ Ashim.',
+    streamUrl: 'https://munotech3.b-cdn.net/gugwa/gugwa42/01.Mirzapur.SN1.VJ.Ashim.1080.mp4'
   },
   {
     id: 67406,
     title: 'Mirzapur',
     vj: 'VJ Ashim',
     category: 'Series',
-    image: 'https://image.tmdb.org/t/p/w780/8cdWjvZQUExUUTzyp4t6EDMubfO.jpg',
+    image: 'https://apposters.b-cdn.net/laba/yo/naki/gNxs2151.jpg',
     backdrop: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1600&auto=format&fit=crop&q=80',
-    rating: 9.1,
+    rating: '9.1',
     year: '2025',
     runtime: '50m',
     isTv: true,
+    seriesCode: '33624',
     synopsis: 'A shocking incident at a wedding procession ignites a series of events entangling two families in the lawless city of Mirzapur.',
-    streamUrl: ''
+    streamUrl: 'https://munotech3.b-cdn.net/gugwa/gugwa42/01.Mirzapur.SN1.VJ.Ashim.1080.mp4'
   },
   {
     id: 67384,
@@ -78,7 +45,7 @@ const INITIAL_MOVIES = [
     category: 'Romance',
     image: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=800&auto=format&fit=crop&q=80',
     backdrop: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1600&auto=format&fit=crop&q=80',
-    rating: 8.7,
+    rating: '8.7',
     year: '2024',
     runtime: '1h 55m',
     isTv: false,
@@ -92,7 +59,7 @@ const INITIAL_MOVIES = [
     category: 'Action',
     image: 'https://image.tmdb.org/t/p/w780/8b8R8l88Qje9dn9OE8PY05Nxl1X.jpg',
     backdrop: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=1600&auto=format&fit=crop&q=80',
-    rating: 8.9,
+    rating: '8.9',
     year: '2024',
     runtime: '2h 10m',
     isTv: false,
@@ -106,7 +73,7 @@ const INITIAL_MOVIES = [
     category: 'Horror',
     image: 'https://image.tmdb.org/t/p/w780/b33nnKl1GSFbao4l3fZDDqsMx0F.jpg',
     backdrop: 'https://image.tmdb.org/t/p/original/b33nnKl1GSFbao4l3fZDDqsMx0F.jpg',
-    rating: 8.6,
+    rating: '8.6',
     year: '2024',
     runtime: '1h 42m',
     isTv: false,
@@ -114,22 +81,40 @@ const INITIAL_MOVIES = [
     streamUrl: ''
   },
   {
-    id: 67359,
-    title: 'Kaleidoscope',
-    vj: 'VJ Ulio',
+    id: 67342,
+    title: 'Self Made: Inspired by the Life of Madam C.J. Walker',
+    vj: 'VJ Aaron',
     category: 'Series',
-    image: 'https://image.tmdb.org/t/p/w780/AnsPtB9LzL58QfGz0Y5k1017r.jpg',
-    backdrop: 'https://image.tmdb.org/t/p/original/AnsPtB9LzL58QfGz0Y5k1017r.jpg',
-    rating: 8.5,
+    image: 'https://apposters.b-cdn.net/laba/yo/naki/YaVQ3808.jpg',
+    backdrop: 'https://apposters.b-cdn.net/laba/yo/naki/YaVQ3808.jpg',
+    rating: '8.8',
     year: '2024',
-    runtime: '48m',
+    runtime: '46m',
     isTv: true,
-    synopsis: 'A master thief and his crew attempt an epic and elaborate heist worth $7 billion dollars, but betrayal and greed threaten everything.',
-    streamUrl: ''
+    seriesCode: '26058',
+    synopsis: 'The inspiring story of trailblazing African American entrepreneur Madam C.J. Walker.',
+    streamUrl: 'https://lunoluno.b-cdn.net/timo28/tyu/Self.Made.Inspired.by.the.Life.of.Madam.C.J.Walker.S01E01.mp4'
   }
 ];
 
-// Genres matching MunoWatch /browse
+// Exact Typewriter Items from MunoWatch.com index.html
+const TYPEWRITER_ITEMS = [
+  "We make it",
+  "Easy",
+  "Comfortable",
+  "To watch foreign",
+  "TV shows and films",
+  "Spiced up by",
+  "Vj Junior",
+  "vj Emmy",
+  "Vj Jingo",
+  "Vj Mark",
+  "Omutaka Ice P",
+  "Vj Sammy",
+  "and more! ..."
+];
+
+// Exact Genres from MunoWatch.com
 const GENRES = [
   'Action', 'Adventure', 'Animation', 'Comedy', 'Crime', 
   'Documentary', 'Drama', 'Family', 'Fantasy', 'History', 
@@ -137,46 +122,38 @@ const GENRES = [
   'Thriller', 'War', 'Western'
 ];
 
-// Curated VJs matching MunoWatch /browse
+// Exact VJs from MunoWatch.com
 const VJ_LIST = [
   'VJ Junior', 'VJ Emmy', 'VJ Jingo', 'VJ Ice P', 'VJ Ulio',
   'VJ Heavy Q', 'VJ Sammy', 'VJ Mark', 'VJ Aaron', 'VJ Banks',
   'VJ Muba', 'VJ Ivo', 'VJ Kevin', 'VJ Dan', 'VJ Ashim', 'VJ Smart'
 ];
 
-// Typewriter Taglines (Matching MunoWatch landing tagline)
-const TYPEWRITER_PHRASES = [
-  'Katandika Butandisi - Twolekede Ekyatuleese',
-  'Ekiseera Kyoona Woona Wooli - Watch Luganda Dubbed Movies Online',
-  'Over 7,000+ Translated Movies & TV Series Streamed in HD',
-  'Continuous High-Speed Streaming Powered by FreeWatch'
-];
-
 export default function FreeWatchWebApp({ onNavigateToStore }) {
+  // View mode: 'landing' (exact MunoWatch homepage video/typewriter) or 'browse' (grid catalog)
+  const [viewMode, setViewMode] = useState('landing');
   const [catalog, setCatalog] = useState(INITIAL_MOVIES);
   const [catalogPage, setCatalogPage] = useState(1);
   const [hasMoreCatalog, setHasMoreCatalog] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [totalCatalogCount, setTotalCatalogCount] = useState(7074);
+  const [totalCatalogCount, setTotalCatalogCount] = useState(7097);
 
-  // Navigation & Filtering States (Matching MunoWatch nav.min.js & grid.min.js)
-  const [activeTab, setActiveTab] = useState('home'); // 'home' | 'grid' | 'series' | 'search' | 'watchlist'
+  // MunoWatch Navigation & Filter States
+  const [pipeType, setPipeType] = useState('p'); // 'p' (latest) | 'g' (series/genre) | 'vj' | 'fr'
+  const [pageTitle, setPageTitle] = useState('Latest movies');
   const [selectedGenre, setSelectedGenre] = useState('All');
   const [selectedVj, setSelectedVj] = useState('All');
-  const [pageTitle, setPageTitle] = useState('Latest Movies');
   const [searchQuery, setSearchQuery] = useState('');
-  
-  // Dropdown UI states
+  const [showSearch, setShowSearch] = useState(false);
   const [genreDropdownOpen, setGenreDropdownOpen] = useState(false);
   const [vjDropdownOpen, setVjDropdownOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
-  // Player & Detail Modal States
+  // Player & Detail Modal
   const [selectedMovie, setSelectedMovie] = useState(null);
   const [activeStreamUrl, setActiveStreamUrl] = useState('');
-  const [resolvingStream, setResolvingStream] = useState(false);
 
-  // Watchlist persistence
+  // Watchlist
   const [myList, setMyList] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem('freewatch_my_list') || '[]');
@@ -185,15 +162,39 @@ export default function FreeWatchWebApp({ onNavigateToStore }) {
     }
   });
 
-  // Typewriter ticker
+  // Typewriter text state
+  const [currentTypewriterText, setCurrentTypewriterText] = useState('');
   const [typewriterIndex, setTypewriterIndex] = useState(0);
+  const [isDeleting, setIsDeleting] = useState(false);
 
+  // Typewriter animation cycle matching MunoWatch.com
   useEffect(() => {
-    const interval = setInterval(() => {
-      setTypewriterIndex((prev) => (prev + 1) % TYPEWRITER_PHRASES.length);
-    }, 4500);
-    return () => clearInterval(interval);
-  }, []);
+    const fullText = TYPEWRITER_ITEMS[typewriterIndex];
+    let speed = isDeleting ? 40 : 80;
+
+    if (!isDeleting && currentTypewriterText === fullText) {
+      speed = 1500; // Pause at end of text
+    }
+
+    const timer = setTimeout(() => {
+      if (!isDeleting) {
+        if (currentTypewriterText.length < fullText.length) {
+          setCurrentTypewriterText(fullText.slice(0, currentTypewriterText.length + 1));
+        } else {
+          setIsDeleting(true);
+        }
+      } else {
+        if (currentTypewriterText.length > 0) {
+          setCurrentTypewriterText(fullText.slice(0, currentTypewriterText.length - 1));
+        } else {
+          setIsDeleting(false);
+          setTypewriterIndex((prev) => (prev + 1) % TYPEWRITER_ITEMS.length);
+        }
+      }
+    }, speed);
+
+    return () => clearTimeout(timer);
+  }, [currentTypewriterText, isDeleting, typewriterIndex]);
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -245,12 +246,6 @@ export default function FreeWatchWebApp({ onNavigateToStore }) {
               }
             }
 
-            // Preserve hero Spider-Man release
-            const hasSpiderman = merged.some(m => /spider-man/i.test(m.title));
-            if (!hasSpiderman) {
-              merged.push(INITIAL_MOVIES[0]);
-            }
-
             return sortNewlyToOldy(merged);
           });
 
@@ -276,6 +271,7 @@ export default function FreeWatchWebApp({ onNavigateToStore }) {
   // Window scroll infinite pagination (matching grid.min.js: scrollTop + height >= innerHeight - 100)
   useEffect(() => {
     const handleScroll = () => {
+      if (viewMode !== 'browse') return;
       const scrollHeight = document.documentElement.scrollHeight;
       const scrollTop = window.scrollY || document.documentElement.scrollTop;
       const clientHeight = window.innerHeight;
@@ -287,14 +283,13 @@ export default function FreeWatchWebApp({ onNavigateToStore }) {
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [loadMoreMovies]);
+  }, [loadMoreMovies, viewMode]);
 
-  // Initial load
+  // Initial load on mount
   useEffect(() => {
     let isMounted = true;
     fetchMoviePage(1, true);
 
-    // RTDB listener for instant live uploads
     const catalogRef = ref(rtdb, 'munowatch/catalog');
     const unsubscribe = onValue(catalogRef, (snapshot) => {
       if (snapshot.exists() && isMounted) {
@@ -321,7 +316,7 @@ export default function FreeWatchWebApp({ onNavigateToStore }) {
                 vj,
                 category: m.category || (m.series_code || m.is_series ? 'Series' : 'Movie'),
                 image: m.image || m.thumbnail || m.poster || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=600&auto=format&fit=crop&q=80',
-                backdrop: m.backdrop || m.cover || m.image || m.thumbnail || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1200&auto=format&fit=crop&q=80',
+                backdrop: m.backdrop || m.cover || m.image || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1200&auto=format&fit=crop&q=80',
                 rating: m.rating || (8.2 + ((idx % 15) / 10)).toFixed(1),
                 year: m.year || m.release_year || '2024',
                 runtime: m.duration || '1h 45m',
@@ -367,23 +362,13 @@ export default function FreeWatchWebApp({ onNavigateToStore }) {
     });
   };
 
-  // Hero movie
-  const heroMovie = useMemo(() => {
-    if (catalog.length === 0) return INITIAL_MOVIES[0];
-    const spiderman = catalog.find(m => /spider-man/i.test(m.title));
-    if (spiderman) return spiderman;
-    return catalog[0];
-  }, [catalog]);
-
   // Play stream resolver
   const handlePlay = async (movie) => {
     setSelectedMovie(movie);
     setActiveStreamUrl('');
-    setResolvingStream(true);
 
     if (movie.streamUrl && movie.streamUrl.startsWith('http')) {
       setActiveStreamUrl(movie.streamUrl);
-      setResolvingStream(false);
       return;
     }
 
@@ -394,23 +379,21 @@ export default function FreeWatchWebApp({ onNavigateToStore }) {
         const url = data.playingurl || data.playingUrl || data.url;
         if (url && url.startsWith('http')) {
           setActiveStreamUrl(url);
-          setResolvingStream(false);
           return;
         }
       }
     } catch (_) {}
 
     setActiveStreamUrl('https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4');
-    setResolvingStream(false);
   };
 
-  // Filtered catalog calculation (combines tab, series, genre, vj, and search)
+  // Filtered movies calculation (combines pipeType, series, genre, vj, and search)
   const displayedMovies = useMemo(() => {
     let list = sortNewlyToOldy(catalog);
 
-    if (activeTab === 'series') {
+    if (pipeType === 'series') {
       list = list.filter(m => m.isTv || /series|season|episode/i.test(m.category + ' ' + m.title));
-    } else if (activeTab === 'watchlist') {
+    } else if (pipeType === 'watchlist') {
       return myList;
     }
 
@@ -424,7 +407,7 @@ export default function FreeWatchWebApp({ onNavigateToStore }) {
       list = list.filter(m => m.vj && m.vj.toLowerCase().includes(v));
     }
 
-    if (activeTab === 'search' && searchQuery.trim()) {
+    if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
       list = list.filter(m => 
         m.title.toLowerCase().includes(q) ||
@@ -434,517 +417,401 @@ export default function FreeWatchWebApp({ onNavigateToStore }) {
     }
 
     return list;
-  }, [catalog, activeTab, selectedGenre, selectedVj, searchQuery, myList, sortNewlyToOldy]);
+  }, [catalog, pipeType, selectedGenre, selectedVj, searchQuery, myList, sortNewlyToOldy]);
 
   return (
-    <div className="min-h-screen bg-[#010318] text-gray-200 flex flex-col font-sans select-none antialiased">
-      {/* ── 1. MunoWatch Sticky Universal Navigation Bar (#universal-nav) ── */}
-      <header id="nav-container" className="sticky top-0 z-40 bg-[#010318]/90 backdrop-blur-md border-b border-white/5 transition-all">
-        <nav id="universal-nav" className="w-[95%] lg:w-[86%] mx-auto py-3 flex items-center justify-between">
-          {/* Left: Brand Logo Wordmark */}
-          <div 
-            onClick={() => { setActiveTab('home'); setSelectedGenre('All'); setSelectedVj('All'); setPageTitle('Latest Movies'); }}
-            className="flex items-center gap-2.5 cursor-pointer group"
-          >
-            <div className="flex items-center">
-              <span className="text-xl sm:text-2xl font-black tracking-wider text-white">
+    <div className="bg-[#010318] text-gray-200 flex flex-col min-h-screen w-full font-sans select-none antialiased relative">
+      
+      {/* ═════════════════════════════════════════════════════════════════════
+          PAGE 1: EXACT MUNOWATCH.COM LANDING HOMEPAGE
+      ═════════════════════════════════════════════════════════════════════ */}
+      {viewMode === 'landing' && (
+        <div className="relative min-h-screen w-full flex flex-col justify-between overflow-hidden">
+          {/* Top Landing Header matching munowatch.com: div class="flex justify-around bg-gradient-to-b from-[#010318] to-transparent p-4" */}
+          <div className="flex justify-between sm:justify-around items-center bg-gradient-to-b from-[#010318] via-[#010318]/70 to-transparent p-4 z-20">
+            {/* Wordmark Logo */}
+            <div 
+              onClick={() => setViewMode('landing')}
+              className="cursor-pointer flex items-center"
+            >
+              <span className="text-2xl sm:text-3xl font-black tracking-wider text-white">
                 FREE<span className="text-green-500">WATCH</span>
               </span>
-              <span className="ml-2 px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 text-[10px] font-black border border-green-500/40">
-                LUGANDA
-              </span>
             </div>
-          </div>
 
-          {/* Center: Main Navigation Links */}
-          <div className="hidden lg:flex items-center space-x-1 text-sm font-bold">
-            {/* Latest Movies */}
-            <button
-              onClick={() => { 
-                setActiveTab('grid'); 
-                setSelectedGenre('All'); 
-                setSelectedVj('All'); 
-                setPageTitle('Latest Movies'); 
-              }}
-              className={`px-4 py-2 rounded-md transition-colors ${
-                activeTab === 'grid' && selectedGenre === 'All' && selectedVj === 'All'
-                  ? 'text-green-500 font-black'
-                  : 'text-gray-200 hover:text-green-500'
-              }`}
-            >
-              Latest movies
-            </button>
-
-            {/* Series */}
-            <button
-              onClick={() => { 
-                setActiveTab('series'); 
-                setSelectedGenre('All'); 
-                setSelectedVj('All'); 
-                setPageTitle('Series'); 
-              }}
-              className={`px-4 py-2 rounded-md transition-colors ${
-                activeTab === 'series'
-                  ? 'text-green-500 font-black'
-                  : 'text-gray-200 hover:text-green-500'
-              }`}
-            >
-              Series
-            </button>
-
-            {/* Genre Dropdown */}
-            <div className="relative inline-block text-left">
+            {/* Buttons: Browse Movies & Log In */}
+            <div className="flex items-center gap-3">
               <button
-                onClick={(e) => { 
-                  e.stopPropagation(); 
-                  setGenreDropdownOpen(!genreDropdownOpen); 
-                  setVjDropdownOpen(false); 
-                }}
-                className={`nav-dropdown-btn inline-flex items-center px-4 py-2 rounded-md transition-colors ${
-                  genreDropdownOpen || selectedGenre !== 'All' ? 'text-green-500' : 'text-gray-200 hover:text-green-500'
-                }`}
+                onClick={() => setViewMode('browse')}
+                className="p-2 px-4 border border-green-500 text-green-500 rounded-md hover:bg-green-700 hover:text-white font-bold transition-all text-sm shadow-lg"
               >
-                <span>{selectedGenre !== 'All' ? `Genre: ${selectedGenre}` : 'Genre'}</span>
-                <ChevronDown className={`ml-1.5 w-4 h-4 transition-transform duration-200 ${genreDropdownOpen ? 'rotate-180' : ''}`} />
+                Log In
               </button>
 
-              {/* Genre Menu */}
-              {genreDropdownOpen && (
-                <div className="nav-dropdown-menu origin-top-right absolute left-0 mt-2 w-72 rounded-xl shadow-2xl bg-[#010318]/95 backdrop-blur-xl border border-gray-700/60 z-50 p-2.5 max-h-80 overflow-y-auto cinema-scroll animate-in fade-in zoom-in-95 duration-150">
-                  <div className="grid grid-cols-2 gap-1.5">
-                    <button
-                      onClick={() => { setSelectedGenre('All'); setGenreDropdownOpen(false); }}
-                      className="text-left px-3 py-1.5 text-xs rounded-md text-gray-300 hover:text-green-400 hover:bg-white/5 font-semibold"
-                    >
-                      All Genres
-                    </button>
-                    {GENRES.map((g) => (
-                      <button
-                        key={g}
-                        onClick={() => {
-                          setSelectedGenre(g);
-                          setPageTitle(`${g} Movies`);
-                          setActiveTab('grid');
-                          setGenreDropdownOpen(false);
-                        }}
-                        className={`text-left px-3 py-1.5 text-xs rounded-md font-semibold transition-colors ${
-                          selectedGenre === g 
-                            ? 'text-green-400 bg-green-500/10 font-bold' 
-                            : 'text-gray-300 hover:text-green-400 hover:bg-white/5'
-                        }`}
-                      >
-                        {g}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* VJ Dropdown */}
-            <div className="relative inline-block text-left">
               <button
-                onClick={(e) => { 
-                  e.stopPropagation(); 
-                  setVjDropdownOpen(!vjDropdownOpen); 
-                  setGenreDropdownOpen(false); 
-                }}
-                className={`nav-dropdown-btn inline-flex items-center px-4 py-2 rounded-md transition-colors ${
-                  vjDropdownOpen || selectedVj !== 'All' ? 'text-green-500' : 'text-gray-200 hover:text-green-500'
-                }`}
+                onClick={() => setViewMode('browse')}
+                className="p-2 px-4 bg-green-500 text-black font-extrabold rounded-md hover:bg-green-400 transition-all text-sm shadow-lg"
               >
-                <span>{selectedVj !== 'All' ? `VJ: ${selectedVj}` : 'Vj'}</span>
-                <ChevronDown className={`ml-1.5 w-4 h-4 transition-transform duration-200 ${vjDropdownOpen ? 'rotate-180' : ''}`} />
+                Browse Movies
               </button>
-
-              {/* VJ Menu */}
-              {vjDropdownOpen && (
-                <div className="nav-dropdown-menu origin-top-right absolute left-0 mt-2 w-72 rounded-xl shadow-2xl bg-[#010318]/95 backdrop-blur-xl border border-gray-700/60 z-50 p-2.5 max-h-80 overflow-y-auto cinema-scroll animate-in fade-in zoom-in-95 duration-150">
-                  <div className="grid grid-cols-2 gap-1.5">
-                    <button
-                      onClick={() => { setSelectedVj('All'); setVjDropdownOpen(false); }}
-                      className="text-left px-3 py-1.5 text-xs rounded-md text-gray-300 hover:text-green-400 hover:bg-white/5 font-semibold"
-                    >
-                      All VJs
-                    </button>
-                    {VJ_LIST.map((v) => (
-                      <button
-                        key={v}
-                        onClick={() => {
-                          setSelectedVj(v);
-                          setPageTitle(`${v} Collection`);
-                          setActiveTab('grid');
-                          setVjDropdownOpen(false);
-                        }}
-                        className={`text-left px-3 py-1.5 text-xs rounded-md font-semibold transition-colors ${
-                          selectedVj === v 
-                            ? 'text-green-400 bg-green-500/10 font-bold' 
-                            : 'text-gray-300 hover:text-green-400 hover:bg-white/5'
-                        }`}
-                      >
-                        {v}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Watchlist */}
-            <button
-              onClick={() => { setActiveTab('watchlist'); setPageTitle('My Watchlist'); }}
-              className={`px-4 py-2 rounded-md transition-colors ${
-                activeTab === 'watchlist'
-                  ? 'text-green-500 font-black'
-                  : 'text-gray-200 hover:text-green-500'
-              }`}
-            >
-              Watchlist
-            </button>
-
-            {/* Free Movies Status Pill */}
-            <div 
-              onClick={() => { setActiveTab('grid'); setSelectedGenre('All'); setSelectedVj('All'); }}
-              className="px-3 py-1 rounded-full bg-green-500/10 border border-green-500/30 text-green-400 font-bold text-xs cursor-pointer hover:bg-green-500/20 transition-all"
-            >
-              free movies
             </div>
           </div>
 
-          {/* Right: Actions (Search, Notification, Download App, Mobile Toggle) */}
-          <div className="flex items-center space-x-3">
-            {/* Search Trigger */}
-            <button
-              onClick={() => {
-                setActiveTab(activeTab === 'search' ? 'home' : 'search');
-                setPageTitle('Search Catalog');
-              }}
-              className={`p-2 rounded-full transition-colors ${
-                activeTab === 'search' ? 'bg-green-500 text-black' : 'text-gray-300 hover:text-green-500 hover:bg-white/5'
-              }`}
-              title="Search"
-            >
-              <Search className="w-5 h-5" />
-            </button>
-
-            {/* Watchlist Quick Count */}
-            <button
-              onClick={() => setActiveTab('watchlist')}
-              className="relative p-2 rounded-full text-gray-300 hover:text-green-500 hover:bg-white/5 transition-colors hidden sm:block"
-              title="Saved Watchlist"
-            >
-              <Heart className="w-5 h-5" />
-              {myList.length > 0 && (
-                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-green-500 ring-2 ring-[#010318]" />
-              )}
-            </button>
-
-            {/* Download App CTA (if available) */}
-            {onNavigateToStore && (
-              <button
-                onClick={onNavigateToStore}
-                className="hidden md:flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-green-500/60 text-green-400 hover:bg-green-500 hover:text-black text-xs font-bold transition-all shadow-md"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>App</span>
-              </button>
-            )}
-
-            {/* Mobile Hamburger Toggle */}
-            <button
-              onClick={() => setMobileNavOpen(!mobileNavOpen)}
-              className="p-2 rounded-lg text-gray-300 hover:text-white lg:hidden"
-            >
-              <Menu className="w-6 h-6" />
-            </button>
-          </div>
-        </nav>
-
-        {/* Mobile Nav Drawer */}
-        {mobileNavOpen && (
-          <div className="lg:hidden bg-[#010318] border-b border-white/10 px-6 py-4 space-y-3 animate-in slide-in-from-top-4 duration-150">
-            <button
-              onClick={() => { setActiveTab('grid'); setSelectedGenre('All'); setSelectedVj('All'); setPageTitle('Latest Movies'); setMobileNavOpen(false); }}
-              className="block w-full text-left py-2 font-bold text-gray-200 hover:text-green-500"
-            >
-              Latest movies
-            </button>
-            <button
-              onClick={() => { setActiveTab('series'); setSelectedGenre('All'); setSelectedVj('All'); setPageTitle('Series'); setMobileNavOpen(false); }}
-              className="block w-full text-left py-2 font-bold text-gray-200 hover:text-green-500"
-            >
-              Series
-            </button>
-            <button
-              onClick={() => { setActiveTab('watchlist'); setPageTitle('My Watchlist'); setMobileNavOpen(false); }}
-              className="block w-full text-left py-2 font-bold text-gray-200 hover:text-green-500"
-            >
-              Watchlist ({myList.length})
-            </button>
-            <div className="pt-2 border-t border-white/10 flex flex-wrap gap-2">
-              <span className="w-full text-xs font-black text-gray-400 uppercase">Top VJs:</span>
-              {VJ_LIST.slice(0, 6).map((v) => (
-                <button
-                  key={v}
-                  onClick={() => { setSelectedVj(v); setPageTitle(`${v} Movies`); setActiveTab('grid'); setMobileNavOpen(false); }}
-                  className="px-2.5 py-1 rounded bg-white/5 text-xs text-gray-300 hover:text-green-400"
-                >
-                  {v}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-      </header>
-
-      {/* ── 2. Typewriter Marquee Tagline (Authentic MunoWatch Banner) ── */}
-      <div className="bg-[#040722] border-b border-white/5 py-2 px-4 text-center select-none overflow-hidden">
-        <p className="text-xs sm:text-sm font-semibold tracking-wide text-green-400 transition-all duration-300">
-          <span className="text-gray-400 mr-2">●</span>
-          {TYPEWRITER_PHRASES[typewriterIndex]}
-        </p>
-      </div>
-
-      {/* ── 3. Main Content Area ── */}
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* VIEW A: Search Overlay / Page (search.min.js style) */}
-        {activeTab === 'search' && (
-          <div className="mb-10 max-w-3xl mx-auto">
-            <div id="query-box" className="relative mb-4">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                id="query"
-                type="text"
-                autoFocus
-                placeholder="Search movies, TV series, or VJ name (e.g. VJ Junior, Spider-Man)..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-10 py-3.5 rounded-xl bg-[#090C22] border border-gray-700 text-white placeholder-gray-500 text-sm focus:outline-none focus:border-green-500 shadow-xl"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-            <div className="flex items-center justify-between text-xs text-gray-400 px-1">
-              <span>{searchQuery ? `Search results for "${searchQuery}"` : 'Browse all catalog'}</span>
-              <span>{displayedMovies.length} found</span>
-            </div>
-          </div>
-        )}
-
-        {/* VIEW B: Featured Marquee Hero Billboard (When on Home view without active query) */}
-        {activeTab === 'home' && selectedGenre === 'All' && selectedVj === 'All' && (
-          <div className="relative w-full rounded-2xl overflow-hidden mb-10 shadow-2xl bg-[#070A1E] border border-white/5">
-            {/* Backdrop Banner */}
-            <div className="relative h-72 sm:h-96 md:h-[420px] w-full overflow-hidden">
-              <img
-                src={heroMovie.backdrop || heroMovie.image}
-                alt={heroMovie.title}
-                className="w-full h-full object-cover object-top filter brightness-85 transform scale-102"
-              />
-              <div className="absolute inset-0 bg-gradient-to-r from-[#010318] via-[#010318]/75 via-40% to-transparent" />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#010318] via-[#010318]/30 to-transparent" />
-            </div>
-
-            {/* Hero Details */}
-            <div className="absolute bottom-6 sm:bottom-10 left-6 sm:left-10 max-w-xl z-20">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-500/20 text-green-400 border border-green-500/40 text-xs font-black tracking-wide mb-3">
-                <Sparkles className="w-3.5 h-3.5" />
-                FEATURED TRANSLATED RELEASE
+          {/* Center Main Typewriter Hero matching munowatch.com */}
+          <main className="container mx-auto flex flex-col justify-center items-center p-4 z-20 flex-1 my-auto">
+            <div className="h-[65vh] flex flex-col justify-center items-center text-center px-4 space-y-8">
+              {/* Typewriter text container */}
+              <div id="typedata" className="min-h-[120px] flex items-center justify-center">
+                <h1 className="text-4xl sm:text-6xl lg:text-7xl font-bold text-white text-center leading-tight">
+                  {currentTypewriterText}
+                  <span className="inline-block w-1.5 h-10 sm:h-14 bg-green-500 ml-1.5 animate-pulse align-middle" />
+                </h1>
               </div>
 
-              <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-white uppercase italic drop-shadow-xl leading-none mb-3">
-                {heroMovie.title}
-              </h1>
+              {/* Get Started Button matching munowatch.com */}
+              <button
+                onClick={() => setViewMode('browse')}
+                className="p-3.5 px-8 border border-white text-white rounded-full bg-white/20 hover:bg-green-500 hover:text-black font-bold text-base sm:text-lg transition-all backdrop-blur-md shadow-2xl hover:scale-105 inline-block"
+              >
+                Get Started
+              </button>
+            </div>
+          </main>
 
-              {/* Frosted Metadata Pill Tags */}
-              <div className="flex flex-wrap items-center gap-2 mb-3.5 text-xs font-bold text-gray-300">
-                <span className="px-2 py-0.5 rounded bg-white/10 border border-white/10 text-white">HD</span>
-                <span className="px-2.5 py-0.5 rounded bg-green-600/90 text-white font-extrabold">{heroMovie.vj}</span>
-                <span>•</span>
-                <span>{heroMovie.year}</span>
-                <span>•</span>
-                <span>{heroMovie.runtime}</span>
-                <span>•</span>
-                <span className="text-yellow-400 flex items-center gap-1">
-                  <Star className="w-3.5 h-3.5 fill-current" />
-                  {heroMovie.rating}
+          {/* Fullscreen Background Video matching munowatch.com: line 112 */}
+          <video 
+            playsInline 
+            poster="https://munowatch.com/assets/images/playbg.jpg" 
+            autoPlay 
+            muted 
+            loop 
+            className="fixed top-0 left-0 object-cover sm:min-w-[100vw] w-full h-[100vh] -z-10"
+          >
+            <source src="https://munotek-vault.b-cdn.net/CLIPS/MOVIES%20HD.mp4" type="video/mp4" />
+          </video>
+
+          {/* MunoWatch Footer on Landing Page */}
+          <MunoFooter onSelectTab={(tab) => { setViewMode('browse'); setPipeType(tab); }} />
+        </div>
+      )}
+
+      {/* ═════════════════════════════════════════════════════════════════════
+          PAGE 2: EXACT MUNOWATCH.COM BROWSE GRID & MOVIE PORTAL
+      ═════════════════════════════════════════════════════════════════════ */}
+      {viewMode === 'browse' && (
+        <div className="min-h-screen flex flex-col w-full">
+          {/* ── MunoWatch Universal Nav Bar (#universal-nav) ──────────────── */}
+          <div id="nav-container" data-cantransform="0" className="sticky bg-[#010318]/90 backdrop-blur-md px-0 py-2.5 text-white flex z-40 top-0 border-b border-white/5 transition-all">
+            <nav id="universal-nav" className="w-[95%] lg:w-[86%] mx-auto flex flex-col lg:flex-row justify-between items-start lg:items-center" style={{ textShadow: '2px 2px 4px rgba(0, 0, 0, 0.6)' }}>
+              <div className="flex items-center justify-between w-full lg:w-auto">
+                {/* Brand Logo Wordmark */}
+                <div 
+                  onClick={() => setViewMode('landing')}
+                  className="cursor-pointer flex items-center gap-2"
+                >
+                  <span className="text-2xl font-black text-white">
+                    FREE<span className="text-green-500">WATCH</span>
+                  </span>
+                </div>
+
+                {/* Mobile hamburger button */}
+                <button 
+                  onClick={() => setMobileNavOpen(!mobileNavOpen)}
+                  className="lg:hidden text-gray-300 hover:text-white p-2" 
+                  id="open-nav-btn"
+                >
+                  <Menu className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className={`flex-col lg:flex-row lg:items-center w-full lg:w-auto ${mobileNavOpen ? 'flex' : 'hidden lg:flex'}`}>
+                {/* Main Nav Links */}
+                <ul className="lg:flex items-center lg:text-xs font-bold text-left lg:text-right nav-list divide-y lg:divide-y-0 divide-gray-800 lg:divide-transparent mt-3 lg:mt-0">
+                  {/* Latest movies */}
+                  <li className="w-full py-2 lg:px-1">
+                    <button
+                      onClick={() => { setPipeType('p'); setPageTitle('Latest movies'); setSelectedGenre('All'); setSelectedVj('All'); setMobileNavOpen(false); }}
+                      className={`w-full inline-block px-4 py-2 rounded-md hover:text-green-500 text-nowrap text-left lg:text-center ${pipeType === 'p' && selectedGenre === 'All' && selectedVj === 'All' ? 'text-green-500 font-black' : ''}`}
+                    >
+                      Latest movies
+                    </button>
+                  </li>
+
+                  {/* Series */}
+                  <li className="w-full py-2 lg:px-1">
+                    <button
+                      onClick={() => { setPipeType('series'); setPageTitle('Series'); setSelectedGenre('All'); setSelectedVj('All'); setMobileNavOpen(false); }}
+                      className={`w-full inline-block px-4 py-2 rounded-md hover:text-green-500 text-nowrap text-left lg:text-center ${pipeType === 'series' ? 'text-green-500 font-black' : ''}`}
+                    >
+                      Series
+                    </button>
+                  </li>
+
+                  {/* Genre Dropdown */}
+                  <li className="w-full py-2 lg:px-1 relative">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setGenreDropdownOpen(!genreDropdownOpen); setVjDropdownOpen(false); }}
+                      className="inline-flex items-center justify-between lg:justify-center w-full rounded-md px-4 py-2 hover:text-green-500 text-nowrap nav-dropdown-btn"
+                    >
+                      <span>{selectedGenre !== 'All' ? `Genre: ${selectedGenre}` : 'Genre'}</span>
+                      <ChevronDown className="ml-1.5 w-4 h-4" />
+                    </button>
+
+                    {genreDropdownOpen && (
+                      <div className="nav-dropdown-menu origin-top-right absolute left-0 lg:right-0 mt-2 w-72 rounded-md shadow-2xl bg-[#010318] backdrop-blur-md border border-gray-700 z-50 p-2.5 max-h-80 overflow-y-auto cinema-scroll animate-in fade-in zoom-in-95 duration-100">
+                        <div className="grid grid-cols-2 gap-1">
+                          <button
+                            onClick={() => { setSelectedGenre('All'); setGenreDropdownOpen(false); setMobileNavOpen(false); }}
+                            className="text-left px-3 py-1.5 text-xs text-gray-300 hover:text-green-500"
+                          >
+                            All Genres
+                          </button>
+                          {GENRES.map((g) => (
+                            <button
+                              key={g}
+                              onClick={() => { setSelectedGenre(g); setPageTitle(`${g} Movies`); setPipeType('p'); setGenreDropdownOpen(false); setMobileNavOpen(false); }}
+                              className={`text-left px-3 py-1.5 text-xs hover:text-green-500 ${selectedGenre === g ? 'text-green-400 font-bold' : 'text-gray-300'}`}
+                            >
+                              {g}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </li>
+
+                  {/* VJ Dropdown */}
+                  <li className="w-full py-2 lg:px-1 relative">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setVjDropdownOpen(!vjDropdownOpen); setGenreDropdownOpen(false); }}
+                      className="inline-flex items-center justify-between lg:justify-center w-full rounded-md px-4 py-2 hover:text-green-500 text-nowrap nav-dropdown-btn"
+                    >
+                      <span>{selectedVj !== 'All' ? `VJ: ${selectedVj}` : 'Vj'}</span>
+                      <ChevronDown className="ml-1.5 w-4 h-4" />
+                    </button>
+
+                    {vjDropdownOpen && (
+                      <div className="nav-dropdown-menu origin-top-right absolute left-0 lg:right-0 mt-2 w-72 rounded-md shadow-2xl bg-[#010318] backdrop-blur-md border border-gray-700 z-50 p-2.5 max-h-80 overflow-y-auto cinema-scroll animate-in fade-in zoom-in-95 duration-100">
+                        <div className="grid grid-cols-2 gap-1">
+                          <button
+                            onClick={() => { setSelectedVj('All'); setVjDropdownOpen(false); setMobileNavOpen(false); }}
+                            className="text-left px-3 py-1.5 text-xs text-gray-300 hover:text-green-500"
+                          >
+                            All VJs
+                          </button>
+                          {VJ_LIST.map((v) => (
+                            <button
+                              key={v}
+                              onClick={() => { setSelectedVj(v); setPageTitle(`${v} Movies`); setPipeType('p'); setVjDropdownOpen(false); setMobileNavOpen(false); }}
+                              className={`text-left px-3 py-1.5 text-xs hover:text-green-500 ${selectedVj === v ? 'text-green-400 font-bold' : 'text-gray-300'}`}
+                            >
+                              {v}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </li>
+
+                  {/* Watchlist */}
+                  <li className="w-full py-2 lg:px-1">
+                    <button
+                      onClick={() => { setPipeType('watchlist'); setPageTitle('Watchlist'); setMobileNavOpen(false); }}
+                      className={`w-full inline-block px-4 py-2 rounded-md hover:text-green-500 text-nowrap text-left lg:text-center ${pipeType === 'watchlist' ? 'text-green-500 font-black' : ''}`}
+                    >
+                      Watchlist ({myList.length})
+                    </button>
+                  </li>
+
+                  {/* Free Movies pill */}
+                  <li className="w-full py-2 lg:px-1">
+                    <div 
+                      onClick={() => { setPipeType('p'); setSelectedGenre('All'); setSelectedVj('All'); setPageTitle('Free movies'); setMobileNavOpen(false); }}
+                      id="days-remaining" 
+                      className="text-green-300 hover:text-green-500 text-nowrap font-bold px-4 py-2 cursor-pointer"
+                    >
+                      free movies
+                    </div>
+                  </li>
+                </ul>
+
+                {/* Right utility icons: notification & search */}
+                <ul className="flex items-center text-sm nav-list lg:ml-2 gap-3 py-2 lg:py-0">
+                  <li>
+                    <button 
+                      onClick={() => alert(`FreeWatch Notifications: ${totalCatalogCount.toLocaleString()} movies available freshly synced from MunoWatch!`)}
+                      className="hover:text-green-500 inline-block p-1"
+                      title="Notifications"
+                    >
+                      <Bell className="w-5 h-5" />
+                    </button>
+                  </li>
+                  <li>
+                    <button 
+                      onClick={() => setShowSearch(!showSearch)}
+                      className={`hover:text-green-500 inline-block p-1 ${showSearch ? 'text-green-500' : ''}`}
+                      title="Search"
+                    >
+                      <Search className="w-5 h-5" />
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      onClick={() => setViewMode('landing')}
+                      className="text-xs font-bold text-gray-400 hover:text-white px-2.5 py-1 rounded border border-gray-700"
+                    >
+                      Home
+                    </button>
+                  </li>
+                </ul>
+              </div>
+            </nav>
+          </div>
+
+          {/* ── Search Query Box (Matching search.min.js: #query-box) ───── */}
+          {showSearch && (
+            <div className="w-[95%] lg:w-[86%] mx-auto my-4 transition-all animate-in slide-in-from-top-2 duration-150">
+              <div id="query-box" className="relative w-full">
+                <input
+                  id="query"
+                  type="text"
+                  autoFocus
+                  placeholder="Search movies, TV series, or VJ name..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full p-3.5 pl-11 rounded-md bg-[#0a0d24] border border-gray-700 text-white placeholder-gray-500 text-sm focus:outline-none focus:border-green-500 shadow-xl"
+                />
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                {searchQuery && (
+                  <button 
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ── Main Catalog Grid Container (#grid-container) ─────────────── */}
+          <main className="w-full max-w-[95%] lg:max-w-[86%] mx-auto py-6 flex-1">
+            {/* Filter Bar with VJ & Genre dropdowns matching grid.min.js */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3.5 mb-6 border-b border-gray-800 gap-3">
+              <div className="flex items-center gap-2.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-green-500"></span>
+                <h2 className="text-xl font-bold text-white tracking-wide">
+                  {pageTitle}
+                </h2>
+                <span className="text-xs text-green-400 bg-green-500/10 px-2.5 py-0.5 rounded-full border border-green-500/20 font-semibold ml-2">
+                  {displayedMovies.length} of {totalCatalogCount.toLocaleString()}
                 </span>
               </div>
 
-              {/* Synopsis */}
-              <p className="text-xs sm:text-sm text-gray-300 line-clamp-2 sm:line-clamp-3 mb-6 max-w-lg leading-relaxed">
-                {heroMovie.synopsis}
-              </p>
-
-              {/* Action Buttons */}
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => handlePlay(heroMovie)}
-                  className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-black font-black px-7 py-3 rounded-full shadow-lg shadow-green-500/30 transition-all hover:scale-105 uppercase text-xs sm:text-sm tracking-wide"
+              {/* Dual Filter Dropdowns (#vj-options & #genre-options) */}
+              <div className="flex items-center gap-2">
+                <select
+                  id="vj-options"
+                  value={selectedVj}
+                  onChange={(e) => setSelectedVj(e.target.value)}
+                  className="bg-[#0a0d24] border border-gray-700 text-xs text-white rounded p-1.5 focus:outline-none focus:border-green-500 cursor-pointer"
                 >
-                  <Play className="w-4 h-4 fill-black" />
-                  Watch Now
-                </button>
+                  <option value="All">All VJs</option>
+                  {VJ_LIST.map((v) => (
+                    <option key={v} value={v}>{v}</option>
+                  ))}
+                </select>
 
-                <button
-                  onClick={() => toggleMyList(heroMovie)}
-                  className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white font-bold px-5 py-3 rounded-full border border-white/15 transition-all text-xs sm:text-sm"
+                <select
+                  id="genre-options"
+                  value={selectedGenre}
+                  onChange={(e) => setSelectedGenre(e.target.value)}
+                  className="bg-[#0a0d24] border border-gray-700 text-xs text-white rounded p-1.5 focus:outline-none focus:border-green-500 cursor-pointer"
                 >
-                  {myList.some(m => m.id === heroMovie.id) ? (
-                    <>
-                      <Check className="w-4 h-4 text-green-400" />
-                      In Watchlist
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="w-4 h-4" />
-                      Add to Watchlist
-                    </>
-                  )}
-                </button>
+                  <option value="All">All Genres</option>
+                  {GENRES.map((g) => (
+                    <option key={g} value={g}>{g}</option>
+                  ))}
+                </select>
+
+                {(selectedGenre !== 'All' || selectedVj !== 'All' || searchQuery) && (
+                  <button
+                    onClick={() => { setSelectedGenre('All'); setSelectedVj('All'); setSearchQuery(''); }}
+                    className="p-1.5 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white"
+                    title="Reset Filters"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
             </div>
-          </div>
-        )}
 
-        {/* ── 4. MunoWatch Grid Filter Bar (#grid-filter-bar) ── */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-4 border-b border-white/10">
-          <div className="flex items-center gap-3">
-            <h2 className="text-lg sm:text-xl font-black text-white flex items-center gap-2">
-              <Film className="w-5 h-5 text-green-500" />
-              {activeTab === 'series' ? 'TV Series' : (activeTab === 'watchlist' ? 'Saved Watchlist' : pageTitle)}
-            </h2>
-            <span className="text-xs text-green-400 bg-green-500/10 px-3 py-1 rounded-full border border-green-500/20 font-bold">
-              Showing {displayedMovies.length} of {totalCatalogCount.toLocaleString()} Movies
-            </span>
-          </div>
-
-          {/* Dual Select Options (#vj-options & #genre-options matching grid.min.js) */}
-          <div className="flex flex-wrap items-center gap-2.5">
-            {/* VJ Option Select */}
-            <div className="flex items-center gap-1.5 bg-[#090C22] border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-gray-300">
-              <span className="text-gray-400 font-medium">VJ:</span>
-              <select
-                id="vj-options"
-                value={selectedVj}
-                onChange={(e) => {
-                  setSelectedVj(e.target.value);
-                  setPageTitle(e.target.value === 'All' ? 'Latest Movies' : `${e.target.value} Movies`);
-                }}
-                className="bg-transparent text-white font-bold focus:outline-none cursor-pointer"
-              >
-                <option value="All" className="bg-[#090C22] text-white">All VJs</option>
-                {VJ_LIST.map((v) => (
-                  <option key={v} value={v} className="bg-[#090C22] text-white">{v}</option>
+            {/* Movie Poster Grid matching output.css: lg:w-[214.5px] lg:h-[299px] */}
+            {displayedMovies.length === 0 ? (
+              <div className="text-center py-20 bg-white/5 rounded-lg border border-gray-800">
+                <Film className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+                <h3 className="text-lg font-bold text-white mb-1">No movies found</h3>
+                <p className="text-xs text-gray-400 mb-4">Try clearing filters to browse more titles.</p>
+                <button
+                  onClick={() => { setSelectedGenre('All'); setSelectedVj('All'); setSearchQuery(''); setPipeType('p'); }}
+                  className="px-5 py-2 rounded-md bg-green-500 text-black font-bold text-xs"
+                >
+                  Show All Movies
+                </button>
+              </div>
+            ) : (
+              <div id="grid-container" className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6 gap-3.5 sm:gap-5 justify-center">
+                {displayedMovies.map((movie) => (
+                  <MunoMoviePosterCard
+                    key={movie.id}
+                    movie={movie}
+                    onPlay={() => handlePlay(movie)}
+                    onSelect={() => setSelectedMovie(movie)}
+                  />
                 ))}
-              </select>
-            </div>
-
-            {/* Genre Option Select */}
-            <div className="flex items-center gap-1.5 bg-[#090C22] border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-gray-300">
-              <span className="text-gray-400 font-medium">Genre:</span>
-              <select
-                id="genre-options"
-                value={selectedGenre}
-                onChange={(e) => {
-                  setSelectedGenre(e.target.value);
-                  setPageTitle(e.target.value === 'All' ? 'Latest Movies' : `${e.target.value} Movies`);
-                }}
-                className="bg-transparent text-white font-bold focus:outline-none cursor-pointer"
-              >
-                <option value="All" className="bg-[#090C22] text-white">All Genres</option>
-                {GENRES.map((g) => (
-                  <option key={g} value={g} className="bg-[#090C22] text-white">{g}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Reset Filters Button */}
-            {(selectedGenre !== 'All' || selectedVj !== 'All') && (
-              <button
-                onClick={() => { setSelectedGenre('All'); setSelectedVj('All'); setPageTitle('Latest Movies'); }}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-bold text-gray-200 transition-colors"
-                title="Reset Filters"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                Reset
-              </button>
+              </div>
             )}
-          </div>
-        </div>
 
-        {/* ── 5. MunoWatch Movie Grid (#grid-container) ── */}
-        {displayedMovies.length === 0 ? (
-          <div className="text-center py-20 bg-white/5 rounded-2xl border border-white/5">
-            <Film className="w-12 h-12 text-gray-500 mx-auto mb-3" />
-            <h3 className="text-lg font-bold text-white mb-1">No movies match your selected filter</h3>
-            <p className="text-xs text-gray-400 mb-4">Try clearing the genre or VJ filter to see more titles.</p>
-            <button
-              onClick={() => { setSelectedGenre('All'); setSelectedVj('All'); setActiveTab('grid'); }}
-              className="px-6 py-2.5 rounded-full bg-green-500 text-black font-extrabold text-xs"
-            >
-              Show All Movies
-            </button>
-          </div>
-        ) : (
-          <div id="grid-container" className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6 gap-4 sm:gap-5">
-            {displayedMovies.map((movie) => (
-              <MunoMovieCard
-                key={movie.id}
-                movie={movie}
-                onPlay={() => handlePlay(movie)}
-                onSelect={() => setSelectedMovie(movie)}
-              />
-            ))}
-          </div>
-        )}
-
-        {/* ── 6. Infinite Scroll Loading Spinner (#grid-loading-spinner) ── */}
-        <div id="grid-loading-spinner" className="mt-12 flex flex-col items-center justify-center gap-3">
-          {loadingMore ? (
-            <div className="flex items-center gap-3 px-6 py-3 rounded-full bg-white/10 border border-white/15 text-white text-sm font-bold backdrop-blur-md shadow-xl">
-              <Loader2 className="w-5 h-5 text-green-500 animate-spin" />
-              Loading more Luganda movies (Newly to Oldy)...
+            {/* Infinite Scroll Spinner matching grid.min.js: #grid-loading-spinner */}
+            <div id="grid-loading-spinner" className="mt-12 flex flex-col items-center justify-center gap-3">
+              {loadingMore ? (
+                <div className="flex items-center gap-2.5 px-6 py-2.5 rounded-full bg-white/10 border border-white/10 text-white text-xs font-bold shadow-lg">
+                  <Loader2 className="w-4 h-4 text-green-500 animate-spin" />
+                  <span>Loading more movies (Newly to Oldy)...</span>
+                </div>
+              ) : hasMoreCatalog ? (
+                <button
+                  onClick={loadMoreMovies}
+                  className="flex items-center gap-2 px-8 py-2.5 rounded-full bg-[#0a0d24] hover:bg-gray-800 border border-gray-700 hover:border-green-500 text-white font-bold text-xs transition-all shadow-lg hover:scale-105"
+                >
+                  <span>Load More Movies (Newly to Oldy)</span>
+                  <ChevronDown className="w-3.5 h-3.5 text-green-500" />
+                </button>
+              ) : (
+                <div className="text-xs font-bold text-gray-600 uppercase tracking-widest py-4">
+                  ✓ All {totalCatalogCount.toLocaleString()} movies loaded
+                </div>
+              )}
             </div>
-          ) : hasMoreCatalog ? (
-            <button
-              onClick={loadMoreMovies}
-              className="group flex items-center gap-2.5 px-8 py-3 rounded-full bg-[#0a0d24] hover:bg-[#12163b] border border-gray-700 hover:border-green-500 text-white font-extrabold text-sm tracking-wide transition-all shadow-xl hover:scale-105"
-            >
-              <span>Load More Movies (Newly to Oldy)</span>
-              <ChevronDown className="w-4 h-4 text-green-500 group-hover:translate-y-0.5 transition-transform" />
-            </button>
-          ) : (
-            <div className="text-xs font-bold text-gray-500 uppercase tracking-widest py-4">
-              ✓ All {totalCatalogCount.toLocaleString()} Luganda movies loaded
-            </div>
-          )}
-          <span className="text-[11px] text-gray-500">
-            Scroll down to continuously load next batches of 40 movies
-          </span>
-        </div>
-      </main>
+          </main>
 
-      {/* ── 7. Movie Detail Modal ── */}
+          {/* MunoWatch Footer on Browse Page */}
+          <MunoFooter onSelectTab={(tab) => { setPipeType(tab); }} />
+        </div>
+      )}
+
+      {/* ── Movie Detail Modal ────────────────────────────────────────── */}
       {selectedMovie && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-2xl flex items-center justify-center p-4 md:p-8 overflow-y-auto">
-          <div className="relative w-full max-w-3xl bg-[#080B1E] border border-white/15 rounded-3xl overflow-hidden shadow-2xl my-auto animate-in fade-in zoom-in-95 duration-200">
-            {/* Close Button */}
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xl flex items-center justify-center p-4 overflow-y-auto">
+          <div className="relative w-full max-w-2xl bg-[#080B1E] border border-gray-800 rounded-xl overflow-hidden shadow-2xl my-auto animate-in fade-in zoom-in-95 duration-150">
             <button
               onClick={() => setSelectedMovie(null)}
-              className="absolute top-4 right-4 z-20 w-9 h-9 rounded-full bg-black/70 hover:bg-black border border-white/20 flex items-center justify-center text-white backdrop-blur-md transition-colors"
+              className="absolute top-3 right-3 z-20 w-8 h-8 rounded-full bg-black/80 hover:bg-black border border-white/20 flex items-center justify-center text-white"
             >
               <X className="w-4 h-4" />
             </button>
 
-            {/* Modal Backdrop Banner */}
-            <div className="relative h-56 md:h-72 w-full overflow-hidden">
+            <div className="relative h-56 w-full overflow-hidden">
               <img 
                 src={selectedMovie.backdrop || selectedMovie.image}
                 alt={selectedMovie.title}
@@ -953,22 +820,18 @@ export default function FreeWatchWebApp({ onNavigateToStore }) {
               <div className="absolute inset-0 bg-gradient-to-t from-[#080B1E] via-[#080B1E]/60 to-transparent" />
             </div>
 
-            {/* Modal Body */}
-            <div className="p-6 md:p-8 -mt-16 relative z-10">
-              {/* VJ Tag */}
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-500/20 border border-green-500/40 text-green-400 text-xs font-black mb-3">
-                <Sparkles className="w-3.5 h-3.5 text-green-400" />
+            <div className="p-6 -mt-14 relative z-10">
+              <div className="inline-block px-2.5 py-0.5 rounded bg-green-500/20 text-green-400 border border-green-500/40 text-xs font-black mb-2">
                 Translated by {selectedMovie.vj}
               </div>
 
-              <h2 className="text-2xl md:text-4xl font-black text-white mb-2 leading-tight">
+              <h2 className="text-2xl sm:text-3xl font-black text-white mb-2 leading-tight">
                 {selectedMovie.title}
               </h2>
 
-              {/* Metadata */}
-              <div className="flex flex-wrap items-center gap-3 text-xs md:text-sm text-gray-400 font-medium mb-5">
-                <span className="flex items-center gap-1 text-yellow-400 font-bold">
-                  <Star className="w-4 h-4 fill-yellow-400" />
+              <div className="flex items-center gap-3 text-xs text-gray-400 font-medium mb-4">
+                <span className="text-yellow-400 font-bold flex items-center gap-1">
+                  <Star className="w-3.5 h-3.5 fill-current" />
                   {selectedMovie.rating}
                 </span>
                 <span>•</span>
@@ -976,17 +839,13 @@ export default function FreeWatchWebApp({ onNavigateToStore }) {
                 <span>•</span>
                 <span>{selectedMovie.runtime}</span>
                 <span>•</span>
-                <span className="px-2 py-0.5 rounded bg-white/10 text-white font-bold text-xs">HD</span>
-                <span className="px-2 py-0.5 rounded bg-green-500/10 text-green-400 border border-green-500/30 font-semibold text-xs">
-                  {selectedMovie.category}
-                </span>
+                <span className="px-1.5 py-0.5 rounded bg-white/10 text-white font-bold text-[10px]">HD</span>
               </div>
 
-              {/* Actions */}
-              <div className="flex items-center gap-3 mb-6">
+              <div className="flex items-center gap-3 mb-5">
                 <button
                   onClick={() => handlePlay(selectedMovie)}
-                  className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-black font-black px-8 py-3 rounded-full shadow-lg shadow-green-500/30 transition-all hover:scale-105 uppercase text-xs sm:text-sm tracking-wide"
+                  className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-black font-black px-6 py-2.5 rounded-full shadow-lg transition-all uppercase text-xs tracking-wide"
                 >
                   <Play className="w-4 h-4 fill-black" />
                   Watch Now
@@ -994,200 +853,70 @@ export default function FreeWatchWebApp({ onNavigateToStore }) {
 
                 <button
                   onClick={() => toggleMyList(selectedMovie)}
-                  className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white font-semibold px-5 py-3 rounded-full border border-white/15 transition-colors text-xs sm:text-sm"
+                  className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white font-bold px-4 py-2.5 rounded-full border border-white/10 transition-all text-xs"
                 >
                   {myList.some(m => m.id === selectedMovie.id) ? (
                     <>
-                      <Check className="w-4 h-4 text-green-400" />
+                      <Check className="w-3.5 h-3.5 text-green-400" />
                       In Watchlist
                     </>
                   ) : (
                     <>
-                      <Plus className="w-4 h-4" />
-                      Add to Watchlist
+                      <Plus className="w-3.5 h-3.5" />
+                      Watchlist
                     </>
                   )}
                 </button>
               </div>
 
-              {/* Synopsis */}
-              <div className="mb-6">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">Synopsis</h3>
-                <p className="text-sm md:text-base text-gray-300 leading-relaxed">
-                  {selectedMovie.synopsis}
-                </p>
-              </div>
-
-              {/* Episodes (If TV Series) */}
-              {selectedMovie.isTv && selectedMovie.episodes && selectedMovie.episodes.length > 0 && (
-                <div className="mb-6">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">Episodes</h3>
-                  <div className="space-y-2 max-h-48 overflow-y-auto cinema-scroll">
-                    {selectedMovie.episodes.map((ep) => (
-                      <div 
-                        key={ep.id}
-                        onClick={() => handlePlay({ ...selectedMovie, streamUrl: ep.streamUrl, title: `${selectedMovie.title} - Episode ${ep.episodeNumber}` })}
-                        className="flex items-center justify-between p-3.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 cursor-pointer transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-6 h-6 rounded-full bg-green-500/20 text-green-400 flex items-center justify-center font-bold text-xs">
-                            {ep.episodeNumber}
-                          </div>
-                          <span className="font-semibold text-sm text-white">{ep.name}</span>
-                        </div>
-                        <Play className="w-4 h-4 text-green-400 fill-green-400" />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── 8. Fullscreen Video Player Modal ── */}
-      {activeStreamUrl && (
-        <div className="fixed inset-0 z-60 bg-black flex flex-col justify-center items-center">
-          <div className="absolute top-6 left-6 right-6 z-20 flex items-center justify-between">
-            <button
-              onClick={() => setActiveStreamUrl('')}
-              className="flex items-center gap-2 px-4 py-2 rounded-full bg-black/70 hover:bg-black border border-white/15 text-white backdrop-blur-md text-sm font-bold transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Close Player
-            </button>
-
-            {selectedMovie && (
-              <span className="text-sm font-bold text-white bg-black/70 px-4 py-2 rounded-full border border-white/10 backdrop-blur-md">
-                {selectedMovie.title} ({selectedMovie.vj})
-              </span>
-            )}
-          </div>
-
-          <div className="w-full h-full flex items-center justify-center">
-            <video 
-              src={activeStreamUrl}
-              controls
-              autoPlay
-              playsInline
-              className="w-full h-full max-h-screen object-contain"
-            >
-              Your browser does not support HTML5 video playback.
-            </video>
-          </div>
-        </div>
-      )}
-
-      {/* ── 9. MunoWatch 4-Column Footer (Matching munowatch.com) ── */}
-      <footer className="bg-[#010318] border-t border-white/10 pt-12 pb-8 text-gray-400 text-sm mt-16 select-none">
-        <div className="w-[95%] lg:w-[86%] mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 mb-10">
-          {/* Column 1: Brand & Copyright */}
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-xl font-black text-white">
-                FREE<span className="text-green-500">WATCH</span>
-              </span>
-            </div>
-            <p className="text-xs text-gray-500 leading-relaxed mb-4">
-              Watch translated Luganda dubbed movies and TV shows online anytime, anywhere.
-            </p>
-            <p className="text-xs text-gray-500">
-              {new Date().getFullYear()} &copy; FreeWatch. All Rights Reserved.
-            </p>
-          </div>
-
-          {/* Column 2: FAQ */}
-          <div>
-            <h4 className="text-white font-bold text-base mb-4">FAQ</h4>
-            <ul className="space-y-2.5 text-xs text-gray-400">
-              <li><a href="#about" onClick={(e) => { e.preventDefault(); setActiveTab('home'); }} className="hover:text-green-400 transition-colors">About Us</a></li>
-              <li><a href="#dmca" onClick={(e) => { e.preventDefault(); alert("DMCA notice: FreeWatch indexes publicly available links provided by MunoWatch CDN."); }} className="hover:text-green-400 transition-colors">DMCA</a></li>
-              <li><a href="#privacy" onClick={(e) => { e.preventDefault(); }} className="hover:text-green-400 transition-colors">Privacy Policy</a></li>
-              <li><a href="#terms" onClick={(e) => { e.preventDefault(); }} className="hover:text-green-400 transition-colors">Terms &amp; Conditions</a></li>
-            </ul>
-          </div>
-
-          {/* Column 3: CONTACTS */}
-          <div>
-            <h4 className="text-white font-bold text-base mb-4">CONTACTS</h4>
-            <ul className="space-y-2.5 text-xs text-gray-400">
-              <li className="flex items-center gap-2">
-                <span className="text-green-400">✉</span>
-                <a href="mailto:info@freewatchug.online" className="hover:text-green-400 transition-colors">info@freewatchug.online</a>
-              </li>
-              <li className="flex items-center gap-2">
-                <MessageCircle className="w-3.5 h-3.5 text-green-400" />
-                <a href="https://wa.me/+256782970036" target="_blank" rel="noopener noreferrer" className="hover:text-green-400 transition-colors">WhatsApp +256 782-970-036</a>
-              </li>
-              <li className="text-[11px] text-gray-500 mt-2">
-                Available 24/7 for support &amp; inquiries.
-              </li>
-            </ul>
-          </div>
-
-          {/* Column 4: FOLLOW US */}
-          <div>
-            <h4 className="text-white font-bold text-base mb-4">FOLLOW US</h4>
-            <div className="flex items-center gap-3">
-              <a 
-                href="https://facebook.com" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="w-9 h-9 rounded-lg bg-white/5 hover:bg-green-500/20 border border-white/10 hover:border-green-500/50 flex items-center justify-center text-gray-300 hover:text-green-400 transition-all"
-                title="Facebook"
-              >
-                <span className="font-bold text-xs">FB</span>
-              </a>
-              <a 
-                href="https://x.com" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="w-9 h-9 rounded-lg bg-white/5 hover:bg-green-500/20 border border-white/10 hover:border-green-500/50 flex items-center justify-center text-gray-300 hover:text-green-400 transition-all"
-                title="X / Twitter"
-              >
-                <span className="font-bold text-xs">X</span>
-              </a>
-              <a 
-                href="https://instagram.com" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="w-9 h-9 rounded-lg bg-white/5 hover:bg-green-500/20 border border-white/10 hover:border-green-500/50 flex items-center justify-center text-gray-300 hover:text-green-400 transition-all"
-                title="Instagram"
-              >
-                <span className="font-bold text-xs">IG</span>
-              </a>
-              <a 
-                href="https://wa.me/+256782970036" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="w-9 h-9 rounded-lg bg-white/5 hover:bg-green-500/20 border border-white/10 hover:border-green-500/50 flex items-center justify-center text-gray-300 hover:text-green-400 transition-all"
-                title="WhatsApp"
-              >
-                <MessageCircle className="w-4 h-4" />
-              </a>
-            </div>
-            <div className="mt-4">
-              <p className="text-[11px] text-gray-500">
-                Official FreeWatch Luganda Dubbed Network
+              <p className="text-xs sm:text-sm text-gray-300 leading-relaxed">
+                {selectedMovie.synopsis}
               </p>
             </div>
           </div>
         </div>
-      </footer>
+      )}
+
+      {/* ── Fullscreen Video Player ────────────────────────────────────── */}
+      {activeStreamUrl && (
+        <div className="fixed inset-0 z-60 bg-black flex flex-col justify-center items-center">
+          <div className="absolute top-4 left-4 right-4 z-20 flex items-center justify-between">
+            <button
+              onClick={() => setActiveStreamUrl('')}
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-black/70 hover:bg-black border border-white/20 text-white text-xs font-bold"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              Close
+            </button>
+            {selectedMovie && (
+              <span className="text-xs font-bold text-white bg-black/70 px-3 py-1.5 rounded-full border border-white/10">
+                {selectedMovie.title} ({selectedMovie.vj})
+              </span>
+            )}
+          </div>
+          <video 
+            src={activeStreamUrl}
+            controls
+            autoPlay
+            playsInline
+            className="w-full h-full max-h-screen object-contain"
+          >
+            Your browser does not support HTML5 video playback.
+          </video>
+        </div>
+      )}
     </div>
   );
 }
 
-// ── Shared MunoWatch Movie Card (2:3 Aspect Ratio, tile-img fallback, hover scale & green play) ──
-function MunoMovieCard({ movie, onPlay, onSelect }) {
+// ── MunoWatch Movie Poster Card matching output.css & grid.min.js ───────────
+function MunoMoviePosterCard({ movie, onPlay, onSelect }) {
   return (
     <div 
       onClick={onSelect}
       className="group relative flex flex-col cursor-pointer transition-all duration-300 select-none"
     >
-      {/* 2:3 Poster Frame */}
-      <div className="relative aspect-[2/3] w-full rounded-xl overflow-hidden bg-[#0d0f1a] border border-white/10 group-hover:border-green-500/80 group-hover:shadow-[0_0_20px_rgba(34,197,94,0.35)] transition-all duration-300">
+      <div className="relative aspect-[2/3] w-full rounded-md overflow-hidden bg-[#0d0f1a] border border-gray-800/80 group-hover:border-green-500 transition-all duration-300 group-hover:scale-105 shadow-md">
         <img 
           src={movie.image}
           alt={movie.title}
@@ -1198,42 +927,121 @@ function MunoMovieCard({ movie, onPlay, onSelect }) {
           className="tile-img w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
         />
 
-        {/* Top Badges: HD on left, VJ on right */}
-        <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-black/75 text-[9px] font-bold text-white border border-white/20 backdrop-blur-sm">
+        {/* Top Badges */}
+        <div className="absolute top-2 left-2 px-1 py-0.5 rounded bg-black/75 text-[9px] font-bold text-white border border-white/20">
           HD
         </div>
 
         {movie.vj && (
-          <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-green-600/90 text-[9px] font-black text-white shadow-md">
+          <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-green-600 text-[9px] font-black text-white shadow">
             {movie.vj}
           </div>
         )}
 
         {/* Hover Center Play Button */}
-        <div className="absolute inset-0 flex items-center justify-center bg-black/35 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+        <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
           <button 
             onClick={(e) => { e.stopPropagation(); onPlay(); }}
-            className="w-12 h-12 rounded-full bg-green-500 hover:bg-green-400 text-black flex items-center justify-center shadow-2xl transform scale-75 group-hover:scale-100 transition-transform duration-200"
-            title="Play Movie"
+            className="w-11 h-11 rounded-full bg-green-500 hover:bg-green-400 text-black flex items-center justify-center shadow-xl transform scale-75 group-hover:scale-100 transition-transform duration-200"
+            title="Play"
           >
-            <Play className="w-5 h-5 fill-black ml-0.5" />
+            <Play className="w-4 h-4 fill-black ml-0.5" />
           </button>
         </div>
 
-        {/* Bottom Rating and Year Overlay */}
-        <div className="absolute inset-x-0 bottom-0 p-2.5 bg-gradient-to-t from-black/95 via-black/50 to-transparent flex items-center justify-between">
-          <span className="flex items-center gap-1 text-[11px] font-bold text-yellow-400">
-            <Star className="w-3 h-3 fill-yellow-400" />
+        {/* Bottom Rating and Year */}
+        <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/95 via-black/50 to-transparent flex items-center justify-between">
+          <span className="flex items-center gap-1 text-[10px] font-bold text-yellow-400">
+            <Star className="w-2.5 h-2.5 fill-current" />
             {movie.rating}
           </span>
           <span className="text-[10px] text-gray-300 font-medium">{movie.year}</span>
         </div>
       </div>
 
-      {/* Movie Title */}
-      <h3 className="mt-2 text-xs sm:text-sm font-bold text-gray-200 line-clamp-1 group-hover:text-green-400 transition-colors">
+      <h3 className="mt-1.5 text-xs font-bold text-gray-200 line-clamp-1 group-hover:text-green-400 transition-colors">
         {movie.title}
       </h3>
     </div>
+  );
+}
+
+// ── Exact 4-Column Footer from MunoWatch.com (lines 116-182) ─────────────────
+function MunoFooter({ onSelectTab }) {
+  return (
+    <footer className="bg-[#010318] p-8 text-gray-500 text-sm mt-auto print:hidden border-t border-gray-900 select-none">
+      <div className="w-[95%] lg:w-[86%] mx-auto grid sm:grid-cols-2 md:grid-cols-4 gap-5 gap-y-6">
+        <p className="text-xs" id="copyright">
+          {new Date().getFullYear()} &copy; FreeWatch. All Rights Reserved.
+        </p>
+        
+        <article>
+          <p className="text-white font-bold pb-4">FAQ</p>
+          <ul className="flex flex-col gap-y-3 text-xs">
+            <li className="flex gap-x-1 items-center">
+              <span>›</span>
+              <a href="#about" onClick={(e) => { e.preventDefault(); onSelectTab('p'); }} className="hover:text-green-500">About</a>
+            </li>
+            <li className="flex gap-x-1 items-center">
+              <span>›</span>
+              <a href="#dmca" onClick={(e) => { e.preventDefault(); alert("FreeWatch indexes publicly available links provided by MunoWatch CDN."); }} className="hover:text-green-500">DMCA</a>
+            </li>
+            <li className="flex gap-x-1 items-center">
+              <span>›</span>
+              <a href="#privacy" onClick={(e) => { e.preventDefault(); }} className="hover:text-green-500">Privacy Policy</a>
+            </li>
+            <li className="flex gap-x-1 items-center">
+              <span>›</span>
+              <a href="#terms" onClick={(e) => { e.preventDefault(); }} className="hover:text-green-500">Terms &amp; Conditions</a>
+            </li>
+          </ul>
+        </article>
+
+        <article>
+          <p className="text-white font-bold pb-4">CONTACTS</p>
+          <ul className="flex flex-col gap-y-3 text-xs">
+            <li className="flex gap-x-2">
+              <span>✉</span>
+              <a href="mailto:info@freewatchug.online" className="hover:text-green-500">info@freewatchug.online</a>
+            </li>
+            <li className="flex gap-x-2">
+              <span>☎</span>
+              <a href="https://wa.me/+256782970036" target="_blank" rel="noopener noreferrer" className="hover:text-green-500">whatsapp +256 782-970-036</a>
+            </li>
+          </ul>
+        </article>
+
+        <article>
+          <p className="text-white font-bold pb-4">FOLLOW US</p>
+          <ul className="flex gap-3">
+            <li>
+              <a href="https://facebook.com/munowatch" target="_blank" rel="noopener noreferrer">
+                <img src="https://munowatch.com/assets/icons/social/facebook.png" alt="fb" className="w-7 hover:scale-110 transition-transform" />
+              </a>
+            </li>
+            <li>
+              <a href="https://x.com/muno_watch" target="_blank" rel="noopener noreferrer">
+                <img src="https://munowatch.com/assets/icons/social/x.png" alt="x" className="w-7 p-1.5 rounded-md bg-gray-400 hover:scale-110 transition-transform" />
+              </a>
+            </li>
+            <li>
+              <a href="http://instagram.com/munowatch" target="_blank" rel="noopener noreferrer">
+                <img src="https://munowatch.com/assets/icons/social/instagram.png" alt="ig" className="w-7 hover:scale-110 transition-transform" />
+              </a>
+            </li>
+            <li>
+              <a href="https://wa.me/+256700970036" target="_blank" rel="noopener noreferrer">
+                <img src="https://munowatch.com/assets/icons/social/whatsapp.png" alt="wa" className="w-7 hover:scale-110 transition-transform" />
+              </a>
+            </li>
+            <li>
+              <a href="https://www.tiktok.com/@muno.watch.ug" target="_blank" rel="noopener noreferrer">
+                <img src="https://munowatch.com/assets/icons/social/tiktok.png" alt="tt" className="w-7 hover:scale-110 transition-transform" />
+              </a>
+            </li>
+          </ul>
+        </article>
+      </div>
+    </footer>
   );
 }
