@@ -69,18 +69,67 @@ export const SearchPage: React.FC<SearchPageProps> = ({
   const [selectedGenre, setSelectedGenre] = useState("All");
   const [selectedVj, setSelectedVj] = useState("All");
   const [selectedType, setSelectedType] = useState("All");
+  const [apiResults, setApiResults] = useState<CatalogMovie[]>([]);
 
   const { searchCatalog, catalog, totalCount } = useLiveCatalog();
 
-  const searchResults: CatalogMovie[] = useMemo(() => {
-    let results = searchCatalog(searchQuery, selectedGenre, selectedVj);
-    if (selectedType === "Series") {
-      results = results.filter((m) => m.isTv);
-    } else if (selectedType === "Movies") {
-      results = results.filter((m) => !m.isTv);
+  // Trigger live search on MunoWatch backend if query is entered
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setApiResults([]);
+      return;
     }
-    return results;
-  }, [searchQuery, selectedGenre, selectedVj, selectedType, searchCatalog]);
+    const timer = setTimeout(() => {
+      fetch(`/api/v1/search?q=${encodeURIComponent(searchQuery)}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((json) => {
+          if (json && json.success && Array.isArray(json.data)) {
+            const mapped: CatalogMovie[] = json.data.map((m: any, idx: number) => ({
+              id: String(m.id || `api-${idx}`),
+              title: m.title,
+              vj: m.vj || 'Luganda Dubbed',
+              category: m.category || 'Action',
+              genres: m.genres || [m.category || 'Action', 'Luganda Dubbed'],
+              imageUrl: m.poster || m.image || 'https://apposters.b-cdn.net/laba/yo/naki/gNxs2151.jpg',
+              backdropUrl: m.backdrop || m.backdrop_path || m.poster || 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1600&auto=format&fit=crop&q=80',
+              rating: String(m.rating || '8.5'),
+              year: String(m.year || '2025'),
+              duration: m.duration || (m.isTv ? '50m' : '1h 45m'),
+              isTv: Boolean(m.isTv || m.is_series),
+              seriesCode: m.series_code,
+              overview: m.overview || '',
+              streamUrl: m.streamUrl || m.playingurl || '',
+              episodes: m.episodes,
+            }));
+            setApiResults(mapped);
+          }
+        })
+        .catch(() => {});
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const searchResults: CatalogMovie[] = useMemo(() => {
+    let local = searchCatalog(searchQuery, selectedGenre, selectedVj);
+    if (searchQuery.trim() && apiResults.length > 0) {
+      const seen = new Set(local.map((m) => m.id));
+      const merged = [...local];
+      apiResults.forEach((ar) => {
+        if (!seen.has(ar.id)) {
+          seen.add(ar.id);
+          merged.push(ar);
+        }
+      });
+      local = merged;
+    }
+    if (selectedType === "Series") {
+      local = local.filter((m) => m.isTv);
+    } else if (selectedType === "Movies") {
+      local = local.filter((m) => !m.isTv);
+    }
+    return local;
+  }, [searchQuery, selectedGenre, selectedVj, selectedType, searchCatalog, apiResults]);
 
   const handleSelectCategory = (cat: string) => {
     setSelectedGenre(cat);
@@ -133,12 +182,19 @@ export const SearchPage: React.FC<SearchPageProps> = ({
       {viewState === "categories" && (
         <div className="px-4 lg:px-8 pt-3 flex-1 max-w-7xl mx-auto w-full">
           {/* Search Pill Input */}
-          <div
-            onClick={() => setViewState("results")}
-            className="w-full h-12 rounded-full bg-[#18181b] border border-white/10 px-5 flex items-center justify-between cursor-pointer hover:border-white/20 transition-all shadow-inner"
-          >
-            <span className="text-sm text-neutral-400">Search 7,000+ movies &amp; VJs...</span>
-            <SearchIcon className="w-4 h-4 text-neutral-400" />
+          <div className="w-full h-12 rounded-full bg-[#18181b] border border-white/10 px-5 flex items-center justify-between hover:border-white/20 transition-all shadow-inner">
+            <input
+              type="text"
+              placeholder="Search 7,000+ movies & VJs..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setViewState("results");
+              }}
+              onFocus={() => setViewState("results")}
+              className="w-full bg-transparent text-sm text-white placeholder-neutral-400 focus:outline-none"
+            />
+            <SearchIcon className="w-4 h-4 text-neutral-400 shrink-0" />
           </div>
 
           {/* Heading */}

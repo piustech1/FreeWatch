@@ -130,6 +130,36 @@ export function extractTitleAndVj(rawTitle, rawVj) {
   return { title, vj };
 }
 
+export function mapMunoCategoryId(rawCatId, rawCategory = '', title = '') {
+  const catId = Number(rawCatId);
+  if (catId === 1 || catId === 5) return 'Action';
+  if (catId === 2 || catId === 9) return 'Sci-Fi';
+  if (catId === 14 || catId === 10) return 'Horror';
+  if (catId === 15 || catId === 8) return 'Drama';
+  if (catId === 3) return 'Romance';
+  if (catId === 16) return 'Animation';
+  if (catId === 20) return 'Family';
+  if (catId === 27) return 'Comedy';
+
+  const catLower = (rawCategory || '').toLowerCase();
+  if (catLower.includes('action')) return 'Action';
+  if (catLower.includes('sci') || catLower.includes('fiction') || catLower.includes('fantasy')) return 'Sci-Fi';
+  if (catLower.includes('horror') || catLower.includes('thriller')) return 'Horror';
+  if (catLower.includes('romance') || catLower.includes('love')) return 'Romance';
+  if (catLower.includes('drama')) return 'Drama';
+  if (catLower.includes('comedy')) return 'Comedy';
+  if (catLower.includes('animation') || catLower.includes('anime')) return 'Animation';
+
+  const t = title.toLowerCase();
+  if (/alien|space|future|galaxy|cyber|robot|matrix|planet|star\s*wars|marvel|avenger/i.test(t)) return 'Sci-Fi';
+  if (/horror|dead|kill|blood|ghost|evil|monster|zombie|haunt|demon|devil|slasher|curse/i.test(t)) return 'Horror';
+  if (/love|heart|romance|kiss|wedding|passion|forever/i.test(t)) return 'Romance';
+  if (/laugh|funny|comedy|joke|fun|fool/i.test(t)) return 'Comedy';
+  if (/drama|life|story|tear|struggle|family|mother|father|crime|truth/i.test(t)) return 'Drama';
+
+  return 'Action';
+}
+
 export function normalizeMovie(raw) {
   const id = Number(raw.id || raw.vid);
   const rawTitle = raw.title || raw.name || raw.video_title || '';
@@ -142,14 +172,25 @@ export function normalizeMovie(raw) {
   const poster = raw.poster_path || raw.image || raw.poster || 'https://apposters.b-cdn.net/laba/yo/naki/01d9.jpg';
   const backdrop = raw.backdrop_path || raw.backdrop || poster;
   const streamUrl = sanitizeStreamUrl(raw.streamUrl || raw.playingurl || raw.videoUrl || '');
-  const category = (raw.category || 'Action').replace(/Munowatch/gi, 'FreeWatch').trim();
-  const isSeries = Boolean(raw.isTv || raw.is_series || (raw.series_code && raw.series_code !== '0' && String(raw.series_code) !== String(id)));
+  
+  const category = mapMunoCategoryId(raw.category_id || raw.categoryId, raw.category, cleanTitle);
+
+  // Single movies (even if labeled 'series' in raw category or with epCount<=1) must stay isTv = false!
+  const hasExplicitSeasonOrEp = /season|\b(?:s\d{1,2}|ep(?:isode)?\s*\d+|part\s*\d+)\b|eps\s*\d+/i.test(cleanTitle);
+  const hasMultipleEpisodes = Array.isArray(raw.episodes) && raw.episodes.length > 1;
+  const isSeries = Boolean(hasExplicitSeasonOrEp || (hasMultipleEpisodes && raw.series_code && String(raw.series_code) !== String(id)));
+
+  const genres = [category, 'Luganda Dubbed'];
+  if (isSeries && !genres.includes('Series')) {
+    genres.unshift('Series');
+  }
 
   return {
     id,
     title: cleanTitle,
     vj: vj || 'Luganda Dubbed',
-    category,
+    category: isSeries ? 'Series' : category,
+    genres,
     category_id: raw.category_id || 10,
     poster,
     poster_path: poster,

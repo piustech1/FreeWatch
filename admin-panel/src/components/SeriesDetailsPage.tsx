@@ -400,8 +400,8 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
           </button>
         </div>
 
-        {/* Episode Cards Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+        {/* Episode Cards Horizontal Slider (Matching Android App ListView.separated) */}
+        <div className="flex gap-3.5 overflow-x-auto no-scrollbar pb-3 pt-1">
           {episodes.map((ep, idx) => {
             const isSelected = activeEpisodeIndex === idx;
             return (
@@ -411,36 +411,65 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
                   setActiveEpisodeIndex(idx);
                   setIsPlaying(true);
                 }}
-                className="cursor-pointer group"
+                className="w-[185px] sm:w-[210px] shrink-0 cursor-pointer group active:scale-[0.98] transition-transform select-none"
               >
                 <div
-                  className={`relative aspect-video rounded-2xl overflow-hidden bg-gradient-to-t from-black via-zinc-900 to-slate-900 border transition-all flex items-center justify-center shadow-md ${
+                  className={`relative aspect-video rounded-2xl overflow-hidden bg-neutral-900 border transition-all flex items-center justify-center shadow-md ${
                     isSelected
-                      ? "border-[#00E676] ring-2 ring-[#00E676]/40 scale-102"
+                      ? "border-[#00E676] ring-2 ring-[#00E676]/40 scale-[1.02]"
                       : "border-white/10 group-hover:border-white/20"
                   }`}
                 >
-                  {activeSeries.imageUrl && (
+                  {(activeSeries.backdropUrl || activeSeries.imageUrl) && (
                     <img
-                      src={activeSeries.imageUrl}
+                      src={activeSeries.backdropUrl || activeSeries.imageUrl}
                       alt=""
-                      className="absolute inset-0 w-full h-full object-cover filter brightness-70"
+                      className="absolute inset-0 w-full h-full object-cover filter brightness-70 group-hover:scale-105 transition-transform duration-300"
                     />
                   )}
-                  <div className="absolute inset-0 bg-black/40" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent pointer-events-none" />
 
-                  <div className="relative z-10 w-10 h-10 rounded-full bg-white/90 text-black flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
-                    <Play className="w-4 h-4 fill-black ml-0.5" />
+                  {/* Top Left: Episode Number Badge */}
+                  <div className="absolute top-2 left-2 z-10">
+                    <span className="px-2 py-0.5 rounded-full bg-black/75 backdrop-blur-md border border-white/10 text-[10px] font-black text-[#00E676]">
+                      EP {ep.num}
+                    </span>
                   </div>
-                  <div className="absolute bottom-2 right-2 px-1.5 py-0.5 rounded bg-black/80 text-[10px] font-bold text-white z-10">
-                    EP {ep.num}
+
+                  {/* Top Right: Duration */}
+                  <div className="absolute top-2 right-2 z-10">
+                    <span className="px-1.5 py-0.5 rounded bg-black/60 text-[9px] font-bold text-neutral-300">
+                      {ep.duration || "45m"}
+                    </span>
+                  </div>
+
+                  {/* Center Play Indicator */}
+                  <div className="relative z-10">
+                    <div
+                      className={`w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition-transform ${
+                        isSelected
+                          ? "bg-[#00E676] text-black scale-110 shadow-[#00E676]/30"
+                          : "bg-white/25 backdrop-blur-md border border-white/40 text-white group-hover:scale-110"
+                      }`}
+                    >
+                      <Play
+                        className={`w-4 h-4 ml-0.5 ${
+                          isSelected ? "fill-black text-black" : "fill-white text-white"
+                        }`}
+                      />
+                    </div>
                   </div>
                 </div>
-                <div className="mt-2">
+
+                <div className="mt-2 px-0.5">
                   <h4 className="text-xs font-bold text-white leading-tight truncate">
                     {ep.title}
                   </h4>
-                  <div className="text-[11px] text-neutral-400 mt-0.5">{ep.duration}</div>
+                  <div className="text-[11px] text-neutral-400 mt-0.5 flex items-center gap-1.5">
+                    <span className="text-[#00E676] font-semibold">{isSelected ? "Now Playing" : "Episode " + ep.num}</span>
+                    <span>•</span>
+                    <span>{ep.duration || "45m"}</span>
+                  </div>
                 </div>
               </div>
             );

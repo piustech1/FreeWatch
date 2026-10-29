@@ -62,6 +62,10 @@ export const HomePage: React.FC<HomePageProps> = ({
   const [desktopFocusedCard, setDesktopFocusedCard] = useState<string>("");
   const [desktopFocusedVj, setDesktopFocusedVj] = useState<string>("vj-junior");
 
+  const [heroIndex, setHeroIndex] = useState(0);
+  const [isHeroPaused, setIsHeroPaused] = useState(false);
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+
   const {
     catalog,
     totalCount,
@@ -77,10 +81,46 @@ export const HomePage: React.FC<HomePageProps> = ({
     animationMovies,
   } = useLiveCatalog();
 
-  const heroMovie = latestMovies[0] || catalog[0];
-  const heroMovie2 = latestMovies[1] || catalog[1];
-  const heroMovie3 = latestMovies[2] || catalog[2];
-  const heroMovie4 = latestMovies[3] || catalog[3];
+  // 8-candidate pool for the Hero Deck matching Flutter HeroBanner
+  const heroCandidates = useMemo(() => {
+    const list = latestMovies.filter((m) => m.imageUrl && m.title);
+    return list.length > 0 ? list.slice(0, 8) : catalog.slice(0, 8);
+  }, [latestMovies, catalog]);
+
+  const numHeroes = heroCandidates.length || 1;
+
+  // 3.5s automated slide timer matching Android app
+  useEffect(() => {
+    if (isHeroPaused || heroCandidates.length <= 1) return;
+    const timer = setInterval(() => {
+      setHeroIndex((prev) => (prev + 1) % heroCandidates.length);
+    }, 3500);
+    return () => clearInterval(timer);
+  }, [isHeroPaused, heroCandidates.length]);
+
+  const heroMovie = heroCandidates[heroIndex % numHeroes];
+  const heroMovie2 = heroCandidates[(heroIndex + 1) % numHeroes];
+  const heroMovie3 = heroCandidates[(heroIndex + 2) % numHeroes];
+  const heroMovie4 = heroCandidates[(heroIndex + 3) % numHeroes];
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setIsHeroPaused(true);
+    setTouchStartX(e.touches[0].clientX);
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    setIsHeroPaused(false);
+    if (touchStartX === null) return;
+    const diff = e.changedTouches[0].clientX - touchStartX;
+    if (diff > 40) {
+      // Swiped right -> previous slide
+      setHeroIndex((prev) => (prev - 1 + numHeroes) % numHeroes);
+    } else if (diff < -40) {
+      // Swiped left -> next slide
+      setHeroIndex((prev) => (prev + 1) % numHeroes);
+    }
+    setTouchStartX(null);
+  };
 
   const handleTabClick = (tab: "home" | "search" | "favorites" | "downloads" | "profile") => {
     setActiveTab(tab);
@@ -197,11 +237,20 @@ export const HomePage: React.FC<HomePageProps> = ({
       </header>
 
       {/* 2A. MOBILE HERO FEATURED 3D CAROUSEL */}
-      <section className="relative px-4 pt-4 pb-2 lg:hidden">
+      <section
+        className="relative px-4 pt-4 pb-2 lg:hidden select-none"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onMouseEnter={() => setIsHeroPaused(true)}
+        onMouseLeave={() => setIsHeroPaused(false)}
+      >
         <div className="relative w-full h-[340px] sm:h-[380px] flex items-center justify-start overflow-hidden">
           {/* Card 4 */}
           {heroMovie4 && (
-            <div className="absolute left-[240px] sm:left-[300px] w-[180px] sm:w-[210px] h-[280px] sm:h-[320px] rounded-2xl overflow-hidden bg-neutral-900 border border-white/10 opacity-40 scale-85 pointer-events-none">
+            <div
+              onClick={() => setHeroIndex((prev) => (prev + 3) % numHeroes)}
+              className="absolute left-[240px] sm:left-[300px] w-[180px] sm:w-[210px] h-[280px] sm:h-[320px] rounded-2xl overflow-hidden bg-neutral-900 border border-white/10 opacity-40 scale-85 cursor-pointer hover:opacity-60 transition-all duration-300"
+            >
               <img src={heroMovie4.imageUrl} alt="" className="w-full h-full object-cover filter brightness-75" />
               <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
               <div className="absolute top-2.5 right-2.5 px-1.5 py-0.5 rounded bg-[#00E5FF] text-black text-[10px] font-bold flex items-center gap-0.5">
@@ -215,7 +264,10 @@ export const HomePage: React.FC<HomePageProps> = ({
 
           {/* Card 3 */}
           {heroMovie3 && (
-            <div className="absolute left-[160px] sm:left-[200px] w-[185px] sm:w-[215px] h-[290px] sm:h-[330px] rounded-2xl overflow-hidden bg-neutral-900 border border-white/10 opacity-60 scale-90 pointer-events-none">
+            <div
+              onClick={() => setHeroIndex((prev) => (prev + 2) % numHeroes)}
+              className="absolute left-[160px] sm:left-[200px] w-[185px] sm:w-[215px] h-[290px] sm:h-[330px] rounded-2xl overflow-hidden bg-neutral-900 border border-white/10 opacity-60 scale-90 cursor-pointer hover:opacity-80 transition-all duration-300"
+            >
               <img src={heroMovie3.imageUrl} alt="" className="w-full h-full object-cover filter brightness-75" />
               <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
               <div className="absolute top-2.5 right-2.5 px-1.5 py-0.5 rounded bg-[#00E5FF] text-black text-[10px] font-bold flex items-center gap-0.5">
@@ -229,7 +281,10 @@ export const HomePage: React.FC<HomePageProps> = ({
 
           {/* Card 2 */}
           {heroMovie2 && (
-            <div className="absolute left-[85px] sm:left-[110px] w-[190px] sm:w-[220px] h-[300px] sm:h-[340px] rounded-2xl overflow-hidden bg-neutral-900 border border-white/10 opacity-80 scale-95 pointer-events-none">
+            <div
+              onClick={() => setHeroIndex((prev) => (prev + 1) % numHeroes)}
+              className="absolute left-[85px] sm:left-[110px] w-[190px] sm:w-[220px] h-[300px] sm:h-[340px] rounded-2xl overflow-hidden bg-neutral-900 border border-white/10 opacity-80 scale-95 cursor-pointer hover:opacity-95 transition-all duration-300"
+            >
               <img src={heroMovie2.imageUrl} alt="" className="w-full h-full object-cover filter brightness-75" />
               <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
               <div className="absolute top-2.5 right-2.5 px-1.5 py-0.5 rounded bg-[#00E5FF] text-black text-[10px] font-bold flex items-center gap-0.5">
@@ -245,7 +300,7 @@ export const HomePage: React.FC<HomePageProps> = ({
           {heroMovie && (
             <div
               onClick={() => onSelectMovie?.(heroMovie.id, heroMovie.isTv, heroMovie.title, heroMovie)}
-              className="relative z-20 w-[200px] sm:w-[230px] h-[310px] sm:h-[350px] rounded-2xl overflow-hidden bg-neutral-900 border border-white/15 shadow-2xl flex flex-col justify-between p-3 cursor-pointer group active:scale-[0.98] transition-transform"
+              className="relative z-20 w-[200px] sm:w-[230px] h-[310px] sm:h-[350px] rounded-2xl overflow-hidden bg-neutral-900 border border-white/15 shadow-2xl flex flex-col justify-between p-3 cursor-pointer group active:scale-[0.98] transition-transform duration-300"
             >
               <img
                 src={heroMovie.imageUrl}
@@ -316,6 +371,23 @@ export const HomePage: React.FC<HomePageProps> = ({
             </button>
           </div>
         )}
+
+        {/* Dynamic Dot Pagination */}
+        <div className="flex justify-center items-center gap-1.5 mt-3">
+          {heroCandidates.slice(0, 6).map((_, dotIdx) => (
+            <button
+              key={dotIdx}
+              type="button"
+              onClick={() => setHeroIndex(dotIdx)}
+              className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                heroIndex % numHeroes === dotIdx
+                  ? "w-6 bg-[#00E676] shadow-sm shadow-[#00E676]/50"
+                  : "w-1.5 bg-white/30 hover:bg-white/50"
+              }`}
+              aria-label={`Slide ${dotIdx + 1}`}
+            />
+          ))}
+        </div>
       </section>
 
       {/* 2B. DESKTOP / 10-FOOT CINEMATIC TV BANNER */}
@@ -567,15 +639,15 @@ export const HomePage: React.FC<HomePageProps> = ({
           </div>
           <button
             type="button"
-            onClick={() => onNavigateToCategorySeeAll?.("Series", seriesMovies.length, "tv")}
+            onClick={() => onNavigateToCategorySeeAll?.("Series", (seriesMovies.length || 1), "tv")}
             className="px-3 py-1 rounded-full bg-[#1e1b2e] border border-white/5 text-[11px] font-semibold text-neutral-300 hover:text-white transition-colors cursor-pointer"
           >
-            See all ({seriesMovies.length})
+            See all ({seriesMovies.length || 1})
           </button>
         </div>
 
         <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
-          {seriesMovies.slice(0, 15).map(renderMovieCard)}
+          {(seriesMovies.length > 0 ? seriesMovies : catalog.filter(m => m.isTv)).slice(0, 15).map(renderMovieCard)}
         </div>
       </section>
 
@@ -588,15 +660,15 @@ export const HomePage: React.FC<HomePageProps> = ({
           </div>
           <button
             type="button"
-            onClick={() => onNavigateToCategorySeeAll?.("Action", actionMovies.length, "flame")}
+            onClick={() => onNavigateToCategorySeeAll?.("Action", (actionMovies.length || latestMovies.length), "flame")}
             className="px-3 py-1 rounded-full bg-[#1e1b2e] border border-white/5 text-[11px] font-semibold text-neutral-300 hover:text-white transition-colors cursor-pointer"
           >
-            See all
+            See all ({(actionMovies.length > 0 ? actionMovies : latestMovies.filter(m => !m.isTv)).length})
           </button>
         </div>
 
         <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
-          {actionMovies.slice(0, 15).map(renderMovieCard)}
+          {(actionMovies.length > 0 ? actionMovies : latestMovies.filter(m => !m.isTv)).slice(0, 15).map(renderMovieCard)}
         </div>
       </section>
 
@@ -609,15 +681,15 @@ export const HomePage: React.FC<HomePageProps> = ({
           </div>
           <button
             type="button"
-            onClick={() => onNavigateToCategorySeeAll?.("Sci-Fi", sciFiMovies.length, "rocket")}
+            onClick={() => onNavigateToCategorySeeAll?.("Sci-Fi", (sciFiMovies.length || 10), "rocket")}
             className="px-3 py-1 rounded-full bg-[#1e1b2e] border border-white/5 text-[11px] font-semibold text-neutral-300 hover:text-white transition-colors cursor-pointer"
           >
-            See all
+            See all ({(sciFiMovies.length > 0 ? sciFiMovies : latestMovies.filter(m => !m.isTv).slice(2)).length})
           </button>
         </div>
 
         <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
-          {sciFiMovies.slice(0, 15).map(renderMovieCard)}
+          {(sciFiMovies.length > 0 ? sciFiMovies : latestMovies.filter(m => !m.isTv).slice(2)).slice(0, 15).map(renderMovieCard)}
         </div>
       </section>
 
@@ -630,15 +702,15 @@ export const HomePage: React.FC<HomePageProps> = ({
           </div>
           <button
             type="button"
-            onClick={() => onNavigateToCategorySeeAll?.("Romance", dramaMovies.length, "heart")}
+            onClick={() => onNavigateToCategorySeeAll?.("Romance", (dramaMovies.length || 10), "heart")}
             className="px-3 py-1 rounded-full bg-[#1e1b2e] border border-white/5 text-[11px] font-semibold text-neutral-300 hover:text-white transition-colors cursor-pointer"
           >
-            See all
+            See all ({(dramaMovies.length > 0 ? dramaMovies : latestMovies.filter(m => !m.isTv).slice(4)).length})
           </button>
         </div>
 
         <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
-          {dramaMovies.slice(0, 15).map(renderMovieCard)}
+          {(dramaMovies.length > 0 ? dramaMovies : latestMovies.filter(m => !m.isTv).slice(4)).slice(0, 15).map(renderMovieCard)}
         </div>
       </section>
 
@@ -651,15 +723,15 @@ export const HomePage: React.FC<HomePageProps> = ({
           </div>
           <button
             type="button"
-            onClick={() => onNavigateToCategorySeeAll?.("Horror", 31, "moon")}
+            onClick={() => onNavigateToCategorySeeAll?.("Horror", (horrorMovies.length || 10), "moon")}
             className="px-3 py-1 rounded-full bg-[#1e1b2e] border border-white/5 text-[11px] font-semibold text-neutral-300 hover:text-white transition-colors cursor-pointer"
           >
-            See all
+            See all ({(horrorMovies.length > 0 ? horrorMovies : latestMovies.filter(m => !m.isTv).slice(1)).length})
           </button>
         </div>
 
         <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
-          {horrorMovies.slice(0, 15).map(renderMovieCard)}
+          {(horrorMovies.length > 0 ? horrorMovies : latestMovies.filter(m => !m.isTv).slice(1)).slice(0, 15).map(renderMovieCard)}
         </div>
       </section>
 

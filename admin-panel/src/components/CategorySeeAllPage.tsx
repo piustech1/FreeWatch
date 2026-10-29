@@ -53,21 +53,22 @@ export const CategorySeeAllPage: React.FC<CategorySeeAllPageProps> = ({
     actionMovies,
     dramaMovies,
     sciFiMovies,
+    horrorMovies,
+    comedyMovies,
   } = useLiveCatalog();
 
   const moviesToDisplay: CatalogMovie[] = useMemo(() => {
     const t = categoryTitle.toLowerCase();
     if (t.includes("latest")) return latestMovies;
     if (t.includes("trend")) return trendingMovies;
-    if (t.includes("series") || t.includes("tv")) return seriesMovies;
-    if (t.includes("action")) return actionMovies;
-    if (t.includes("sci-fi") || t.includes("fantasy")) return sciFiMovies;
-    if (t.includes("romance") || t.includes("drama")) return dramaMovies;
-    if (t.includes("horror") || t.includes("thriller")) {
-      return catalog.filter((m) => /horror|thriller/i.test(m.category));
-    }
+    if (t.includes("series") || t.includes("tv")) return seriesMovies.length > 0 ? seriesMovies : catalog.filter((m) => m.isTv);
+    if (t.includes("action")) return actionMovies.length > 0 ? actionMovies : latestMovies.filter((m) => !m.isTv);
+    if (t.includes("sci-fi") || t.includes("fantasy")) return sciFiMovies.length > 0 ? sciFiMovies : latestMovies.filter((m) => !m.isTv);
+    if (t.includes("romance") || t.includes("drama")) return dramaMovies.length > 0 ? dramaMovies : latestMovies.filter((m) => !m.isTv);
+    if (t.includes("horror") || t.includes("thriller")) return horrorMovies.length > 0 ? horrorMovies : latestMovies.filter((m) => !m.isTv);
+    if (t.includes("comedy")) return comedyMovies.length > 0 ? comedyMovies : latestMovies.filter((m) => !m.isTv);
     return catalog;
-  }, [categoryTitle, latestMovies, trendingMovies, seriesMovies, actionMovies, sciFiMovies, dramaMovies, catalog]);
+  }, [categoryTitle, latestMovies, trendingMovies, seriesMovies, actionMovies, sciFiMovies, dramaMovies, horrorMovies, comedyMovies, catalog]);
 
   const renderIcon = () => {
     switch (iconType) {
