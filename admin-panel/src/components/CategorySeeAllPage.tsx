@@ -22,6 +22,7 @@ import { FreeWatchLogo } from "./HomePage";
 import { useLiveCatalog, CatalogMovie } from "../data/liveCatalog";
 import { AvatarGraphic } from "./AvatarGraphic";
 import { UserProfileData } from "./EditProfileModal";
+import { VjBadge } from "./VjBadge";
 
 interface CategorySeeAllPageProps {
   categoryTitle: string;
@@ -151,7 +152,7 @@ export const CategorySeeAllPage: React.FC<CategorySeeAllPageProps> = ({
           </div>
         </div>
 
-        <div className="px-3 py-1 rounded-full bg-[#3b0764]/60 border border-[#a855f7]/40 text-xs font-bold text-[#d8b4fe] shadow-sm">
+        <div className="px-3 py-1 rounded-full bg-white/[0.06] border border-white/10 text-xs font-semibold text-white/70 backdrop-blur-md">
           {moviesToDisplay.length} Movies
         </div>
       </div>
@@ -165,7 +166,7 @@ export const CategorySeeAllPage: React.FC<CategorySeeAllPageProps> = ({
             className="cursor-pointer group flex flex-col active:scale-95 transition-transform select-none"
           >
             {/* Poster Card */}
-            <div className="relative aspect-[2/3] rounded-2xl overflow-hidden bg-neutral-900 border border-white/10 group-hover:border-[#00E676]/60 group-hover:scale-[1.03] transition-all shadow-md p-2 flex flex-col justify-between">
+            <div className="relative aspect-[2/3] rounded-2xl overflow-hidden bg-neutral-900 border border-white/10 group-hover:border-white/30 group-hover:scale-[1.03] transition-all shadow-md p-2 flex flex-col justify-between">
               {movie.imageUrl && (
                 <img
                   src={movie.imageUrl}
@@ -179,9 +180,7 @@ export const CategorySeeAllPage: React.FC<CategorySeeAllPageProps> = ({
               <div className="absolute inset-0 bg-gradient-to-t from-black via-black/25 to-transparent pointer-events-none" />
 
               <div className="relative z-10 flex justify-end">
-                <span className="px-1.5 py-0.5 rounded-full bg-[#581c87]/90 border border-purple-400/40 text-[9px] font-bold text-white flex items-center gap-1 shadow-sm">
-                  <span>{movie.vj}</span>
-                </span>
+                <VjBadge vjName={movie.vj} size="sm" />
               </div>
 
               {/* Hover Play Button */}

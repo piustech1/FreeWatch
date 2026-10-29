@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Search as SearchIcon,
   Bell,
@@ -20,6 +20,8 @@ import {
 import { FreeWatchLogo } from "./HomePage";
 import { EditProfileModal, UserProfileData } from "./EditProfileModal";
 import { AvatarGraphic } from "./AvatarGraphic";
+import { VjBadge } from "./VjBadge";
+import { CatalogMovie } from "../data/liveCatalog";
 
 interface ProfilePageProps {
   onNavigateTab: (tab: "home" | "search" | "favorites" | "downloads" | "profile") => void;
@@ -49,6 +51,24 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   const [isWatchHistoryOpen, setIsWatchHistoryOpen] = useState(true);
   const [isSavedMoviesOpen, setIsSavedMoviesOpen] = useState(true);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+
+  const [watchHistory, setWatchHistory] = useState<CatalogMovie[]>([]);
+  const [savedMovies, setSavedMovies] = useState<CatalogMovie[]>([]);
+
+  useEffect(() => {
+    try {
+      const hist = localStorage.getItem("freewatch_watch_history");
+      if (hist) {
+        setWatchHistory(JSON.parse(hist));
+      }
+    } catch {}
+    try {
+      const favs = localStorage.getItem("freewatch_favorites");
+      if (favs) {
+        setSavedMovies(JSON.parse(favs));
+      }
+    } catch {}
+  }, []);
 
   const handleClearCache = () => {
     setCachedDataSize("0 MB");
@@ -152,13 +172,15 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
       {/* 4. SPLIT STATS CARD (Watched vs Downloaded) */}
       <div className="px-4 mt-5">
         <div className="w-full rounded-2xl overflow-hidden border border-white/5 grid grid-cols-2 shadow-lg">
-          {/* Left Half: 75 Movies Watched */}
+          {/* Left Half: Dynamic Movies Watched */}
           <div className="bg-[#121829] p-4 flex items-center gap-3 border-r border-white/5">
             <div className="w-10 h-10 rounded-xl bg-sky-950/60 flex items-center justify-center text-sky-400 shrink-0">
               <Film className="w-5 h-5 fill-sky-400/20" />
             </div>
             <div className="min-w-0">
-              <div className="text-sm font-extrabold text-white truncate">75 Movies</div>
+              <div className="text-sm font-extrabold text-white truncate">
+                {watchHistory.length} {watchHistory.length === 1 ? "Movie" : "Movies"}
+              </div>
               <div className="text-xs font-semibold text-sky-400">Watched</div>
             </div>
           </div>
@@ -187,10 +209,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
             <div className="flex items-center gap-2">
               <span className="text-xs font-black text-white tracking-wider">WATCH HISTORY</span>
               <span className="px-2 py-0.5 rounded bg-white/10 text-[10px] font-bold text-neutral-300">
-                75
+                {watchHistory.length}
               </span>
             </div>
-            {/* Right double indicator > v matching screenshot */}
             <div className="flex items-center gap-1.5 text-neutral-500">
               <ChevronRight className="w-4 h-4" />
               <ChevronDown
@@ -201,110 +222,55 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
             </div>
           </div>
 
-          {/* Horizontal Watch History Shelf matching Screenshot 3 */}
+          {/* Horizontal Watch History Shelf */}
           {isWatchHistoryOpen && (
-            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1 pt-0.5">
-              {/* Card 1: The Soccer Football Movie */}
-              <div
-                onClick={() => onSelectMovie?.("soccer-movie", false, "The Soccer Football Movie")}
-                className="w-28 sm:w-32 shrink-0 cursor-pointer group active:scale-95 transition-transform"
-              >
-                <div className="relative aspect-[2/3] rounded-2xl overflow-hidden bg-gradient-to-t from-red-950 via-red-900/60 to-black border border-white/10 group-hover:border-white/30 transition-all p-2 flex flex-col justify-between shadow-md">
-                  <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-red-600/30 via-zinc-900 to-black pointer-events-none" />
-                  <div className="flex justify-start">
-                    <span className="text-[7.5px] font-bold text-red-400">NETFLIX</span>
-                  </div>
-                  <div className="relative z-10 text-center">
-                    <div className="text-[10px] font-black text-white tracking-tight leading-tight uppercase drop-shadow-md">
-                      THE SOCCER
-                    </div>
-                    <div className="text-xs font-black text-white tracking-tight leading-none uppercase drop-shadow-md">
-                      FOOTBALL MOVIE
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-1.5 px-0.5">
-                  <div className="text-xs font-bold text-white truncate">The Soccer Footb...</div>
-                  <div className="flex items-center gap-1 text-[11px] text-neutral-400 font-medium mt-0.5">
-                    <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                    <span className="font-bold text-white">8.4</span>
-                    <span>• 2026</span>
-                  </div>
-                </div>
+            watchHistory.length === 0 ? (
+              <div className="w-full py-8 px-4 rounded-2xl bg-white/[0.03] border border-white/5 flex flex-col items-center justify-center text-center">
+                <Film className="w-7 h-7 text-white/20 mb-2" />
+                <p className="text-xs font-medium text-white/50">No watch history recorded yet</p>
+                <p className="text-[11px] text-white/30 mt-0.5">Start streaming any movie to track your movies</p>
               </div>
-
-              {/* Card 2: Supacell */}
-              <div
-                onClick={() => onSelectMovie?.("supacell", true, "Supacell")}
-                className="w-28 sm:w-32 shrink-0 cursor-pointer group active:scale-95 transition-transform"
-              >
-                <div className="relative aspect-[2/3] rounded-2xl overflow-hidden bg-gradient-to-t from-teal-950 via-emerald-900/50 to-black border border-white/10 group-hover:border-white/30 transition-all p-2 flex flex-col justify-between shadow-md">
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-amber-400/30 via-teal-900/40 to-black pointer-events-none" />
-                  <div />
-                  <div className="relative z-10 text-center pb-2">
-                    <div className="text-sm font-black text-amber-300 tracking-wider leading-none drop-shadow-md">
-                      SUPACELL
+            ) : (
+              <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1 pt-0.5">
+                {watchHistory.map((movie) => (
+                  <div
+                    key={movie.id}
+                    onClick={() => onSelectMovie?.(movie.id, movie.isTv, movie.title)}
+                    className="w-28 sm:w-32 shrink-0 cursor-pointer group active:scale-95 transition-transform"
+                  >
+                    <div className="relative aspect-[2/3] rounded-2xl overflow-hidden bg-neutral-900 border border-white/10 group-hover:border-white/30 transition-all p-2 flex flex-col justify-between shadow-md">
+                      {movie.imageUrl && (
+                        <img
+                          src={movie.imageUrl}
+                          alt={movie.title}
+                          className="absolute inset-0 w-full h-full object-cover filter brightness-85 group-hover:scale-105 transition-transform"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = "none";
+                          }}
+                        />
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent pointer-events-none" />
+                      <div className="relative z-10 flex justify-end">
+                        <VjBadge vjName={movie.vj} size="sm" />
+                      </div>
+                      <div className="relative z-10 text-left pt-6">
+                        <div className="text-[11px] font-black text-white leading-tight drop-shadow-md line-clamp-2">
+                          {movie.title}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-1.5 px-0.5">
+                      <div className="text-xs font-bold text-white truncate">{movie.title}</div>
+                      <div className="flex items-center gap-1 text-[11px] text-neutral-400 font-medium mt-0.5">
+                        <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                        <span className="font-bold text-white">{movie.rating || "8.5"}</span>
+                        <span>• {movie.year || "2025"}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="mt-1.5 px-0.5">
-                  <div className="text-xs font-bold text-white truncate">Supacell</div>
-                  <div className="flex items-center gap-1 text-[11px] text-neutral-400 font-medium mt-0.5">
-                    <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                    <span className="font-bold text-white">8.4</span>
-                    <span>• 2026</span>
-                  </div>
-                </div>
+                ))}
               </div>
-
-              {/* Card 3: The Blob */}
-              <div
-                onClick={() => onSelectMovie?.("the-blob", false, "The Blob")}
-                className="w-28 sm:w-32 shrink-0 cursor-pointer group active:scale-95 transition-transform"
-              >
-                <div className="relative aspect-[2/3] rounded-2xl overflow-hidden bg-gradient-to-t from-pink-950 via-purple-950 to-black border border-white/10 group-hover:border-white/30 transition-all p-2 flex flex-col justify-between shadow-md">
-                  <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-pink-600/30 via-purple-950 to-black pointer-events-none" />
-                  <div />
-                  <div className="relative z-10 text-center pb-2">
-                    <div className="text-base font-serif font-black text-amber-200 tracking-widest leading-none drop-shadow-md">
-                      THE BLOB
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-1.5 px-0.5">
-                  <div className="text-xs font-bold text-white truncate">The Blob</div>
-                  <div className="flex items-center gap-1 text-[11px] text-neutral-400 font-medium mt-0.5">
-                    <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                    <span className="font-bold text-white">8.6</span>
-                    <span>• 2024</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 4: Mirzapur */}
-              <div
-                onClick={() => onSelectMovie?.("mirzapur", true, "Mirzapur")}
-                className="w-28 sm:w-32 shrink-0 cursor-pointer group active:scale-95 transition-transform"
-              >
-                <div className="relative aspect-[2/3] rounded-2xl overflow-hidden bg-gradient-to-t from-amber-950 via-orange-950 to-black border border-white/10 group-hover:border-white/30 transition-all p-2 flex flex-col justify-between shadow-md">
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom,_var(--tw-gradient-stops))] from-amber-600/40 via-red-950 to-black pointer-events-none" />
-                  <div />
-                  <div className="relative z-10 text-center pb-1">
-                    <div className="text-sm font-black text-amber-400 tracking-widest leading-none drop-shadow-md">
-                      MIRZAPUR
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-1.5 px-0.5">
-                  <div className="text-xs font-bold text-white truncate">Mirzapur</div>
-                  <div className="flex items-center gap-1 text-[11px] text-neutral-400 font-medium mt-0.5">
-                    <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                    <span className="font-bold text-white">8.4</span>
-                    <span>• 2026</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+            )
           )}
         </div>
 
@@ -317,10 +283,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
             <div className="flex items-center gap-2">
               <span className="text-xs font-black text-white tracking-wider">SAVED MOVIES</span>
               <span className="px-2 py-0.5 rounded bg-white/10 text-[10px] font-bold text-neutral-300">
-                23
+                {savedMovies.length}
               </span>
             </div>
-            {/* Right double indicator > v matching screenshot */}
             <div className="flex items-center gap-1.5 text-neutral-500">
               <ChevronRight className="w-4 h-4" />
               <ChevronDown
@@ -331,108 +296,55 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
             </div>
           </div>
 
-          {/* Horizontal Saved Movies Shelf matching Screenshot 3 */}
+          {/* Horizontal Saved Movies Shelf */}
           {isSavedMoviesOpen && (
-            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1 pt-0.5">
-              {/* Card 1: Just Say It: Ava Peace */}
-              <div
-                onClick={() => onSelectMovie?.("ava-peace", false, "Just Say It: Ava Peace: The story behind the hits")}
-                className="w-28 sm:w-32 shrink-0 cursor-pointer group active:scale-95 transition-transform"
-              >
-                <div className="relative aspect-[2/3] rounded-2xl overflow-hidden bg-gradient-to-t from-indigo-950 via-purple-950 to-black border border-white/10 group-hover:border-white/30 transition-all p-2 flex flex-col justify-between shadow-md">
-                  <div className="absolute inset-0 bg-gradient-to-b from-indigo-900/40 to-black pointer-events-none" />
-                  <div />
-                  <div className="relative z-10">
-                    <span className="text-[6.5px] font-black text-lime-400 uppercase block">Ava Peace:</span>
-                    <div className="text-[9px] font-black text-white leading-tight">
-                      The story behind the hits
+            savedMovies.length === 0 ? (
+              <div className="w-full py-8 px-4 rounded-2xl bg-white/[0.03] border border-white/5 flex flex-col items-center justify-center text-center">
+                <Heart className="w-7 h-7 text-white/20 mb-2" />
+                <p className="text-xs font-medium text-white/50">No saved movies recorded yet</p>
+                <p className="text-[11px] text-white/30 mt-0.5">Tap the bookmark icon on any movie to add it here</p>
+              </div>
+            ) : (
+              <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1 pt-0.5">
+                {savedMovies.map((movie) => (
+                  <div
+                    key={movie.id}
+                    onClick={() => onSelectMovie?.(movie.id, movie.isTv, movie.title)}
+                    className="w-28 sm:w-32 shrink-0 cursor-pointer group active:scale-95 transition-transform"
+                  >
+                    <div className="relative aspect-[2/3] rounded-2xl overflow-hidden bg-neutral-900 border border-white/10 group-hover:border-white/30 transition-all p-2 flex flex-col justify-between shadow-md">
+                      {movie.imageUrl && (
+                        <img
+                          src={movie.imageUrl}
+                          alt={movie.title}
+                          className="absolute inset-0 w-full h-full object-cover filter brightness-85 group-hover:scale-105 transition-transform"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = "none";
+                          }}
+                        />
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent pointer-events-none" />
+                      <div className="relative z-10 flex justify-end">
+                        <VjBadge vjName={movie.vj} size="sm" />
+                      </div>
+                      <div className="relative z-10 text-left pt-6">
+                        <div className="text-[11px] font-black text-white leading-tight drop-shadow-md line-clamp-2">
+                          {movie.title}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-1.5 px-0.5">
+                      <div className="text-xs font-bold text-white truncate">{movie.title}</div>
+                      <div className="flex items-center gap-1 text-[11px] text-neutral-400 font-medium mt-0.5">
+                        <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                        <span className="font-bold text-white">{movie.rating || "8.5"}</span>
+                        <span>• {movie.year || "2025"}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="mt-1.5 px-0.5">
-                  <div className="text-xs font-bold text-white truncate">Just Say It: Ava P...</div>
-                  <div className="flex items-center gap-1 text-[11px] text-neutral-400 font-medium mt-0.5">
-                    <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                    <span className="font-bold text-white">8.4</span>
-                    <span>• 2026</span>
-                  </div>
-                </div>
+                ))}
               </div>
-
-              {/* Card 2: What If */}
-              <div
-                onClick={() => onSelectMovie?.("what-if", false, "What If")}
-                className="w-28 sm:w-32 shrink-0 cursor-pointer group active:scale-95 transition-transform"
-              >
-                <div className="relative aspect-[2/3] rounded-2xl overflow-hidden bg-gradient-to-t from-sky-950 via-sky-800 to-black border border-white/10 group-hover:border-white/30 transition-all p-2 flex flex-col justify-between shadow-md">
-                  <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-sky-400/30 via-sky-900/50 to-black pointer-events-none" />
-                  <div className="text-center pt-1">
-                    <div className="text-xs font-black text-amber-300 tracking-wider">
-                      WHAT IF
-                    </div>
-                  </div>
-                  <div className="text-center pb-2">
-                    <span className="text-xl font-bold text-sky-300">?</span>
-                  </div>
-                </div>
-                <div className="mt-1.5 px-0.5">
-                  <div className="text-xs font-bold text-white truncate">What If</div>
-                  <div className="flex items-center gap-1 text-[11px] text-neutral-400 font-medium mt-0.5">
-                    <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                    <span className="font-bold text-white">8.4</span>
-                    <span>• 2026</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 3: Hope */}
-              <div
-                onClick={() => onSelectMovie?.("hope", false, "Hope")}
-                className="w-28 sm:w-32 shrink-0 cursor-pointer group active:scale-95 transition-transform"
-              >
-                <div className="relative aspect-[2/3] rounded-2xl overflow-hidden bg-gradient-to-t from-zinc-950 via-slate-900 to-black border border-white/10 group-hover:border-white/30 transition-all p-2 flex flex-col justify-between shadow-md">
-                  <div className="absolute inset-0 bg-gradient-to-b from-slate-700/30 to-black pointer-events-none" />
-                  <div />
-                  <div className="relative z-10 text-center pb-2">
-                    <div className="text-sm font-serif font-black text-white tracking-widest leading-none drop-shadow-md">
-                      HOPE
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-1.5 px-0.5">
-                  <div className="text-xs font-bold text-white truncate">Hope</div>
-                  <div className="flex items-center gap-1 text-[11px] text-neutral-400 font-medium mt-0.5">
-                    <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                    <span className="font-bold text-white">8.4</span>
-                    <span>• 2026</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 4: Mapanukso */}
-              <div
-                onClick={() => onSelectMovie?.("mapanukso", false, "Mapanukso")}
-                className="w-28 sm:w-32 shrink-0 cursor-pointer group active:scale-95 transition-transform"
-              >
-                <div className="relative aspect-[2/3] rounded-2xl overflow-hidden bg-gradient-to-t from-emerald-950 via-stone-900 to-black border border-white/10 group-hover:border-white/30 transition-all p-2 flex flex-col justify-between shadow-md">
-                  <div className="absolute inset-0 bg-gradient-to-t from-black via-zinc-900/60 to-transparent pointer-events-none" />
-                  <div />
-                  <div className="relative z-10 text-center pb-2">
-                    <div className="text-xs font-serif font-bold text-white tracking-tight leading-none drop-shadow-md">
-                      Mapanukso
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-1.5 px-0.5">
-                  <div className="text-xs font-bold text-white truncate">Mapanukso</div>
-                  <div className="flex items-center gap-1 text-[11px] text-neutral-400 font-medium mt-0.5">
-                    <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                    <span className="font-bold text-white">7.0</span>
-                    <span>• 2003</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+            )
           )}
         </div>
       </div>
@@ -515,6 +427,12 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 
           <button
             type="button"
+            onClick={() => {
+              try {
+                localStorage.setItem("has_clicked_join_community_v1", "true");
+              } catch {}
+              window.open("https://www.tiktok.com/@freewatchug", "_blank");
+            }}
             className="px-5 py-2 rounded-full bg-[#E50914] hover:bg-[#d00812] active:scale-95 text-white font-extrabold text-xs shadow-md shadow-[#E50914]/20 cursor-pointer transition-transform"
           >
             Follow

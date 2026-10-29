@@ -22,6 +22,7 @@ import { useLiveCatalog, CatalogMovie } from "../data/liveCatalog";
 import { ALL_VJS } from "./AvailableVJsPage";
 import { AvatarGraphic } from "./AvatarGraphic";
 import { UserProfileData } from "./EditProfileModal";
+import { VjBadge } from "./VjBadge";
 
 export type SearchViewState = "categories" | "results" | "filters";
 
@@ -113,11 +114,14 @@ export const SearchPage: React.FC<SearchPageProps> = ({
   const searchResults: CatalogMovie[] = useMemo(() => {
     let local = searchCatalog(searchQuery, selectedGenre, selectedVj);
     if (searchQuery.trim() && apiResults.length > 0) {
-      const seen = new Set(local.map((m) => m.id));
+      const seenIds = new Set(local.map((m) => m.id));
+      const seenTitles = new Set(local.map((m) => m.title.toLowerCase().trim()));
       const merged = [...local];
       apiResults.forEach((ar) => {
-        if (!seen.has(ar.id)) {
-          seen.add(ar.id);
+        const normTitle = ar.title.toLowerCase().trim();
+        if (!seenIds.has(ar.id) && !seenTitles.has(normTitle)) {
+          seenIds.add(ar.id);
+          seenTitles.add(normTitle);
           merged.push(ar);
         }
       });
@@ -329,9 +333,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-black/25 to-transparent pointer-events-none" />
 
                     <div className="relative z-10 flex justify-end">
-                      <span className="px-1.5 py-0.5 rounded-full bg-[#581c87]/90 border border-purple-400/40 text-[9px] font-bold text-white flex items-center gap-1 shadow-sm">
-                        <span>{movie.vj}</span>
-                      </span>
+                      <VjBadge vjName={movie.vj} size="sm" />
                     </div>
 
                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">

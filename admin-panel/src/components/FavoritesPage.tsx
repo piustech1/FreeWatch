@@ -13,6 +13,7 @@ import { FreeWatchLogo } from "./HomePage";
 import { CatalogMovie } from "../data/liveCatalog";
 import { AvatarGraphic } from "./AvatarGraphic";
 import { UserProfileData } from "./EditProfileModal";
+import { VjBadge } from "./VjBadge";
 
 interface FavoritesPageProps {
   onNavigateTab: (tab: "home" | "search" | "favorites" | "downloads" | "profile") => void;
@@ -144,7 +145,7 @@ export const FavoritesPage: React.FC<FavoritesPageProps> = ({
                 onClick={() => onSelectMovie?.(movie.id, movie.isTv, movie.title, movie)}
                 className="cursor-pointer group active:scale-95 transition-transform select-none relative"
               >
-                <div className="relative aspect-[2/3] rounded-2xl overflow-hidden bg-neutral-900 border border-white/10 group-hover:border-[#00E676]/60 transition-all p-2 flex flex-col justify-between shadow-lg">
+                <div className="relative aspect-[2/3] rounded-2xl overflow-hidden bg-neutral-900 border border-white/10 group-hover:border-white/30 transition-all p-2 flex flex-col justify-between shadow-lg">
                   {movie.imageUrl && (
                     <img
                       src={movie.imageUrl}
@@ -157,19 +158,22 @@ export const FavoritesPage: React.FC<FavoritesPageProps> = ({
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black via-black/35 to-transparent pointer-events-none" />
 
-                  {/* Top: Remove button & Rating */}
+                  {/* Top: Remove button, Rating & VjBadge */}
                   <div className="relative z-10 flex items-center justify-between">
                     <span className="px-1.5 py-0.5 rounded bg-black/60 backdrop-blur-md text-amber-400 text-[10px] font-bold">
                       ★ {movie.rating}
                     </span>
-                    <button
-                      type="button"
-                      onClick={(e) => handleRemoveFavorite(movie.id, e)}
-                      title="Remove from favorites"
-                      className="w-6 h-6 rounded-full bg-black/60 hover:bg-red-600/80 text-white flex items-center justify-center transition-colors cursor-pointer"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <VjBadge vjName={movie.vj} size="sm" />
+                      <button
+                        type="button"
+                        onClick={(e) => handleRemoveFavorite(movie.id, e)}
+                        title="Remove from favorites"
+                        className="w-6 h-6 rounded-full bg-black/60 hover:bg-red-600/80 text-white flex items-center justify-center transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
                   </div>
 
                   {/* Center Play Button on Hover */}

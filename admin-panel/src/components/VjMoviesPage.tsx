@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   ArrowLeft,
   Search as SearchIcon,
@@ -9,12 +9,14 @@ import {
   User as UserIcon,
   Star,
   Play,
+  Film,
 } from "lucide-react";
 import { FreeWatchLogo } from "./HomePage";
 import { VJDetailItem } from "./AvailableVJsPage";
 import { useLiveCatalog, CatalogMovie } from "../data/liveCatalog";
 import { AvatarGraphic } from "./AvatarGraphic";
 import { UserProfileData } from "./EditProfileModal";
+import { VjBadge } from "./VjBadge";
 
 interface VjMoviesPageProps {
   vj: VJDetailItem;
@@ -34,14 +36,65 @@ export const VjMoviesPage: React.FC<VjMoviesPageProps> = ({
   onNavigateToNotifications,
   userProfile,
 }) => {
-  const { getMoviesByVj, catalog } = useLiveCatalog();
+  const { getMoviesByVj } = useLiveCatalog();
+  const [apiVjMovies, setApiVjMovies] = useState<CatalogMovie[]>([]);
+
+  // Asynchronously query MunoWatch for this VJ to populate real titles if needed
+  useEffect(() => {
+    let cancelled = false;
+    const cleanVj = vj.name.toLowerCase().replace("vj", "").trim();
+
+    fetch(`/api/v1/search?q=${encodeURIComponent(vj.name)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((json) => {
+        if (!cancelled && json && json.success && Array.isArray(json.data)) {
+          const matched: CatalogMovie[] = json.data
+            .filter((m: any) => {
+              const mvj = (m.vj || "").toLowerCase();
+              return mvj.includes(cleanVj) || cleanVj.includes(mvj);
+            })
+            .map((m: any, idx: number) => ({
+              id: String(m.id || `vj-api-${idx}`),
+              title: m.title,
+              vj: m.vj || vj.name,
+              category: m.category || "Action",
+              genres: m.genres || [m.category || "Action", "Luganda Dubbed"],
+              imageUrl: m.poster || m.image || "https://apposters.b-cdn.net/laba/yo/naki/gNxs2151.jpg",
+              backdropUrl: m.backdrop || m.poster || "",
+              rating: String(m.rating || "8.5"),
+              year: String(m.year || "2025"),
+              duration: m.duration || (m.isTv ? "50m" : "1h 45m"),
+              isTv: Boolean(m.isTv || m.is_series),
+              seriesCode: m.series_code,
+              overview: m.overview || "",
+              streamUrl: m.streamUrl || m.playingurl || "",
+              episodes: m.episodes,
+            }));
+          setApiVjMovies(matched);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [vj.name]);
 
   const moviesToDisplay = useMemo(() => {
     const list = getMoviesByVj(vj.name);
-    if (list.length > 0) return list;
-    // Fallback: take catalog items matching VJ or first 12 catalog items
-    return catalog.slice(0, 18);
-  }, [vj.name, getMoviesByVj, catalog]);
+    if (apiVjMovies.length > 0) {
+      const seen = new Set(list.map((m) => m.id));
+      const combined = [...list];
+      apiVjMovies.forEach((m) => {
+        if (!seen.has(m.id)) {
+          seen.add(m.id);
+          combined.push(m);
+        }
+      });
+      return combined;
+    }
+    return list;
+  }, [vj.name, getMoviesByVj, apiVjMovies]);
 
   return (
     <div className="w-full min-h-screen bg-black text-white font-sans flex flex-col pb-24 select-none">
@@ -112,64 +165,74 @@ export const VjMoviesPage: React.FC<VjMoviesPageProps> = ({
           </div>
         </div>
 
-        <div className="px-3 py-1 rounded-full bg-[#3b0764]/60 border border-[#a855f7]/40 text-xs font-bold text-[#d8b4fe] shadow-sm">
+        <div className="px-3 py-1 rounded-full bg-white/[0.06] border border-white/10 text-xs font-semibold text-white/70 backdrop-blur-md">
           {moviesToDisplay.length} Movies
         </div>
       </div>
 
-      {/* 3. MOVIES 3-COLUMN POSTER GRID */}
-      <div className="px-4 lg:px-8 pt-3 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3.5 max-w-7xl mx-auto w-full flex-1">
-        {moviesToDisplay.map((movie) => (
-          <div
-            key={movie.id}
-            onClick={() => onSelectMovie(movie.id, movie.isTv, movie.title, movie)}
-            className="cursor-pointer group flex flex-col active:scale-95 transition-transform select-none"
-          >
-            {/* Poster Card */}
-            <div className="relative aspect-[2/3] rounded-2xl overflow-hidden bg-neutral-900 border border-white/10 group-hover:border-[#00E676]/60 group-hover:scale-[1.03] transition-all shadow-md p-2 flex flex-col justify-between">
-              {movie.imageUrl && (
-                <img
-                  src={movie.imageUrl}
-                  alt={movie.title}
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = "none";
-                  }}
-                  className="absolute inset-0 w-full h-full object-cover filter brightness-85 group-hover:scale-105 transition-transform"
-                />
-              )}
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/25 to-transparent pointer-events-none" />
-
-              <div className="relative z-10 flex justify-end">
-                <span className="px-1.5 py-0.5 rounded-full bg-[#581c87]/90 border border-purple-400/40 text-[9px] font-bold text-white flex items-center gap-1 shadow-sm">
-                  <span>{vj.name}</span>
-                </span>
-              </div>
-
-              {/* Hover Play Button */}
-              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
-                <div className="w-9 h-9 rounded-full bg-[#00E676] text-black flex items-center justify-center shadow-lg">
-                  <Play className="w-4 h-4 fill-black ml-0.5" />
-                </div>
-              </div>
-
-              <div className="relative z-10 text-left pt-6">
-                <div className="text-xs font-black text-white leading-tight drop-shadow-md line-clamp-2">
-                  {movie.title}
-                </div>
-              </div>
-            </div>
-
-            {/* Bottom Rating and Year */}
-            <div className="flex items-center gap-1.5 mt-1.5 px-0.5 text-xs font-bold text-neutral-300">
-              <div className="flex items-center gap-1 text-amber-400">
-                <Star className="w-3 h-3 fill-amber-400" />
-                <span className="text-[11px] font-black text-white">{movie.rating}</span>
-              </div>
-              <span className="text-[11px] font-medium text-neutral-400">• {movie.year}</span>
-            </div>
+      {/* 3. MOVIES POSTER GRID OR EMPTY STATE */}
+      {moviesToDisplay.length === 0 ? (
+        <div className="flex-1 flex flex-col items-center justify-center py-24 px-4 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-purple-950/40 border border-purple-500/20 flex items-center justify-center mb-3">
+            <Film className="w-8 h-8 text-purple-400" />
           </div>
-        ))}
-      </div>
+          <h3 className="text-base font-bold text-white">No movies found for {vj.name}</h3>
+          <p className="text-xs text-neutral-400 max-w-sm mt-1">
+            We are continuously indexing more Luganda releases translated by {vj.name}. Check back soon!
+          </p>
+        </div>
+      ) : (
+        <div className="px-4 lg:px-8 pt-3 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3.5 max-w-7xl mx-auto w-full flex-1">
+          {moviesToDisplay.map((movie) => (
+            <div
+              key={movie.id}
+              onClick={() => onSelectMovie(movie.id, movie.isTv, movie.title, movie)}
+              className="cursor-pointer group flex flex-col active:scale-95 transition-transform select-none"
+            >
+              {/* Poster Card */}
+              <div className="relative aspect-[2/3] rounded-2xl overflow-hidden bg-neutral-900 border border-white/10 group-hover:border-white/30 group-hover:scale-[1.03] transition-all shadow-md p-2 flex flex-col justify-between">
+                {movie.imageUrl && (
+                  <img
+                    src={movie.imageUrl}
+                    alt={movie.title}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = "none";
+                    }}
+                    className="absolute inset-0 w-full h-full object-cover filter brightness-85 group-hover:scale-105 transition-transform"
+                  />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/25 to-transparent pointer-events-none" />
+
+                <div className="relative z-10 flex justify-end">
+                  <VjBadge vjName={movie.vj || vj.name} size="sm" />
+                </div>
+
+                {/* Hover Play Button */}
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
+                  <div className="w-9 h-9 rounded-full bg-[#00E676] text-black flex items-center justify-center shadow-lg">
+                    <Play className="w-4 h-4 fill-black ml-0.5" />
+                  </div>
+                </div>
+
+                <div className="relative z-10 text-left pt-6">
+                  <div className="text-xs font-black text-white leading-tight drop-shadow-md line-clamp-2">
+                    {movie.title}
+                  </div>
+                </div>
+              </div>
+
+              {/* Bottom Rating and Year */}
+              <div className="flex items-center gap-1.5 mt-1.5 px-0.5 text-xs font-bold text-neutral-300">
+                <div className="flex items-center gap-1 text-amber-400">
+                  <Star className="w-3 h-3 fill-amber-400" />
+                  <span className="text-[11px] font-black text-white">{movie.rating}</span>
+                </div>
+                <span className="text-[11px] font-medium text-neutral-400">• {movie.year}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* 4. FIXED BOTTOM NAVIGATION BAR */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 h-16 bg-black/95 backdrop-blur-lg border-t border-white/10 px-4 flex items-center justify-around">

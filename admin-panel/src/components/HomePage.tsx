@@ -24,6 +24,8 @@ import { ALL_VJS } from "./AvailableVJsPage";
 import { useLiveCatalog, CatalogMovie } from "../data/liveCatalog";
 import { AvatarGraphic } from "./AvatarGraphic";
 import { UserProfileData } from "./EditProfileModal";
+import { searchTmdb, getMovieLogo } from "../services/tmdb";
+import { VjBadge } from "./VjBadge";
 
 interface HomePageProps {
   userProfile?: UserProfileData;
@@ -79,6 +81,8 @@ export const HomePage: React.FC<HomePageProps> = ({
     sciFiMovies,
     horrorMovies,
     animationMovies,
+    romanceMovies,
+    familyMovies,
   } = useLiveCatalog();
 
   // 8-candidate pool for the Hero Deck matching Flutter HeroBanner
@@ -88,6 +92,27 @@ export const HomePage: React.FC<HomePageProps> = ({
   }, [latestMovies, catalog]);
 
   const numHeroes = heroCandidates.length || 1;
+
+  // TMDB logo caching for hero candidate items
+  const [heroLogos, setHeroLogos] = useState<Record<string, string | null>>({});
+
+  useEffect(() => {
+    if (heroCandidates.length === 0) return;
+    heroCandidates.forEach(async (movie) => {
+      if (heroLogos[movie.id] !== undefined) return;
+      try {
+        const tmdb = await searchTmdb(movie.title, movie.isTv);
+        if (tmdb && tmdb.id) {
+          const logo = await getMovieLogo(tmdb.id, movie.isTv);
+          setHeroLogos((prev) => ({ ...prev, [movie.id]: logo }));
+        } else {
+          setHeroLogos((prev) => ({ ...prev, [movie.id]: null }));
+        }
+      } catch {
+        setHeroLogos((prev) => ({ ...prev, [movie.id]: null }));
+      }
+    });
+  }, [heroCandidates]);
 
   // 3.5s automated slide timer matching Android app
   useEffect(() => {
@@ -99,9 +124,6 @@ export const HomePage: React.FC<HomePageProps> = ({
   }, [isHeroPaused, heroCandidates.length]);
 
   const heroMovie = heroCandidates[heroIndex % numHeroes];
-  const heroMovie2 = heroCandidates[(heroIndex + 1) % numHeroes];
-  const heroMovie3 = heroCandidates[(heroIndex + 2) % numHeroes];
-  const heroMovie4 = heroCandidates[(heroIndex + 3) % numHeroes];
 
   const handleTouchStart = (e: React.TouchEvent) => {
     setIsHeroPaused(true);
@@ -131,15 +153,15 @@ export const HomePage: React.FC<HomePageProps> = ({
     }
   };
 
-  // Reusable Movie Poster Card
+  // Reusable Movie Poster Card matching Flutter app layout
   const renderMovieCard = (movie: CatalogMovie) => {
     return (
       <div
         key={movie.id}
         onClick={() => onSelectMovie?.(movie.id, movie.isTv, movie.title, movie)}
-        className="w-[120px] sm:w-[136px] md:w-[148px] shrink-0 cursor-pointer group active:scale-95 transition-transform select-none"
+        className="w-[124px] sm:w-[138px] md:w-[148px] shrink-0 cursor-pointer group active:scale-95 transition-transform select-none"
       >
-        <div className="relative aspect-[2/3] rounded-2xl overflow-hidden bg-neutral-900 border border-white/10 group-hover:border-[#00E676]/60 transition-all p-2.5 flex flex-col justify-between shadow-lg">
+        <div className="relative aspect-[2/3] rounded-2xl overflow-hidden bg-neutral-900 border border-white/10 group-hover:border-white/30 transition-all p-2.5 flex flex-col justify-between shadow-lg">
           {movie.imageUrl ? (
             <img
               src={movie.imageUrl}
@@ -152,12 +174,9 @@ export const HomePage: React.FC<HomePageProps> = ({
           ) : null}
           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/35 to-transparent pointer-events-none" />
 
-          {/* Top Right: VJ Badge */}
+          {/* Top Right: Authentic Flutter VJ Badge (No green dot) */}
           <div className="relative z-10 flex justify-end">
-            <span className="px-2 py-0.5 rounded-full bg-[#581c87]/90 border border-purple-400/40 text-[9px] font-bold text-white flex items-center gap-1 shadow-sm backdrop-blur-sm">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#00E676] inline-block" />
-              <span className="truncate max-w-[70px]">{movie.vj}</span>
-            </span>
+            <VjBadge vjName={movie.vj} size="sm" />
           </div>
 
           {/* Center Play Button on Hover */}
@@ -236,7 +255,7 @@ export const HomePage: React.FC<HomePageProps> = ({
         </div>
       </header>
 
-      {/* 2A. MOBILE HERO FEATURED 3D CAROUSEL */}
+      {/* 2A. MOBILE HERO FEATURED 5-POSTER STRETCHED DECK */}
       <section
         className="relative px-4 pt-4 pb-2 lg:hidden select-none"
         onTouchStart={handleTouchStart}
@@ -244,130 +263,171 @@ export const HomePage: React.FC<HomePageProps> = ({
         onMouseEnter={() => setIsHeroPaused(true)}
         onMouseLeave={() => setIsHeroPaused(false)}
       >
-        <div className="relative w-full h-[340px] sm:h-[380px] flex items-center justify-start overflow-hidden">
-          {/* Card 4 */}
-          {heroMovie4 && (
-            <div
-              onClick={() => setHeroIndex((prev) => (prev + 3) % numHeroes)}
-              className="absolute left-[240px] sm:left-[300px] w-[180px] sm:w-[210px] h-[280px] sm:h-[320px] rounded-2xl overflow-hidden bg-neutral-900 border border-white/10 opacity-40 scale-85 cursor-pointer hover:opacity-60 transition-all duration-300"
-            >
-              <img src={heroMovie4.imageUrl} alt="" className="w-full h-full object-cover filter brightness-75" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
-              <div className="absolute top-2.5 right-2.5 px-1.5 py-0.5 rounded bg-[#00E5FF] text-black text-[10px] font-bold flex items-center gap-0.5">
-                <span>★</span> {heroMovie4.rating}
-              </div>
-              <div className="absolute bottom-3 left-3 text-lg font-black text-amber-400 tracking-wider line-clamp-1">
-                {heroMovie4.title}
-              </div>
-            </div>
-          )}
+        {/* 5-Poster Stretched Stacked Deck Container */}
+        <div className="relative w-full h-[252px] flex items-center justify-start overflow-hidden">
+          {heroCandidates.map((m, idx) => {
+            const offset = (idx - (heroIndex % numHeroes) + numHeroes) % numHeroes;
+            const step = 78;
 
-          {/* Card 3 */}
-          {heroMovie3 && (
-            <div
-              onClick={() => setHeroIndex((prev) => (prev + 2) % numHeroes)}
-              className="absolute left-[160px] sm:left-[200px] w-[185px] sm:w-[215px] h-[290px] sm:h-[330px] rounded-2xl overflow-hidden bg-neutral-900 border border-white/10 opacity-60 scale-90 cursor-pointer hover:opacity-80 transition-all duration-300"
-            >
-              <img src={heroMovie3.imageUrl} alt="" className="w-full h-full object-cover filter brightness-75" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
-              <div className="absolute top-2.5 right-2.5 px-1.5 py-0.5 rounded bg-[#00E5FF] text-black text-[10px] font-bold flex items-center gap-0.5">
-                <span>★</span> {heroMovie3.rating}
-              </div>
-              <div className="absolute bottom-3 left-3 text-xl font-black text-amber-400 tracking-wider line-clamp-1">
-                {heroMovie3.title}
-              </div>
-            </div>
-          )}
+            let x = step * 5;
+            let scale = 0.6;
+            let zIndex = 0;
+            let opacity = 0;
+            let overlayOpacity = 0.8;
+            let pointerEvents = "none";
 
-          {/* Card 2 */}
-          {heroMovie2 && (
-            <div
-              onClick={() => setHeroIndex((prev) => (prev + 1) % numHeroes)}
-              className="absolute left-[85px] sm:left-[110px] w-[190px] sm:w-[220px] h-[300px] sm:h-[340px] rounded-2xl overflow-hidden bg-neutral-900 border border-white/10 opacity-80 scale-95 cursor-pointer hover:opacity-95 transition-all duration-300"
-            >
-              <img src={heroMovie2.imageUrl} alt="" className="w-full h-full object-cover filter brightness-75" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
-              <div className="absolute top-2.5 right-2.5 px-1.5 py-0.5 rounded bg-[#00E5FF] text-black text-[10px] font-bold flex items-center gap-0.5">
-                <span>★</span> {heroMovie2.rating}
-              </div>
-              <div className="absolute bottom-3 left-3 text-2xl font-black text-amber-400 tracking-wider line-clamp-1">
-                {heroMovie2.title}
-              </div>
-            </div>
-          )}
+            if (offset === 0) {
+              x = 0;
+              scale = 1.0;
+              zIndex = 30;
+              opacity = 1;
+              overlayOpacity = 0;
+              pointerEvents = "auto";
+            } else if (offset === 1) {
+              x = step * 1;
+              scale = 0.92;
+              zIndex = 20;
+              opacity = 1;
+              overlayOpacity = 0.25;
+              pointerEvents = "auto";
+            } else if (offset === 2) {
+              x = step * 2;
+              scale = 0.85;
+              zIndex = 15;
+              opacity = 1;
+              overlayOpacity = 0.45;
+              pointerEvents = "auto";
+            } else if (offset === 3) {
+              x = step * 3;
+              scale = 0.78;
+              zIndex = 10;
+              opacity = 1;
+              overlayOpacity = 0.65;
+              pointerEvents = "auto";
+            } else if (offset === 4) {
+              x = step * 4;
+              scale = 0.71;
+              zIndex = 5;
+              opacity = 0.8;
+              overlayOpacity = 0.78;
+              pointerEvents = "auto";
+            } else if (offset === numHeroes - 1) {
+              x = -130;
+              scale = 0.88;
+              zIndex = 2;
+              opacity = 0;
+              overlayOpacity = 0.85;
+            }
 
-          {/* Card 1: Front Active Card */}
-          {heroMovie && (
-            <div
-              onClick={() => onSelectMovie?.(heroMovie.id, heroMovie.isTv, heroMovie.title, heroMovie)}
-              className="relative z-20 w-[200px] sm:w-[230px] h-[310px] sm:h-[350px] rounded-2xl overflow-hidden bg-neutral-900 border border-white/15 shadow-2xl flex flex-col justify-between p-3 cursor-pointer group active:scale-[0.98] transition-transform duration-300"
-            >
-              <img
-                src={heroMovie.imageUrl}
-                alt={heroMovie.title}
-                className="absolute inset-0 w-full h-full object-cover filter brightness-85 group-hover:scale-105 transition-transform duration-300"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent pointer-events-none" />
+            return (
+              <div
+                key={m.id}
+                onClick={() => {
+                  if (offset !== 0) {
+                    setHeroIndex(idx);
+                  } else {
+                    onSelectMovie?.(m.id, m.isTv, m.title, m);
+                  }
+                }}
+                className="absolute top-0 left-0 w-[162px] h-[242px] rounded-[20px] overflow-hidden bg-[#111827] cursor-pointer select-none"
+                style={{
+                  transform: `translate3d(${x}px, 0, 0) scale(${scale})`,
+                  transformOrigin: "left center",
+                  zIndex,
+                  opacity,
+                  pointerEvents: pointerEvents as any,
+                  boxShadow:
+                    offset === 0
+                      ? "-8px 0 22px rgba(0,0,0,0.75), 0 8px 16px rgba(0,0,0,0.5)"
+                      : "0 4px 12px rgba(0,0,0,0.4)",
+                  transition:
+                    "transform 700ms cubic-bezier(0.19, 1.0, 0.22, 1.0), opacity 700ms cubic-bezier(0.19, 1.0, 0.22, 1.0)",
+                }}
+              >
+                {/* Clean Poster Artwork without title overlay */}
+                {m.imageUrl ? (
+                  <img
+                    src={m.imageUrl}
+                    alt=""
+                    className="w-full h-full object-cover filter brightness-95"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = "none";
+                    }}
+                  />
+                ) : null}
 
-              {/* Top Row Badges */}
-              <div className="relative z-10 flex items-center justify-between">
+                {/* Smooth Dark Dimming Overlay based on stack depth */}
+                <div
+                  className="absolute inset-0 bg-black transition-opacity duration-700 pointer-events-none"
+                  style={{ opacity: overlayOpacity }}
+                />
+
+                {/* Bookmark Button (Top Left) */}
                 <button
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     setIsBookmarked(!isBookmarked);
                   }}
-                  className="w-7 h-7 rounded-lg bg-black/60 backdrop-blur-md flex items-center justify-center text-white hover:text-[#00E676] transition-colors cursor-pointer"
+                  className="absolute top-2.5 left-2.5 z-20 w-7 h-7 rounded-lg bg-white/20 backdrop-blur-md border border-white/15 flex items-center justify-center text-white hover:text-[#00E676] transition-colors cursor-pointer"
                 >
-                  <Bookmark className={`w-3.5 h-3.5 ${isBookmarked ? "fill-[#00E676] text-[#00E676]" : ""}`} />
+                  <Bookmark
+                    className={`w-3.5 h-3.5 ${
+                      isBookmarked && offset === 0
+                        ? "fill-[#34D399] text-[#34D399]"
+                        : "text-white"
+                    }`}
+                  />
                 </button>
 
-                <div className="px-1.5 py-0.5 rounded bg-[#00E5FF] text-black text-[10px] font-extrabold flex items-center gap-0.5 shadow-sm">
-                  <span>★</span> {heroMovie.rating}
+                {/* Rating Badge (Top Right) */}
+                <div className="absolute top-2.5 right-2.5 z-20 px-2 py-0.5 rounded-md bg-[#34D399] text-black text-[10px] font-extrabold flex items-center gap-0.5 shadow-sm">
+                  <span>★</span> {m.rating || "7.5"}
                 </div>
-              </div>
 
-              {/* Center Play Button */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-                <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                  <Play className="w-5 h-5 fill-white text-white ml-0.5" />
-                </div>
+                {/* Center Play Button on Active Front Poster */}
+                {offset === 0 && (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+                    <div className="w-11 h-11 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center shadow-lg">
+                      <Play className="w-4 h-4 fill-white text-white ml-0.5" />
+                    </div>
+                  </div>
+                )}
               </div>
-
-              {/* Bottom Title */}
-              <div className="relative z-10 pt-8">
-                <h3 className="text-xl sm:text-2xl font-black tracking-tight text-white drop-shadow-md line-clamp-2">
-                  {heroMovie.title}
-                </h3>
-              </div>
-            </div>
-          )}
+            );
+          })}
         </div>
 
-        {/* Hero Metadata & VJ Badge */}
+        {/* Below Posters Info Row (TMDB Logo / Subtitle & VJ Capsule Badge) */}
         {heroMovie && (
           <div className="mt-3 flex items-center justify-between px-1">
             <div
               onClick={() => onSelectMovie?.(heroMovie.id, heroMovie.isTv, heroMovie.title, heroMovie)}
-              className="cursor-pointer group flex-1 pr-3"
+              className="cursor-pointer group flex-1 pr-3 flex flex-col justify-center"
             >
-              <div className="text-base font-black tracking-tight text-white font-sans leading-tight group-hover:text-[#00E676] transition-colors truncate">
-                {heroMovie.title}
-              </div>
-              <div className="text-xs text-neutral-400 mt-1 font-medium">
-                {heroMovie.category} • {heroMovie.year} • {heroMovie.duration}
+              {heroLogos[heroMovie.id] ? (
+                <img
+                  src={heroLogos[heroMovie.id]!}
+                  alt={heroMovie.title}
+                  className="h-7 max-w-[210px] object-contain object-left drop-shadow-md"
+                />
+              ) : (
+                <div className="text-lg font-black tracking-tight text-white font-sans leading-tight group-hover:text-[#00E676] transition-colors truncate">
+                  {heroMovie.title}
+                </div>
+              )}
+              <div className="text-[12px] text-[#7A7C85] mt-1 font-medium">
+                {heroMovie.category || "Action"} • {heroMovie.year}
+                {heroMovie.duration ? ` • ${heroMovie.duration}` : ""}
               </div>
             </div>
 
             <button
               type="button"
-              onClick={() => onSelectVj ? onSelectVj(heroMovie.vj) : onNavigateToAvailableVJs?.()}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#4c1d95]/80 border border-[#7c3aed]/50 text-white text-xs font-semibold hover:bg-[#4c1d95] transition-all cursor-pointer shadow-sm active:scale-95 shrink-0"
+              onClick={() => (onSelectVj ? onSelectVj(heroMovie.vj) : onNavigateToAvailableVJs?.())}
+              className="shrink-0 cursor-pointer"
             >
-              <span>{heroMovie.vj}</span>
-              <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center">
-                <Headphones className="w-3 h-3 text-[#00E676]" />
-              </div>
+              <VjBadge vjName={heroMovie.vj} size="md" />
             </button>
           </div>
         )}
@@ -405,26 +465,31 @@ export const HomePage: React.FC<HomePageProps> = ({
               <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 via-30% to-transparent" />
             </div>
 
-            {/* Top Right: VJ Badge Pill */}
+            {/* Top Right: Authentic VJ Badge */}
             <div className="absolute top-6 right-6 z-20">
               <button
                 type="button"
                 onClick={() => onSelectVj?.(heroMovie.vj)}
-                className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#4c1d95]/90 hover:bg-[#581c87] border border-[#a855f7]/50 text-white text-xs font-extrabold shadow-xl backdrop-blur-md transition-all cursor-pointer active:scale-95"
+                className="cursor-pointer"
               >
-                <div className="w-5 h-5 rounded-full overflow-hidden bg-purple-300 border border-white/40 flex items-center justify-center text-[10px] text-purple-950 font-black">
-                  VJ
-                </div>
-                <span className="tracking-wider">{heroMovie.vj}</span>
+                <VjBadge vjName={heroMovie.vj} size="md" />
               </button>
             </div>
 
             {/* Left Content Column */}
             <div className="relative z-10 h-full flex flex-col justify-end p-8 xl:p-12 max-w-2xl">
               <div className="space-y-1 mb-3">
-                <div className="text-3xl xl:text-5xl font-black tracking-tight text-white drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)] leading-tight uppercase">
-                  {heroMovie.title}
-                </div>
+                {heroLogos[heroMovie.id] ? (
+                  <img
+                    src={heroLogos[heroMovie.id]!}
+                    alt={heroMovie.title}
+                    className="h-16 max-w-[340px] object-contain object-left drop-shadow-xl mb-2"
+                  />
+                ) : (
+                  <div className="text-3xl xl:text-5xl font-black tracking-tight text-white drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)] leading-tight uppercase">
+                    {heroMovie.title}
+                  </div>
+                )}
               </div>
 
               {/* Tags Row */}
@@ -479,9 +544,9 @@ export const HomePage: React.FC<HomePageProps> = ({
               <button
                 type="button"
                 onClick={onNavigateToAvailableVJs}
-                className="text-xs font-bold text-neutral-400 hover:text-white transition-colors cursor-pointer"
+                className="px-3 py-1 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-xs font-semibold text-white/70 hover:text-white transition-all cursor-pointer backdrop-blur-md"
               >
-                See all ({ALL_VJS.length})
+                See all
               </button>
             </div>
 
@@ -547,9 +612,9 @@ export const HomePage: React.FC<HomePageProps> = ({
           <button
             type="button"
             onClick={onNavigateToAvailableVJs}
-            className="px-3 py-1 rounded-full bg-[#1e1b2e] border border-white/5 text-[11px] font-semibold text-neutral-300 hover:text-white transition-colors cursor-pointer"
+            className="px-3 py-1 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-xs font-semibold text-white/70 hover:text-white transition-all cursor-pointer backdrop-blur-md"
           >
-            See all ({ALL_VJS.length})
+            See all
           </button>
         </div>
 
@@ -558,7 +623,7 @@ export const HomePage: React.FC<HomePageProps> = ({
           {ALL_VJS.map((vj) => (
             <div
               key={vj.id}
-              onClick={() => onSelectVj ? onSelectVj(vj.name) : onNavigateToAvailableVJs?.()}
+              onClick={() => (onSelectVj ? onSelectVj(vj.name) : onNavigateToAvailableVJs?.())}
               className={`min-w-[190px] h-[95px] rounded-2xl bg-gradient-to-r ${vj.bgColor} border border-white/10 flex items-center justify-between relative overflow-hidden shrink-0 cursor-pointer hover:border-white/20 transition-all`}
             >
               <div className="relative h-full w-[45%] overflow-hidden">
@@ -598,7 +663,7 @@ export const HomePage: React.FC<HomePageProps> = ({
           <button
             type="button"
             onClick={() => onNavigateToCategorySeeAll?.("Latest on FreeWatch", totalCount || latestMovies.length, "sparkles")}
-            className="px-3 py-1 rounded-full bg-[#1e1b2e] border border-white/5 text-[11px] font-semibold text-neutral-300 hover:text-white transition-colors cursor-pointer"
+            className="px-3 py-1 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-xs font-semibold text-white/70 hover:text-white transition-all cursor-pointer backdrop-blur-md"
           >
             See all
           </button>
@@ -619,7 +684,7 @@ export const HomePage: React.FC<HomePageProps> = ({
           <button
             type="button"
             onClick={() => onNavigateToCategorySeeAll?.("Trending Now", trendingMovies.length, "trending")}
-            className="px-3 py-1 rounded-full bg-[#1e1b2e] border border-white/5 text-[11px] font-semibold text-neutral-300 hover:text-white transition-colors cursor-pointer"
+            className="px-3 py-1 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-xs font-semibold text-white/70 hover:text-white transition-all cursor-pointer backdrop-blur-md"
           >
             See all
           </button>
@@ -640,14 +705,14 @@ export const HomePage: React.FC<HomePageProps> = ({
           <button
             type="button"
             onClick={() => onNavigateToCategorySeeAll?.("Series", (seriesMovies.length || 1), "tv")}
-            className="px-3 py-1 rounded-full bg-[#1e1b2e] border border-white/5 text-[11px] font-semibold text-neutral-300 hover:text-white transition-colors cursor-pointer"
+            className="px-3 py-1 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-xs font-semibold text-white/70 hover:text-white transition-all cursor-pointer backdrop-blur-md"
           >
-            See all ({seriesMovies.length || 1})
+            See all
           </button>
         </div>
 
         <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
-          {(seriesMovies.length > 0 ? seriesMovies : catalog.filter(m => m.isTv)).slice(0, 15).map(renderMovieCard)}
+          {(seriesMovies.length > 0 ? seriesMovies : catalog.filter((m) => m.isTv)).slice(0, 15).map(renderMovieCard)}
         </div>
       </section>
 
@@ -661,14 +726,14 @@ export const HomePage: React.FC<HomePageProps> = ({
           <button
             type="button"
             onClick={() => onNavigateToCategorySeeAll?.("Action", (actionMovies.length || latestMovies.length), "flame")}
-            className="px-3 py-1 rounded-full bg-[#1e1b2e] border border-white/5 text-[11px] font-semibold text-neutral-300 hover:text-white transition-colors cursor-pointer"
+            className="px-3 py-1 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-xs font-semibold text-white/70 hover:text-white transition-all cursor-pointer backdrop-blur-md"
           >
-            See all ({(actionMovies.length > 0 ? actionMovies : latestMovies.filter(m => !m.isTv)).length})
+            See all
           </button>
         </div>
 
         <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
-          {(actionMovies.length > 0 ? actionMovies : latestMovies.filter(m => !m.isTv)).slice(0, 15).map(renderMovieCard)}
+          {(actionMovies.length > 0 ? actionMovies : latestMovies.filter((m) => !m.isTv)).slice(0, 15).map(renderMovieCard)}
         </div>
       </section>
 
@@ -682,39 +747,81 @@ export const HomePage: React.FC<HomePageProps> = ({
           <button
             type="button"
             onClick={() => onNavigateToCategorySeeAll?.("Sci-Fi", (sciFiMovies.length || 10), "rocket")}
-            className="px-3 py-1 rounded-full bg-[#1e1b2e] border border-white/5 text-[11px] font-semibold text-neutral-300 hover:text-white transition-colors cursor-pointer"
+            className="px-3 py-1 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-xs font-semibold text-white/70 hover:text-white transition-all cursor-pointer backdrop-blur-md"
           >
-            See all ({(sciFiMovies.length > 0 ? sciFiMovies : latestMovies.filter(m => !m.isTv).slice(2)).length})
+            See all
           </button>
         </div>
 
         <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
-          {(sciFiMovies.length > 0 ? sciFiMovies : latestMovies.filter(m => !m.isTv).slice(2)).slice(0, 15).map(renderMovieCard)}
+          {(sciFiMovies.length > 0 ? sciFiMovies : latestMovies.filter((m) => !m.isTv).slice(2)).slice(0, 15).map(renderMovieCard)}
         </div>
       </section>
 
-      {/* 9. SECTION: DRAMA & ROMANCE */}
+      {/* 9. SECTION: ROMANCE */}
       <section className="mt-7 px-4">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <Heart className="w-4 h-4 text-pink-500 fill-pink-500" />
-            <h2 className="text-lg font-bold text-white tracking-tight">Drama &amp; Romance</h2>
+            <h2 className="text-lg font-bold text-white tracking-tight">Romance &amp; Love</h2>
           </div>
           <button
             type="button"
-            onClick={() => onNavigateToCategorySeeAll?.("Romance", (dramaMovies.length || 10), "heart")}
-            className="px-3 py-1 rounded-full bg-[#1e1b2e] border border-white/5 text-[11px] font-semibold text-neutral-300 hover:text-white transition-colors cursor-pointer"
+            onClick={() => onNavigateToCategorySeeAll?.("Romance", (romanceMovies.length || 10), "heart")}
+            className="px-3 py-1 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-xs font-semibold text-white/70 hover:text-white transition-all cursor-pointer backdrop-blur-md"
           >
-            See all ({(dramaMovies.length > 0 ? dramaMovies : latestMovies.filter(m => !m.isTv).slice(4)).length})
+            See all
           </button>
         </div>
 
         <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
-          {(dramaMovies.length > 0 ? dramaMovies : latestMovies.filter(m => !m.isTv).slice(4)).slice(0, 15).map(renderMovieCard)}
+          {(romanceMovies.length > 0 ? romanceMovies : dramaMovies.length > 0 ? dramaMovies : latestMovies.slice(4)).slice(0, 15).map(renderMovieCard)}
         </div>
       </section>
 
-      {/* 10. SECTION: HORROR & THRILLER */}
+      {/* 10. SECTION: ANIMATION & KIDS */}
+      <section className="mt-7 px-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Smile className="w-4 h-4 text-yellow-400" />
+            <h2 className="text-lg font-bold text-white tracking-tight">Animation &amp; Kids</h2>
+          </div>
+          <button
+            type="button"
+            onClick={() => onNavigateToCategorySeeAll?.("Animation", animationMovies.length || 10, "sparkles")}
+            className="px-3 py-1 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-xs font-semibold text-white/70 hover:text-white transition-all cursor-pointer backdrop-blur-md"
+          >
+            See all
+          </button>
+        </div>
+
+        <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
+          {(animationMovies.length > 0 ? animationMovies : latestMovies.filter((m) => m.category.toLowerCase().includes("anim") || m.title.toLowerCase().includes("sonic") || m.title.toLowerCase().includes("panda"))).slice(0, 15).map(renderMovieCard)}
+        </div>
+      </section>
+
+      {/* 11. SECTION: KIDS & FAMILY */}
+      <section className="mt-7 px-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Smile className="w-4 h-4 text-sky-400" />
+            <h2 className="text-lg font-bold text-white tracking-tight">Kids &amp; Family</h2>
+          </div>
+          <button
+            type="button"
+            onClick={() => onNavigateToCategorySeeAll?.("Family", familyMovies.length || 10, "sparkles")}
+            className="px-3 py-1 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-xs font-semibold text-white/70 hover:text-white transition-all cursor-pointer backdrop-blur-md"
+          >
+            See all
+          </button>
+        </div>
+
+        <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
+          {(familyMovies.length > 0 ? familyMovies : comedyMovies.length > 0 ? comedyMovies : latestMovies.slice(2)).slice(0, 15).map(renderMovieCard)}
+        </div>
+      </section>
+
+      {/* 12. SECTION: HORROR & THRILLER */}
       <section className="mt-7 px-4">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
@@ -724,39 +831,16 @@ export const HomePage: React.FC<HomePageProps> = ({
           <button
             type="button"
             onClick={() => onNavigateToCategorySeeAll?.("Horror", (horrorMovies.length || 10), "moon")}
-            className="px-3 py-1 rounded-full bg-[#1e1b2e] border border-white/5 text-[11px] font-semibold text-neutral-300 hover:text-white transition-colors cursor-pointer"
+            className="px-3 py-1 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-xs font-semibold text-white/70 hover:text-white transition-all cursor-pointer backdrop-blur-md"
           >
-            See all ({(horrorMovies.length > 0 ? horrorMovies : latestMovies.filter(m => !m.isTv).slice(1)).length})
+            See all
           </button>
         </div>
 
         <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
-          {(horrorMovies.length > 0 ? horrorMovies : latestMovies.filter(m => !m.isTv).slice(1)).slice(0, 15).map(renderMovieCard)}
+          {(horrorMovies.length > 0 ? horrorMovies : latestMovies.filter((m) => !m.isTv).slice(1)).slice(0, 15).map(renderMovieCard)}
         </div>
       </section>
-
-      {/* 11. SECTION: ANIMATION & CARTOONS */}
-      {animationMovies.length > 0 && (
-        <section className="mt-7 px-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <Smile className="w-4 h-4 text-yellow-400" />
-              <h2 className="text-lg font-bold text-white tracking-tight">Animation &amp; Kids</h2>
-            </div>
-            <button
-              type="button"
-              onClick={() => onNavigateToCategorySeeAll?.("Animation", animationMovies.length, "sparkles")}
-              className="px-3 py-1 rounded-full bg-[#1e1b2e] border border-white/5 text-[11px] font-semibold text-neutral-300 hover:text-white transition-colors cursor-pointer"
-            >
-              See all
-            </button>
-          </div>
-
-          <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
-            {animationMovies.slice(0, 15).map(renderMovieCard)}
-          </div>
-        </section>
-      )}
 
       {/* 11. FIXED BOTTOM NAVIGATION BAR (Hidden on desktop) */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 h-16 bg-black/95 backdrop-blur-lg border-t border-white/10 px-4 flex items-center justify-around">

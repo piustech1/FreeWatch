@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ArrowLeft,
   Search as SearchIcon,
   Bell,
+  BellOff,
   Home,
   Heart,
   Download,
@@ -11,99 +12,27 @@ import {
 import { FreeWatchLogo } from "./HomePage";
 import { AvatarGraphic } from "./AvatarGraphic";
 import { UserProfileData } from "./EditProfileModal";
+import { useLiveCatalog, CatalogMovie } from "../data/liveCatalog";
 
 interface NotificationItem {
   id: string;
+  movieId?: string;
   title: string;
   timestamp: string;
   isUnread: boolean;
   isSeries?: boolean;
   movieTitle: string;
-  posterBg: string;
   posterImage?: string;
-  posterBadgeText?: string;
+  movie?: CatalogMovie;
 }
 
 interface NotificationsPageProps {
   onBack: () => void;
   onNavigateTab: (tab: "home" | "search" | "favorites" | "downloads" | "profile") => void;
-  onSelectMovie?: (movieId: string, isSeries?: boolean, title?: string) => void;
+  onSelectMovie?: (movieId: string, isSeries?: boolean, title?: string, movie?: CatalogMovie) => void;
   onLogout?: () => void;
   userProfile?: UserProfileData;
 }
-
-const INITIAL_NOTIFICATIONS: NotificationItem[] = [
-  {
-    id: "notif-1",
-    title: "New Release: Head Over Hooves translated by Vj Mosco is now streaming on FreeWatch!",
-    timestamp: "Just now",
-    isUnread: true,
-    isSeries: false,
-    movieTitle: "Head Over Hooves",
-    posterBg: "from-sky-500 via-cyan-600 to-amber-700",
-    posterBadgeText: "Head Over Hooves",
-  },
-  {
-    id: "notif-2",
-    title: "New Release: Shaun the Sheep: The Beast of Mossy Bottom translated by Vj Mosco is now streaming on FreeWatch!",
-    timestamp: "Just now",
-    isUnread: true,
-    isSeries: false,
-    movieTitle: "Shaun the Sheep: The Beast of Mossy Bottom",
-    posterBg: "from-purple-900 via-indigo-950 to-emerald-950",
-    posterBadgeText: "Shaun the Sheep",
-  },
-  {
-    id: "notif-3",
-    title: "New Release: PAW Patrol: The Dino Movie translated by Vj Mosco is now streaming on FreeWatch!",
-    timestamp: "Just now",
-    isUnread: true,
-    isSeries: false,
-    movieTitle: "PAW Patrol: The Dino Movie",
-    posterBg: "from-amber-600 via-orange-800 to-amber-950",
-    posterBadgeText: "PAW PATROL",
-  },
-  {
-    id: "notif-4",
-    title: "New Release: Garuda di Dadaku translated by Vj Mosco is now streaming on FreeWatch!",
-    timestamp: "Just now",
-    isUnread: true,
-    isSeries: false,
-    movieTitle: "Garuda di Dadaku",
-    posterBg: "from-blue-700 via-cyan-900 to-stone-900",
-    posterBadgeText: "GARUDA DI DADAKU",
-  },
-  {
-    id: "notif-5",
-    title: "New Release: Chickenhare and the Secret of the Groundhog translated by Vj Mosco is now streaming on FreeWatch!",
-    timestamp: "Just now",
-    isUnread: true,
-    isSeries: false,
-    movieTitle: "Chickenhare and the Secret of the Groundhog",
-    posterBg: "from-rose-800 via-amber-900 to-orange-950",
-    posterBadgeText: "Chickenhare",
-  },
-  {
-    id: "notif-6",
-    title: "New Release: Chickenhare and the Secret of the Groundhog translated by Vj Mosco is now streaming on FreeWatch!",
-    timestamp: "Just now",
-    isUnread: true,
-    isSeries: false,
-    movieTitle: "Chickenhare and the Secret of the Groundhog",
-    posterBg: "from-rose-800 via-amber-900 to-orange-950",
-    posterBadgeText: "Chickenhare",
-  },
-  {
-    id: "notif-7",
-    title: "New Release: EPS 1 - 2 translated by Luganda Dubbed is now streaming on FreeWatch!",
-    timestamp: "Just now",
-    isUnread: true,
-    isSeries: true,
-    movieTitle: "Wednesday Season 2: Episode 1",
-    posterBg: "from-stone-900 via-zinc-800 to-black",
-    posterBadgeText: "EPS 1 - 2",
-  },
-];
 
 export const NotificationsPage: React.FC<NotificationsPageProps> = ({
   onBack,
@@ -111,21 +40,63 @@ export const NotificationsPage: React.FC<NotificationsPageProps> = ({
   onSelectMovie,
   userProfile,
 }) => {
-  const [notifications, setNotifications] = useState<NotificationItem[]>(INITIAL_NOTIFICATIONS);
+  const { latestMovies } = useLiveCatalog();
+
+  const [notifications, setNotifications] = useState<NotificationItem[]>(() => {
+    try {
+      const saved = localStorage.getItem("freewatch_user_notifications_v1");
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return [];
+  });
+
+  // Dynamically populate notifications based on latest releases if none stored
+  useEffect(() => {
+    if (latestMovies.length === 0) return;
+    setNotifications((prev) => {
+      if (prev.length > 0) return prev;
+      const initial = latestMovies.slice(0, 8).map((m, idx) => ({
+        id: `notif-${m.id}`,
+        movieId: m.id,
+        title: `New Release: ${m.title} translated by ${m.vj} is now streaming on FreeWatch!`,
+        timestamp: idx === 0 ? "Just now" : idx < 3 ? "1h ago" : "Earlier today",
+        isUnread: idx < 3,
+        isSeries: m.isTv,
+        movieTitle: m.title,
+        posterImage: m.imageUrl,
+        movie: m,
+      }));
+      try {
+        localStorage.setItem("freewatch_user_notifications_v1", JSON.stringify(initial));
+      } catch {}
+      return initial;
+    });
+  }, [latestMovies]);
 
   const unreadCount = notifications.filter((n) => n.isUnread).length;
 
   const handleMarkAllRead = () => {
-    setNotifications((prev) => prev.map((item) => ({ ...item, isUnread: false })));
+    setNotifications((prev) => {
+      const updated = prev.map((item) => ({ ...item, isUnread: false }));
+      try {
+        localStorage.setItem("freewatch_user_notifications_v1", JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
   };
 
   const handleItemClick = (notif: NotificationItem) => {
-    // mark single as read
-    setNotifications((prev) =>
-      prev.map((item) => (item.id === notif.id ? { ...item, isUnread: false } : item))
-    );
+    setNotifications((prev) => {
+      const updated = prev.map((item) =>
+        item.id === notif.id ? { ...item, isUnread: false } : item
+      );
+      try {
+        localStorage.setItem("freewatch_user_notifications_v1", JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
     if (onSelectMovie) {
-      onSelectMovie(notif.id, notif.isSeries, notif.movieTitle);
+      onSelectMovie(notif.movieId || notif.id, notif.isSeries, notif.movieTitle, notif.movie);
     }
   };
 
@@ -180,13 +151,15 @@ export const NotificationsPage: React.FC<NotificationsPageProps> = ({
           <ArrowLeft className="w-6 h-6 stroke-[2.3]" />
         </button>
 
-        <button
-          type="button"
-          onClick={handleMarkAllRead}
-          className="text-xs font-medium text-neutral-400 hover:text-white transition-colors cursor-pointer"
-        >
-          Mark all read
-        </button>
+        {notifications.length > 0 && unreadCount > 0 && (
+          <button
+            type="button"
+            onClick={handleMarkAllRead}
+            className="text-xs font-semibold text-white/60 hover:text-white transition-colors cursor-pointer"
+          >
+            Mark all read
+          </button>
+        )}
       </div>
 
       {/* 3. TITLE ROW: NOTIFICATIONS BADGE */}
@@ -199,54 +172,73 @@ export const NotificationsPage: React.FC<NotificationsPageProps> = ({
         )}
       </div>
 
-      {/* 4. SECTION HEADER: TODAY */}
-      <div className="px-4 pt-5 pb-2">
-        <span className="text-sm font-medium text-neutral-400">Today</span>
-      </div>
+      {/* 4. NOTIFICATION LIST OR EMPTY STATE */}
+      {notifications.length === 0 ? (
+        <div className="flex-1 flex flex-col items-center justify-center p-8 text-center my-auto">
+          <div className="w-16 h-16 rounded-3xl bg-white/[0.06] border border-white/10 flex items-center justify-center mb-4 text-white/40 shadow-inner">
+            <BellOff className="w-8 h-8" />
+          </div>
+          <h3 className="text-lg font-bold text-white mb-1.5">No notifications yet</h3>
+          <p className="text-xs text-neutral-400 max-w-xs leading-relaxed">
+            We will notify you right here whenever newly translated Luganda movies and series drop!
+          </p>
+        </div>
+      ) : (
+        <div className="px-4 mt-4 divide-y divide-white/[0.06] flex-1">
+          <div className="py-2">
+            <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Recent</span>
+          </div>
 
-      {/* 5. NOTIFICATION LIST */}
-      <div className="px-4 divide-y divide-white/[0.06] flex-1">
-        {notifications.map((notif) => (
-          <div
-            key={notif.id}
-            onClick={() => handleItemClick(notif)}
-            className="py-3.5 flex items-start gap-3.5 cursor-pointer group active:bg-white/[0.02] transition-colors rounded-xl px-1"
-          >
-            {/* Poster Thumbnail */}
+          {notifications.map((notif) => (
             <div
-              className={`w-14 h-18 sm:w-16 sm:h-20 rounded-xl overflow-hidden bg-gradient-to-t ${notif.posterBg} shrink-0 border border-white/10 flex flex-col justify-between p-1.5 shadow-md group-hover:scale-105 transition-transform`}
+              key={notif.id}
+              onClick={() => handleItemClick(notif)}
+              className="py-3.5 flex items-start gap-3.5 cursor-pointer group active:bg-white/[0.02] transition-colors rounded-xl px-1"
             >
-              <div className="text-[8px] font-black uppercase tracking-tight text-white/90 leading-tight">
-                {notif.posterBadgeText}
+              {/* Poster Thumbnail */}
+              <div className="w-14 h-20 rounded-xl overflow-hidden bg-neutral-900 shrink-0 border border-white/10 relative shadow-md group-hover:scale-105 transition-transform">
+                {notif.posterImage ? (
+                  <img
+                    src={notif.posterImage}
+                    alt=""
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = "none";
+                    }}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-purple-950 text-white font-bold text-[10px] p-1 text-center">
+                    {notif.movieTitle}
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
               </div>
-              <div className="w-full text-center">
-                <span className="text-[7.5px] px-1 py-0.5 rounded bg-black/60 font-bold text-[#00E676]">
-                  HD
-                </span>
+
+              {/* Notification Text Content */}
+              <div className="flex-1 min-w-0 pr-1">
+                <p className="text-xs sm:text-sm font-semibold text-white/90 leading-snug line-clamp-2 group-hover:text-white transition-colors">
+                  {notif.title}
+                </p>
+                <div className="mt-1.5 flex items-center gap-2">
+                  <span className="text-[11px] font-medium text-neutral-400">{notif.timestamp}</span>
+                  {notif.isSeries && (
+                    <span className="text-[10px] font-bold text-[#00E676] bg-[#00E676]/10 px-1.5 py-0.2 rounded">
+                      Series
+                    </span>
+                  )}
+                </div>
               </div>
-            </div>
 
-            {/* Notification Text and Meta */}
-            <div className="flex-1 min-w-0 pr-2">
-              <p className="text-xs sm:text-sm font-medium text-white leading-snug line-clamp-2">
-                {notif.title}
-              </p>
-              <span className="text-[11px] text-neutral-400 font-normal mt-1 block">
-                {notif.timestamp}
-              </span>
-            </div>
-
-            {/* Unread Red Dot */}
-            <div className="pt-2 shrink-0">
+              {/* Blue Unread Dot */}
               {notif.isUnread && (
-                <span className="w-2.5 h-2.5 rounded-full bg-[#E50914] block shadow-sm shadow-[#E50914]/50" />
+                <div className="w-2.5 h-2.5 rounded-full bg-[#00B0FF] shrink-0 mt-2 shadow-[0_0_8px_rgba(0,176,255,0.7)]" />
               )}
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
-      {/* 6. FIXED BOTTOM NAVIGATION BAR (Hidden on desktop) */}
+      {/* 5. FIXED BOTTOM NAVIGATION BAR */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 h-16 bg-black/95 backdrop-blur-lg border-t border-white/10 px-4 flex items-center justify-around">
         <button
           type="button"
@@ -289,8 +281,8 @@ export const NotificationsPage: React.FC<NotificationsPageProps> = ({
           onClick={() => onNavigateTab("profile")}
           className="flex flex-col items-center gap-1 cursor-pointer transition-colors"
         >
-          <UserIcon className="w-5 h-5 text-[#00E676]" />
-          <span className="text-[10px] font-medium text-[#00E676]">Profile</span>
+          <UserIcon className="w-5 h-5 text-neutral-500" />
+          <span className="text-[10px] font-medium text-neutral-500">Profile</span>
         </button>
       </nav>
     </div>

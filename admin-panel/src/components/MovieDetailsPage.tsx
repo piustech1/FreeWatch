@@ -7,7 +7,6 @@ import {
   Bookmark,
   Download,
   ChevronDown,
-  Headphones,
   Home,
   Heart,
   User as UserIcon,
@@ -20,6 +19,13 @@ import { FreeWatchLogo } from "./HomePage";
 import { useLiveCatalog, CatalogMovie } from "../data/liveCatalog";
 import { AvatarGraphic } from "./AvatarGraphic";
 import { UserProfileData } from "./EditProfileModal";
+import {
+  searchTmdb,
+  getMovieLogo,
+  getCredits,
+  TmdbCastMember
+} from "../services/tmdb";
+import { VjBadge } from "./VjBadge";
 
 interface MovieDetailsPageProps {
   onBack: () => void;
@@ -47,6 +53,8 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
   const [isDownloaded, setIsDownloaded] = useState(false);
   const [isReadMore, setIsReadMore] = useState(false);
   const [streamError, setStreamError] = useState(false);
+  const [tmdbLogo, setTmdbLogo] = useState<string | null>(null);
+  const [castList, setCastList] = useState<TmdbCastMember[]>([]);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const { catalog, latestMovies } = useLiveCatalog();
@@ -79,6 +87,28 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
     );
   }, [incomingMovie, movieTitle, catalog, latestMovies]);
 
+  // Load TMDB Logo & Cast
+  useEffect(() => {
+    let cancelled = false;
+    async function loadTmdbData() {
+      try {
+        const tmdb = await searchTmdb(activeMovie.title, false);
+        if (!cancelled && tmdb && tmdb.id) {
+          getMovieLogo(tmdb.id, false).then((l) => {
+            if (!cancelled) setTmdbLogo(l);
+          });
+          getCredits(tmdb.id, false).then((c) => {
+            if (!cancelled) setCastList(c);
+          });
+        }
+      } catch {}
+    }
+    loadTmdbData();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeMovie.title]);
+
   const streamUrl = activeMovie.streamUrl;
 
   // Sync bookmarks from localStorage
@@ -91,6 +121,17 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
           setIsBookmarked(true);
         }
       }
+    } catch {}
+  }, [activeMovie.id]);
+
+  // Record movie to watch history in localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("freewatch_watch_history");
+      const list: CatalogMovie[] = saved ? JSON.parse(saved) : [];
+      const filtered = list.filter((m) => m.id !== activeMovie.id);
+      const updated = [activeMovie, ...filtered].slice(0, 50);
+      localStorage.setItem("freewatch_watch_history", JSON.stringify(updated));
     } catch {}
   }, [activeMovie.id]);
 
@@ -293,14 +334,19 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
               </div>
 
               <div className="flex items-center justify-between gap-3">
-                <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-white font-sans leading-tight drop-shadow-md">
-                  {activeMovie.title}
-                </h1>
+                {tmdbLogo ? (
+                  <img
+                    src={tmdbLogo}
+                    alt={activeMovie.title}
+                    className="h-8 sm:h-10 max-w-[240px] sm:max-w-[320px] object-contain object-left drop-shadow-xl"
+                  />
+                ) : (
+                  <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-white font-sans leading-tight drop-shadow-md">
+                    {activeMovie.title}
+                  </h1>
+                )}
 
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#4c1d95] text-white text-[11px] font-bold shrink-0 shadow-md">
-                  <Headphones className="w-3.5 h-3.5 text-[#00E676]" />
-                  <span>{activeMovie.vj}</span>
-                </div>
+                <VjBadge vjName={activeMovie.vj} size="md" />
               </div>
 
               {/* Tags */}
@@ -340,7 +386,7 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
           className={`w-12 h-12 rounded-2xl flex items-center justify-center border transition-all cursor-pointer ${
             isBookmarked
               ? "bg-[#00E676] border-[#00E676] text-black"
-              : "bg-[#1c1c1e] border-white/5 text-white hover:bg-[#28282b]"
+              : "bg-white/[0.06] border-white/10 text-white hover:bg-white/[0.12] backdrop-blur-md"
           }`}
           title="Bookmark"
         >
@@ -356,7 +402,7 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
           className={`w-12 h-12 rounded-2xl flex items-center justify-center border transition-all cursor-pointer ${
             isDownloaded
               ? "bg-sky-500 border-sky-500 text-white"
-              : "bg-[#1c1c1e] border-white/5 text-white hover:bg-[#28282b]"
+              : "bg-white/[0.06] border-white/10 text-white hover:bg-white/[0.12] backdrop-blur-md"
           }`}
           title="Download MP4"
         >
@@ -384,7 +430,38 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
         </div>
       </div>
 
-      {/* 5. MORE FROM THIS VJ */}
+      {/* 5. MOVIE CAST SECTION (TMDB Actor Portraits) */}
+      {castList.length > 0 && (
+        <div className="px-4 mt-7">
+          <h3 className="text-base font-extrabold text-white tracking-tight mb-3">Cast</h3>
+          <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2 pt-1">
+            {castList.slice(0, 15).map((actor) => (
+              <div key={actor.id} className="flex flex-col items-center text-center w-16 shrink-0">
+                <div className="w-14 h-14 rounded-full overflow-hidden border border-white/10 bg-neutral-900 shadow-md mb-1.5">
+                  {actor.profileUrl ? (
+                    <img
+                      src={actor.profileUrl}
+                      alt={actor.name}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-neutral-500 text-xs">
+                      {actor.name.charAt(0)}
+                    </div>
+                  )}
+                </div>
+                <span className="text-[11px] font-bold text-white line-clamp-1 leading-tight">{actor.name}</span>
+                <span className="text-[9px] text-neutral-400 line-clamp-1 leading-tight mt-0.5">{actor.character}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 6. MORE FROM THIS VJ */}
       <div className="px-4 mt-7">
         <h3 className="text-base font-extrabold text-white tracking-tight mb-3">
           More from {activeMovie.vj}
@@ -398,9 +475,9 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
                 setIsPlaying(false);
                 onSelectMovie?.(movie.id, movie.isTv, movie.title, movie);
               }}
-              className="w-[120px] sm:w-[136px] shrink-0 cursor-pointer group active:scale-95 transition-transform"
+              className="w-[124px] sm:w-[138px] shrink-0 cursor-pointer group active:scale-95 transition-transform"
             >
-              <div className="relative aspect-[2/3] rounded-2xl overflow-hidden bg-neutral-900 border border-white/10 group-hover:border-[#00E676]/60 transition-all p-2 flex flex-col justify-between shadow-md">
+              <div className="relative aspect-[2/3] rounded-2xl overflow-hidden bg-neutral-900 border border-white/10 group-hover:border-white/30 transition-all p-2 flex flex-col justify-between shadow-md">
                 {movie.imageUrl && (
                   <img
                     src={movie.imageUrl}
@@ -414,9 +491,7 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent pointer-events-none" />
 
                 <div className="relative z-10 flex justify-end">
-                  <span className="px-1.5 py-0.5 rounded bg-black/60 backdrop-blur-md text-amber-400 text-[10px] font-bold flex items-center gap-0.5">
-                    ★ {movie.rating}
-                  </span>
+                  <VjBadge vjName={movie.vj} size="sm" />
                 </div>
                 <div className="relative z-10 text-left pt-6">
                   <div className="text-xs font-black text-white leading-tight drop-shadow-md line-clamp-2">

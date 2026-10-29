@@ -206,8 +206,8 @@ export const AuthPage: React.FC<AuthPageProps> = ({
             </div>
           )}
 
-          {/* Auth Dark Card */}
-          <div className="w-full rounded-[28px] bg-[#1a1a1c]/90 border border-white/5 p-6 shadow-2xl backdrop-blur-md">
+          {/* Floating Liquid Glassmorphic Auth Card (matching Flutter onboarding_screen) */}
+          <div className="w-full rounded-[28px] bg-white/[0.08] border border-white/10 p-6 shadow-[0_10px_35px_rgba(0,0,0,0.5)] backdrop-blur-2xl">
             {/* Sign Up: Choose Your Avatar Row */}
             {screen === "signup" && (
               <div className="flex items-center justify-between mb-5 pb-1">
@@ -227,7 +227,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                   <div className="w-full h-full">
                     <AvatarGraphic id={selectedAvatarId} />
                   </div>
-                  <div className="absolute bottom-0 right-0 w-4 h-4 rounded-full bg-[#E50914] flex items-center justify-center text-white shadow-sm">
+                  <div className="absolute bottom-0 right-0 w-4 h-4 rounded-full bg-[#FFD233] flex items-center justify-center text-black shadow-sm">
                     <Edit3 className="w-2.5 h-2.5 stroke-[3]" />
                   </div>
                 </button>
@@ -239,46 +239,46 @@ export const AuthPage: React.FC<AuthPageProps> = ({
               {/* Full Name field (Sign Up only) */}
               {screen === "signup" && (
                 <div className="relative flex items-center">
-                  <User className="absolute left-4 w-4 h-4 text-neutral-400 pointer-events-none" />
+                  <User className="absolute left-4 w-4 h-4 text-white/50 pointer-events-none" />
                   <input
                     type="text"
                     required
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="Full Name"
-                    className="w-full h-13 pl-11 pr-4 rounded-xl bg-[#28282b] text-sm text-white placeholder-neutral-500 focus:outline-none focus:ring-1 focus:ring-neutral-400 transition-all"
+                    className="w-full h-13 pl-11 pr-4 rounded-2xl bg-white/[0.06] border border-white/10 text-sm text-white placeholder-white/40 focus:outline-none focus:border-white/30 focus:bg-white/[0.1] transition-all"
                   />
                 </div>
               )}
 
               {/* Email Address */}
               <div className="relative flex items-center">
-                <Mail className="absolute left-4 w-4 h-4 text-neutral-400 pointer-events-none" />
+                <Mail className="absolute left-4 w-4 h-4 text-white/50 pointer-events-none" />
                 <input
                   type="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Email Address"
-                  className="w-full h-13 pl-11 pr-4 rounded-xl bg-[#28282b] text-sm text-white placeholder-neutral-500 focus:outline-none focus:ring-1 focus:ring-neutral-400 transition-all"
+                  className="w-full h-13 pl-11 pr-4 rounded-2xl bg-white/[0.06] border border-white/10 text-sm text-white placeholder-white/40 focus:outline-none focus:border-white/30 focus:bg-white/[0.1] transition-all"
                 />
               </div>
 
               {/* Password */}
               <div className="relative flex items-center">
-                <Lock className="absolute left-4 w-4 h-4 text-neutral-400 pointer-events-none" />
+                <Lock className="absolute left-4 w-4 h-4 text-white/50 pointer-events-none" />
                 <input
                   type={showPassword ? "text" : "password"}
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Password"
-                  className="w-full h-13 pl-11 pr-11 rounded-xl bg-[#28282b] text-sm text-white placeholder-neutral-500 focus:outline-none focus:ring-1 focus:ring-neutral-400 transition-all"
+                  className="w-full h-13 pl-11 pr-11 rounded-2xl bg-white/[0.06] border border-white/10 text-sm text-white placeholder-white/40 focus:outline-none focus:border-white/30 focus:bg-white/[0.1] transition-all"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 p-1 text-neutral-400 hover:text-white transition-colors cursor-pointer"
+                  className="absolute right-3.5 p-1 text-white/50 hover:text-white transition-colors cursor-pointer"
                   aria-label="Toggle password visibility"
                 >
                   {showPassword ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
@@ -288,19 +288,19 @@ export const AuthPage: React.FC<AuthPageProps> = ({
               {/* Confirm Password (Sign Up only) */}
               {screen === "signup" && (
                 <div className="relative flex items-center">
-                  <Lock className="absolute left-4 w-4 h-4 text-neutral-400 pointer-events-none" />
+                  <Lock className="absolute left-4 w-4 h-4 text-white/50 pointer-events-none" />
                   <input
                     type={showConfirmPassword ? "text" : "password"}
                     required
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Confirm Password"
-                    className="w-full h-13 pl-11 pr-11 rounded-xl bg-[#28282b] text-sm text-white placeholder-neutral-500 focus:outline-none focus:ring-1 focus:ring-neutral-400 transition-all"
+                    className="w-full h-13 pl-11 pr-11 rounded-2xl bg-white/[0.06] border border-white/10 text-sm text-white placeholder-white/40 focus:outline-none focus:border-white/30 focus:bg-white/[0.1] transition-all"
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3.5 p-1 text-neutral-400 hover:text-white transition-colors cursor-pointer"
+                    className="absolute right-3.5 p-1 text-white/50 hover:text-white transition-colors cursor-pointer"
                     aria-label="Toggle confirm password visibility"
                   >
                     {showConfirmPassword ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
@@ -315,7 +315,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                     <div
                       onClick={() => setRememberMe(!rememberMe)}
                       className={`w-4 h-4 rounded flex items-center justify-center transition-colors cursor-pointer ${
-                        rememberMe ? "bg-[#E50914] text-white" : "border border-neutral-600 bg-neutral-800"
+                        rememberMe ? "bg-[#FFD233] text-black" : "border border-white/20 bg-white/5"
                       }`}
                     >
                       {rememberMe && (
@@ -324,13 +324,13 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                         </svg>
                       )}
                     </div>
-                    <span className="text-white">Remember me</span>
+                    <span className="text-white/80">Remember me</span>
                   </label>
 
                   <button
                     type="button"
                     onClick={() => setErrorMessage("Password reset link will be sent to your email.")}
-                    className="text-[#E50914] font-medium hover:underline cursor-pointer"
+                    className="text-[#FFD233] font-medium hover:underline cursor-pointer"
                   >
                     Forgot Password?
                   </button>
@@ -342,7 +342,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full h-13 rounded-full bg-[#E50914] hover:bg-[#d00812] active:scale-[0.98] text-white font-black text-sm tracking-wide uppercase transition-all shadow-[0_4px_20px_rgba(229,9,20,0.35)] cursor-pointer flex items-center justify-center gap-2 disabled:opacity-70"
+                  className="w-full h-13 rounded-full bg-[#FFD233] hover:bg-[#ffca1a] active:scale-[0.98] text-black font-extrabold text-sm tracking-wide uppercase transition-all shadow-[0_4px_20px_rgba(255,210,51,0.25)] cursor-pointer flex items-center justify-center gap-2 disabled:opacity-70"
                 >
                   {loading && <Loader2 className="w-4 h-4 animate-spin" />}
                   <span>{screen === "login" ? "LOG IN" : "SIGN UP"}</span>
@@ -354,7 +354,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                 type="button"
                 onClick={handleGuest}
                 disabled={loading}
-                className="w-full h-13 rounded-full bg-[#2a2a2e]/90 hover:bg-[#34343a] active:scale-[0.98] text-white font-medium text-sm flex items-center justify-center gap-2 transition-all border border-white/5 cursor-pointer disabled:opacity-70"
+                className="w-full h-13 rounded-full bg-white/[0.06] hover:bg-white/[0.12] active:scale-[0.98] text-white font-medium text-sm flex items-center justify-center gap-2 transition-all border border-white/10 cursor-pointer disabled:opacity-70 backdrop-blur-md"
               >
                 <Tv className="w-4 h-4 text-white" />
                 <span>Continue as Guest</span>
@@ -363,7 +363,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
           </div>
 
           {/* Bottom Switch Screen Text */}
-          <div className="mt-7 text-xs text-neutral-400 text-center">
+          <div className="mt-7 text-xs text-white/60 text-center">
             {screen === "login" ? (
               <span>
                 Don't have an account?{" "}
@@ -373,7 +373,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                     setErrorMessage("");
                     setScreen("signup");
                   }}
-                  className="text-[#E50914] font-semibold hover:underline cursor-pointer ml-0.5"
+                  className="text-[#FFD233] font-bold hover:underline cursor-pointer ml-0.5"
                 >
                   Create Account
                 </button>
@@ -387,7 +387,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                     setErrorMessage("");
                     setScreen("login");
                   }}
-                  className="text-[#E50914] font-semibold hover:underline cursor-pointer ml-0.5"
+                  className="text-[#FFD233] font-bold hover:underline cursor-pointer ml-0.5"
                 >
                   Log In
                 </button>

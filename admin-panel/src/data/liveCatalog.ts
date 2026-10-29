@@ -17,7 +17,10 @@ export interface CatalogMovie {
   seriesCode?: string;
   overview: string;
   streamUrl: string;
-  episodes?: { num: number; title: string; duration: string; streamUrl: string }[];
+  tmdbId?: number;
+  logoUrl?: string;
+  cast?: { id: number; name: string; character: string; profileUrl?: string }[];
+  episodes?: { num: number; title: string; duration: string; streamUrl: string; stillUrl?: string; overview?: string }[];
 }
 
 export const FALLBACK_MOVIES: CatalogMovie[] = [
@@ -583,7 +586,57 @@ export function useLiveCatalog() {
           });
         }
       }
-      if (isMounted) setLoading(false);
+      if (isMounted) {
+        setLoading(false);
+        // 5. Background seeding queries for comprehensive category & series coverage
+        const SEED_QUERIES = [
+          'romance', 'love', 'sonic', 'panda', 'disney', 'cartoon', 'family',
+          'kari', 'karikaada', 'from', 'squid game', 'reacher', 'loki', 'vikings',
+          'tulsa king', 'money heist', 'the boys', 'wednesday', 'fallout', 'witcher', 'halo'
+        ];
+        
+        // Query in staggered batches to prevent network congestion
+        const seedBatch = async () => {
+          for (let i = 0; i < SEED_QUERIES.length; i += 3) {
+            if (!isMounted) break;
+            const chunk = SEED_QUERIES.slice(i, i + 3);
+            const chunkItems: any[] = [];
+            await Promise.all(
+              chunk.map(async (query) => {
+                try {
+                  const res = await fetch(`https://mumowatch.ai.studio/search?q=${encodeURIComponent(query)}`);
+                  if (res.ok) {
+                    const data = await res.json();
+                    if (Array.isArray(data.series)) {
+                      data.series.forEach((s: any) => {
+                        if (Array.isArray(s.episodes)) chunkItems.push(...s.episodes);
+                      });
+                    }
+                    if (Array.isArray(data.movies)) {
+                      chunkItems.push(...data.movies);
+                    }
+                  }
+                } catch (_) {}
+              })
+            );
+
+            if (isMounted && chunkItems.length > 0) {
+              const grouped = groupAndDeduplicate(chunkItems);
+              if (grouped.length > 0) {
+                setCatalog(prev => {
+                  const seen = new Set(prev.map(m => m.id));
+                  const toAdd = grouped.filter(m => !seen.has(m.id));
+                  if (toAdd.length === 0) return prev;
+                  return [...prev, ...toAdd].sort((a, b) => (parseInt(b.id, 10) || 0) - (parseInt(a.id, 10) || 0));
+                });
+              }
+            }
+          }
+        };
+
+        // Fire background seed without blocking main render
+        setTimeout(seedBatch, 400);
+      }
     });
 
     // 4. Listen to RTDB
@@ -625,11 +678,13 @@ export function useLiveCatalog() {
   const trendingMovies = useMemo(() => [...catalog].sort((a, b) => parseFloat(b.rating) - parseFloat(a.rating)), [catalog]);
   const seriesMovies = useMemo(() => catalog.filter(m => m.isTv), [catalog]);
   const actionMovies = useMemo(() => catalog.filter(m => !m.isTv && (/action/i.test(m.category) || m.genres.some(g => /action/i.test(g)))), [catalog]);
-  const dramaMovies = useMemo(() => catalog.filter(m => !m.isTv && (/drama|romance|love/i.test(m.category) || m.genres.some(g => /drama|romance|love/i.test(g)))), [catalog]);
+  const dramaMovies = useMemo(() => catalog.filter(m => !m.isTv && (/drama/i.test(m.category) || m.genres.some(g => /drama/i.test(g)))), [catalog]);
+  const romanceMovies = useMemo(() => catalog.filter(m => !m.isTv && (/romance|love/i.test(m.category) || m.genres.some(g => /romance|love/i.test(g)))), [catalog]);
   const comedyMovies = useMemo(() => catalog.filter(m => !m.isTv && (/comedy/i.test(m.category) || m.genres.some(g => /comedy/i.test(g)))), [catalog]);
   const sciFiMovies = useMemo(() => catalog.filter(m => !m.isTv && (/sci|fantasy|future/i.test(m.category) || m.genres.some(g => /sci|fantasy|future/i.test(g)))), [catalog]);
   const horrorMovies = useMemo(() => catalog.filter(m => !m.isTv && (/horror|thriller/i.test(m.category) || m.genres.some(g => /horror|thriller/i.test(g)))), [catalog]);
-  const animationMovies = useMemo(() => catalog.filter(m => !m.isTv && (/animation|anime/i.test(m.category) || m.genres.some(g => /animation|anime/i.test(g)))), [catalog]);
+  const animationMovies = useMemo(() => catalog.filter(m => !m.isTv && (/animation|anime|cartoon|panda|sonic|mario|shrek|frozen|minion/i.test(m.category + ' ' + m.title) || m.genres.some(g => /animation|anime|cartoon/i.test(g)))), [catalog]);
+  const familyMovies = useMemo(() => catalog.filter(m => !m.isTv && (/family|kids|children|disney|wonka|narnia/i.test(m.category + ' ' + m.title) || m.genres.some(g => /family|kids/i.test(g)))), [catalog]);
 
   // VJ filter helper
   const getMoviesByVj = useCallback((vjName: string) => {
@@ -684,10 +739,12 @@ export function useLiveCatalog() {
     seriesMovies,
     actionMovies,
     dramaMovies,
+    romanceMovies,
     comedyMovies,
     sciFiMovies,
     horrorMovies,
     animationMovies,
+    familyMovies,
     getMoviesByVj,
     getVjMovieCount,
     searchCatalog
