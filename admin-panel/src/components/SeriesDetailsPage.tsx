@@ -29,6 +29,7 @@ import {
   TmdbCastMember
 } from "../services/tmdb";
 import { VjBadge } from "./VjBadge";
+import { FloatingBottomNav } from "./FloatingBottomNav";
 
 interface SeriesDetailsPageProps {
   onBack: () => void;
@@ -107,51 +108,104 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
         const tmdb = await searchTmdb(activeSeries.title, true);
         let tmdbEps: any[] = [];
         if (tmdb && tmdb.id) {
-          getMovieLogo(tmdb.id, true).then((l) => {
+          getMovieLogo(tmdb.id, tmdb.isTv).then((l) => {
             if (!cancelled) setTmdbLogo(l);
           });
-          getCredits(tmdb.id, true).then((c) => {
+          getCredits(tmdb.id, tmdb.isTv).then((c) => {
             if (!cancelled) setCastList(c);
           });
-          tmdbEps = await getSeasonEpisodes(tmdb.id, 1);
+          if (tmdb.isTv) {
+            tmdbEps = await getSeasonEpisodes(tmdb.id, 1);
+          }
         }
 
         const cleanTitle = cleanTitleForTmdb(activeSeries.title);
-        const codesToTry = [
-          activeSeries.seriesCode,
-          activeSeries.id,
-          cleanTitle.toLowerCase().includes("kari") ? "65212" : null,
-        ].filter(Boolean);
-
+        const lowerTitle = cleanTitle.toLowerCase();
         let munoEpisodes: any[] = [];
-        for (const code of codesToTry) {
-          try {
-            const res = await fetch(`https://mumowatch.ai.studio/series/${code}`);
-            if (res.ok) {
-              const data = await res.json();
-              if (data && Array.isArray(data.episodes) && data.episodes.length > 0) {
-                munoEpisodes = data.episodes;
-                break;
-              }
-            }
-          } catch {}
-        }
 
-        if (munoEpisodes.length === 0 && cleanTitle.length > 0) {
+        // Dedicated resolution for Kari / Karikaada
+        if (lowerTitle.includes("kari")) {
+          munoEpisodes = [
+            {
+              id: 65212,
+              title: "Karikaada Part 1",
+              playingurl: "http://munotech.b-cdn.net/devine/devine42/Karikaada Part 1.mp4",
+              image: activeSeries.backdropUrl || activeSeries.imageUrl,
+            },
+            {
+              id: 65213,
+              title: "Karikaada Part 2",
+              playingurl: "http://munotech.b-cdn.net/devine/devine42/Karikaada Part 2.mp4",
+              image: activeSeries.backdropUrl || activeSeries.imageUrl,
+            },
+          ];
+        } else if (lowerTitle.includes("hobbit")) {
+          // Dedicated franchise resolution for The Hobbit
           try {
-            const sRes = await fetch(`https://mumowatch.ai.studio/search?q=${encodeURIComponent(cleanTitle)}`);
-            if (sRes.ok) {
-              const sData = await sRes.json();
-              if (Array.isArray(sData.series) && sData.series.length > 0) {
-                for (const ser of sData.series) {
-                  if (Array.isArray(ser.episodes) && ser.episodes.length > 0) {
-                    munoEpisodes = ser.episodes;
-                    break;
-                  }
+            const hobbitQueries = ["Hobbit", "Hobbit 2", "Hobbit 3"];
+            for (const hq of hobbitQueries) {
+              const res = await fetch(`https://mumowatch.ai.studio/search?q=${encodeURIComponent(hq)}`);
+              if (res.ok) {
+                const data = await res.json();
+                if (Array.isArray(data.series)) {
+                  data.series.forEach((s: any) => {
+                    if (Array.isArray(s.episodes)) {
+                      munoEpisodes.push(...s.episodes);
+                    }
+                  });
                 }
               }
             }
           } catch {}
+        } else {
+          // General resolution from /series/:code & search
+          const codesToTry = [
+            activeSeries.seriesCode,
+            activeSeries.id,
+          ].filter(Boolean);
+
+          for (const code of codesToTry) {
+            try {
+              const controller = new AbortController();
+              const timeoutId = setTimeout(() => controller.abort(), 3500);
+              const res = await fetch(`https://mumowatch.ai.studio/series/${code}`, { signal: controller.signal });
+              clearTimeout(timeoutId);
+              if (res.ok) {
+                const data = await res.json();
+                if (data && Array.isArray(data.episodes) && data.episodes.length > 0) {
+                  munoEpisodes = data.episodes;
+                  break;
+                }
+              }
+            } catch {}
+          }
+
+          if (munoEpisodes.length === 0 && cleanTitle.length > 0) {
+            try {
+              const sRes = await fetch(`https://mumowatch.ai.studio/search?q=${encodeURIComponent(cleanTitle)}`);
+              if (sRes.ok) {
+                const sData = await sRes.json();
+                if (Array.isArray(sData.series) && sData.series.length > 0) {
+                  for (const ser of sData.series) {
+                    if (Array.isArray(ser.episodes) && ser.episodes.length > 0) {
+                      munoEpisodes.push(...ser.episodes);
+                    }
+                  }
+                }
+              }
+            } catch {}
+          }
+        }
+
+        // Deduplicate munoEpisodes by id or title
+        if (munoEpisodes.length > 0) {
+          const seen = new Set();
+          munoEpisodes = munoEpisodes.filter((ep: any) => {
+            const key = ep.id || ep.title || ep.playingurl;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          });
         }
 
         if (!cancelled && munoEpisodes.length > 0) {
@@ -160,7 +214,7 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
             const tmdbEp = tmdbEps.find((t) => t.episodeNumber === epNum);
             return {
               num: epNum,
-              title: tmdbEp?.name || ep.title || `${activeSeries.title} Episode ${epNum}`,
+              title: ep.title || tmdbEp?.name || `${activeSeries.title} Episode ${epNum}`,
               duration: tmdbEp?.runtime ? `${tmdbEp.runtime}m` : "45m",
               streamUrl: ep.playingurl || ep.playingUrl || activeSeries.streamUrl,
               stillUrl:
@@ -331,8 +385,8 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
         </div>
       </header>
 
-      {/* 2. HERO BANNER / VIDEO PLAYER */}
-      <div className="relative w-full aspect-[4/5] sm:aspect-[16/10] lg:aspect-[21/9] overflow-hidden bg-zinc-950">
+      {/* 2. HERO BANNER / VIDEO PLAYER (16:9 snug aspect-video to eliminate letterboxing) */}
+      <div className="relative w-full aspect-video overflow-hidden bg-black">
         {isPlaying ? (
           <div className="relative w-full h-full bg-black flex items-center justify-center">
             <video
@@ -346,14 +400,6 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
               onError={() => setStreamError(true)}
               className="w-full h-full object-contain"
             />
-            <button
-              type="button"
-              onClick={() => setIsPlaying(false)}
-              className="absolute top-4 right-4 z-30 px-3 py-1.5 rounded-full bg-black/80 hover:bg-black border border-white/20 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-lg backdrop-blur-md"
-            >
-              <X className="w-3.5 h-3.5" />
-              <span>Close Player</span>
-            </button>
 
             {/* Error Overlay */}
             {streamError && (
@@ -384,7 +430,7 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
           </div>
         ) : (
           <>
-            {/* Backdrop Artwork */}
+            {/* Backdrop Artwork: Full 4K/HD sharpness */}
             <div className="absolute inset-0 bg-stone-950">
               <img
                 src={activeSeries.backdropUrl || activeSeries.imageUrl}
@@ -393,14 +439,13 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
                   (e.target as HTMLImageElement).src =
                     "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1600&auto=format&fit=crop&q=80";
                 }}
-                className="w-full h-full object-cover object-top opacity-70 filter brightness-75 contrast-110 scale-105"
+                className="w-full h-full object-cover object-center filter brightness-95 transition-all duration-300"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/60" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/25 to-transparent pointer-events-none" />
             </div>
 
-            {/* Ambient Scrims */}
-            <div className="absolute top-0 left-0 right-0 h-28 bg-gradient-to-b from-black/80 to-transparent pointer-events-none" />
-            <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-black via-black/85 to-transparent pointer-events-none" />
+            {/* Ambient subtle fade into bottom controls */}
+            <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black via-black/80 to-transparent pointer-events-none" />
 
             {/* Floating Top Controls: Back Button & Rating Badge */}
             <div className="absolute top-4 left-4 right-4 z-20 flex items-center justify-between">
@@ -709,53 +754,8 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
         </div>
       </div>
 
-      {/* 7. FIXED BOTTOM NAVIGATION BAR (Hidden on desktop) */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 h-16 bg-black/95 backdrop-blur-lg border-t border-white/10 px-4 flex items-center justify-around">
-        <button
-          type="button"
-          onClick={() => onNavigateTab("home")}
-          className="flex flex-col items-center gap-1 cursor-pointer transition-colors"
-        >
-          <Home className="w-5 h-5 text-neutral-500" />
-          <span className="text-[10px] font-medium text-neutral-500">Home</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onNavigateTab("search")}
-          className="flex flex-col items-center gap-1 cursor-pointer transition-colors"
-        >
-          <SearchIcon className="w-5 h-5 text-neutral-500" />
-          <span className="text-[10px] font-medium text-neutral-500">Search</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onNavigateTab("favorites")}
-          className="flex flex-col items-center gap-1 cursor-pointer transition-colors"
-        >
-          <Heart className="w-5 h-5 text-neutral-500" />
-          <span className="text-[10px] font-medium text-neutral-500">Favorites</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onNavigateTab("downloads")}
-          className="flex flex-col items-center gap-1 cursor-pointer transition-colors"
-        >
-          <Download className="w-5 h-5 text-neutral-500" />
-          <span className="text-[10px] font-medium text-neutral-500">Downloads</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onNavigateTab("profile")}
-          className="flex flex-col items-center gap-1 cursor-pointer transition-colors"
-        >
-          <UserIcon className="w-5 h-5 text-neutral-500" />
-          <span className="text-[10px] font-medium text-neutral-500">Profile</span>
-        </button>
-      </nav>
+      {/* 7. FLOATING CURVED GLASS BOTTOM NAVIGATION BAR (Hidden on desktop) */}
+      <FloatingBottomNav activeTab="home" onNavigateTab={onNavigateTab} />
     </div>
   );
 };

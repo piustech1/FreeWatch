@@ -210,24 +210,23 @@ export async function getMovieLogo(tmdbId: number, isTv: boolean = false): Promi
   }
 
   // Fallback: If not found in primary endpoint, try the other
-  if (!isTv) {
-    try {
-      const tvUrl = `${TMDB_BASE_URL}/tv/${tmdbId}/images?api_key=${TMDB_API_KEY}`;
-      const res = await fetch(tvUrl);
-      if (res.ok) {
-        const data = await res.json();
-        const logos = data.logos as any[] | undefined;
-        if (logos && logos.length > 0) {
-          const enLogo = logos.find((l) => l.iso_639_1 === "en") || logos[0];
-          if (enLogo?.file_path) {
-            const logoUrl = `${TMDB_IMAGE_SIZES.logoW500}${enLogo.file_path}`;
-            logoCache.set(cacheKey, logoUrl);
-            return logoUrl;
-          }
+  const altEndpoint = isTv ? "movie" : "tv";
+  try {
+    const altUrl = `${TMDB_BASE_URL}/${altEndpoint}/${tmdbId}/images?api_key=${TMDB_API_KEY}`;
+    const res = await fetch(altUrl);
+    if (res.ok) {
+      const data = await res.json();
+      const logos = data.logos as any[] | undefined;
+      if (logos && logos.length > 0) {
+        const enLogo = logos.find((l) => l.iso_639_1 === "en") || logos[0];
+        if (enLogo?.file_path) {
+          const logoUrl = `${TMDB_IMAGE_SIZES.logoW500}${enLogo.file_path}`;
+          logoCache.set(cacheKey, logoUrl);
+          return logoUrl;
         }
       }
-    } catch (_) {}
-  }
+    }
+  } catch (_) {}
 
   logoCache.set(cacheKey, null);
   return null;
@@ -254,12 +253,34 @@ export async function getCredits(tmdbId: number, isTv: boolean = false): Promise
         character: c.character || "Cast",
         profileUrl: c.profile_path ? `${TMDB_IMAGE_SIZES.profileW185}${c.profile_path}` : undefined,
       }));
-      creditsCache.set(cacheKey, cast);
-      return cast;
+      if (cast.length > 0) {
+        creditsCache.set(cacheKey, cast);
+        return cast;
+      }
     }
   } catch (e) {
     console.warn("[TMDB] Credits fetch failed for id:", tmdbId, e);
   }
+
+  // Fallback: Try reciprocal endpoint if primary had no cast
+  const altEndpoint = isTv ? "movie" : "tv";
+  try {
+    const altUrl = `${TMDB_BASE_URL}/${altEndpoint}/${tmdbId}/credits?api_key=${TMDB_API_KEY}`;
+    const altRes = await fetch(altUrl);
+    if (altRes.ok) {
+      const data = await altRes.json();
+      const cast = (data.cast || []).slice(0, 12).map((c: any) => ({
+        id: c.id,
+        name: c.name,
+        character: c.character || "Cast",
+        profileUrl: c.profile_path ? `${TMDB_IMAGE_SIZES.profileW185}${c.profile_path}` : undefined,
+      }));
+      if (cast.length > 0) {
+        creditsCache.set(cacheKey, cast);
+        return cast;
+      }
+    }
+  } catch (_) {}
 
   creditsCache.set(cacheKey, []);
   return [];

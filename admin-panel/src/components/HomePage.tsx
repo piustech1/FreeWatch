@@ -26,6 +26,7 @@ import { AvatarGraphic } from "./AvatarGraphic";
 import { UserProfileData } from "./EditProfileModal";
 import { searchTmdb, getMovieLogo } from "../services/tmdb";
 import { VjBadge } from "./VjBadge";
+import { FloatingBottomNav } from "./FloatingBottomNav";
 
 interface HomePageProps {
   userProfile?: UserProfileData;
@@ -41,10 +42,11 @@ interface HomePageProps {
 
 export const FreeWatchLogo: React.FC<{ className?: string }> = ({ className = "" }) => {
   return (
-    <div className={`font-black tracking-tight inline-flex items-center select-none text-[22px] leading-none ${className}`}>
-      <span className="text-white">FREE</span>
-      <span className="text-[#00E676]">WATCH</span>
-    </div>
+    <img
+      src="/logo_full.png"
+      alt="FreeWatch"
+      className={`h-7 sm:h-8 w-auto object-contain select-none ${className}`}
+    />
   );
 };
 
@@ -208,6 +210,14 @@ export const HomePage: React.FC<HomePageProps> = ({
       </div>
     );
   };
+
+  const renderMovieCardSkeleton = (idx: number) => (
+    <div key={`skel-${idx}`} className="w-[124px] sm:w-[138px] md:w-[148px] shrink-0 animate-pulse select-none">
+      <div className="aspect-[2/3] rounded-2xl bg-neutral-900/90 border border-white/5 relative overflow-hidden" />
+      <div className="mt-2 h-3 w-4/5 rounded bg-white/10" />
+      <div className="mt-1 h-2.5 w-1/2 rounded bg-white/5" />
+    </div>
+  );
 
   return (
     <div className="w-full min-h-screen bg-black text-white font-sans flex flex-col pb-24 select-none">
@@ -670,7 +680,9 @@ export const HomePage: React.FC<HomePageProps> = ({
         </div>
 
         <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
-          {latestMovies.slice(0, 15).map(renderMovieCard)}
+          {loading && latestMovies.length === 0
+            ? Array.from({ length: 6 }).map((_, i) => renderMovieCardSkeleton(i))
+            : latestMovies.slice(0, 15).map(renderMovieCard)}
         </div>
       </section>
 
@@ -691,7 +703,9 @@ export const HomePage: React.FC<HomePageProps> = ({
         </div>
 
         <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
-          {trendingMovies.slice(0, 15).map(renderMovieCard)}
+          {loading && trendingMovies.length === 0
+            ? Array.from({ length: 6 }).map((_, i) => renderMovieCardSkeleton(i))
+            : trendingMovies.slice(0, 15).map(renderMovieCard)}
         </div>
       </section>
 
@@ -712,7 +726,9 @@ export const HomePage: React.FC<HomePageProps> = ({
         </div>
 
         <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
-          {(seriesMovies.length > 0 ? seriesMovies : catalog.filter((m) => m.isTv)).slice(0, 15).map(renderMovieCard)}
+          {loading && seriesMovies.length === 0
+            ? Array.from({ length: 6 }).map((_, i) => renderMovieCardSkeleton(i))
+            : (seriesMovies.length > 0 ? seriesMovies : catalog.filter((m) => m.isTv)).slice(0, 15).map(renderMovieCard)}
         </div>
       </section>
 
@@ -733,7 +749,9 @@ export const HomePage: React.FC<HomePageProps> = ({
         </div>
 
         <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
-          {(actionMovies.length > 0 ? actionMovies : latestMovies.filter((m) => !m.isTv)).slice(0, 15).map(renderMovieCard)}
+          {loading && actionMovies.length === 0
+            ? Array.from({ length: 6 }).map((_, i) => renderMovieCardSkeleton(i))
+            : (actionMovies.length > 0 ? actionMovies : latestMovies.filter((m) => !m.isTv)).slice(0, 15).map(renderMovieCard)}
         </div>
       </section>
 
@@ -754,7 +772,9 @@ export const HomePage: React.FC<HomePageProps> = ({
         </div>
 
         <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
-          {(sciFiMovies.length > 0 ? sciFiMovies : latestMovies.filter((m) => !m.isTv).slice(2)).slice(0, 15).map(renderMovieCard)}
+          {loading && sciFiMovies.length === 0
+            ? Array.from({ length: 6 }).map((_, i) => renderMovieCardSkeleton(i))
+            : (sciFiMovies.length > 0 ? sciFiMovies : latestMovies.filter((m) => !m.isTv).slice(2)).slice(0, 15).map(renderMovieCard)}
         </div>
       </section>
 
@@ -775,7 +795,9 @@ export const HomePage: React.FC<HomePageProps> = ({
         </div>
 
         <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
-          {(romanceMovies.length > 0 ? romanceMovies : dramaMovies.length > 0 ? dramaMovies : latestMovies.slice(4)).slice(0, 15).map(renderMovieCard)}
+          {loading && romanceMovies.length === 0
+            ? Array.from({ length: 6 }).map((_, i) => renderMovieCardSkeleton(i))
+            : (romanceMovies.length > 0 ? romanceMovies : dramaMovies.length > 0 ? dramaMovies : latestMovies.slice(4)).slice(0, 15).map(renderMovieCard)}
         </div>
       </section>
 
@@ -796,7 +818,9 @@ export const HomePage: React.FC<HomePageProps> = ({
         </div>
 
         <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
-          {(animationMovies.length > 0 ? animationMovies : latestMovies.filter((m) => m.category.toLowerCase().includes("anim") || m.title.toLowerCase().includes("sonic") || m.title.toLowerCase().includes("panda"))).slice(0, 15).map(renderMovieCard)}
+          {loading && animationMovies.length === 0
+            ? Array.from({ length: 6 }).map((_, i) => renderMovieCardSkeleton(i))
+            : (animationMovies.length > 0 ? animationMovies : latestMovies.filter((m) => m.category.toLowerCase().includes("anim") || m.title.toLowerCase().includes("panda") || m.title.toLowerCase().includes("sonic"))).slice(0, 15).map(renderMovieCard)}
         </div>
       </section>
 
@@ -817,7 +841,9 @@ export const HomePage: React.FC<HomePageProps> = ({
         </div>
 
         <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
-          {(familyMovies.length > 0 ? familyMovies : comedyMovies.length > 0 ? comedyMovies : latestMovies.slice(2)).slice(0, 15).map(renderMovieCard)}
+          {loading && familyMovies.length === 0
+            ? Array.from({ length: 6 }).map((_, i) => renderMovieCardSkeleton(i))
+            : (familyMovies.length > 0 ? familyMovies : comedyMovies.length > 0 ? comedyMovies : latestMovies.slice(2)).slice(0, 15).map(renderMovieCard)}
         </div>
       </section>
 
@@ -838,67 +864,14 @@ export const HomePage: React.FC<HomePageProps> = ({
         </div>
 
         <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
-          {(horrorMovies.length > 0 ? horrorMovies : latestMovies.filter((m) => !m.isTv).slice(1)).slice(0, 15).map(renderMovieCard)}
+          {loading && horrorMovies.length === 0
+            ? Array.from({ length: 6 }).map((_, i) => renderMovieCardSkeleton(i))
+            : (horrorMovies.length > 0 ? horrorMovies : latestMovies.filter((m) => !m.isTv).slice(1)).slice(0, 15).map(renderMovieCard)}
         </div>
       </section>
 
-      {/* 11. FIXED BOTTOM NAVIGATION BAR (Hidden on desktop) */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 h-16 bg-black/95 backdrop-blur-lg border-t border-white/10 px-4 flex items-center justify-around">
-        <button
-          type="button"
-          onClick={() => handleTabClick("home")}
-          className="flex flex-col items-center gap-1 cursor-pointer transition-colors"
-        >
-          <Home className={`w-5 h-5 ${activeTab === "home" ? "text-[#00E676]" : "text-neutral-500"}`} />
-          <span className={`text-[10px] font-medium ${activeTab === "home" ? "text-[#00E676]" : "text-neutral-500"}`}>
-            Home
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => handleTabClick("search")}
-          className="flex flex-col items-center gap-1 cursor-pointer transition-colors"
-        >
-          <Search className={`w-5 h-5 ${activeTab === "search" ? "text-[#00E676]" : "text-neutral-500"}`} />
-          <span className={`text-[10px] font-medium ${activeTab === "search" ? "text-[#00E676]" : "text-neutral-500"}`}>
-            Search
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => handleTabClick("favorites")}
-          className="flex flex-col items-center gap-1 cursor-pointer transition-colors"
-        >
-          <Heart className={`w-5 h-5 ${activeTab === "favorites" ? "text-[#00E676]" : "text-neutral-500"}`} />
-          <span className={`text-[10px] font-medium ${activeTab === "favorites" ? "text-[#00E676]" : "text-neutral-500"}`}>
-            Favorites
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => handleTabClick("downloads")}
-          className="flex flex-col items-center gap-1 cursor-pointer transition-colors"
-        >
-          <Download className={`w-5 h-5 ${activeTab === "downloads" ? "text-[#00E676]" : "text-neutral-500"}`} />
-          <span className={`text-[10px] font-medium ${activeTab === "downloads" ? "text-[#00E676]" : "text-neutral-500"}`}>
-            Downloads
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => handleTabClick("profile")}
-          className="flex flex-col items-center gap-1 cursor-pointer transition-colors"
-        >
-          <UserIcon className={`w-5 h-5 ${activeTab === "profile" ? "text-[#00E676]" : "text-neutral-500"}`} />
-          <span className={`text-[10px] font-medium ${activeTab === "profile" ? "text-[#00E676]" : "text-neutral-500"}`}>
-            Profile
-          </span>
-        </button>
-      </nav>
+      {/* 13. FLOATING CURVED GLASS BOTTOM NAVIGATION BAR (Hidden on desktop) */}
+      <FloatingBottomNav activeTab={activeTab} onNavigateTab={handleTabClick} />
     </div>
   );
 };

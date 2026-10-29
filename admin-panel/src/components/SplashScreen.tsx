@@ -9,12 +9,13 @@ export const FWLogo: React.FC<{ size?: "sm" | "md" | "lg"; className?: string }>
   size = "md",
   className = "",
 }) => {
-  const sizeClass = size === "sm" ? "text-[20px]" : size === "lg" ? "text-[32px]" : "text-[26px]";
+  const hClass = size === "sm" ? "h-8" : size === "lg" ? "h-14" : "h-11";
   return (
-    <div className={`font-black tracking-tighter inline-flex items-center select-none ${sizeClass} leading-none ${className}`}>
-      <span className="text-white">F</span>
-      <span className="text-[#00E676]">W</span>
-    </div>
+    <img
+      src="/logo_initials.png"
+      alt="FW"
+      className={`${hClass} w-auto object-contain select-none ${className}`}
+    />
   );
 };
 
@@ -22,16 +23,16 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onGetStarted, onLogI
   const [activeSlide, setActiveSlide] = useState(0);
 
   return (
-    <div className="relative w-full min-h-screen bg-black flex flex-col justify-between overflow-hidden select-none font-sans">
+    <div className="relative w-full h-screen max-h-screen bg-black flex flex-col justify-between overflow-hidden select-none font-sans">
       {/* Background Video Layer */}
-      <div className="absolute inset-0 z-0 overflow-hidden bg-black">
+      <div className="absolute inset-0 z-0 overflow-hidden bg-black pointer-events-none">
         <video
           autoPlay
           loop
           muted
           playsInline
-          className="absolute inset-0 w-full h-full object-cover filter brightness-[0.4] contrast-125 scale-105"
-          src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4"
+          className="absolute inset-0 w-full h-full object-cover filter brightness-[0.45] contrast-125 scale-105"
+          src="/videos/onboarding_bg.mp4"
         />
 
         {/* Ambient Dark Gradient Overlays */}
@@ -41,9 +42,9 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onGetStarted, onLogI
       </div>
 
       {/* Top Bar: FW on left, Log In on right */}
-      <header className="relative z-10 w-full max-w-6xl mx-auto flex items-center justify-between px-6 pt-10 sm:pt-12">
+      <header className="relative z-10 w-full max-w-6xl mx-auto flex items-center justify-between px-6 pt-8 sm:pt-10">
         <div className="flex items-center gap-3">
-          <FWLogo />
+          <FWLogo size="md" />
           <div className="hidden lg:flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-bold text-neutral-300">
             <span className="w-2 h-2 rounded-full bg-[#00E676] animate-pulse" />
             <span>PC Web &amp; TV Cinema Edition</span>
@@ -59,7 +60,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onGetStarted, onLogI
       </header>
 
       {/* Main Content Area: Responsive split layout on PC */}
-      <div className="relative z-10 w-full max-w-6xl mx-auto px-6 py-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-10">
+      <div className="relative z-10 w-full max-w-6xl mx-auto px-6 py-4 my-auto flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 lg:gap-10">
         {/* Left Column (Desktop Showcase) */}
         <div className="hidden lg:flex flex-col space-y-4 max-w-lg">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#581c87]/60 border border-purple-400/30 text-purple-200 text-xs font-extrabold tracking-wider uppercase">

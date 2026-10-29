@@ -12,9 +12,7 @@ import {
   MessageSquare,
   Sparkles,
   Info,
-  Home,
   Heart,
-  User as UserIcon,
   Star,
 } from "lucide-react";
 import { FreeWatchLogo } from "./HomePage";
@@ -22,6 +20,7 @@ import { EditProfileModal, UserProfileData } from "./EditProfileModal";
 import { AvatarGraphic } from "./AvatarGraphic";
 import { VjBadge } from "./VjBadge";
 import { CatalogMovie } from "../data/liveCatalog";
+import { FloatingBottomNav } from "./FloatingBottomNav";
 
 interface ProfilePageProps {
   onNavigateTab: (tab: "home" | "search" | "favorites" | "downloads" | "profile") => void;
@@ -440,53 +439,8 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
         </div>
       </div>
 
-      {/* 8. FIXED BOTTOM NAVIGATION BAR (Profile Active - Hidden on desktop) */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 h-16 bg-black/95 backdrop-blur-lg border-t border-white/10 px-4 flex items-center justify-around">
-        <button
-          type="button"
-          onClick={() => onNavigateTab("home")}
-          className="flex flex-col items-center gap-1 cursor-pointer transition-colors"
-        >
-          <Home className="w-5 h-5 text-neutral-500" />
-          <span className="text-[10px] font-medium text-neutral-500">Home</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onNavigateTab("search")}
-          className="flex flex-col items-center gap-1 cursor-pointer transition-colors"
-        >
-          <SearchIcon className="w-5 h-5 text-neutral-500" />
-          <span className="text-[10px] font-medium text-neutral-500">Search</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onNavigateTab("favorites")}
-          className="flex flex-col items-center gap-1 cursor-pointer transition-colors"
-        >
-          <Heart className="w-5 h-5 text-neutral-500" />
-          <span className="text-[10px] font-medium text-neutral-500">Favorites</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onNavigateTab("downloads")}
-          className="flex flex-col items-center gap-1 cursor-pointer transition-colors"
-        >
-          <Download className="w-5 h-5 text-neutral-500" />
-          <span className="text-[10px] font-medium text-neutral-500">Downloads</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onNavigateTab("profile")}
-          className="flex flex-col items-center gap-1 cursor-pointer transition-colors"
-        >
-          <UserIcon className="w-5 h-5 text-[#00E676]" />
-          <span className="text-[10px] font-medium text-[#00E676]">Profile</span>
-        </button>
-      </nav>
+      {/* 8. FLOATING CURVED BOTTOM NAVIGATION PILL */}
+      <FloatingBottomNav activeTab="profile" onNavigateTab={onNavigateTab} />
 
       {/* Edit Profile Bottom Sheet Modal matching Screenshot 1 */}
       <EditProfileModal

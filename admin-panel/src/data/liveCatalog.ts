@@ -160,6 +160,51 @@ export const FALLBACK_MOVIES: CatalogMovie[] = [
     streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
   },
   {
+    id: "68001",
+    title: "Purple Hearts",
+    vj: "VJ Junior",
+    category: "Romance",
+    genres: ["Romance", "Drama", "Music"],
+    imageUrl: "https://image.tmdb.org/t/p/w500/5qHoazZiaLe7oFBok7XlUhg96f2.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/w1280/5qHoazZiaLe7oFBok7XlUhg96f2.jpg",
+    rating: "8.8",
+    year: "2024",
+    duration: "2h 02m",
+    isTv: false,
+    overview: "An aspiring musician and a troubled marine agree to marry solely for military benefits, but tragedy soon turns their fake love into reality. Translated by VJ Junior.",
+    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4"
+  },
+  {
+    id: "68002",
+    title: "The Idea of You",
+    vj: "VJ Emmy",
+    category: "Romance",
+    genres: ["Romance", "Comedy", "Drama"],
+    imageUrl: "https://image.tmdb.org/t/p/w500/q6y0Go1tsGEsmtFryDOJo3dEmqu.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/w1280/q6y0Go1tsGEsmtFryDOJo3dEmqu.jpg",
+    rating: "8.7",
+    year: "2024",
+    duration: "1h 55m",
+    isTv: false,
+    overview: "A 40-year-old single mother begins an unexpected romance with the 24-year-old lead singer of the hottest boy band on the planet. Voice-over by VJ Emmy.",
+    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4"
+  },
+  {
+    id: "68003",
+    title: "Through My Window",
+    vj: "VJ Jingo",
+    category: "Romance",
+    genres: ["Romance", "Drama"],
+    imageUrl: "https://image.tmdb.org/t/p/w500/kDp1vUBnMpe8ak4rjgl3cLELqjU.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/w1280/kDp1vUBnMpe8ak4rjgl3cLELqjU.jpg",
+    rating: "8.5",
+    year: "2024",
+    duration: "1h 53m",
+    isTv: false,
+    overview: "Raquel's long-standing crush on her next-door neighbor turns into something more when he starts developing feelings for her, despite his family's objections. Translated by VJ Jingo.",
+    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+  },
+  {
     id: "67098",
     title: "Kifeesi",
     vj: "VJ Emmy",
@@ -590,7 +635,7 @@ export function useLiveCatalog() {
         setLoading(false);
         // 5. Background seeding queries for comprehensive category & series coverage
         const SEED_QUERIES = [
-          'romance', 'love', 'sonic', 'panda', 'disney', 'cartoon', 'family',
+          'romance', 'love', 'hobbit', 'the hobbit', 'sonic', 'panda', 'disney', 'cartoon', 'family',
           'kari', 'karikaada', 'from', 'squid game', 'reacher', 'loki', 'vikings',
           'tulsa king', 'money heist', 'the boys', 'wednesday', 'fallout', 'witcher', 'halo'
         ];

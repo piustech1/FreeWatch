@@ -26,6 +26,7 @@ import {
   TmdbCastMember
 } from "../services/tmdb";
 import { VjBadge } from "./VjBadge";
+import { FloatingBottomNav } from "./FloatingBottomNav";
 
 interface MovieDetailsPageProps {
   onBack: () => void;
@@ -92,12 +93,12 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
     let cancelled = false;
     async function loadTmdbData() {
       try {
-        const tmdb = await searchTmdb(activeMovie.title, false);
+        const tmdb = await searchTmdb(activeMovie.title, activeMovie.isTv);
         if (!cancelled && tmdb && tmdb.id) {
-          getMovieLogo(tmdb.id, false).then((l) => {
+          getMovieLogo(tmdb.id, tmdb.isTv).then((l) => {
             if (!cancelled) setTmdbLogo(l);
           });
-          getCredits(tmdb.id, false).then((c) => {
+          getCredits(tmdb.id, tmdb.isTv).then((c) => {
             if (!cancelled) setCastList(c);
           });
         }
@@ -228,8 +229,8 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
         </div>
       </header>
 
-      {/* 2. HERO BANNER / VIDEO PLAYER */}
-      <div className="relative w-full aspect-[4/5] sm:aspect-[16/10] lg:aspect-[21/9] overflow-hidden bg-stone-950">
+      {/* 2. HERO BANNER / VIDEO PLAYER (16:9 snug aspect-video to eliminate all black letterbox bars) */}
+      <div className="relative w-full aspect-video overflow-hidden bg-black">
         {isPlaying ? (
           <div className="relative w-full h-full bg-black flex items-center justify-center">
             <video
@@ -242,14 +243,6 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
               onError={() => setStreamError(true)}
               className="w-full h-full object-contain"
             />
-            <button
-              type="button"
-              onClick={() => setIsPlaying(false)}
-              className="absolute top-4 right-4 z-30 px-3 py-1.5 rounded-full bg-black/80 hover:bg-black border border-white/20 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-lg backdrop-blur-md"
-            >
-              <X className="w-3.5 h-3.5" />
-              <span>Close Player</span>
-            </button>
 
             {/* Error Overlay */}
             {streamError && (
@@ -280,7 +273,7 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
           </div>
         ) : (
           <>
-            {/* Backdrop Artwork */}
+            {/* Backdrop Artwork: Full 4K/HD sharpness, zero muddy dimming */}
             <div className="absolute inset-0 bg-stone-950">
               <img
                 src={activeMovie.backdropUrl || activeMovie.imageUrl}
@@ -289,14 +282,13 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
                   (e.target as HTMLImageElement).src =
                     "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1600&auto=format&fit=crop&q=80";
                 }}
-                className="w-full h-full object-cover object-top opacity-70 filter brightness-75 contrast-110 scale-105"
+                className="w-full h-full object-cover object-center filter brightness-95 transition-all duration-300"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/60" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/25 to-transparent pointer-events-none" />
             </div>
 
-            {/* Ambient Scrims */}
-            <div className="absolute top-0 left-0 right-0 h-28 bg-gradient-to-b from-black/80 to-transparent pointer-events-none" />
-            <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-black via-black/85 to-transparent pointer-events-none" />
+            {/* Ambient subtle fade into bottom controls */}
+            <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black via-black/80 to-transparent pointer-events-none" />
 
             {/* Floating Top Controls: Back Button & Rating Badge */}
             <div className="absolute top-4 left-4 right-4 z-20 flex items-center justify-between">
@@ -512,53 +504,8 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
         </div>
       </div>
 
-      {/* 6. FIXED BOTTOM NAVIGATION BAR (Hidden on desktop) */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 h-16 bg-black/95 backdrop-blur-lg border-t border-white/10 px-4 flex items-center justify-around">
-        <button
-          type="button"
-          onClick={() => onNavigateTab("home")}
-          className="flex flex-col items-center gap-1 cursor-pointer transition-colors"
-        >
-          <Home className="w-5 h-5 text-neutral-500" />
-          <span className="text-[10px] font-medium text-neutral-500">Home</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onNavigateTab("search")}
-          className="flex flex-col items-center gap-1 cursor-pointer transition-colors"
-        >
-          <SearchIcon className="w-5 h-5 text-neutral-500" />
-          <span className="text-[10px] font-medium text-neutral-500">Search</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onNavigateTab("favorites")}
-          className="flex flex-col items-center gap-1 cursor-pointer transition-colors"
-        >
-          <Heart className="w-5 h-5 text-neutral-500" />
-          <span className="text-[10px] font-medium text-neutral-500">Favorites</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onNavigateTab("downloads")}
-          className="flex flex-col items-center gap-1 cursor-pointer transition-colors"
-        >
-          <Download className="w-5 h-5 text-neutral-500" />
-          <span className="text-[10px] font-medium text-neutral-500">Downloads</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onNavigateTab("profile")}
-          className="flex flex-col items-center gap-1 cursor-pointer transition-colors"
-        >
-          <UserIcon className="w-5 h-5 text-neutral-500" />
-          <span className="text-[10px] font-medium text-neutral-500">Profile</span>
-        </button>
-      </nav>
+      {/* 6. FLOATING CURVED GLASS BOTTOM NAVIGATION BAR (Hidden on desktop) */}
+      <FloatingBottomNav activeTab="home" onNavigateTab={onNavigateTab} />
     </div>
   );
 };

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import {
   Search as SearchIcon,
+  SearchX,
   Bell,
   ArrowLeft,
   SlidersHorizontal,
@@ -23,6 +24,7 @@ import { ALL_VJS } from "./AvailableVJsPage";
 import { AvatarGraphic } from "./AvatarGraphic";
 import { UserProfileData } from "./EditProfileModal";
 import { VjBadge } from "./VjBadge";
+import { FloatingBottomNav } from "./FloatingBottomNav";
 
 export type SearchViewState = "categories" | "results" | "filters";
 
@@ -35,26 +37,27 @@ interface SearchPageProps {
   onNavigateToNotifications?: () => void;
 }
 
-const CATEGORIES_LIST = [
-  "Action",
-  "Adventure",
-  "Animation",
-  "Comedy",
-  "Crime",
-  "Documentary",
-  "Drama",
-  "Family",
-  "Fantasy",
-  "History",
-  "Horror",
-  "Music",
-  "Mystery",
-  "Romance",
-  "Science Fiction",
-  "TV Series",
-  "Thriller",
-  "War",
-  "Western",
+export const FOLDER_CATEGORIES = [
+  { title: "Action", poster: "https://image.tmdb.org/t/p/w500/bjiS5ipwxb9JFy3XRRN4OAilSeX.jpg", query: "Action" },
+  { title: "Horror", poster: "https://image.tmdb.org/t/p/w500/bXi6IQiCuHDv0Xsp7Na5966WDFG.jpg", query: "Horror" },
+  { title: "Series", poster: "https://image.tmdb.org/t/p/w500/dDlG1v7kWqFfg1k5pW6bEa4Xv34.jpg", query: "Series" },
+  { title: "Adventure", poster: "https://image.tmdb.org/t/p/w500/8b8R8l88Qje9dn9OE8PY05Nxl1X.jpg", query: "Adventure" },
+  { title: "Love Story", poster: "https://image.tmdb.org/t/p/w500/q6y0Go1tsGEsmtFryDOJo3dEmqu.jpg", query: "Love Story" },
+  { title: "Comedy", poster: "https://image.tmdb.org/t/p/w500/iuFNMS8U5cb6xfzi51Dbkovj7vM.jpg", query: "Comedy" },
+  { title: "Crime", poster: "https://image.tmdb.org/t/p/w500/kKGQzkTyMbAlQUTvBhZ1nFEJ75U.jpg", query: "Crime" },
+  { title: "Family", poster: "https://image.tmdb.org/t/p/w500/kDp1vUBnMpe8ak4rjgl3cLELqjU.jpg", query: "Family" },
+  { title: "Sci FI", poster: "https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg", query: "Sci FI" },
+  { title: "Romance", poster: "https://image.tmdb.org/t/p/w500/5qHoazZiaLe7oFBok7XlUhg96f2.jpg", query: "Romance" },
+  { title: "Kungu Fu", poster: "https://image.tmdb.org/t/p/w500/qA5kPY0debq59v9H6eFv8d0yI6I.jpg", query: "Kungu Fu" },
+  { title: "Drama", poster: "https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg", query: "Drama" },
+  { title: "Sport", poster: "https://image.tmdb.org/t/p/w500/H6vke7zGiuL7z75m1N6T5gS4Vp.jpg", query: "Sport" },
+  { title: "Thriller", poster: "https://image.tmdb.org/t/p/w500/6MKr3KgOLmzOP6MSuZERO41Lpkt.jpg", query: "Thriller" },
+  { title: "Animation", poster: "https://image.tmdb.org/t/p/w500/vpnVM9B6NMmQpWeZvzLvDESb2QY.jpg", query: "Animation" },
+  { title: "Korean", poster: "https://image.tmdb.org/t/p/w500/7IiTTgloJzvGI1TAYymCfbfl3vT.jpg", query: "Korean" },
+  { title: "Filipino", poster: "https://image.tmdb.org/t/p/w500/r2J02Z2OpNTctfOSN2Ydgii51I3.jpg", query: "Filipino" },
+  { title: "Indian", poster: "https://image.tmdb.org/t/p/w500/kdPMUMJzyYAc4roD52qavX0nLIC.jpg", query: "Indian" },
+  { title: "Chinese", poster: "https://image.tmdb.org/t/p/w500/5kHvC0Vv83g6R52tCq4jL7sDqC6.jpg", query: "Chinese" },
+  { title: "Ugandan", poster: "https://image.tmdb.org/t/p/w500/628Dep6AxEtDxjZoGP78TsOxYbK.jpg", query: "Ugandan" },
 ];
 
 export const SearchPage: React.FC<SearchPageProps> = ({
@@ -210,17 +213,43 @@ export const SearchPage: React.FC<SearchPageProps> = ({
             </p>
           </div>
 
-          {/* 2-Column Categories Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-            {CATEGORIES_LIST.map((cat) => (
+          {/* 2-Column Physical Folder-Tab Cards (Flutter _FolderCardItem 1:1 match) */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-4 gap-y-6">
+            {FOLDER_CATEGORIES.map((cat) => (
               <div
-                key={cat}
-                onClick={() => handleSelectCategory(cat)}
-                className="h-16 rounded-2xl bg-[#141416] hover:bg-[#1f1f23] border border-white/5 hover:border-[#00E676]/40 flex items-center justify-center p-3 cursor-pointer group active:scale-[0.98] transition-all shadow-md"
+                key={cat.title}
+                onClick={() => handleSelectCategory(cat.query)}
+                className="cursor-pointer group flex flex-col active:scale-[0.98] transition-transform select-none"
               >
-                <span className="text-sm font-bold text-neutral-200 group-hover:text-[#00E676] transition-colors text-center">
-                  {cat}
-                </span>
+                {/* Physical Folder Stack */}
+                <div className="relative w-full aspect-[3/4] pt-3.5">
+                  {/* Tier 2 back tab ridge (topmost, narrower, gradient) */}
+                  <div className="absolute top-0 left-[16%] right-[16%] h-3.5 rounded-t-lg bg-gradient-to-b from-[#2B303E] to-[#1B1E28] border-t border-x border-white/10 shadow-sm" />
+
+                  {/* Tier 1 back tab (main folder ridge) */}
+                  <div className="absolute top-1.5 left-2.5 right-2.5 h-4 rounded-t-xl bg-gradient-to-b from-[#383D4E] to-[#242835] border-t border-x border-white/15 shadow" />
+
+                  {/* Front Poster Card */}
+                  <div className="relative w-full h-full rounded-2xl overflow-hidden border border-white/15 shadow-xl bg-[#181B24] group-hover:border-[#00E676]/60 transition-all">
+                    <img
+                      src={cat.poster}
+                      alt={cat.title}
+                      className="w-full h-full object-cover filter brightness-90 group-hover:scale-105 transition-transform duration-300"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src =
+                          "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=800&auto=format&fit=crop&q=80";
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
+
+                    {/* Bottom Title on Poster */}
+                    <div className="absolute bottom-2.5 left-2.5 right-2.5 z-10 text-left">
+                      <span className="text-sm font-extrabold text-white tracking-tight drop-shadow-md group-hover:text-[#00E676] transition-colors">
+                        {cat.title}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
@@ -306,10 +335,12 @@ export const SearchPage: React.FC<SearchPageProps> = ({
 
           {/* 3-Column / Responsive Results Grid */}
           {searchResults.length === 0 ? (
-            <div className="text-center py-20 text-neutral-400">
-              <SearchIcon className="w-12 h-12 mx-auto mb-3 opacity-30 text-[#00E676]" />
-              <p className="text-base font-bold text-white">No movies found</p>
-              <p className="text-xs text-neutral-500 mt-1">Try another search term or clear filters</p>
+            <div className="flex flex-col items-center justify-center py-24 text-center select-none">
+              <SearchX className="w-14 h-14 text-white/40 mb-3.5 stroke-[1.5]" />
+              <h3 className="text-white text-base sm:text-lg font-bold tracking-tight">No movies found</h3>
+              <p className="text-white/50 text-xs sm:text-sm mt-1.5 max-w-xs leading-relaxed">
+                Try searching for another genre or title
+              </p>
             </div>
           ) : (
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
@@ -485,53 +516,8 @@ export const SearchPage: React.FC<SearchPageProps> = ({
         </div>
       )}
 
-      {/* 4. FIXED BOTTOM NAVIGATION BAR */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 h-16 bg-black/95 backdrop-blur-lg border-t border-white/10 px-4 flex items-center justify-around">
-        <button
-          type="button"
-          onClick={() => (onNavigateTab ? onNavigateTab("home") : onBackToHome?.())}
-          className="flex flex-col items-center gap-1 cursor-pointer transition-colors"
-        >
-          <Home className="w-5 h-5 text-neutral-500" />
-          <span className="text-[10px] font-medium text-neutral-500">Home</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setViewState("results")}
-          className="flex flex-col items-center gap-1 cursor-pointer transition-colors"
-        >
-          <SearchIcon className="w-5 h-5 text-[#00E676]" />
-          <span className="text-[10px] font-medium text-[#00E676]">Search</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onNavigateTab?.("favorites")}
-          className="flex flex-col items-center gap-1 cursor-pointer transition-colors"
-        >
-          <Heart className="w-5 h-5 text-neutral-500" />
-          <span className="text-[10px] font-medium text-neutral-500">Favorites</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onNavigateTab?.("downloads")}
-          className="flex flex-col items-center gap-1 cursor-pointer transition-colors"
-        >
-          <Download className="w-5 h-5 text-neutral-500" />
-          <span className="text-[10px] font-medium text-neutral-500">Downloads</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onNavigateTab?.("profile")}
-          className="flex flex-col items-center gap-1 cursor-pointer transition-colors"
-        >
-          <UserIcon className="w-5 h-5 text-neutral-500" />
-          <span className="text-[10px] font-medium text-neutral-500">Profile</span>
-        </button>
-      </nav>
+      {/* 4. FLOATING CURVED GLASS BOTTOM NAVIGATION BAR */}
+      <FloatingBottomNav activeTab="search" onNavigateTab={onNavigateTab} />
     </div>
   );
 };
