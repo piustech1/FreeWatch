@@ -9,6 +9,8 @@ import {
   User as UserIcon,
 } from "lucide-react";
 import { FreeWatchLogo } from "./HomePage";
+import { AvatarGraphic } from "./AvatarGraphic";
+import { UserProfileData } from "./EditProfileModal";
 
 export interface VJDetailItem {
   id: string;
@@ -227,6 +229,7 @@ interface AvailableVJsPageProps {
   onNavigateTab: (tab: "home" | "search" | "favorites" | "downloads" | "profile") => void;
   onNavigateToNotifications?: () => void;
   onLogout?: () => void;
+  userProfile?: UserProfileData;
 }
 
 export const AvailableVJsPage: React.FC<AvailableVJsPageProps> = ({
@@ -234,6 +237,7 @@ export const AvailableVJsPage: React.FC<AvailableVJsPageProps> = ({
   onSelectVj,
   onNavigateTab,
   onNavigateToNotifications,
+  userProfile,
 }) => {
   return (
     <div className="w-full min-h-screen bg-black text-white font-sans flex flex-col pb-24 select-none">
@@ -269,11 +273,7 @@ export const AvailableVJsPage: React.FC<AvailableVJsPageProps> = ({
             title="Account Profile"
             className="w-8 h-8 rounded-full overflow-hidden border border-white/20 active:scale-95 transition-transform cursor-pointer"
           >
-            <img
-              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
-              alt="Profile"
-              className="w-full h-full object-cover"
-            />
+            <AvatarGraphic id={userProfile?.avatarId || "mirabel"} />
           </button>
         </div>
       </header>

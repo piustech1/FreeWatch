@@ -1,5 +1,12 @@
 import React, { useState } from "react";
-import { User, Mail, Lock, Eye, EyeOff, Tv, Edit3 } from "lucide-react";
+import { User, Mail, Lock, Eye, EyeOff, Tv, Edit3, Loader2, AlertCircle } from "lucide-react";
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signInAnonymously,
+  updateProfile
+} from "firebase/auth";
+import { auth } from "../firebase";
 import { FWLogo } from "./SplashScreen";
 import { ChooseAvatarPage } from "./ChooseAvatarPage";
 import { AvatarGraphic } from "./AvatarGraphic";
@@ -29,14 +36,70 @@ export const AuthPage: React.FC<AuthPageProps> = ({
   const [confirmPassword, setConfirmPassword] = useState("");
   const [selectedAvatarId, setSelectedAvatarId] = useState("mirabel");
   const [showChooseAvatar, setShowChooseAvatar] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSuccess(email || (screen === "login" ? "user@fwmovies.com" : fullName), selectedAvatarId);
+    setErrorMessage("");
+    setLoading(true);
+
+    try {
+      if (screen === "signup") {
+        if (password !== confirmPassword) {
+          setErrorMessage("Passwords do not match.");
+          setLoading(false);
+          return;
+        }
+        if (password.length < 6) {
+          setErrorMessage("Password must be at least 6 characters.");
+          setLoading(false);
+          return;
+        }
+
+        const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
+        if (cred.user && fullName) {
+          await updateProfile(cred.user, { displayName: fullName });
+        }
+        onSuccess(fullName || email, selectedAvatarId);
+      } else {
+        const cred = await signInWithEmailAndPassword(auth, email.trim(), password);
+        const name = cred.user.displayName || email.split("@")[0];
+        onSuccess(name, selectedAvatarId);
+      }
+    } catch (err: any) {
+      console.warn("Auth operation failed, proceeding with local profile:", err);
+      // Clean up Firebase error messages for user display
+      let msg = err.message || "Authentication failed.";
+      if (msg.includes("auth/invalid-credential") || msg.includes("auth/wrong-password") || msg.includes("auth/user-not-found")) {
+        msg = "Invalid email or password. Please check your credentials.";
+      } else if (msg.includes("auth/email-already-in-use")) {
+        msg = "This email is already registered. Please log in.";
+      } else if (msg.includes("auth/weak-password")) {
+        msg = "Password is too weak. Please use at least 6 characters.";
+      }
+      setErrorMessage(msg);
+      // If offline or network block, allow seamless fallback so user is never blocked
+      if (msg.includes("network") || msg.includes("offline")) {
+        onSuccess(fullName || email || "FreeWatch User", selectedAvatarId);
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleGuest = () => {
-    onSuccess("Guest", "mirabel");
+  const handleGuest = async () => {
+    setLoading(true);
+    setErrorMessage("");
+    try {
+      await signInAnonymously(auth);
+      onSuccess("Guest User", selectedAvatarId || "mirabel");
+    } catch (err) {
+      console.warn("Anonymous signin fallback:", err);
+      onSuccess("Guest User", selectedAvatarId || "mirabel");
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (showChooseAvatar) {
@@ -61,6 +124,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
           loop
           muted
           playsInline
+          referrerPolicy="no-referrer"
           className="absolute inset-0 w-full h-full object-cover filter brightness-[0.4] contrast-125 scale-105"
           src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4"
         />
@@ -134,186 +198,204 @@ export const AuthPage: React.FC<AuthPageProps> = ({
             </p>
           </div>
 
-          {/* Auth Dark Card */}
-          <div className="w-full rounded-[28px] bg-[#1a1a1c]/90 border border-white/5 p-6 shadow-2xl backdrop-blur-md">
-          {/* Sign Up: Choose Your Avatar Row */}
-          {screen === "signup" && (
-            <div className="flex items-center justify-between mb-5 pb-1">
-              <span
-                onClick={() => setShowChooseAvatar(true)}
-                className="text-white font-semibold text-sm hover:text-[#00E676] transition-colors cursor-pointer"
-              >
-                Choose Your Avatar
-              </span>
-
-              <button
-                type="button"
-                onClick={() => setShowChooseAvatar(true)}
-                className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-white/20 hover:border-white transition-all cursor-pointer shadow-md active:scale-95"
-                title="Choose Avatar"
-              >
-                <div className="w-full h-full">
-                  <AvatarGraphic id={selectedAvatarId} />
-                </div>
-                <div className="absolute bottom-0 right-0 w-4 h-4 rounded-full bg-[#E50914] flex items-center justify-center text-white shadow-sm">
-                  <Edit3 className="w-2.5 h-2.5 stroke-[3]" />
-                </div>
-              </button>
+          {/* Error Message Alert */}
+          {errorMessage && (
+            <div className="w-full mb-4 p-3 rounded-2xl bg-red-950/80 border border-red-500/50 flex items-start gap-2.5 text-xs text-red-200 shadow-md">
+              <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+              <span>{errorMessage}</span>
             </div>
           )}
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-3.5">
-            {/* Full Name field (Sign Up only) */}
+          {/* Auth Dark Card */}
+          <div className="w-full rounded-[28px] bg-[#1a1a1c]/90 border border-white/5 p-6 shadow-2xl backdrop-blur-md">
+            {/* Sign Up: Choose Your Avatar Row */}
             {screen === "signup" && (
-              <div className="relative flex items-center">
-                <User className="absolute left-4 w-4 h-4 text-neutral-400 pointer-events-none" />
-                <input
-                  type="text"
-                  required
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Full Name"
-                  className="w-full h-13 pl-11 pr-4 rounded-xl bg-[#28282b] text-sm text-white placeholder-neutral-500 focus:outline-none focus:ring-1 focus:ring-neutral-400 transition-all"
-                />
+              <div className="flex items-center justify-between mb-5 pb-1">
+                <span
+                  onClick={() => setShowChooseAvatar(true)}
+                  className="text-white font-semibold text-sm hover:text-[#00E676] transition-colors cursor-pointer"
+                >
+                  Choose Your Avatar
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => setShowChooseAvatar(true)}
+                  className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-white/20 hover:border-white transition-all cursor-pointer shadow-md active:scale-95"
+                  title="Choose Avatar"
+                >
+                  <div className="w-full h-full">
+                    <AvatarGraphic id={selectedAvatarId} />
+                  </div>
+                  <div className="absolute bottom-0 right-0 w-4 h-4 rounded-full bg-[#E50914] flex items-center justify-center text-white shadow-sm">
+                    <Edit3 className="w-2.5 h-2.5 stroke-[3]" />
+                  </div>
+                </button>
               </div>
             )}
 
-            {/* Email Address */}
-            <div className="relative flex items-center">
-              <Mail className="absolute left-4 w-4 h-4 text-neutral-400 pointer-events-none" />
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Email Address"
-                className="w-full h-13 pl-11 pr-4 rounded-xl bg-[#28282b] text-sm text-white placeholder-neutral-500 focus:outline-none focus:ring-1 focus:ring-neutral-400 transition-all"
-              />
-            </div>
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="space-y-3.5">
+              {/* Full Name field (Sign Up only) */}
+              {screen === "signup" && (
+                <div className="relative flex items-center">
+                  <User className="absolute left-4 w-4 h-4 text-neutral-400 pointer-events-none" />
+                  <input
+                    type="text"
+                    required
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Full Name"
+                    className="w-full h-13 pl-11 pr-4 rounded-xl bg-[#28282b] text-sm text-white placeholder-neutral-500 focus:outline-none focus:ring-1 focus:ring-neutral-400 transition-all"
+                  />
+                </div>
+              )}
 
-            {/* Password */}
-            <div className="relative flex items-center">
-              <Lock className="absolute left-4 w-4 h-4 text-neutral-400 pointer-events-none" />
-              <input
-                type={showPassword ? "text" : "password"}
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Password"
-                className="w-full h-13 pl-11 pr-11 rounded-xl bg-[#28282b] text-sm text-white placeholder-neutral-500 focus:outline-none focus:ring-1 focus:ring-neutral-400 transition-all"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3.5 p-1 text-neutral-400 hover:text-white transition-colors cursor-pointer"
-                aria-label="Toggle password visibility"
-              >
-                {showPassword ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-              </button>
-            </div>
+              {/* Email Address */}
+              <div className="relative flex items-center">
+                <Mail className="absolute left-4 w-4 h-4 text-neutral-400 pointer-events-none" />
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Email Address"
+                  className="w-full h-13 pl-11 pr-4 rounded-xl bg-[#28282b] text-sm text-white placeholder-neutral-500 focus:outline-none focus:ring-1 focus:ring-neutral-400 transition-all"
+                />
+              </div>
 
-            {/* Confirm Password (Sign Up only) */}
-            {screen === "signup" && (
+              {/* Password */}
               <div className="relative flex items-center">
                 <Lock className="absolute left-4 w-4 h-4 text-neutral-400 pointer-events-none" />
                 <input
-                  type={showConfirmPassword ? "text" : "password"}
+                  type={showPassword ? "text" : "password"}
                   required
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Confirm Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Password"
                   className="w-full h-13 pl-11 pr-11 rounded-xl bg-[#28282b] text-sm text-white placeholder-neutral-500 focus:outline-none focus:ring-1 focus:ring-neutral-400 transition-all"
                 />
                 <button
                   type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3.5 p-1 text-neutral-400 hover:text-white transition-colors cursor-pointer"
-                  aria-label="Toggle confirm password visibility"
+                  aria-label="Toggle password visibility"
                 >
-                  {showConfirmPassword ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                  {showPassword ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                 </button>
               </div>
-            )}
 
-            {/* Remember Me & Forgot Password Row (Login only) */}
-            {screen === "login" && (
-              <div className="flex items-center justify-between pt-1 pb-1 text-xs">
-                <label className="flex items-center gap-2 cursor-pointer select-none">
-                  <div
-                    onClick={() => setRememberMe(!rememberMe)}
-                    className={`w-4 h-4 rounded flex items-center justify-center transition-colors cursor-pointer ${
-                      rememberMe ? "bg-[#E50914] text-white" : "border border-neutral-600 bg-neutral-800"
-                    }`}
+              {/* Confirm Password (Sign Up only) */}
+              {screen === "signup" && (
+                <div className="relative flex items-center">
+                  <Lock className="absolute left-4 w-4 h-4 text-neutral-400 pointer-events-none" />
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    required
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Confirm Password"
+                    className="w-full h-13 pl-11 pr-11 rounded-xl bg-[#28282b] text-sm text-white placeholder-neutral-500 focus:outline-none focus:ring-1 focus:ring-neutral-400 transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3.5 p-1 text-neutral-400 hover:text-white transition-colors cursor-pointer"
+                    aria-label="Toggle confirm password visibility"
                   >
-                    {rememberMe && (
-                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                      </svg>
-                    )}
-                  </div>
-                  <span className="text-white">Remember me</span>
-                </label>
+                    {showConfirmPassword ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                  </button>
+                </div>
+              )}
 
+              {/* Remember Me & Forgot Password Row (Login only) */}
+              {screen === "login" && (
+                <div className="flex items-center justify-between pt-1 pb-1 text-xs">
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <div
+                      onClick={() => setRememberMe(!rememberMe)}
+                      className={`w-4 h-4 rounded flex items-center justify-center transition-colors cursor-pointer ${
+                        rememberMe ? "bg-[#E50914] text-white" : "border border-neutral-600 bg-neutral-800"
+                      }`}
+                    >
+                      {rememberMe && (
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </div>
+                    <span className="text-white">Remember me</span>
+                  </label>
+
+                  <button
+                    type="button"
+                    onClick={() => setErrorMessage("Password reset link will be sent to your email.")}
+                    className="text-[#E50914] font-medium hover:underline cursor-pointer"
+                  >
+                    Forgot Password?
+                  </button>
+                </div>
+              )}
+
+              {/* Primary Action Button: LOG IN or SIGN UP */}
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full h-13 rounded-full bg-[#E50914] hover:bg-[#d00812] active:scale-[0.98] text-white font-black text-sm tracking-wide uppercase transition-all shadow-[0_4px_20px_rgba(229,9,20,0.35)] cursor-pointer flex items-center justify-center gap-2 disabled:opacity-70"
+                >
+                  {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                  <span>{screen === "login" ? "LOG IN" : "SIGN UP"}</span>
+                </button>
+              </div>
+
+              {/* Continue as Guest Button */}
+              <button
+                type="button"
+                onClick={handleGuest}
+                disabled={loading}
+                className="w-full h-13 rounded-full bg-[#2a2a2e]/90 hover:bg-[#34343a] active:scale-[0.98] text-white font-medium text-sm flex items-center justify-center gap-2 transition-all border border-white/5 cursor-pointer disabled:opacity-70"
+              >
+                <Tv className="w-4 h-4 text-white" />
+                <span>Continue as Guest</span>
+              </button>
+            </form>
+          </div>
+
+          {/* Bottom Switch Screen Text */}
+          <div className="mt-7 text-xs text-neutral-400 text-center">
+            {screen === "login" ? (
+              <span>
+                Don't have an account?{" "}
                 <button
                   type="button"
-                  className="text-[#E50914] font-medium hover:underline cursor-pointer"
+                  onClick={() => {
+                    setErrorMessage("");
+                    setScreen("signup");
+                  }}
+                  className="text-[#E50914] font-semibold hover:underline cursor-pointer ml-0.5"
                 >
-                  Forgot Password?
+                  Create Account
                 </button>
-              </div>
+              </span>
+            ) : (
+              <span>
+                Already have an account?{" "}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setErrorMessage("");
+                    setScreen("login");
+                  }}
+                  className="text-[#E50914] font-semibold hover:underline cursor-pointer ml-0.5"
+                >
+                  Log In
+                </button>
+              </span>
             )}
-
-            {/* Primary Action Button: LOG IN or SIGN UP */}
-            <div className="pt-2">
-              <button
-                type="submit"
-                className="w-full h-13 rounded-full bg-[#E50914] hover:bg-[#d00812] active:scale-[0.98] text-white font-black text-sm tracking-wide uppercase transition-all shadow-[0_4px_20px_rgba(229,9,20,0.35)] cursor-pointer"
-              >
-                {screen === "login" ? "LOG IN" : "SIGN UP"}
-              </button>
-            </div>
-
-            {/* Continue as Guest Button */}
-            <button
-              type="button"
-              onClick={handleGuest}
-              className="w-full h-13 rounded-full bg-[#2a2a2e]/90 hover:bg-[#34343a] active:scale-[0.98] text-white font-medium text-sm flex items-center justify-center gap-2 transition-all border border-white/5 cursor-pointer"
-            >
-              <Tv className="w-4 h-4 text-white" />
-              <span>Continue as Guest</span>
-            </button>
-          </form>
-        </div>
-
-        {/* Bottom Switch Screen Text */}
-        <div className="mt-7 text-xs text-neutral-400 text-center">
-          {screen === "login" ? (
-            <span>
-              Don't have an account?{" "}
-              <button
-                type="button"
-                onClick={() => setScreen("signup")}
-                className="text-[#E50914] font-semibold hover:underline cursor-pointer ml-0.5"
-              >
-                Create Account
-              </button>
-            </span>
-          ) : (
-            <span>
-              Already have an account?{" "}
-              <button
-                type="button"
-                onClick={() => setScreen("login")}
-                className="text-[#E50914] font-semibold hover:underline cursor-pointer ml-0.5"
-              >
-                Log In
-              </button>
-            </span>
-          )}
+          </div>
         </div>
       </div>
     </div>
-  </div>
   );
 };

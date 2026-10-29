@@ -12,6 +12,8 @@ import {
   Film,
 } from "lucide-react";
 import { FreeWatchLogo } from "./HomePage";
+import { AvatarGraphic } from "./AvatarGraphic";
+import { UserProfileData } from "./EditProfileModal";
 
 export interface DownloadItem {
   id: string;
@@ -28,6 +30,7 @@ export interface DownloadItem {
 interface DownloadsPageProps {
   onNavigateTab: (tab: "home" | "search" | "favorites" | "downloads" | "profile") => void;
   onLogout?: () => void;
+  userProfile?: UserProfileData;
   onSelectMovie?: (movieId: string, isSeries?: boolean, title?: string) => void;
   onNavigateToNotifications?: () => void;
 }
@@ -35,25 +38,21 @@ interface DownloadsPageProps {
 export const DownloadsPage: React.FC<DownloadsPageProps> = ({
   onNavigateTab,
   onLogout,
+  userProfile,
   onSelectMovie,
   onNavigateToNotifications,
 }) => {
-  // Downloads state matching Screenshot_20261028-215736_3c8b88b9.png
-  const [downloads, setDownloads] = useState<DownloadItem[]>([
-    {
-      id: "mirzapur-4",
-      title: "Mirzapur 4",
-      posterBg: "from-amber-950 via-orange-950 to-black",
-      progress: 2,
-      isPaused: false,
-      fileSize: "1.4 GB",
-      speed: "3.2 MB/s",
-      isSeries: true,
-    },
-  ]);
+  const [downloads, setDownloads] = useState<DownloadItem[]>(() => {
+    try {
+      const saved = localStorage.getItem("freewatch_downloads");
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return [];
+  });
 
-  // Subtle simulated progress update when not paused
+  // Simulated progress update when active downloads exist
   useEffect(() => {
+    if (downloads.length === 0) return;
     const timer = setInterval(() => {
       setDownloads((prev) =>
         prev.map((item) => {
@@ -70,7 +69,7 @@ export const DownloadsPage: React.FC<DownloadsPageProps> = ({
     }, 2500);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [downloads.length]);
 
   const handleTogglePause = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -83,26 +82,20 @@ export const DownloadsPage: React.FC<DownloadsPageProps> = ({
 
   const handleDelete = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setDownloads((prev) => prev.filter((item) => item.id !== id));
+    setDownloads((prev) => {
+      const next = prev.filter((item) => item.id !== id);
+      try {
+        localStorage.setItem("freewatch_downloads", JSON.stringify(next));
+      } catch {}
+      return next;
+    });
   };
 
   const handleClearAll = () => {
     setDownloads([]);
-  };
-
-  const handleRestoreSample = () => {
-    setDownloads([
-      {
-        id: "mirzapur-4",
-        title: "Mirzapur 4",
-        posterBg: "from-amber-950 via-orange-950 to-black",
-        progress: 2,
-        isPaused: false,
-        fileSize: "1.4 GB",
-        speed: "3.2 MB/s",
-        isSeries: true,
-      },
-    ]);
+    try {
+      localStorage.removeItem("freewatch_downloads");
+    } catch {}
   };
 
   return (
@@ -139,11 +132,7 @@ export const DownloadsPage: React.FC<DownloadsPageProps> = ({
             title="Account Profile"
             className="w-8 h-8 rounded-full overflow-hidden border border-white/20 active:scale-95 transition-transform cursor-pointer"
           >
-            <img
-              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
-              alt="Profile"
-              className="w-full h-full object-cover"
-            />
+            <AvatarGraphic id={userProfile?.avatarId || "mirabel"} />
           </button>
         </div>
       </header>
@@ -151,7 +140,6 @@ export const DownloadsPage: React.FC<DownloadsPageProps> = ({
       {/* 2. SUBHEADER: DOWNLOADED MOVIES TITLE & CLEAR ALL */}
       <div className="max-w-6xl mx-auto w-full px-4 lg:px-8 pt-4 pb-3 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          {/* Red Download Tray Icon matching screenshot */}
           <div className="text-[#E50914] flex items-center justify-center">
             <svg
               className="w-5 h-5"
@@ -167,9 +155,8 @@ export const DownloadsPage: React.FC<DownloadsPageProps> = ({
               <line x1="12" y1="15" x2="12" y2="3" />
             </svg>
           </div>
-
-          <h1 className="text-base sm:text-lg font-black text-white tracking-tight">
-            Downloaded Movies ({downloads.length})
+          <h1 className="text-base font-extrabold text-white tracking-wider uppercase">
+            DOWNLOADED MOVIES ({downloads.length})
           </h1>
         </div>
 
@@ -179,104 +166,81 @@ export const DownloadsPage: React.FC<DownloadsPageProps> = ({
             onClick={handleClearAll}
             className="text-xs font-semibold text-neutral-400 hover:text-white transition-colors cursor-pointer"
           >
-            Clear All
+            Clear all
           </button>
         )}
       </div>
 
-      {/* DESKTOP STORAGE & STATS WIDGET */}
-      <div className="hidden lg:grid grid-cols-3 gap-4 max-w-6xl mx-auto w-full px-4 lg:px-8 mb-4">
-        <div className="rounded-2xl bg-[#111114] border border-white/5 p-4 flex flex-col justify-between">
-          <div className="text-xs text-neutral-400 font-medium">FreeWatch Storage</div>
-          <div className="text-xl font-black text-white mt-1">1.4 GB Used</div>
-          <div className="w-full h-1.5 bg-neutral-800 rounded-full mt-2 overflow-hidden">
-            <div className="w-[12%] h-full bg-[#00E676] rounded-full" />
-          </div>
-          <div className="text-[10px] text-neutral-400 mt-1.5">54.2 GB free on local device</div>
-        </div>
-
-        <div className="rounded-2xl bg-[#111114] border border-white/5 p-4 flex flex-col justify-between">
-          <div className="text-xs text-neutral-400 font-medium">Download Quality</div>
-          <div className="text-base font-black text-white mt-1">1080p FHD Cinema</div>
-          <div className="text-[11px] text-[#00E676] font-semibold mt-1">Luganda Dubbed Audio Included</div>
-          <div className="text-[10px] text-neutral-400 mt-1">Smart auto-download next episode: ON</div>
-        </div>
-
-        <div className="rounded-2xl bg-[#111114] border border-white/5 p-4 flex flex-col justify-between">
-          <div className="text-xs text-neutral-400 font-medium">Offline Playback</div>
-          <div className="text-base font-black text-white mt-1">Airplane Mode Ready</div>
-          <div className="text-[11px] text-sky-400 font-semibold mt-1">No Internet Connection Required</div>
-          <div className="text-[10px] text-neutral-400 mt-1">Encrypted local media cache</div>
-        </div>
-      </div>
-
-      {/* 3. DOWNLOADS CONTENT LIST */}
-      <div className="max-w-6xl mx-auto w-full px-4 lg:px-8 pt-1 flex-1 space-y-3">
+      {/* 3. DOWNLOADS LIST CONTAINER */}
+      <div className="max-w-6xl mx-auto w-full px-4 lg:px-8 space-y-3.5 flex-1">
         {downloads.map((item) => (
           <div
             key={item.id}
             onClick={() => onSelectMovie?.(item.id, item.isSeries, item.title)}
-            className="w-full rounded-2xl bg-[#131316] border border-white/5 p-3 flex items-center gap-3.5 shadow-lg group hover:border-white/10 active:scale-[0.99] transition-all cursor-pointer"
+            className="rounded-2xl bg-[#17171a] border border-white/5 p-3 flex items-center justify-between gap-3 shadow-md active:scale-[0.99] transition-transform cursor-pointer group"
           >
-            {/* Mirzapur Thumbnail matching screenshot */}
-            <div className="w-16 h-20 rounded-xl overflow-hidden bg-gradient-to-t from-amber-950 via-orange-950 to-black border border-white/10 relative shrink-0 p-1 flex flex-col justify-between shadow-md">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom,_var(--tw-gradient-stops))] from-amber-600/40 via-red-950 to-black pointer-events-none" />
-              <div />
-              <div className="relative z-10 text-center pb-0.5">
-                <div className="text-[9px] font-black text-amber-400 tracking-wider leading-none drop-shadow-md">
-                  MIRZAPUR
-                </div>
-              </div>
+            {/* Left: Thumbnail poster preview */}
+            <div
+              className={`w-14 sm:w-16 aspect-[3/4] rounded-xl overflow-hidden bg-gradient-to-t ${item.posterBg} border border-white/10 shrink-0 relative flex items-center justify-center`}
+            >
+              {item.posterUrl ? (
+                <img
+                  src={item.posterUrl}
+                  alt={item.title}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <Film className="w-5 h-5 text-white/40" />
+              )}
             </div>
 
-            {/* Middle Info Column: Title, Progress Bar, Status */}
-            <div className="flex-1 min-w-0 pr-1">
-              <h3 className="text-sm sm:text-base font-bold text-white tracking-tight truncate">
-                {item.title}
-              </h3>
+            {/* Middle: Title, progress bar, file size & speed */}
+            <div className="flex-1 min-w-0 pr-2">
+              <div className="flex items-center justify-between mb-1.5">
+                <h3 className="text-xs sm:text-sm font-bold text-white truncate group-hover:text-[#00E676] transition-colors">
+                  {item.title}
+                </h3>
+                <span className="text-[11px] font-semibold text-neutral-400 ml-2">
+                  {item.progress}%
+                </span>
+              </div>
 
-              {/* Progress Bar Track */}
-              <div className="w-full h-1 bg-[#27272a] rounded-full overflow-hidden mt-2 mb-1.5">
+              {/* Progress Track */}
+              <div className="w-full h-1.5 rounded-full bg-neutral-800 overflow-hidden relative">
                 <div
-                  className="h-full bg-[#00E676] rounded-full transition-all duration-300"
-                  style={{ width: `${Math.max(2, item.progress)}%` }}
+                  className={`h-full transition-all duration-300 ${
+                    item.isPaused ? "bg-amber-400" : "bg-[#00E676]"
+                  }`}
+                  style={{ width: `${item.progress}%` }}
                 />
               </div>
 
-              {/* Status Text (Downloading 2% / Paused) */}
-              <div className="text-xs font-semibold text-[#00E676]">
-                {item.progress >= 100
-                  ? "Downloaded"
-                  : item.isPaused
-                  ? `Paused (${item.progress}%)`
-                  : `Downloading ${item.progress}%`}
+              {/* Bottom detail row */}
+              <div className="flex items-center justify-between text-[10px] text-neutral-400 font-medium mt-1.5">
+                <span>{item.fileSize}</span>
+                <span>{item.isPaused ? "Paused" : item.speed}</span>
               </div>
             </div>
 
-            {/* Right Action Buttons: Pause/Play & Trash */}
-            <div className="flex items-center gap-2.5 shrink-0 pl-1">
-              {/* Pause / Resume Button */}
+            {/* Right: Controls (Pause/Play & Delete) */}
+            <div className="flex items-center gap-1.5 shrink-0">
               <button
                 type="button"
                 onClick={(e) => handleTogglePause(item.id, e)}
                 title={item.isPaused ? "Resume" : "Pause"}
-                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 flex items-center justify-center text-white transition-all cursor-pointer"
+                className="p-1.5 rounded-full bg-white/5 hover:bg-white/15 text-white transition-colors cursor-pointer"
               >
                 {item.isPaused ? (
-                  <Play className="w-3.5 h-3.5 fill-white text-white ml-0.5" />
+                  <Play className="w-4 h-4 fill-white" />
                 ) : (
-                  <div className="flex items-center gap-0.5">
-                    <span className="w-1 h-3.5 bg-white rounded-sm inline-block" />
-                    <span className="w-1 h-3.5 bg-white rounded-sm inline-block" />
-                  </div>
+                  <Pause className="w-4 h-4 fill-white" />
                 )}
               </button>
 
-              {/* Delete Trash Button */}
               <button
                 type="button"
                 onClick={(e) => handleDelete(item.id, e)}
-                title="Remove Download"
+                title="Delete"
                 className="p-1.5 text-neutral-400 hover:text-red-400 transition-colors cursor-pointer"
               >
                 <Trash2 className="w-4 h-4 stroke-[2]" />
@@ -285,32 +249,30 @@ export const DownloadsPage: React.FC<DownloadsPageProps> = ({
           </div>
         ))}
 
-        {/* Empty State when list is cleared */}
+        {/* Empty State with authentic SVG */}
         {downloads.length === 0 && (
-          <div className="flex flex-col items-center justify-center pt-20 pb-12 text-center px-4">
-            <div className="w-16 h-16 rounded-full bg-neutral-900 border border-white/5 flex items-center justify-center text-neutral-500 mb-3">
-              <Download className="w-7 h-7" />
+          <div className="flex flex-col items-center justify-center pt-24 pb-12 text-center px-4">
+            <div className="w-36 h-36 mb-6 flex items-center justify-center">
+              <img
+                src="/assets/images/empty_downloads.svg"
+                alt="Empty Downloads"
+                className="w-full h-full object-contain filter drop-shadow-[0_4px_20px_rgba(0,0,0,0.8)]"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = "none";
+                }}
+              />
             </div>
-            <h2 className="text-base font-bold text-white mb-1">No Downloads Yet</h2>
-            <p className="text-xs text-neutral-400 max-w-xs mb-5">
-              Downloaded movies and series will appear here for offline playback anytime.
+            <h2 className="text-xl font-black text-white mb-2">No Downloads Yet</h2>
+            <p className="text-xs text-neutral-400 max-w-xs mb-6 leading-relaxed">
+              Downloaded movies and series will appear here for fast offline playback with no buffering.
             </p>
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={handleRestoreSample}
-                className="px-4 py-2 rounded-full bg-neutral-800 hover:bg-neutral-700 text-xs font-semibold text-neutral-200 transition-colors cursor-pointer"
-              >
-                Restore Mirzapur
-              </button>
-              <button
-                type="button"
-                onClick={() => onNavigateTab("home")}
-                className="px-5 py-2 rounded-full bg-[#00E676] hover:bg-[#00c865] text-xs font-extrabold text-black transition-colors cursor-pointer"
-              >
-                Browse Movies
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => onNavigateTab("home")}
+              className="px-7 py-3.5 rounded-full bg-[#00E676] hover:bg-[#00c853] text-black font-extrabold text-xs uppercase tracking-wider active:scale-95 transition-all shadow-lg shadow-[#00E676]/25 cursor-pointer"
+            >
+              Browse Movies
+            </button>
           </div>
         )}
       </div>

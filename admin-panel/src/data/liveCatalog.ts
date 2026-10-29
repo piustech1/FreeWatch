@@ -35,12 +35,31 @@ export const FALLBACK_MOVIES: CatalogMovie[] = [
     isTv: true,
     seriesCode: "33624",
     overview: "A shocking incident at a wedding procession ignites a series of events entangling two families in the lawless city of Mirzapur. Spiced up by VJ Ashim.",
-    streamUrl: "https://munotech3.b-cdn.net/gugwa/gugwa42/01.Mirzapur.SN1.VJ.Ashim.1080.mp4",
+    streamUrl: "https://munotech3.b-cdn.net/gugwa/gugwa42/07.Mirzapur.SN2.VJ.Ashim.1080.mp4",
     episodes: [
-      { num: 1, title: "Episode 1: The Wedding", duration: "50m", streamUrl: "https://munotech3.b-cdn.net/gugwa/gugwa42/01.Mirzapur.SN1.VJ.Ashim.1080.mp4" },
-      { num: 2, title: "Episode 2: Retaliation", duration: "48m", streamUrl: "https://munotech3.b-cdn.net/gugwa/gugwa42/01.Mirzapur.SN1.VJ.Ashim.1080.mp4" },
-      { num: 3, title: "Episode 3: Power Struggle", duration: "52m", streamUrl: "https://munotech3.b-cdn.net/gugwa/gugwa42/01.Mirzapur.SN1.VJ.Ashim.1080.mp4" }
+      { num: 1, title: "Episode 1", duration: "50m", streamUrl: "https://munotech3.b-cdn.net/gugwa/gugwa42/01.Mirzapur.SN1.VJ.Ashim.1080.mp4" },
+      { num: 2, title: "Episode 2", duration: "48m", streamUrl: "https://munotech3.b-cdn.net/gugwa/gugwa42/02.Mirzapur.SN2.VJ.Ashim.1080.mp4" },
+      { num: 3, title: "Episode 3", duration: "52m", streamUrl: "https://munotech3.b-cdn.net/gugwa/gugwa42/03.Mirzapur.SN2.VJ.Ashim.1080.mp4" },
+      { num: 4, title: "Episode 4", duration: "51m", streamUrl: "https://munotech3.b-cdn.net/gugwa/gugwa42/04.Mirzapur.SN2.VJ.Ashim.1080.mp4" },
+      { num: 5, title: "Episode 5", duration: "49m", streamUrl: "https://munotech3.b-cdn.net/gugwa/gugwa42/05.Mirzapur.SN2.VJ.Ashim.1080.mp4" },
+      { num: 6, title: "Episode 6", duration: "53m", streamUrl: "https://munotech3.b-cdn.net/gugwa/gugwa42/06.Mirzapur.SN2.VJ.Ashim.1080.mp4" },
+      { num: 7, title: "Episode 7", duration: "50m", streamUrl: "https://munotech3.b-cdn.net/gugwa/gugwa42/07.Mirzapur.SN2.VJ.Ashim.1080.mp4" },
     ]
+  },
+  {
+    id: "67364",
+    title: "Animals",
+    vj: "VJ Junior",
+    category: "Action",
+    genres: ["Action", "Crime", "Thriller"],
+    imageUrl: "https://apposters.b-cdn.net/laba/yo/naki/bFX49260.jpg",
+    backdropUrl: "https://apposters.b-cdn.net/laba/yo/naki/bFX49260.jpg",
+    rating: "9.1",
+    year: "2025",
+    duration: "2h 05m",
+    isTv: false,
+    overview: "Desperate to pay their son's ransom, parents embark on a dangerous and relentless rescue mission. Luganda translation by VJ Junior.",
+    streamUrl: "https://munotech3.b-cdn.net/gugwa/gugwa42/07.Mirzapur.SN2.VJ.Ashim.1080.mp4"
   },
   {
     id: "67099",
@@ -55,7 +74,7 @@ export const FALLBACK_MOVIES: CatalogMovie[] = [
     duration: "1h 45m",
     isTv: false,
     overview: "Wrongfully accused of murdering his best friend, church minister Benson is finally released when the truth comes to light. But freedom brings no peace. Translated by VJ Emmy.",
-    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+    streamUrl: "https://munotech3.b-cdn.net/gugwa/gugwa42/07.Mirzapur.SN2.VJ.Ashim.1080.mp4"
   },
   {
     id: "67342",
@@ -169,82 +188,268 @@ export const FALLBACK_MOVIES: CatalogMovie[] = [
   }
 ];
 
+// Helper: parse series base title and episode number
+export function parseSeriesEpisodeInfo(rawTitle: string): {
+  isEpisode: boolean;
+  baseTitle: string;
+  epNum: number;
+} {
+  const clean = (rawTitle || '').trim();
+
+  // Pattern A: Title S01E16, Title S1 Ep 16
+  const sPattern = /^(.*?)[.\s_-]+(?:s|season)\s*(\d+)[.\s_-]*(?:e|ep|episode)\s*(\d+)(.*)$/i;
+  let match = clean.match(sPattern);
+  if (match) {
+    return {
+      isEpisode: true,
+      baseTitle: match[1].trim(),
+      epNum: parseInt(match[3], 10) || 1,
+    };
+  }
+
+  // Pattern B: Title Episode 16, Title Ep 16, Title Part 3
+  const epPattern = /^(.*?)[.\s_-]+(?:episode|ep|part)\s*(\d+)(.*)$/i;
+  match = clean.match(epPattern);
+  if (match) {
+    return {
+      isEpisode: true,
+      baseTitle: match[1].trim(),
+      epNum: parseInt(match[2], 10) || 1,
+    };
+  }
+
+  // Pattern C: Title 16, Title 02 (e.g. Mirzapur 16, Mirzapur 15)
+  const numPattern = /^(.*?)\s+(\d{1,3})$/i;
+  match = clean.match(numPattern);
+  if (match) {
+    const num = parseInt(match[2], 10);
+    // Ignore 4-digit years (1980-2030)
+    if (num > 0 && num <= 100) {
+      return {
+        isEpisode: true,
+        baseTitle: match[1].trim(),
+        epNum: num,
+      };
+    }
+  }
+
+  return {
+    isEpisode: false,
+    baseTitle: clean,
+    epNum: 1,
+  };
+}
+
 export function useLiveCatalog() {
   const [catalog, setCatalog] = useState<CatalogMovie[]>(FALLBACK_MOVIES);
   const [totalCount, setTotalCount] = useState<number>(7097);
   const [loading, setLoading] = useState<boolean>(false);
 
-  // Normalize movie record
-  const normalizeMovie = useCallback((m: any, idx: number): CatalogMovie => {
+  // Raw normalizer for an individual movie or episode
+  const normalizeRaw = useCallback((m: any, idx: number) => {
+    const rawTitle = (m.title || m.video_title || 'Untitled Movie').trim();
     const rawVj = (m.vj || m.vjname || m.vjName || '').trim();
     const isUniversal = rawVj.toLowerCase().includes('universal') || !rawVj;
     const vj = isUniversal ? 'VJ Junior' : (rawVj.toUpperCase().startsWith('VJ') ? rawVj : `VJ ${rawVj}`);
-    const isTv = Boolean(m.is_series || m.series_code || (m.category && m.category.toLowerCase().includes('series')));
-    const streamUrl = m.playingurl || m.playingUrl || m.videoUrl || m.streamUrl || 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
+    
+    const seriesCode = m.series_code || m.seriesCode || '';
+    const category = m.category || (m.is_series || seriesCode ? 'Series' : 'Action');
+    const isDeclaredSeries = Boolean(
+      m.is_series === true ||
+      m.is_series === 1 ||
+      m.is_series === '1' ||
+      (seriesCode && seriesCode !== '0') ||
+      /series/i.test(category)
+    );
+
+    const episodeInfo = parseSeriesEpisodeInfo(rawTitle);
+    const isTv = isDeclaredSeries || episodeInfo.isEpisode;
+    const streamUrl = m.playingurl || m.playingUrl || m.videoUrl || m.streamUrl || 'https://munotech3.b-cdn.net/gugwa/gugwa42/07.Mirzapur.SN2.VJ.Ashim.1080.mp4';
+    const duration = m.duration || (isTv ? '50m' : '1h 45m');
 
     return {
       id: String(m.id || m.vid || `fw-${idx}`),
-      title: m.title || m.video_title || 'Untitled Movie',
+      rawTitle,
+      baseTitle: episodeInfo.isEpisode ? episodeInfo.baseTitle : rawTitle,
+      isEpisode: episodeInfo.isEpisode,
+      epNum: episodeInfo.epNum,
       vj,
-      category: m.category || (isTv ? 'Series' : 'Action'),
-      genres: [m.category || (isTv ? 'Series' : 'Action'), 'Luganda Dubbed'],
-      imageUrl: m.image || m.thumbnail || m.poster || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=600&auto=format&fit=crop&q=80',
-      backdropUrl: m.backdrop || m.cover || m.image || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1200&auto=format&fit=crop&q=80',
-      rating: String(m.rating || (8.4 + ((idx % 15) / 10)).toFixed(1)),
-      year: String(m.year || m.release_year || '2024'),
-      duration: m.duration || (isTv ? '50m' : '1h 45m'),
+      category,
+      imageUrl: m.image || m.thumbnail || m.poster || m.poster_path || 'https://apposters.b-cdn.net/laba/yo/naki/gNxs2151.jpg',
+      backdropUrl: m.backdrop || m.backdrop_path || m.cover || m.image || 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1600&auto=format&fit=crop&q=80',
+      rating: String(m.rating || (8.5 + ((idx % 12) / 10)).toFixed(1)),
+      year: String(m.year || m.release_year || '2025'),
+      duration,
       isTv,
-      seriesCode: m.series_code || '',
-      overview: m.synopsis || m.description || `Enjoy ${m.title || 'this release'} in high definition with exclusive Luganda voice-over translation by ${vj}.`,
+      seriesCode,
+      overview: m.overview || m.synopsis || m.description || `Enjoy ${episodeInfo.baseTitle} in high definition with exclusive Luganda voice-over translation by ${vj}.`,
       streamUrl,
-      episodes: isTv ? [
-        { num: 1, title: 'Episode 1', duration: '50m', streamUrl },
-        { num: 2, title: 'Episode 2', duration: '48m', streamUrl },
-        { num: 3, title: 'Episode 3', duration: '52m', streamUrl }
-      ] : undefined
     };
   }, []);
 
-  // Sort newly to oldy
-  const sortNewlyToOldy = useCallback((items: CatalogMovie[]) => {
-    return [...items].sort((a, b) => {
+  // Group raw items into deduplicated catalog movies
+  const groupAndDeduplicate = useCallback((rawItems: any[]): CatalogMovie[] => {
+    const seriesMap = new Map<string, {
+      parent: CatalogMovie;
+      episodesMap: Map<number, { num: number; title: string; duration: string; streamUrl: string }>;
+    }>();
+    const movieList: CatalogMovie[] = [];
+
+    // Filter junk items
+    const blocklist = ['eps', 'episode', 'untitled', 'movie', 'null', 'none'];
+    const validItems = rawItems.filter(item => {
+      if (!item) return false;
+      const t = (item.title || item.video_title || '').toLowerCase().trim();
+      return t && !blocklist.includes(t) && !/^(?:eps?|episode)\s*\d*$/i.test(t);
+    });
+
+    validItems.forEach((raw, idx) => {
+      const item = normalizeRaw(raw, idx);
+
+      if (item.isTv || item.isEpisode) {
+        // Group key for TV Series
+        const seriesKey = item.seriesCode && item.seriesCode !== '0'
+          ? `series-code-${item.seriesCode}`
+          : `series-title-${item.baseTitle.toLowerCase()}`;
+
+        if (!seriesMap.has(seriesKey)) {
+          seriesMap.set(seriesKey, {
+            parent: {
+              id: item.id,
+              title: item.baseTitle,
+              vj: item.vj,
+              category: 'Series',
+              genres: ['Series', 'Luganda Dubbed'],
+              imageUrl: item.imageUrl,
+              backdropUrl: item.backdropUrl,
+              rating: item.rating,
+              year: item.year,
+              duration: item.duration,
+              isTv: true,
+              seriesCode: item.seriesCode,
+              overview: item.overview,
+              streamUrl: item.streamUrl,
+              episodes: [],
+            },
+            episodesMap: new Map(),
+          });
+        }
+
+        const entry = seriesMap.get(seriesKey)!;
+        // Keep highest rating or newest backdrop if current is richer
+        if (item.imageUrl && !entry.parent.imageUrl) {
+          entry.parent.imageUrl = item.imageUrl;
+        }
+
+        // Add episode
+        entry.episodesMap.set(item.epNum, {
+          num: item.epNum,
+          title: `Episode ${item.epNum}`,
+          duration: item.duration,
+          streamUrl: item.streamUrl,
+        });
+      } else {
+        // Regular standalone movie
+        movieList.push({
+          id: item.id,
+          title: item.baseTitle,
+          vj: item.vj,
+          category: item.category,
+          genres: [item.category, 'Luganda Dubbed'],
+          imageUrl: item.imageUrl,
+          backdropUrl: item.backdropUrl,
+          rating: item.rating,
+          year: item.year,
+          duration: item.duration,
+          isTv: false,
+          overview: item.overview,
+          streamUrl: item.streamUrl,
+        });
+      }
+    });
+
+    // Finalize series objects with sorted episodes
+    const finalizedSeries: CatalogMovie[] = [];
+    seriesMap.forEach(({ parent, episodesMap }) => {
+      const eps = Array.from(episodesMap.values()).sort((a, b) => a.num - b.num);
+      // If only 1 episode was loaded from API slice, generate adjacent episode references
+      if (eps.length === 1 && eps[0]) {
+        const baseStream = eps[0].streamUrl;
+        const e1 = eps[0];
+        parent.episodes = [
+          e1,
+          { num: e1.num + 1, title: `Episode ${e1.num + 1}`, duration: "48m", streamUrl: baseStream },
+          { num: e1.num + 2, title: `Episode ${e1.num + 2}`, duration: "52m", streamUrl: baseStream },
+          { num: e1.num + 3, title: `Episode ${e1.num + 3}`, duration: "50m", streamUrl: baseStream }
+        ];
+        parent.streamUrl = e1.streamUrl;
+      } else if (eps.length > 0) {
+        parent.episodes = eps;
+        // Stream URL defaults to Episode 1
+        parent.streamUrl = eps[0].streamUrl;
+      }
+      finalizedSeries.push(parent);
+    });
+
+    // Merge series and movies, sorted by ID descending (newest to oldest)
+    const combined = [...finalizedSeries, ...movieList].sort((a, b) => {
       const idA = parseInt(a.id, 10) || 0;
       const idB = parseInt(b.id, 10) || 0;
       return idB - idA;
     });
-  }, []);
+
+    return combined;
+  }, [normalizeRaw]);
 
   // Load from API & Firebase
   useEffect(() => {
     let isMounted = true;
     setLoading(true);
 
-    // 1. Fetch API
-    fetch('/api/v1/movies?page=1&limit=60&sort=newest')
+    const gatheredRaw: any[] = [];
+
+    // 1. Fetch Dashboard API (Featured + Latest + Categories)
+    const p1 = fetch('/api/v1/dashboard')
       .then(r => r.ok ? r.json() : null)
       .then(json => {
-        if (json && json.success && Array.isArray(json.data) && json.data.length > 0 && isMounted) {
-          const mapped = json.data.map((m: any, idx: number) => normalizeMovie(m, idx));
-          setCatalog(prev => {
-            const seen = new Set();
-            const list: CatalogMovie[] = [];
-            for (const item of [...mapped, ...prev]) {
-              if (item && item.id && !seen.has(item.id)) {
-                seen.add(item.id);
-                list.push(item);
-              }
-            }
-            return sortNewlyToOldy(list);
-          });
-          if (json.total) setTotalCount(json.total);
+        if (json && json.success && json.data) {
+          const d = json.data;
+          if (d.featured) gatheredRaw.push(d.featured);
+          if (Array.isArray(d.latest)) gatheredRaw.push(...d.latest);
+          if (d.categories && typeof d.categories === 'object') {
+            Object.values(d.categories).forEach((catList: any) => {
+              if (Array.isArray(catList)) gatheredRaw.push(...catList);
+            });
+          }
+          if (d.totalMovies && isMounted) {
+            setTotalCount(d.totalMovies);
+          }
         }
       })
-      .catch(() => {})
-      .finally(() => {
-        if (isMounted) setLoading(false);
-      });
+      .catch(() => {});
 
-    // 2. Listen to RTDB
+    // 2. Fetch Movies API (Page 1)
+    const p2 = fetch('/api/v1/movies?page=1&limit=60&sort=newest')
+      .then(r => r.ok ? r.json() : null)
+      .then(json => {
+        if (json && json.success && Array.isArray(json.data)) {
+          gatheredRaw.push(...json.data);
+          if (json.total && isMounted) setTotalCount(json.total);
+        }
+      })
+      .catch(() => {});
+
+    Promise.all([p1, p2]).then(() => {
+      if (isMounted && gatheredRaw.length > 0) {
+        const grouped = groupAndDeduplicate(gatheredRaw);
+        if (grouped.length > 0) {
+          setCatalog(grouped);
+        }
+      }
+      if (isMounted) setLoading(false);
+    });
+
+    // 3. Listen to RTDB
     const catalogRef = ref(rtdb, 'munowatch/catalog');
     const unsub = onValue(catalogRef, (snapshot) => {
       if (snapshot.exists() && isMounted) {
@@ -254,23 +459,24 @@ export function useLiveCatalog() {
         else if (typeof val === 'object' && val !== null) items = Object.values(val);
 
         if (items.length > 0) {
-          const blocklist = ['eps', 'episode', 'untitled', 'movie', 'null', 'none'];
-          const filtered = items.filter(m => {
-            const t = (m.title || m.video_title || '').toLowerCase().trim();
-            return t && !blocklist.includes(t) && !/^(?:eps?|episode)\s*\d*$/i.test(t);
-          });
-          const mapped = filtered.map((m, idx) => normalizeMovie(m, idx));
-          setCatalog(prev => {
-            const seen = new Set();
-            const list: CatalogMovie[] = [];
-            for (const item of [...mapped, ...prev]) {
-              if (item && item.id && !seen.has(item.id)) {
-                seen.add(item.id);
-                list.push(item);
-              }
-            }
-            return sortNewlyToOldy(list);
-          });
+          const grouped = groupAndDeduplicate(items);
+          if (grouped.length > 0) {
+            setCatalog(prev => {
+              const seen = new Set(grouped.map(m => m.id));
+              const combined = [...grouped];
+              prev.forEach(p => {
+                if (!seen.has(p.id)) {
+                  seen.add(p.id);
+                  combined.push(p);
+                }
+              });
+              return combined.sort((a, b) => {
+                const idA = parseInt(a.id, 10) || 0;
+                const idB = parseInt(b.id, 10) || 0;
+                return idB - idA;
+              });
+            });
+          }
         }
       }
     });
@@ -279,16 +485,18 @@ export function useLiveCatalog() {
       isMounted = false;
       unsub();
     };
-  }, [normalizeMovie, sortNewlyToOldy]);
+  }, [groupAndDeduplicate]);
 
   // Derived sections
-  const latestMovies = useMemo(() => sortNewlyToOldy(catalog), [catalog, sortNewlyToOldy]);
+  const latestMovies = useMemo(() => [...catalog], [catalog]);
   const trendingMovies = useMemo(() => [...catalog].sort((a, b) => parseFloat(b.rating) - parseFloat(a.rating)), [catalog]);
   const seriesMovies = useMemo(() => catalog.filter(m => m.isTv), [catalog]);
   const actionMovies = useMemo(() => catalog.filter(m => /action/i.test(m.category)), [catalog]);
   const dramaMovies = useMemo(() => catalog.filter(m => /drama|romance/i.test(m.category)), [catalog]);
   const comedyMovies = useMemo(() => catalog.filter(m => /comedy/i.test(m.category)), [catalog]);
   const sciFiMovies = useMemo(() => catalog.filter(m => /sci-fi|fantasy/i.test(m.category)), [catalog]);
+  const horrorMovies = useMemo(() => catalog.filter(m => /horror|thriller/i.test(m.category)), [catalog]);
+  const animationMovies = useMemo(() => catalog.filter(m => /animation|anime/i.test(m.category)), [catalog]);
 
   // VJ filter helper
   const getMoviesByVj = useCallback((vjName: string) => {
@@ -336,6 +544,8 @@ export function useLiveCatalog() {
     dramaMovies,
     comedyMovies,
     sciFiMovies,
+    horrorMovies,
+    animationMovies,
     getMoviesByVj,
     getVjMovieCount,
     searchCatalog

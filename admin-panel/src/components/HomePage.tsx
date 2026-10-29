@@ -22,8 +22,11 @@ import {
 } from "lucide-react";
 import { ALL_VJS } from "./AvailableVJsPage";
 import { useLiveCatalog, CatalogMovie } from "../data/liveCatalog";
+import { AvatarGraphic } from "./AvatarGraphic";
+import { UserProfileData } from "./EditProfileModal";
 
 interface HomePageProps {
+  userProfile?: UserProfileData;
   onSelectMovie?: (movieId: string, isSeries?: boolean, title?: string, movie?: CatalogMovie) => void;
   onLogout?: () => void;
   onNavigateTab?: (tab: "home" | "search" | "favorites" | "downloads" | "profile") => void;
@@ -44,6 +47,7 @@ export const FreeWatchLogo: React.FC<{ className?: string }> = ({ className = ""
 };
 
 export const HomePage: React.FC<HomePageProps> = ({
+  userProfile,
   onSelectMovie,
   onLogout,
   onNavigateTab,
@@ -69,6 +73,8 @@ export const HomePage: React.FC<HomePageProps> = ({
     dramaMovies,
     comedyMovies,
     sciFiMovies,
+    horrorMovies,
+    animationMovies,
   } = useLiveCatalog();
 
   const heroMovie = latestMovies[0] || catalog[0];
@@ -185,11 +191,7 @@ export const HomePage: React.FC<HomePageProps> = ({
             title="Account Profile"
             className="w-8 h-8 rounded-full overflow-hidden border border-white/20 active:scale-95 transition-transform cursor-pointer"
           >
-            <img
-              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
-              alt="Profile"
-              className="w-full h-full object-cover"
-            />
+            <AvatarGraphic id={userProfile?.avatarId || "mirabel"} />
           </button>
         </div>
       </header>
@@ -657,9 +659,32 @@ export const HomePage: React.FC<HomePageProps> = ({
         </div>
 
         <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
-          {catalog.filter((m) => /horror|thriller/i.test(m.category)).slice(0, 15).map(renderMovieCard)}
+          {horrorMovies.slice(0, 15).map(renderMovieCard)}
         </div>
       </section>
+
+      {/* 11. SECTION: ANIMATION & CARTOONS */}
+      {animationMovies.length > 0 && (
+        <section className="mt-7 px-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Smile className="w-4 h-4 text-yellow-400" />
+              <h2 className="text-lg font-bold text-white tracking-tight">Animation &amp; Kids</h2>
+            </div>
+            <button
+              type="button"
+              onClick={() => onNavigateToCategorySeeAll?.("Animation", animationMovies.length, "sparkles")}
+              className="px-3 py-1 rounded-full bg-[#1e1b2e] border border-white/5 text-[11px] font-semibold text-neutral-300 hover:text-white transition-colors cursor-pointer"
+            >
+              See all
+            </button>
+          </div>
+
+          <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
+            {animationMovies.slice(0, 15).map(renderMovieCard)}
+          </div>
+        </section>
+      )}
 
       {/* 11. FIXED BOTTOM NAVIGATION BAR (Hidden on desktop) */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 h-16 bg-black/95 backdrop-blur-lg border-t border-white/10 px-4 flex items-center justify-around">

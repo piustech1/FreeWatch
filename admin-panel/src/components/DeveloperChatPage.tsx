@@ -9,6 +9,8 @@ import {
   CheckCheck,
 } from "lucide-react";
 import { FreeWatchLogo } from "./HomePage";
+import { AvatarGraphic } from "./AvatarGraphic";
+import { UserProfileData } from "./EditProfileModal";
 
 interface ChatMessage {
   id: string;
@@ -26,6 +28,7 @@ interface DeveloperChatPageProps {
   onNavigateTab: (tab: "home" | "search" | "favorites" | "downloads" | "profile") => void;
   onNavigateToNotifications?: () => void;
   onLogout?: () => void;
+  userProfile?: UserProfileData;
 }
 
 const INITIAL_MESSAGES: ChatMessage[] = [
@@ -81,6 +84,7 @@ export const DeveloperChatPage: React.FC<DeveloperChatPageProps> = ({
   onBack,
   onNavigateTab,
   onNavigateToNotifications,
+  userProfile,
 }) => {
   const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
   const [inputText, setInputText] = useState("");
@@ -162,11 +166,7 @@ export const DeveloperChatPage: React.FC<DeveloperChatPageProps> = ({
             title="Account Profile"
             className="w-8 h-8 rounded-full overflow-hidden border border-white/20 active:scale-95 transition-transform cursor-pointer"
           >
-            <img
-              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
-              alt="Profile"
-              className="w-full h-full object-cover"
-            />
+            <AvatarGraphic id={userProfile?.avatarId || "mirabel"} />
           </button>
         </div>
       </header>
@@ -294,11 +294,7 @@ export const DeveloperChatPage: React.FC<DeveloperChatPageProps> = ({
                 {/* User Avatar */}
                 {isUser && (
                   <div className="w-7 h-7 rounded-full overflow-hidden border border-white/20 shrink-0 mb-1">
-                    <img
-                      src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&auto=format&fit=crop&q=80"
-                      alt="User"
-                      className="w-full h-full object-cover"
-                    />
+                    <AvatarGraphic id={userProfile?.avatarId || "mirabel"} />
                   </div>
                 )}
               </div>

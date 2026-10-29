@@ -20,10 +20,13 @@ import {
 import { FreeWatchLogo } from "./HomePage";
 import { useLiveCatalog, CatalogMovie } from "../data/liveCatalog";
 import { ALL_VJS } from "./AvailableVJsPage";
+import { AvatarGraphic } from "./AvatarGraphic";
+import { UserProfileData } from "./EditProfileModal";
 
 export type SearchViewState = "categories" | "results" | "filters";
 
 interface SearchPageProps {
+  userProfile?: UserProfileData;
   onBackToHome?: () => void;
   onLogout?: () => void;
   onNavigateTab?: (tab: "home" | "search" | "favorites" | "downloads" | "profile") => void;
@@ -54,6 +57,7 @@ const CATEGORIES_LIST = [
 ];
 
 export const SearchPage: React.FC<SearchPageProps> = ({
+  userProfile,
   onBackToHome,
   onLogout,
   onNavigateTab,
@@ -118,11 +122,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({
             title="Account Profile"
             className="w-8 h-8 rounded-full overflow-hidden border border-white/20 active:scale-95 transition-transform cursor-pointer"
           >
-            <img
-              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
-              alt="Profile"
-              className="w-full h-full object-cover"
-            />
+            <AvatarGraphic id={userProfile?.avatarId || "mirabel"} />
           </button>
         </div>
       </header>

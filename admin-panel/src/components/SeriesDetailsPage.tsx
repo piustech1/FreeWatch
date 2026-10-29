@@ -1,23 +1,26 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import {
   Search as SearchIcon,
   Bell,
   ArrowLeft,
-  Star,
   Play,
   SkipForward,
   Bookmark,
   Download,
   ChevronDown,
-  Check,
   Home,
   Heart,
   User as UserIcon,
   X,
   Headphones,
+  RefreshCw,
+  AlertCircle
 } from "lucide-react";
+import Hls from "hls.js";
 import { FreeWatchLogo } from "./HomePage";
 import { useLiveCatalog, CatalogMovie } from "../data/liveCatalog";
+import { AvatarGraphic } from "./AvatarGraphic";
+import { UserProfileData } from "./EditProfileModal";
 
 interface SeriesDetailsPageProps {
   onBack: () => void;
@@ -25,6 +28,7 @@ interface SeriesDetailsPageProps {
   onLogout?: () => void;
   seriesTitle?: string;
   movie?: CatalogMovie;
+  userProfile?: UserProfileData;
   onSelectMovie?: (movieId: string, isSeries?: boolean, title?: string, movie?: CatalogMovie) => void;
   onNavigateToNotifications?: () => void;
 }
@@ -35,16 +39,18 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
   onLogout,
   seriesTitle = "Wednesday Season 2",
   movie: incomingMovie,
+  userProfile,
   onSelectMovie,
   onNavigateToNotifications,
 }) => {
-  const [selectedSeason, setSelectedSeason] = useState<number>(1);
   const [activeEpisodeIndex, setActiveEpisodeIndex] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [isBookmarked, setIsBookmarked] = useState<boolean>(false);
   const [isDownloaded, setIsDownloaded] = useState<boolean>(false);
   const [isReadMore, setIsReadMore] = useState<boolean>(false);
+  const [streamError, setStreamError] = useState<boolean>(false);
 
+  const videoRef = useRef<HTMLVideoElement>(null);
   const { seriesMovies, catalog } = useLiveCatalog();
 
   // Resolve active series object
@@ -70,12 +76,12 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
         duration: "50m",
         isTv: true,
         overview: `Intense plot twists and tactical power struggles unfold in this acclaimed series, spiced up with exclusive Luganda voice-over translation.`,
-        streamUrl: "https://munotech3.b-cdn.net/gugwa/gugwa42/01.Mirzapur.SN1.VJ.Ashim.1080.mp4",
+        streamUrl: "https://munotech3.b-cdn.net/gugwa/gugwa42/07.Mirzapur.SN2.VJ.Ashim.1080.mp4",
         episodes: [
-          { num: 1, title: "Episode 1: The Outbreak", duration: "50m", streamUrl: "https://munotech3.b-cdn.net/gugwa/gugwa42/01.Mirzapur.SN1.VJ.Ashim.1080.mp4" },
-          { num: 2, title: "Episode 2: Retaliation", duration: "48m", streamUrl: "https://munotech3.b-cdn.net/gugwa/gugwa42/01.Mirzapur.SN1.VJ.Ashim.1080.mp4" },
-          { num: 3, title: "Episode 3: Power Struggle", duration: "52m", streamUrl: "https://munotech3.b-cdn.net/gugwa/gugwa42/01.Mirzapur.SN1.VJ.Ashim.1080.mp4" },
-          { num: 4, title: "Episode 4: The Showdown", duration: "55m", streamUrl: "https://munotech3.b-cdn.net/gugwa/gugwa42/01.Mirzapur.SN1.VJ.Ashim.1080.mp4" },
+          { num: 1, title: "Episode 1", duration: "50m", streamUrl: "https://munotech3.b-cdn.net/gugwa/gugwa42/01.Mirzapur.SN1.VJ.Ashim.1080.mp4" },
+          { num: 2, title: "Episode 2", duration: "48m", streamUrl: "https://munotech3.b-cdn.net/gugwa/gugwa42/02.Mirzapur.SN2.VJ.Ashim.1080.mp4" },
+          { num: 3, title: "Episode 3", duration: "52m", streamUrl: "https://munotech3.b-cdn.net/gugwa/gugwa42/03.Mirzapur.SN2.VJ.Ashim.1080.mp4" },
+          { num: 4, title: "Episode 4", duration: "55m", streamUrl: "https://munotech3.b-cdn.net/gugwa/gugwa42/04.Mirzapur.SN2.VJ.Ashim.1080.mp4" },
         ],
       }
     );
@@ -85,7 +91,7 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
     if (activeSeries.episodes && activeSeries.episodes.length > 0) {
       return activeSeries.episodes;
     }
-    const defaultUrl = activeSeries.streamUrl || "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4";
+    const defaultUrl = activeSeries.streamUrl || "https://munotech3.b-cdn.net/gugwa/gugwa42/07.Mirzapur.SN2.VJ.Ashim.1080.mp4";
     return [
       { num: 1, title: `${activeSeries.title} Episode 01`, duration: "50m", streamUrl: defaultUrl },
       { num: 2, title: `${activeSeries.title} Episode 02`, duration: "48m", streamUrl: defaultUrl },
@@ -95,7 +101,67 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
   }, [activeSeries]);
 
   const currentEpisode = episodes[activeEpisodeIndex] || episodes[0];
-  const streamUrl = currentEpisode.streamUrl || activeSeries.streamUrl;
+  const streamUrl = currentEpisode?.streamUrl || activeSeries.streamUrl;
+
+  // Sync bookmarks from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("freewatch_favorites");
+      if (saved) {
+        const list: CatalogMovie[] = JSON.parse(saved);
+        if (list.some((m) => m.id === activeSeries.id)) {
+          setIsBookmarked(true);
+        }
+      }
+    } catch {}
+  }, [activeSeries.id]);
+
+  const toggleFavorite = () => {
+    const nextState = !isBookmarked;
+    setIsBookmarked(nextState);
+    try {
+      const saved = localStorage.getItem("freewatch_favorites");
+      let list: CatalogMovie[] = saved ? JSON.parse(saved) : [];
+      if (nextState) {
+        if (!list.some((m) => m.id === activeSeries.id)) {
+          list.push(activeSeries);
+        }
+      } else {
+        list = list.filter((m) => m.id !== activeSeries.id);
+      }
+      localStorage.setItem("freewatch_favorites", JSON.stringify(list));
+    } catch {}
+  };
+
+  // Video Streaming Setup with HLS and MP4 fallback
+  useEffect(() => {
+    if (!isPlaying || !streamUrl || !videoRef.current) return;
+    setStreamError(false);
+
+    const video = videoRef.current;
+    let hlsInstance: Hls | null = null;
+
+    if (streamUrl.includes(".m3u8")) {
+      if (video.canPlayType("application/vnd.apple.mpegurl")) {
+        video.src = streamUrl;
+      } else if (Hls.isSupported()) {
+        hlsInstance = new Hls({ enableWorker: true });
+        hlsInstance.loadSource(streamUrl);
+        hlsInstance.attachMedia(video);
+        hlsInstance.on(Hls.Events.ERROR, () => {
+          setStreamError(true);
+        });
+      }
+    } else {
+      video.src = streamUrl;
+    }
+
+    return () => {
+      if (hlsInstance) {
+        hlsInstance.destroy();
+      }
+    };
+  }, [isPlaying, streamUrl]);
 
   const handleNextEpisode = () => {
     const nextIdx = (activeEpisodeIndex + 1) % episodes.length;
@@ -137,11 +203,7 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
             title="Account Profile"
             className="w-8 h-8 rounded-full overflow-hidden border border-white/20 active:scale-95 transition-transform cursor-pointer"
           >
-            <img
-              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
-              alt="Profile"
-              className="w-full h-full object-cover"
-            />
+            <AvatarGraphic id={userProfile?.avatarId || "mirabel"} />
           </button>
         </div>
       </header>
@@ -151,11 +213,14 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
         {isPlaying ? (
           <div className="relative w-full h-full bg-black flex items-center justify-center">
             <video
+              ref={videoRef}
               key={streamUrl}
-              src={streamUrl}
+              referrerPolicy="no-referrer"
+              crossOrigin="anonymous"
               controls
               autoPlay
               playsInline
+              onError={() => setStreamError(true)}
               className="w-full h-full object-contain"
             />
             <button
@@ -166,6 +231,33 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
               <X className="w-3.5 h-3.5" />
               <span>Close Player</span>
             </button>
+
+            {/* Error Overlay */}
+            {streamError && (
+              <div className="absolute inset-0 bg-black/90 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center z-20">
+                <AlertCircle className="w-12 h-12 text-[#E50914] mb-3" />
+                <h3 className="text-lg font-bold text-white mb-1">Stream Error</h3>
+                <p className="text-xs text-neutral-400 max-w-sm mb-4">
+                  Episode stream could not be loaded directly. Click below to retry.
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStreamError(false);
+                      if (videoRef.current) {
+                        videoRef.current.load();
+                        videoRef.current.play().catch(() => {});
+                      }
+                    }}
+                    className="px-4 py-2 rounded-full bg-[#00E676] text-black font-bold text-xs flex items-center gap-1.5 active:scale-95 transition-all"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>Retry Stream</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <>
@@ -198,14 +290,14 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
                 <ArrowLeft className="w-5 h-5 stroke-[2.2]" />
               </button>
 
-              <div className="px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/10 flex items-center gap-1.5 shadow-md">
-                <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                <span className="text-xs font-bold text-white">{activeSeries.rating}</span>
+              <div className="px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-amber-400 text-xs font-black flex items-center gap-1 shadow-md">
+                <span>★</span>
+                <span>{activeSeries.rating}</span>
               </div>
             </div>
 
-            {/* Center Circular Play Button */}
-            <div className="absolute inset-0 flex items-center justify-center z-20">
+            {/* Center Big Play Button */}
+            <div className="absolute inset-0 z-20 flex items-center justify-center">
               <button
                 type="button"
                 onClick={() => setIsPlaying(true)}
@@ -223,8 +315,8 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
               </div>
 
               <div className="flex items-center justify-between gap-3">
-                <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-white leading-tight drop-shadow-md">
-                  {activeSeries.title}: {currentEpisode.title}
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-white font-sans leading-tight drop-shadow-md">
+                  {activeSeries.title}
                 </h1>
 
                 <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#4c1d95] text-white text-[11px] font-bold shrink-0 shadow-md">
@@ -236,13 +328,13 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
               {/* Tags */}
               <div className="flex items-center gap-2 pt-1 flex-wrap">
                 <span className="px-3 py-1 rounded-full bg-[#1c1c1e] text-[11px] font-semibold text-neutral-300">
-                  Season 1
+                  {episodes.length} Episodes
                 </span>
                 <span className="px-3 py-1 rounded-full bg-[#1c1c1e] text-[11px] font-semibold text-neutral-300">
-                  TV Series
+                  HD 1080p
                 </span>
                 <span className="px-3 py-1 rounded-full bg-[#1c1c1e] text-[11px] font-semibold text-[#00E676]">
-                  Luganda Dubbed
+                  Luganda Dubbed Series
                 </span>
               </div>
             </div>
@@ -250,7 +342,7 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
         )}
       </div>
 
-      {/* 3. ACTION BUTTONS ROW (Play, Next Ep, Bookmark, Download) */}
+      {/* 3. ACTION BUTTONS ROW (Play, Bookmark, Download) */}
       <div className="px-4 pt-4 flex items-center gap-2.5">
         <button
           type="button"
@@ -258,21 +350,12 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
           className="flex-1 h-12 rounded-full bg-[#00E676] hover:bg-[#00c853] text-black font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg shadow-[#00E676]/25 active:scale-[0.98] cursor-pointer"
         >
           <Play className="w-4 h-4 fill-black" />
-          <span>{isPlaying ? "NOW PLAYING" : "PLAY EPISODE"}</span>
+          <span>{isPlaying ? `PLAYING ${currentEpisode?.title || "EPISODE"}` : "START WATCHING"}</span>
         </button>
 
         <button
           type="button"
-          onClick={handleNextEpisode}
-          className="px-4 h-12 rounded-full bg-[#0e2a18] border border-[#00E676]/40 hover:bg-[#133820] text-[#00E676] font-bold text-xs flex items-center gap-1.5 active:scale-[0.98] cursor-pointer"
-        >
-          <SkipForward className="w-3.5 h-3.5 fill-[#00E676]" />
-          <span>Next Ep</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setIsBookmarked(!isBookmarked)}
+          onClick={toggleFavorite}
           className={`w-12 h-12 rounded-2xl flex items-center justify-center border transition-all cursor-pointer ${
             isBookmarked
               ? "bg-[#00E676] border-[#00E676] text-black"
@@ -310,7 +393,7 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
           <button
             type="button"
             onClick={handleNextEpisode}
-            className="px-3.5 py-1.5 rounded-full bg-[#00E676] text-black font-extrabold text-xs flex items-center gap-1.5 shadow-md shadow-[#00E676]/20 cursor-pointer"
+            className="px-3.5 py-1.5 rounded-full bg-[#00E676] text-black font-extrabold text-xs flex items-center gap-1.5 shadow-md shadow-[#00E676]/20 cursor-pointer active:scale-95 transition-all"
           >
             <SkipForward className="w-3 h-3 fill-black" />
             <span>Next Episode</span>
@@ -398,8 +481,7 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
                 key={movie.id}
                 onClick={() => {
                   setIsPlaying(false);
-                  setActiveEpisodeIndex(0);
-                  onSelectMovie?.(movie.id, true, movie.title, movie);
+                  onSelectMovie?.(movie.id, movie.isTv, movie.title, movie);
                 }}
                 className="w-[120px] sm:w-[136px] shrink-0 cursor-pointer group active:scale-95 transition-transform"
               >
@@ -432,7 +514,7 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
                   <div className="flex items-center gap-1 text-[11px] text-neutral-400 font-medium">
                     <span className="text-amber-400 font-bold">★ {movie.rating}</span>
                     <span>•</span>
-                    <span>{movie.year}</span>
+                    <span className="text-[#00E676]">Series</span>
                   </div>
                 </div>
               </div>
@@ -440,7 +522,7 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
         </div>
       </div>
 
-      {/* 7. FIXED BOTTOM NAVIGATION BAR */}
+      {/* 7. FIXED BOTTOM NAVIGATION BAR (Hidden on desktop) */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 h-16 bg-black/95 backdrop-blur-lg border-t border-white/10 px-4 flex items-center justify-around">
         <button
           type="button"

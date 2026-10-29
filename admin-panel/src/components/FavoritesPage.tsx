@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Search as SearchIcon,
   Bell,
@@ -7,112 +7,48 @@ import {
   Home,
   Download,
   User as UserIcon,
+  Trash2,
 } from "lucide-react";
 import { FreeWatchLogo } from "./HomePage";
+import { CatalogMovie } from "../data/liveCatalog";
+import { AvatarGraphic } from "./AvatarGraphic";
+import { UserProfileData } from "./EditProfileModal";
 
 interface FavoritesPageProps {
   onNavigateTab: (tab: "home" | "search" | "favorites" | "downloads" | "profile") => void;
   onLogout?: () => void;
-  onSelectMovie?: (movieId: string, isSeries?: boolean, title?: string) => void;
+  userProfile?: UserProfileData;
+  onSelectMovie?: (movieId: string, isSeries?: boolean, title?: string, movie?: CatalogMovie) => void;
   onNavigateToNotifications?: () => void;
 }
-
-interface FavoriteMovieItem {
-  id: string;
-  title: string;
-  rating: string;
-  posterGradient: string;
-  subtitle?: string;
-  highlightTitle?: string;
-}
-
-const CONTINUE_WATCHING_ITEMS = [
-  {
-    id: "cw-1",
-    title: "The Soccer Football Movie",
-    progress: 35,
-    gradient: "from-red-950 via-zinc-900 to-black",
-  },
-  {
-    id: "cw-2",
-    title: "Supacell",
-    progress: 60,
-    gradient: "from-amber-950 via-stone-900 to-black",
-  },
-];
-
-const FAVORITE_MOVIES: FavoriteMovieItem[] = [
-  {
-    id: "fav-1",
-    title: "Just Say It: Ava Peace",
-    rating: "8.4",
-    posterGradient: "from-purple-900 via-indigo-950 to-black",
-    highlightTitle: "The story behind the hits",
-  },
-  {
-    id: "fav-2",
-    title: "What If",
-    rating: "8.4",
-    posterGradient: "from-sky-500 via-blue-600 to-indigo-950",
-    highlightTitle: "WHAT IF",
-  },
-  {
-    id: "fav-3",
-    title: "Hope",
-    rating: "8.4",
-    posterGradient: "from-slate-700 via-zinc-900 to-black",
-    highlightTitle: "HOPE",
-  },
-  {
-    id: "fav-4",
-    title: "Mapanukso",
-    rating: "0.0",
-    posterGradient: "from-stone-300 via-stone-600 to-stone-900",
-    highlightTitle: "Mapanukso",
-  },
-  {
-    id: "fav-5",
-    title: "Insidious: Out of the ...",
-    rating: "8.4",
-    posterGradient: "from-teal-950 via-stone-900 to-black",
-    highlightTitle: "INSIDIOUS",
-  },
-  {
-    id: "fav-6",
-    title: "Jurassic World: Rebir...",
-    rating: "8.4",
-    posterGradient: "from-red-950 via-amber-950 to-black",
-    highlightTitle: "JURASSIC WORLD",
-  },
-  {
-    id: "fav-7",
-    title: "VJ Junior Special",
-    rating: "8.8",
-    posterGradient: "from-emerald-600 via-green-800 to-black",
-    highlightTitle: "VJ JUNIOR",
-  },
-  {
-    id: "fav-8",
-    title: "Fall: The Edge",
-    rating: "8.2",
-    posterGradient: "from-stone-400 via-stone-700 to-stone-950",
-    highlightTitle: "FALL",
-  },
-  {
-    id: "fav-9",
-    title: "Chappie / Automata",
-    rating: "8.4",
-    posterGradient: "from-sky-900 via-slate-800 to-zinc-900",
-    highlightTitle: "REJECT",
-  },
-];
 
 export const FavoritesPage: React.FC<FavoritesPageProps> = ({
   onNavigateTab,
   onLogout,
+  userProfile,
   onSelectMovie,
   onNavigateToNotifications,
 }) => {
+  const [favorites, setFavorites] = useState<CatalogMovie[]>([]);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("freewatch_favorites");
+      if (saved) {
+        setFavorites(JSON.parse(saved));
+      }
+    } catch {}
+  }, []);
+
+  const handleRemoveFavorite = (movieId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const next = favorites.filter((m) => m.id !== movieId);
+    setFavorites(next);
+    try {
+      localStorage.setItem("freewatch_favorites", JSON.stringify(next));
+    } catch {}
+  };
+
   return (
     <div className="w-full min-h-screen bg-black text-white font-sans flex flex-col pb-24 select-none">
       {/* 1. TOP HEADER BAR */}
@@ -147,93 +83,126 @@ export const FavoritesPage: React.FC<FavoritesPageProps> = ({
             title="Account Profile"
             className="w-8 h-8 rounded-full overflow-hidden border border-white/20 active:scale-95 transition-transform cursor-pointer"
           >
-            <img
-              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
-              alt="Profile"
-              className="w-full h-full object-cover"
-            />
+            <AvatarGraphic id={userProfile?.avatarId || "mirabel"} />
           </button>
         </div>
       </header>
 
-      {/* 2. CONTINUE WATCHING SECTION */}
-      <section className="px-4 pt-4">
-        <h2 className="text-sm font-extrabold text-white tracking-wider uppercase mb-3">
-          CONTINUE WATCHING
-        </h2>
-
-        {/* 2 Cards Row */}
-        <div className="grid grid-cols-2 gap-3">
-          {CONTINUE_WATCHING_ITEMS.map((item) => (
-            <div
-              key={item.id}
-              onClick={() => onSelectMovie?.(item.id, false, item.title)}
-              className={`relative aspect-video rounded-2xl overflow-hidden bg-gradient-to-t ${item.gradient} border border-white/10 p-2.5 flex flex-col justify-between cursor-pointer group shadow-lg active:scale-95 transition-transform`}
-            >
-              <div />
-
-              {/* Center Play Button */}
-              <div className="self-center w-10 h-10 rounded-full bg-white/90 text-black flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
-                <Play className="w-4 h-4 fill-black text-black ml-0.5" />
-              </div>
-
-              {/* Title Overlay */}
-              <div>
-                <h4 className="text-xs font-bold text-white leading-tight drop-shadow-md truncate">
-                  {item.title}
-                </h4>
-              </div>
-
-              {/* Bottom Progress Bar */}
-              <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20">
-                <div
-                  className="h-full bg-[#00E676]"
-                  style={{ width: `${item.progress}%` }}
-                />
-              </div>
-            </div>
-          ))}
+      {/* 2. MAIN CONTENT AREA */}
+      {favorites.length === 0 ? (
+        <div className="flex-1 flex flex-col items-center justify-center py-24 px-4 text-center">
+          <div className="w-36 h-36 mb-6 flex items-center justify-center">
+            <img
+              src="/assets/images/empty_favorites.svg"
+              alt="Empty Favorites"
+              className="w-full h-full object-contain filter drop-shadow-[0_4px_20px_rgba(0,0,0,0.8)]"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = "none";
+              }}
+            />
+          </div>
+          <h3 className="text-xl font-black text-white mb-2">No Favorites Yet</h3>
+          <p className="text-xs text-neutral-400 max-w-xs mb-6 leading-relaxed">
+            Discover great Luganda dubbed movies and series, then tap the bookmark icon to save them for easy access.
+          </p>
+          <button
+            type="button"
+            onClick={() => onNavigateTab("home")}
+            className="px-7 py-3.5 rounded-full bg-[#00E676] hover:bg-[#00c853] text-black font-extrabold text-xs uppercase tracking-wider active:scale-95 transition-all shadow-lg shadow-[#00E676]/25 cursor-pointer"
+          >
+            Browse Movies
+          </button>
         </div>
-      </section>
-
-      {/* 3. MY FAVORITES SECTION */}
-      <section className="max-w-7xl mx-auto w-full px-4 lg:px-8 mt-6">
-        <h2 className="text-sm font-extrabold text-white tracking-wider uppercase mb-3">
-          MY FAVORITES
-        </h2>
-
-        {/* Responsive Movie Grid (3-cols mobile, 6-7 cols desktop) */}
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-3 lg:gap-4">
-          {FAVORITE_MOVIES.map((movie) => (
-            <div
-              key={movie.id}
-              onClick={() => onSelectMovie?.(movie.id, false, movie.title)}
-              className="cursor-pointer group active:scale-95 transition-transform"
+      ) : (
+        <section className="max-w-7xl mx-auto w-full px-4 lg:px-8 mt-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Heart className="w-4 h-4 text-[#00E676] fill-[#00E676]" />
+              <h2 className="text-sm font-extrabold text-white tracking-wider uppercase">
+                MY FAVORITES ({favorites.length})
+              </h2>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setFavorites([]);
+                try {
+                  localStorage.removeItem("freewatch_favorites");
+                } catch {}
+              }}
+              className="text-xs text-neutral-400 hover:text-red-400 transition-colors cursor-pointer"
             >
+              Clear all
+            </button>
+          </div>
+
+          {/* Grid of favorited movies */}
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-3 lg:gap-4">
+            {favorites.map((movie) => (
               <div
-                className={`relative aspect-[2/3] rounded-2xl overflow-hidden bg-gradient-to-t ${movie.posterGradient} border border-white/10 group-hover:border-white/30 group-hover:scale-[1.03] transition-all p-2 flex flex-col justify-end shadow-md`}
+                key={movie.id}
+                onClick={() => onSelectMovie?.(movie.id, movie.isTv, movie.title, movie)}
+                className="cursor-pointer group active:scale-95 transition-transform select-none relative"
               >
-                <div className="text-center pb-1">
-                  <div className="text-[11px] font-black text-white leading-tight drop-shadow-md line-clamp-2">
-                    {movie.highlightTitle || movie.title}
+                <div className="relative aspect-[2/3] rounded-2xl overflow-hidden bg-neutral-900 border border-white/10 group-hover:border-[#00E676]/60 transition-all p-2 flex flex-col justify-between shadow-lg">
+                  {movie.imageUrl && (
+                    <img
+                      src={movie.imageUrl}
+                      alt={movie.title}
+                      className="absolute inset-0 w-full h-full object-cover filter brightness-85 group-hover:scale-105 transition-transform"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/35 to-transparent pointer-events-none" />
+
+                  {/* Top: Remove button & Rating */}
+                  <div className="relative z-10 flex items-center justify-between">
+                    <span className="px-1.5 py-0.5 rounded bg-black/60 backdrop-blur-md text-amber-400 text-[10px] font-bold">
+                      ★ {movie.rating}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => handleRemoveFavorite(movie.id, e)}
+                      title="Remove from favorites"
+                      className="w-6 h-6 rounded-full bg-black/60 hover:bg-red-600/80 text-white flex items-center justify-center transition-colors cursor-pointer"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+
+                  {/* Center Play Button on Hover */}
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
+                    <div className="w-9 h-9 rounded-full bg-[#00E676] text-black flex items-center justify-center shadow-lg">
+                      <Play className="w-4 h-4 fill-black ml-0.5" />
+                    </div>
+                  </div>
+
+                  {/* Bottom: Title */}
+                  <div className="relative z-10 text-left pt-6">
+                    <div className="text-xs font-black text-white leading-tight drop-shadow-md line-clamp-2">
+                      {movie.title}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="mt-1.5 space-y-0.5">
-                <h4 className="text-[11.5px] font-bold text-white truncate">
-                  {movie.title}
-                </h4>
-                <div className="flex items-center gap-1 text-[11px] text-neutral-400 font-medium">
-                  <span className="text-amber-400">★ {movie.rating}</span>
+                <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-neutral-400 font-medium">
+                  <span className="text-neutral-400">{movie.year}</span>
+                  {movie.isTv && (
+                    <>
+                      <span>•</span>
+                      <span className="text-[#00E676] font-semibold">Series</span>
+                    </>
+                  )}
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
-      </section>
+            ))}
+          </div>
+        </section>
+      )}
 
-      {/* 4. FIXED BOTTOM NAVIGATION BAR (Hidden on desktop) */}
+      {/* 3. FIXED BOTTOM NAVIGATION BAR (Hidden on desktop) */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 h-16 bg-black/95 backdrop-blur-lg border-t border-white/10 px-4 flex items-center justify-around">
         <button
           type="button"

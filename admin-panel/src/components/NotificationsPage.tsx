@@ -9,6 +9,8 @@ import {
   User as UserIcon,
 } from "lucide-react";
 import { FreeWatchLogo } from "./HomePage";
+import { AvatarGraphic } from "./AvatarGraphic";
+import { UserProfileData } from "./EditProfileModal";
 
 interface NotificationItem {
   id: string;
@@ -27,6 +29,7 @@ interface NotificationsPageProps {
   onNavigateTab: (tab: "home" | "search" | "favorites" | "downloads" | "profile") => void;
   onSelectMovie?: (movieId: string, isSeries?: boolean, title?: string) => void;
   onLogout?: () => void;
+  userProfile?: UserProfileData;
 }
 
 const INITIAL_NOTIFICATIONS: NotificationItem[] = [
@@ -106,6 +109,7 @@ export const NotificationsPage: React.FC<NotificationsPageProps> = ({
   onBack,
   onNavigateTab,
   onSelectMovie,
+  userProfile,
 }) => {
   const [notifications, setNotifications] = useState<NotificationItem[]>(INITIAL_NOTIFICATIONS);
 
@@ -160,11 +164,7 @@ export const NotificationsPage: React.FC<NotificationsPageProps> = ({
             title="Account Profile"
             className="w-8 h-8 rounded-full overflow-hidden border border-white/20 active:scale-95 transition-transform cursor-pointer"
           >
-            <img
-              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
-              alt="Profile"
-              className="w-full h-full object-cover"
-            />
+            <AvatarGraphic id={userProfile?.avatarId || "mirabel"} />
           </button>
         </div>
       </header>

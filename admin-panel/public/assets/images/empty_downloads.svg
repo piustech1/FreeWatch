@@ -1,0 +1,44 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="downBgGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#F97316" stop-opacity="0.25"/>
+      <stop offset="70%" stop-color="#FB923C" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="downArrowGrad" x1="100" y1="46" x2="100" y2="124" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FDE047"/>
+      <stop offset="100%" stop-color="#F97316"/>
+    </linearGradient>
+    <linearGradient id="trayGrad" x1="40" y1="130" x2="160" y2="150" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FB923C" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#EA580C" stop-opacity="0.4"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Ambient Glow -->
+  <circle cx="100" cy="100" r="90" fill="url(#downBgGlow)"/>
+
+  <!-- Modern Cloud outline with subtle transparency -->
+  <path d="M72 88 C72 73 84 62 99 62 C113 62 124 72 126 85 C136 86 144 95 144 105 C144 116 135 125 124 125 L76 125 C63 125 52 114 52 101 C52 89 61 79 72 78" 
+        stroke="#FB923C" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="4 6" opacity="0.45"/>
+
+  <!-- Download Arrow Stem & Head -->
+  <g>
+    <line x1="100" y1="68" x2="100" y2="114" stroke="url(#downArrowGrad)" stroke-width="5" stroke-linecap="round"/>
+    <path d="M85 102 L100 117 L115 102" stroke="url(#downArrowGrad)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- Storage Tray Base -->
+  <path d="M56 126 L56 142 C56 148 61 153 67 153 L133 153 C139 153 144 148 144 142 L144 126" 
+        stroke="url(#trayGrad)" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- Storage Indicator Pulse -->
+  <circle cx="100" cy="142" r="3" fill="#FB923C"/>
+  <circle cx="114" cy="142" r="2" fill="#FB923C" opacity="0.6"/>
+  <circle cx="86" cy="142" r="2" fill="#FB923C" opacity="0.6"/>
+
+  <!-- Accents / Sparks -->
+  <circle cx="148" cy="68" r="3" fill="#FDE047" opacity="0.8"/>
+  <circle cx="48" cy="116" r="2" fill="#F97316" opacity="0.7"/>
+  <path d="M152 110 L154 114 L158 116 L154 118 L152 122 L150 118 L146 116 L150 114 Z" fill="#FB923C" opacity="0.75"/>
+</svg>

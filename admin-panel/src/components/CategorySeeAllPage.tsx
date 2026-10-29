@@ -20,6 +20,8 @@ import {
 } from "lucide-react";
 import { FreeWatchLogo } from "./HomePage";
 import { useLiveCatalog, CatalogMovie } from "../data/liveCatalog";
+import { AvatarGraphic } from "./AvatarGraphic";
+import { UserProfileData } from "./EditProfileModal";
 
 interface CategorySeeAllPageProps {
   categoryTitle: string;
@@ -30,6 +32,7 @@ interface CategorySeeAllPageProps {
   onNavigateTab: (tab: "home" | "search" | "favorites" | "downloads" | "profile") => void;
   onNavigateToNotifications?: () => void;
   onLogout?: () => void;
+  userProfile?: UserProfileData;
 }
 
 export const CategorySeeAllPage: React.FC<CategorySeeAllPageProps> = ({
@@ -40,6 +43,7 @@ export const CategorySeeAllPage: React.FC<CategorySeeAllPageProps> = ({
   onSelectMovie,
   onNavigateTab,
   onNavigateToNotifications,
+  userProfile,
 }) => {
   const {
     catalog,
@@ -120,11 +124,7 @@ export const CategorySeeAllPage: React.FC<CategorySeeAllPageProps> = ({
             title="Account Profile"
             className="w-8 h-8 rounded-full overflow-hidden border border-white/20 active:scale-95 transition-transform cursor-pointer"
           >
-            <img
-              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
-              alt="Profile"
-              className="w-full h-full object-cover"
-            />
+            <AvatarGraphic id={userProfile?.avatarId || "mirabel"} />
           </button>
         </div>
       </header>
