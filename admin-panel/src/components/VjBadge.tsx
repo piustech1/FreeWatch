@@ -16,13 +16,19 @@ export const VjBadge: React.FC<VjBadgeProps> = ({ vjName, size = "sm", className
   const cleanRaw = vjName.trim();
   const lower = cleanRaw.toLowerCase();
 
-  // Filter out meaningless placeholder names
+  // Filter out meaningless placeholder names or generic dubbed branding
   if (
     lower === "na" ||
     lower === "n/a" ||
     lower === "null" ||
     lower === "general" ||
-    lower.includes("universal")
+    lower === "unknown" ||
+    lower.includes("universal") ||
+    lower.includes("luganda dubbed") ||
+    lower.includes("vj luganda") ||
+    lower === "luganda" ||
+    lower === "vj dubbed" ||
+    lower.includes("translation")
   ) {
     return null;
   }

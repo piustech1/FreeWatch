@@ -19,7 +19,7 @@ import {
   User as UserIcon,
 } from "lucide-react";
 import { FreeWatchLogo } from "./HomePage";
-import { useLiveCatalog, CatalogMovie } from "../data/liveCatalog";
+import { useLiveCatalog, CatalogMovie, cleanTitleFromUrlOrId } from "../data/liveCatalog";
 import { ALL_VJS } from "./AvailableVJsPage";
 import { AvatarGraphic } from "./AvatarGraphic";
 import { UserProfileData } from "./EditProfileModal";
@@ -146,10 +146,16 @@ export const SearchPage: React.FC<SearchPageProps> = ({
               hasEpisodes
             );
 
+            const itemId = String(m.id || `api-${idx}`);
+            const rawStream = m.streamUrl || m.playingurl || '';
+            const rawTitle = m.title || m.video_title || '';
+            const rawVj = m.vj || '';
+            const cleaned = cleanTitleFromUrlOrId(itemId, rawTitle, rawStream, rawVj);
+
             return {
-              id: String(m.id || `api-${idx}`),
-              title: m.title,
-              vj: m.vj || 'Luganda Dubbed',
+              id: itemId,
+              title: cleaned.title,
+              vj: cleaned.vj || 'VJ Junior',
               category: isTv ? 'Series' : (m.category || 'Action'),
               genres: isTv ? ['Series', 'Luganda Dubbed'] : (m.genres || [m.category || 'Action', 'Luganda Dubbed']),
               imageUrl: m.poster || m.image || 'https://apposters.b-cdn.net/laba/yo/naki/gNxs2151.jpg',
@@ -160,7 +166,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({
               isTv,
               seriesCode: seriesCode || undefined,
               overview: m.overview || '',
-              streamUrl: m.streamUrl || m.playingurl || '',
+              streamUrl: cleaned.streamUrl || rawStream,
               episodes: Array.isArray(m.episodes) ? m.episodes : undefined,
             };
           });

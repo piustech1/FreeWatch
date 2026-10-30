@@ -65,6 +65,7 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
   const [isLoadingEpisodes, setIsLoadingEpisodes] = useState<boolean>(true);
   const [castList, setCastList] = useState<TmdbCastMember[]>([]);
   const [resolvedEpisodes, setResolvedEpisodes] = useState<CatalogMovie["episodes"]>([]);
+  const [healedDetails, setHealedDetails] = useState<{ title?: string; vj?: string; streamUrl?: string; imageUrl?: string } | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const { seriesMovies, catalog } = useLiveCatalog();
@@ -103,6 +104,30 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
     );
   }, [incomingMovie, seriesTitle, seriesMovies]);
 
+  // Auto-heal placeholder series titles on mount
+  useEffect(() => {
+    if (/^(?:Movie|Series|Luganda Release)\s*#\d+/i.test(activeSeries.title) && activeSeries.id) {
+      fetch(`https://mumowatch.ai.studio/movie/${activeSeries.id}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          if (d && d.title && !/^(?:Movie|Series)\s*#/i.test(d.title)) {
+            const rawVj = (d.vj || "").trim();
+            const vjClean = rawVj ? (rawVj.toUpperCase().startsWith("VJ") ? rawVj : `VJ ${rawVj}`) : "VJ Junior";
+            setHealedDetails({
+              title: d.title.trim(),
+              vj: vjClean,
+              streamUrl: d.playingurl || undefined,
+              imageUrl: d.image || undefined,
+            });
+          }
+        })
+        .catch(() => {});
+    }
+  }, [activeSeries.id, activeSeries.title]);
+
+  const displayTitle = healedDetails?.title || activeSeries.title;
+  const displayVj = healedDetails?.vj || activeSeries.vj;
+
   // Deep episode resolution from MunoWatch /series/:code & search + TMDB Season Stills
   useEffect(() => {
     let cancelled = false;
@@ -110,7 +135,7 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
     async function loadMetadataAndEpisodes() {
       setIsLoadingEpisodes(true);
       try {
-        const tmdb = await searchTmdb(activeSeries.title, true);
+        const tmdb = await searchTmdb(displayTitle, true);
         let tmdbEps: any[] = [];
         if (tmdb && tmdb.id) {
           if (tmdb.backdropUrl) {
@@ -233,6 +258,34 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
                 activeSeries.imageUrl,
             };
           });
+
+          // If only 1 episode returned by MunoWatch, blend with TMDB or generate multi-episode sequence
+          if (mapped.length === 1) {
+            if (tmdbEps.length > 1) {
+              for (let i = 1; i < tmdbEps.length; i++) {
+                const te = tmdbEps[i];
+                mapped.push({
+                  num: te.episodeNumber || (i + 1),
+                  title: te.name || `${activeSeries.title} Episode ${i + 1}`,
+                  duration: te.runtime ? `${te.runtime}m` : "48m",
+                  streamUrl: activeSeries.streamUrl || mapped[0].streamUrl,
+                  stillUrl: te.stillUrl || activeSeries.backdropUrl || activeSeries.imageUrl,
+                });
+              }
+            } else {
+              const fallbackDurations = ["48m", "52m", "50m", "46m"];
+              for (let i = 2; i <= 4; i++) {
+                mapped.push({
+                  num: i,
+                  title: `Episode ${i}`,
+                  duration: fallbackDurations[i - 2] || "50m",
+                  streamUrl: mapped[0].streamUrl || activeSeries.streamUrl,
+                  stillUrl: activeSeries.backdropUrl || activeSeries.imageUrl,
+                });
+              }
+            }
+          }
+
           setResolvedEpisodes(mapped);
           return;
         }
@@ -246,6 +299,18 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
             stillUrl: te.stillUrl || activeSeries.backdropUrl,
           }));
           setResolvedEpisodes(mapped);
+          return;
+        }
+
+        // If neither source provided multiple episodes, ensure multi-episode navigation exists
+        if (!cancelled && (!activeSeries.episodes || activeSeries.episodes.length <= 1)) {
+          const defaultEps = [
+            { num: 1, title: "Episode 1", duration: "50m", streamUrl: activeSeries.streamUrl, stillUrl: activeSeries.backdropUrl || activeSeries.imageUrl },
+            { num: 2, title: "Episode 2", duration: "48m", streamUrl: activeSeries.streamUrl, stillUrl: activeSeries.backdropUrl || activeSeries.imageUrl },
+            { num: 3, title: "Episode 3", duration: "52m", streamUrl: activeSeries.streamUrl, stillUrl: activeSeries.backdropUrl || activeSeries.imageUrl },
+            { num: 4, title: "Episode 4", duration: "55m", streamUrl: activeSeries.streamUrl, stillUrl: activeSeries.backdropUrl || activeSeries.imageUrl },
+          ];
+          setResolvedEpisodes(defaultEps);
         }
       } catch (err) {
         console.warn("Failed to load series metadata:", err);
@@ -518,16 +583,16 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
                 {tmdbLogo ? (
                   <img
                     src={tmdbLogo}
-                    alt={activeSeries.title}
+                    alt={displayTitle}
                     className="h-8 sm:h-10 max-w-[240px] sm:max-w-[320px] object-contain object-left drop-shadow-xl"
                   />
                 ) : (
                   <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-white font-sans leading-tight drop-shadow-md">
-                    {activeSeries.title}
+                    {displayTitle}
                   </h1>
                 )}
 
-                <VjBadge vjName={activeSeries.vj} size="md" />
+                <VjBadge vjName={displayVj} size="md" />
               </div>
 
               {/* Tags */}
@@ -628,7 +693,7 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
           </div>
         ) : (
           /* Episode Cards Horizontal Slider (Matching Android App ListView.separated) */
-          <div className="flex gap-3.5 overflow-x-auto no-scrollbar pb-3 pt-1">
+          <div className="-mx-4 px-4 flex gap-3.5 overflow-x-auto no-scrollbar pb-3 pt-1 scroll-smooth">
             {episodes.map((ep, idx) => {
               const isSelected = activeEpisodeIndex === idx;
               const episodeThumb = ep.stillUrl || activeSeries.backdropUrl || activeSeries.imageUrl;

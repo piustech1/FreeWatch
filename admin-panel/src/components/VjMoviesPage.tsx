@@ -35,24 +35,67 @@ export const VjMoviesPage: React.FC<VjMoviesPageProps> = ({
 }) => {
   const { getMoviesByVj } = useLiveCatalog();
   const [apiVjMovies, setApiVjMovies] = useState<CatalogMovie[]>([]);
+  const initialLocal = useMemo(() => getMoviesByVj(vj.name), [getMoviesByVj, vj.name]);
+  const [isLoading, setIsLoading] = useState<boolean>(initialLocal.length === 0);
 
-  // Asynchronously query MunoWatch for this VJ to populate real titles if needed
+  // Asynchronously query MunoWatch for this VJ to populate real titles
   useEffect(() => {
     let cancelled = false;
     const cleanVj = vj.name.toLowerCase().replace("vj", "").trim();
 
-    fetch(`/api/v1/search?q=${encodeURIComponent(vj.name)}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((json) => {
-        if (!cancelled && json && json.success && Array.isArray(json.data)) {
-          const matched: CatalogMovie[] = json.data
+    async function fetchVjReleases() {
+      if (initialLocal.length === 0) {
+        setIsLoading(true);
+      }
+      try {
+        let resultsData: any[] = [];
+
+        // 1. First try serverless endpoint
+        try {
+          const r = await fetch(`/api/v1/search?q=${encodeURIComponent(vj.name)}`);
+          if (r.ok) {
+            const json = await r.json();
+            if (json && json.success && Array.isArray(json.data) && json.data.length > 0) {
+              resultsData = json.data;
+            }
+          }
+        } catch (_) {}
+
+        // 2. Direct fallback to MunoWatch public API if serverless returned empty
+        if (resultsData.length === 0) {
+          try {
+            const munoRes = await fetch(`https://mumowatch.ai.studio/search?q=${encodeURIComponent(vj.name)}`);
+            if (munoRes.ok) {
+              const mData = await munoRes.json();
+              if (Array.isArray(mData.series)) {
+                mData.series.forEach((s: any) => {
+                  if (Array.isArray(s.episodes) && s.episodes.length > 0) {
+                    const ep = s.episodes[0];
+                    resultsData.push({
+                      ...ep,
+                      title: s.title || ep.title,
+                      vj: s.vj || ep.vj || vj.name,
+                      isTv: true,
+                    });
+                  }
+                });
+              }
+              if (Array.isArray(mData.movies)) {
+                resultsData.push(...mData.movies);
+              }
+            }
+          } catch (_) {}
+        }
+
+        if (!cancelled && resultsData.length > 0) {
+          const matched: CatalogMovie[] = resultsData
             .filter((m: any) => {
-              const mvj = (m.vj || "").toLowerCase();
-              return mvj.includes(cleanVj) || cleanVj.includes(mvj);
+              const mvj = (m.vj || m.vjname || "").toLowerCase();
+              return mvj.includes(cleanVj) || cleanVj.includes(mvj) || !mvj || mvj.includes("universal");
             })
             .map((m: any, idx: number) => ({
               id: String(m.id || `vj-api-${idx}`),
-              title: m.title,
+              title: m.title || m.video_title || `Movie #${m.id}`,
               vj: m.vj || vj.name,
               category: m.category || "Action",
               genres: m.genres || [m.category || "Action", "Luganda Dubbed"],
@@ -69,22 +112,32 @@ export const VjMoviesPage: React.FC<VjMoviesPageProps> = ({
             }));
           setApiVjMovies(matched);
         }
-      })
-      .catch(() => {});
+      } catch (_) {
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    fetchVjReleases();
 
     return () => {
       cancelled = true;
     };
-  }, [vj.name]);
+  }, [vj.name, initialLocal.length]);
 
   const moviesToDisplay = useMemo(() => {
     const list = getMoviesByVj(vj.name);
     if (apiVjMovies.length > 0) {
       const seen = new Set(list.map((m) => m.id));
+      const seenTitles = new Set(list.map((m) => m.title.toLowerCase().trim()));
       const combined = [...list];
       apiVjMovies.forEach((m) => {
-        if (!seen.has(m.id)) {
+        const normTitle = m.title.toLowerCase().trim();
+        if (!seen.has(m.id) && !seenTitles.has(normTitle)) {
           seen.add(m.id);
+          seenTitles.add(normTitle);
           combined.push(m);
         }
       });
@@ -167,8 +220,28 @@ export const VjMoviesPage: React.FC<VjMoviesPageProps> = ({
         </div>
       </div>
 
-      {/* 3. MOVIES POSTER GRID OR EMPTY STATE */}
-      {moviesToDisplay.length === 0 ? (
+      {/* 3. MOVIES POSTER GRID, SKELETON LOADER, OR EMPTY STATE */}
+      {isLoading && moviesToDisplay.length === 0 ? (
+        <div className="px-4 lg:px-8 pt-3 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3.5 max-w-7xl mx-auto w-full flex-1">
+          {Array.from({ length: 12 }).map((_, i) => (
+            <div key={`vj-skel-${i}`} className="flex flex-col space-y-2">
+              <div className="aspect-[2/3] rounded-2xl bg-white/[0.05] border border-white/5 animate-pulse relative overflow-hidden flex flex-col justify-between p-2">
+                <div className="flex justify-end">
+                  <div className="w-12 h-4 rounded-full bg-white/10" />
+                </div>
+                <div className="space-y-1.5">
+                  <div className="w-3/4 h-3 rounded bg-white/10" />
+                  <div className="w-1/2 h-2.5 rounded bg-white/10" />
+                </div>
+              </div>
+              <div className="flex items-center gap-2 px-1">
+                <div className="w-8 h-2.5 rounded bg-white/10 animate-pulse" />
+                <div className="w-8 h-2.5 rounded bg-white/10 animate-pulse" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : moviesToDisplay.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center py-24 px-4 text-center">
           <div className="w-16 h-16 rounded-2xl bg-purple-950/40 border border-purple-500/20 flex items-center justify-center mb-3">
             <Film className="w-8 h-8 text-purple-400" />

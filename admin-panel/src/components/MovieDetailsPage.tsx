@@ -91,12 +91,53 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
     );
   }, [incomingMovie, movieTitle, catalog, latestMovies]);
 
+  const [healedDetails, setHealedDetails] = useState<{
+    title?: string;
+    vj?: string;
+    streamUrl?: string;
+    imageUrl?: string;
+    overview?: string;
+  } | null>(null);
+
+  // Auto-heal placeholder movie titles or missing streams on mount
+  useEffect(() => {
+    if (
+      (/^(?:Movie|Series|Luganda Release)\s*#\d+/i.test(activeMovie.title) || !activeMovie.streamUrl) &&
+      activeMovie.id
+    ) {
+      fetch(`https://mumowatch.ai.studio/movie/${activeMovie.id}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          if (d && d.title && !/^(?:Movie|Series)\s*#/i.test(d.title)) {
+            const rawVj = (d.vj || "").trim();
+            const vjClean = rawVj
+              ? rawVj.toUpperCase().startsWith("VJ")
+                ? rawVj
+                : `VJ ${rawVj}`
+              : "VJ Junior";
+            setHealedDetails({
+              title: d.title.trim(),
+              vj: vjClean,
+              streamUrl: d.playingurl || undefined,
+              imageUrl: d.image || undefined,
+              overview: d.description || undefined,
+            });
+          }
+        })
+        .catch(() => {});
+    }
+  }, [activeMovie.id, activeMovie.title, activeMovie.streamUrl]);
+
+  const displayTitle = healedDetails?.title || activeMovie.title;
+  const displayVj = healedDetails?.vj || activeMovie.vj;
+  const displayOverview = healedDetails?.overview || activeMovie.overview;
+
   // Load TMDB Logo, Backdrop & Cast
   useEffect(() => {
     let cancelled = false;
     async function loadTmdbData() {
       try {
-        const tmdb = await searchTmdb(activeMovie.title, activeMovie.isTv);
+        const tmdb = await searchTmdb(displayTitle, activeMovie.isTv);
         if (!cancelled && tmdb && tmdb.id) {
           if (tmdb.backdropUrl) {
             setTmdbBackdrop(tmdb.backdropUrl);
@@ -114,9 +155,12 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [activeMovie.title]);
+  }, [displayTitle, activeMovie.isTv]);
 
-  const streamUrl = useMemo(() => sanitizeStreamUrl(activeMovie.streamUrl), [activeMovie.streamUrl]);
+  const streamUrl = useMemo(
+    () => sanitizeStreamUrl(healedDetails?.streamUrl || activeMovie.streamUrl),
+    [healedDetails?.streamUrl, activeMovie.streamUrl]
+  );
 
   // Sync bookmarks from localStorage
   useEffect(() => {
@@ -159,13 +203,29 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
     } catch {}
   };
 
-  // Video Streaming Setup with HLS and MP4 fallback
+  // Video Streaming Setup with HLS, MP4 and CDN mirror recovery
   useEffect(() => {
     if (!isPlaying || !streamUrl || !videoRef.current) return;
     setStreamError(false);
 
     const video = videoRef.current;
     let hlsInstance: Hls | null = null;
+    let mirrorTried = false;
+
+    const handleStreamFailure = () => {
+      if (!mirrorTried && streamUrl.includes("munotech")) {
+        mirrorTried = true;
+        const mirror = streamUrl.replace(/http:\/\/munotech\d*\.com/g, "https://munotech3.b-cdn.net");
+        if (mirror !== streamUrl) {
+          video.src = mirror;
+          video.play().catch(() => setStreamError(true));
+          return;
+        }
+      }
+      setStreamError(true);
+    };
+
+    video.onerror = handleStreamFailure;
 
     if (streamUrl.includes(".m3u8")) {
       if (video.canPlayType("application/vnd.apple.mpegurl")) {
@@ -174,27 +234,39 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
         hlsInstance = new Hls({ enableWorker: true });
         hlsInstance.loadSource(streamUrl);
         hlsInstance.attachMedia(video);
-        hlsInstance.on(Hls.Events.ERROR, () => {
-          setStreamError(true);
-        });
+        hlsInstance.on(Hls.Events.ERROR, handleStreamFailure);
       }
     } else {
       video.src = streamUrl;
     }
 
     return () => {
+      video.onerror = null;
       if (hlsInstance) {
         hlsInstance.destroy();
       }
     };
   }, [isPlaying, streamUrl]);
 
+  // Recommendations: More Like This (category or genre matched)
+  const moreLikeThisList = useMemo(() => {
+    return catalog
+      .filter(
+        (m) =>
+          m.id !== activeMovie.id &&
+          (m.category === activeMovie.category ||
+            m.genres.some((g) => activeMovie.genres.includes(g)))
+      )
+      .slice(0, 10);
+  }, [catalog, activeMovie]);
+
   // Related movies from same VJ
   const relatedList = useMemo(() => {
+    const v = displayVj.toLowerCase().replace("vj", "").trim();
     return catalog
-      .filter((m) => m.vj === activeMovie.vj && m.id !== activeMovie.id)
+      .filter((m) => m.id !== activeMovie.id && m.vj.toLowerCase().includes(v))
       .slice(0, 8);
-  }, [catalog, activeMovie]);
+  }, [catalog, activeMovie, displayVj]);
 
   return (
     <div className="w-full min-h-screen bg-black text-white font-sans flex flex-col pb-24 select-none">
@@ -339,16 +411,16 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
                 {tmdbLogo ? (
                   <img
                     src={tmdbLogo}
-                    alt={activeMovie.title}
+                    alt={displayTitle}
                     className="h-8 sm:h-10 max-w-[240px] sm:max-w-[320px] object-contain object-left drop-shadow-xl"
                   />
                 ) : (
                   <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-white font-sans leading-tight drop-shadow-md">
-                    {activeMovie.title}
+                    {displayTitle}
                   </h1>
                 )}
 
-                <VjBadge vjName={activeMovie.vj} size="md" />
+                <VjBadge vjName={displayVj} size="md" />
               </div>
 
               {/* Tags */}
@@ -436,7 +508,7 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
 
         <div className="rounded-2xl bg-[#141416] p-4 shadow-md">
           <p className={`text-xs text-neutral-300 leading-relaxed font-normal ${isReadMore ? "" : "line-clamp-3"}`}>
-            {activeMovie.overview}
+            {displayOverview}
           </p>
 
           <button
@@ -481,56 +553,111 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
         </div>
       )}
 
-      {/* 6. MORE FROM THIS VJ */}
-      <div className="px-4 mt-7">
-        <h3 className="text-base font-extrabold text-white tracking-tight mb-3">
-          More from {activeMovie.vj}
-        </h3>
+      {/* 6. MORE LIKE THIS RECOMMENDATIONS */}
+      {moreLikeThisList.length > 0 && (
+        <div className="px-4 mt-7">
+          <h3 className="text-base font-extrabold text-white tracking-tight mb-3">
+            More Like This
+          </h3>
 
-        <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
-          {relatedList.map((movie) => (
-            <div
-              key={movie.id}
-              onClick={() => {
-                setIsPlaying(false);
-                onSelectMovie?.(movie.id, movie.isTv, movie.title, movie);
-              }}
-              className="w-[124px] sm:w-[138px] shrink-0 cursor-pointer group active:scale-95 transition-transform"
-            >
-              <div className="relative aspect-[2/3] rounded-2xl overflow-hidden bg-neutral-900 border border-white/10 group-hover:border-white/30 transition-all p-2 flex flex-col justify-between shadow-md">
-                {movie.imageUrl && (
-                  <img
-                    src={movie.imageUrl}
-                    alt={movie.title}
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = "none";
-                    }}
-                    className="absolute inset-0 w-full h-full object-cover filter brightness-85 group-hover:scale-105 transition-transform"
-                  />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent pointer-events-none" />
+          <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
+            {moreLikeThisList.map((movie) => (
+              <div
+                key={movie.id}
+                onClick={() => {
+                  setIsPlaying(false);
+                  onSelectMovie?.(movie.id, movie.isTv, movie.title, movie);
+                }}
+                className="w-[124px] sm:w-[138px] shrink-0 cursor-pointer group active:scale-95 transition-transform"
+              >
+                <div className="relative aspect-[2/3] rounded-2xl overflow-hidden bg-neutral-900 border border-white/10 group-hover:border-white/30 transition-all p-2 flex flex-col justify-between shadow-md">
+                  {movie.imageUrl && (
+                    <img
+                      src={movie.imageUrl}
+                      alt={movie.title}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
+                      className="absolute inset-0 w-full h-full object-cover filter brightness-85 group-hover:scale-105 transition-transform"
+                    />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent pointer-events-none" />
 
-                <div className="relative z-10 flex justify-end">
-                  <VjBadge vjName={movie.vj} size="sm" />
+                  <div className="relative z-10 flex justify-end">
+                    <VjBadge vjName={movie.vj} size="sm" />
+                  </div>
+                  <div className="relative z-10 text-left pt-6">
+                    <div className="text-xs font-black text-white leading-tight drop-shadow-md line-clamp-2">
+                      {movie.title}
+                    </div>
+                  </div>
                 </div>
-                <div className="relative z-10 text-left pt-6">
-                  <div className="text-xs font-black text-white leading-tight drop-shadow-md line-clamp-2">
-                    {movie.title}
+
+                <div className="mt-1.5 space-y-0.5">
+                  <div className="flex items-center gap-1 text-[11px] text-neutral-400 font-medium">
+                    <span className="text-amber-400 font-bold">★ {movie.rating}</span>
+                    <span>•</span>
+                    <span>{movie.category}</span>
                   </div>
                 </div>
               </div>
+            ))}
+          </div>
+        </div>
+      )}
 
-              <div className="mt-1.5 space-y-0.5">
-                <div className="flex items-center gap-1 text-[11px] text-neutral-400 font-medium">
-                  <span className="text-amber-400 font-bold">★ {movie.rating}</span>
-                  <span>•</span>
-                  <span>{movie.year}</span>
+      {/* 7. MORE FROM THIS VJ */}
+      {relatedList.length > 0 && (
+        <div className="px-4 mt-7">
+          <h3 className="text-base font-extrabold text-white tracking-tight mb-3">
+            More from {displayVj}
+          </h3>
+
+          <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
+            {relatedList.map((movie) => (
+              <div
+                key={movie.id}
+                onClick={() => {
+                  setIsPlaying(false);
+                  onSelectMovie?.(movie.id, movie.isTv, movie.title, movie);
+                }}
+                className="w-[124px] sm:w-[138px] shrink-0 cursor-pointer group active:scale-95 transition-transform"
+              >
+                <div className="relative aspect-[2/3] rounded-2xl overflow-hidden bg-neutral-900 border border-white/10 group-hover:border-white/30 transition-all p-2 flex flex-col justify-between shadow-md">
+                  {movie.imageUrl && (
+                    <img
+                      src={movie.imageUrl}
+                      alt={movie.title}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
+                      className="absolute inset-0 w-full h-full object-cover filter brightness-85 group-hover:scale-105 transition-transform"
+                    />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent pointer-events-none" />
+
+                  <div className="relative z-10 flex justify-end">
+                    <VjBadge vjName={movie.vj} size="sm" />
+                  </div>
+                  <div className="relative z-10 text-left pt-6">
+                    <div className="text-xs font-black text-white leading-tight drop-shadow-md line-clamp-2">
+                      {movie.title}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-1.5 space-y-0.5">
+                  <div className="flex items-center gap-1 text-[11px] text-neutral-400 font-medium">
+                    <span className="text-amber-400 font-bold">★ {movie.rating}</span>
+                    <span>•</span>
+                    <span>{movie.year}</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* 6. FLOATING CURVED GLASS BOTTOM NAVIGATION BAR (Hidden on desktop) */}
       <FloatingBottomNav activeTab="home" onNavigateTab={onNavigateTab} />

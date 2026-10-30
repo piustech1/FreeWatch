@@ -843,7 +843,7 @@ export const HomePage: React.FC<HomePageProps> = ({
         <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
           {loading && familyMovies.length === 0
             ? Array.from({ length: 6 }).map((_, i) => renderMovieCardSkeleton(i))
-            : (familyMovies.length > 0 ? familyMovies : comedyMovies.length > 0 ? comedyMovies : latestMovies.slice(2)).slice(0, 15).map(renderMovieCard)}
+            : (familyMovies.length > 0 ? familyMovies : animationMovies.length > 0 ? animationMovies : latestMovies).slice(0, 15).map(renderMovieCard)}
         </div>
       </section>
 
