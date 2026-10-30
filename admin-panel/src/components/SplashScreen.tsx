@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 
 interface SplashScreenProps {
   onGetStarted: () => void;
@@ -21,12 +21,44 @@ export const FWLogo: React.FC<{ size?: "sm" | "md" | "lg"; className?: string }>
 
 export const SplashScreen: React.FC<SplashScreenProps> = ({ onGetStarted, onLogIn }) => {
   const [activeSlide, setActiveSlide] = useState(0);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Synchronize background video starting at 42 seconds and loop back to 42s (Matching Flutter onboarding)
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const handleLoadedMetadata = () => {
+      if (video.duration > 42) {
+        video.currentTime = 42;
+        video.play().catch(() => {});
+      }
+    };
+
+    const handleTimeUpdate = () => {
+      if (video.duration > 45 && (video.currentTime >= video.duration - 1 || video.currentTime < 40)) {
+        video.currentTime = 42;
+      }
+    };
+
+    video.addEventListener("loadedmetadata", handleLoadedMetadata);
+    video.addEventListener("timeupdate", handleTimeUpdate);
+    if (video.readyState >= 1 && video.duration > 42 && video.currentTime < 42) {
+      video.currentTime = 42;
+    }
+
+    return () => {
+      video.removeEventListener("loadedmetadata", handleLoadedMetadata);
+      video.removeEventListener("timeupdate", handleTimeUpdate);
+    };
+  }, []);
 
   return (
-    <div className="relative w-full h-screen max-h-screen bg-black flex flex-col justify-between overflow-hidden select-none font-sans">
+    <div className="relative w-full h-[100dvh] max-h-[100dvh] bg-black flex flex-col justify-between overflow-hidden select-none font-sans p-0 m-0">
       {/* Background Video Layer */}
       <div className="absolute inset-0 z-0 overflow-hidden bg-black pointer-events-none">
         <video
+          ref={videoRef}
           autoPlay
           loop
           muted
@@ -42,7 +74,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onGetStarted, onLogI
       </div>
 
       {/* Top Bar: FW on left, Log In on right */}
-      <header className="relative z-10 w-full max-w-6xl mx-auto flex items-center justify-between px-6 pt-8 sm:pt-10">
+      <header className="relative z-10 w-full max-w-6xl mx-auto flex items-center justify-between px-6 pt-6 sm:pt-8 shrink-0">
         <div className="flex items-center gap-3">
           <FWLogo size="md" />
           <div className="hidden lg:flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-bold text-neutral-300">
@@ -53,16 +85,16 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onGetStarted, onLogI
 
         <button
           onClick={onLogIn}
-          className="px-5 py-2 rounded-full bg-[#2b2b2b]/80 hover:bg-[#383838] active:scale-95 transition-all text-sm font-medium text-white backdrop-blur-md border border-white/5 cursor-pointer"
+          className="px-5 py-2 rounded-full bg-[#2b2b2b]/80 hover:bg-[#383838] active:scale-95 transition-all text-sm font-medium text-white backdrop-blur-md cursor-pointer shadow-md"
         >
           Log In
         </button>
       </header>
 
-      {/* Main Content Area: Responsive split layout on PC */}
-      <div className="relative z-10 w-full max-w-6xl mx-auto px-6 py-4 my-auto flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 lg:gap-10">
+      {/* Main Content Area: Anchored cleanly to bottom without scroll */}
+      <div className="relative z-10 w-full max-w-6xl mx-auto px-6 pb-8 sm:pb-10 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 lg:gap-10">
         {/* Left Column (Desktop Showcase) */}
-        <div className="hidden lg:flex flex-col space-y-4 max-w-lg">
+        <div className="hidden lg:flex flex-col space-y-4 max-w-lg mb-4">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#581c87]/60 border border-purple-400/30 text-purple-200 text-xs font-extrabold tracking-wider uppercase">
             <span>✨ Uganda&apos;s #1 Dubbed Streaming Hub</span>
           </div>
@@ -92,7 +124,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onGetStarted, onLogI
         </div>
 
         {/* Right / Bottom Card Area: Exact typography, pagination pill, and Get Started CTA */}
-        <div className="w-full max-w-md space-y-4 bg-black/40 lg:bg-[#121216]/80 lg:border lg:border-white/10 lg:p-8 lg:rounded-3xl lg:backdrop-blur-xl">
+        <div className="w-full max-w-md space-y-4 bg-transparent lg:bg-[#121216]/80 lg:p-8 lg:rounded-3xl lg:backdrop-blur-xl">
           {/* Headlines */}
           <div className="space-y-2">
             <h1 className="text-[28px] sm:text-[32px] font-extrabold text-white leading-[1.18] tracking-tight">

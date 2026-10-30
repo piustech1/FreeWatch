@@ -45,7 +45,7 @@ export const FreeWatchLogo: React.FC<{ className?: string }> = ({ className = ""
     <img
       src="/logo_full.png"
       alt="FreeWatch"
-      className={`h-7 sm:h-8 w-auto object-contain select-none ${className}`}
+      className={`h-9 sm:h-10 md:h-11 w-auto max-w-[160px] sm:max-w-[190px] object-contain select-none transition-all ${className}`}
     />
   );
 };

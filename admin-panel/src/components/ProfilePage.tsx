@@ -416,7 +416,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 
       {/* 7. FOLLOW US ON TIKTOK STRIP */}
       <div className="px-4 mt-6">
-        <div className="w-full h-14 rounded-full bg-black border border-white/10 px-5 flex items-center justify-between shadow-md">
+        <div className="w-full h-14 rounded-full bg-[#16171b] px-5 flex items-center justify-between shadow-lg">
           <div className="flex items-center gap-3">
             <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center text-black">
               <span className="text-xs font-black">♪</span>
@@ -430,7 +430,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
               try {
                 localStorage.setItem("has_clicked_join_community_v1", "true");
               } catch {}
-              window.open("https://www.tiktok.com/@freewatchug", "_blank");
+              window.open("https://www.tiktok.com/@freewatchmoviesug?_r=1&_t=ZS-9AV8GRTNGfi", "_blank");
             }}
             className="px-5 py-2 rounded-full bg-[#E50914] hover:bg-[#d00812] active:scale-95 text-white font-extrabold text-xs shadow-md shadow-[#E50914]/20 cursor-pointer transition-transform"
           >

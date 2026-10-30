@@ -4,6 +4,7 @@ import {
   Bell,
   ArrowLeft,
   Play,
+  Pause,
   Bookmark,
   Download,
   ChevronDown,
@@ -23,6 +24,7 @@ import {
   searchTmdb,
   getMovieLogo,
   getCredits,
+  sanitizeStreamUrl,
   TmdbCastMember
 } from "../services/tmdb";
 import { VjBadge } from "./VjBadge";
@@ -55,6 +57,7 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
   const [isReadMore, setIsReadMore] = useState(false);
   const [streamError, setStreamError] = useState(false);
   const [tmdbLogo, setTmdbLogo] = useState<string | null>(null);
+  const [tmdbBackdrop, setTmdbBackdrop] = useState<string | null>(null);
   const [castList, setCastList] = useState<TmdbCastMember[]>([]);
 
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -88,13 +91,16 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
     );
   }, [incomingMovie, movieTitle, catalog, latestMovies]);
 
-  // Load TMDB Logo & Cast
+  // Load TMDB Logo, Backdrop & Cast
   useEffect(() => {
     let cancelled = false;
     async function loadTmdbData() {
       try {
         const tmdb = await searchTmdb(activeMovie.title, activeMovie.isTv);
         if (!cancelled && tmdb && tmdb.id) {
+          if (tmdb.backdropUrl) {
+            setTmdbBackdrop(tmdb.backdropUrl);
+          }
           getMovieLogo(tmdb.id, tmdb.isTv).then((l) => {
             if (!cancelled) setTmdbLogo(l);
           });
@@ -110,7 +116,7 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
     };
   }, [activeMovie.title]);
 
-  const streamUrl = activeMovie.streamUrl;
+  const streamUrl = useMemo(() => sanitizeStreamUrl(activeMovie.streamUrl), [activeMovie.streamUrl]);
 
   // Sync bookmarks from localStorage
   useEffect(() => {
@@ -229,8 +235,12 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
         </div>
       </header>
 
-      {/* 2. HERO BANNER / VIDEO PLAYER (16:9 snug aspect-video to eliminate all black letterbox bars) */}
-      <div className="relative w-full aspect-video overflow-hidden bg-black">
+      {/* 2. HERO BANNER / VIDEO PLAYER (Tall 50vh when stopped, 16:9 snug aspect-video when playing) */}
+      <div
+        className={`relative w-full overflow-hidden bg-black transition-[height,aspect-ratio] duration-300 ${
+          isPlaying ? "aspect-video" : "h-[50vh] min-h-[440px] sm:min-h-[480px]"
+        }`}
+      >
         {isPlaying ? (
           <div className="relative w-full h-full bg-black flex items-center justify-center">
             <video
@@ -262,7 +272,7 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
                         videoRef.current.play().catch(() => {});
                       }
                     }}
-                    className="px-4 py-2 rounded-full bg-[#00E676] text-black font-bold text-xs flex items-center gap-1.5 active:scale-95 transition-all"
+                    className="px-4 py-2 rounded-full bg-[#00E676] text-black font-bold text-xs flex items-center gap-1.5 active:scale-95 transition-all shadow-md"
                   >
                     <RefreshCw className="w-3.5 h-3.5" />
                     <span>Retry Stream</span>
@@ -276,7 +286,7 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
             {/* Backdrop Artwork: Full 4K/HD sharpness, zero muddy dimming */}
             <div className="absolute inset-0 bg-stone-950">
               <img
-                src={activeMovie.backdropUrl || activeMovie.imageUrl}
+                src={tmdbBackdrop || activeMovie.backdropUrl || activeMovie.imageUrl}
                 alt={activeMovie.title}
                 onError={(e) => {
                   (e.target as HTMLImageElement).src =
@@ -295,13 +305,13 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
               <button
                 type="button"
                 onClick={onBack}
-                className="w-10 h-10 rounded-full bg-black/60 backdrop-blur-md border border-white/10 flex items-center justify-center text-white hover:bg-black transition-colors cursor-pointer"
+                className="w-10 h-10 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white hover:bg-black transition-colors cursor-pointer shadow-md"
                 aria-label="Back"
               >
                 <ArrowLeft className="w-5 h-5 stroke-[2.2]" />
               </button>
 
-              <div className="px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-amber-400 text-xs font-black flex items-center gap-1 shadow-md">
+              <div className="px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-md text-amber-400 text-xs font-black flex items-center gap-1 shadow-md">
                 <span>★</span>
                 <span>{activeMovie.rating}</span>
               </div>
@@ -361,24 +371,42 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
         )}
       </div>
 
-      {/* 3. ACTION BUTTONS ROW (Play, Bookmark, Download) */}
+      {/* 3. ACTION BUTTONS ROW (Play/Pause, Bookmark, Download) */}
       <div className="px-4 pt-4 flex items-center gap-2.5">
         <button
           type="button"
-          onClick={() => setIsPlaying(true)}
+          onClick={() => {
+            if (isPlaying) {
+              if (videoRef.current) {
+                videoRef.current.pause();
+              }
+              setIsPlaying(false);
+            } else {
+              setIsPlaying(true);
+            }
+          }}
           className="flex-1 h-12 rounded-full bg-[#00E676] hover:bg-[#00c853] text-black font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg shadow-[#00E676]/25 active:scale-[0.98] cursor-pointer"
         >
-          <Play className="w-4 h-4 fill-black" />
-          <span>{isPlaying ? "NOW PLAYING" : "PLAY MOVIE"}</span>
+          {isPlaying ? (
+            <>
+              <Pause className="w-4 h-4 fill-black text-black" />
+              <span>PAUSE</span>
+            </>
+          ) : (
+            <>
+              <Play className="w-4 h-4 fill-black" />
+              <span>PLAY MOVIE</span>
+            </>
+          )}
         </button>
 
         <button
           type="button"
           onClick={toggleFavorite}
-          className={`w-12 h-12 rounded-2xl flex items-center justify-center border transition-all cursor-pointer ${
+          className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all cursor-pointer shadow-md ${
             isBookmarked
-              ? "bg-[#00E676] border-[#00E676] text-black"
-              : "bg-white/[0.06] border-white/10 text-white hover:bg-white/[0.12] backdrop-blur-md"
+              ? "bg-[#00E676] text-black"
+              : "bg-white/[0.08] text-white hover:bg-white/[0.15] backdrop-blur-md"
           }`}
           title="Bookmark"
         >
@@ -391,10 +419,10 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
             setIsDownloaded(true);
             window.open?.(streamUrl, "_blank");
           }}
-          className={`w-12 h-12 rounded-2xl flex items-center justify-center border transition-all cursor-pointer ${
+          className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all cursor-pointer shadow-md ${
             isDownloaded
-              ? "bg-sky-500 border-sky-500 text-white"
-              : "bg-white/[0.06] border-white/10 text-white hover:bg-white/[0.12] backdrop-blur-md"
+              ? "bg-sky-500 text-white"
+              : "bg-white/[0.08] text-white hover:bg-white/[0.15] backdrop-blur-md"
           }`}
           title="Download MP4"
         >
@@ -406,7 +434,7 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
       <div className="px-4 mt-7">
         <h3 className="text-base font-extrabold text-white tracking-tight mb-3">Synopsis</h3>
 
-        <div className="rounded-2xl bg-[#141416] border border-white/5 p-4 shadow-md">
+        <div className="rounded-2xl bg-[#141416] p-4 shadow-md">
           <p className={`text-xs text-neutral-300 leading-relaxed font-normal ${isReadMore ? "" : "line-clamp-3"}`}>
             {activeMovie.overview}
           </p>

@@ -87,6 +87,39 @@ export function cleanTitleForTmdb(rawTitle: string): string {
   return clean;
 }
 
+export function computeTitleSimilarity(s1: string, s2: string): number {
+  const norm1 = s1.toLowerCase().replace(/[^a-z0-9 ]/g, "").trim();
+  const norm2 = s2.toLowerCase().replace(/[^a-z0-9 ]/g, "").trim();
+  if (norm1 === norm2) return 1.0;
+  if (!norm1 || !norm2) return 0;
+  if (norm1.includes(norm2) || norm2.includes(norm1)) return 0.85;
+
+  const words1 = new Set(norm1.split(/\s+/).filter((w) => w.length > 2));
+  const words2 = new Set(norm2.split(/\s+/).filter((w) => w.length > 2));
+  if (words1.size === 0 || words2.size === 0) return 0.5;
+  const intersection = [...words1].filter((w) => words2.has(w));
+  if (intersection.length === 0) return 0;
+  return (intersection.length * 2) / (words1.size + words2.size);
+}
+
+/**
+ * Sanitizes stream URLs: upgrades http to https for CDNs, maps parked domains, encodes spaces
+ */
+export function sanitizeStreamUrl(url?: string): string {
+  if (!url) return "";
+  let clean = url.trim();
+  // Upgrade http to https to avoid mixed content block
+  if (clean.startsWith("http://")) {
+    clean = clean.replace(/^http:\/\//i, "https://");
+  }
+  // Fallback for dead parked domains like munoserver56.club
+  if (clean.includes("munoserver56.club")) {
+    clean = clean.replace(/https?:\/\/munoserver56\.club/i, "https://munotech3.b-cdn.net");
+  }
+  // Encode unescaped spaces
+  return clean.replace(/ /g, "%20");
+}
+
 /**
  * Searches TMDB for TV series or movies with priority matching
  */
@@ -106,18 +139,28 @@ export async function searchTmdb(title: string, isTv: boolean = false): Promise<
       const tvRes = await fetch(tvUrl);
       if (tvRes.ok) {
         const tvData = await tvRes.json();
-        const first = tvData.results?.[0];
-        if (first) {
+        const results = (tvData.results || []) as any[];
+        // Pick best matching result by title similarity
+        let best = results[0];
+        let bestScore = best ? computeTitleSimilarity(clean, best.name || "") : 0;
+        for (const item of results.slice(1, 6)) {
+          const score = computeTitleSimilarity(clean, item.name || "");
+          if (score > bestScore) {
+            best = item;
+            bestScore = score;
+          }
+        }
+        if (best && bestScore >= 0.25) {
           const meta: TmdbMetadata = {
-            id: first.id,
-            title: first.name || clean,
-            overview: first.overview,
-            posterUrl: first.poster_path ? `${TMDB_IMAGE_SIZES.posterW500}${first.poster_path}` : undefined,
-            backdropUrl: first.backdrop_path ? `${TMDB_IMAGE_SIZES.backdropW1280}${first.backdrop_path}` : undefined,
+            id: best.id,
+            title: best.name || clean,
+            overview: best.overview,
+            posterUrl: best.poster_path ? `${TMDB_IMAGE_SIZES.posterW500}${best.poster_path}` : undefined,
+            backdropUrl: best.backdrop_path ? `${TMDB_IMAGE_SIZES.backdropW1280}${best.backdrop_path}` : undefined,
             isTv: true,
-            voteAverage: first.vote_average,
-            voteCount: first.vote_count,
-            releaseYear: (first.first_air_date || "").slice(0, 4),
+            voteAverage: best.vote_average,
+            voteCount: best.vote_count,
+            releaseYear: (best.first_air_date || "").slice(0, 4),
           };
           metadataCache.set(cacheKey, meta);
           return meta;
@@ -130,18 +173,27 @@ export async function searchTmdb(title: string, isTv: boolean = false): Promise<
     const movieRes = await fetch(movieUrl);
     if (movieRes.ok) {
       const movieData = await movieRes.json();
-      const first = movieData.results?.[0];
-      if (first) {
+      const results = (movieData.results || []) as any[];
+      let best = results[0];
+      let bestScore = best ? computeTitleSimilarity(clean, best.title || "") : 0;
+      for (const item of results.slice(1, 6)) {
+        const score = computeTitleSimilarity(clean, item.title || "");
+        if (score > bestScore) {
+          best = item;
+          bestScore = score;
+        }
+      }
+      if (best && bestScore >= 0.25) {
         const meta: TmdbMetadata = {
-          id: first.id,
-          title: first.title || clean,
-          overview: first.overview,
-          posterUrl: first.poster_path ? `${TMDB_IMAGE_SIZES.posterW500}${first.poster_path}` : undefined,
-          backdropUrl: first.backdrop_path ? `${TMDB_IMAGE_SIZES.backdropW1280}${first.backdrop_path}` : undefined,
+          id: best.id,
+          title: best.title || clean,
+          overview: best.overview,
+          posterUrl: best.poster_path ? `${TMDB_IMAGE_SIZES.posterW500}${best.poster_path}` : undefined,
+          backdropUrl: best.backdrop_path ? `${TMDB_IMAGE_SIZES.backdropW1280}${best.backdrop_path}` : undefined,
           isTv: false,
-          voteAverage: first.vote_average,
-          voteCount: first.vote_count,
-          releaseYear: (first.release_date || "").slice(0, 4),
+          voteAverage: best.vote_average,
+          voteCount: best.vote_count,
+          releaseYear: (best.release_date || "").slice(0, 4),
         };
         metadataCache.set(cacheKey, meta);
         return meta;
@@ -153,8 +205,17 @@ export async function searchTmdb(title: string, isTv: boolean = false): Promise<
     const multiRes = await fetch(multiUrl);
     if (multiRes.ok) {
       const multiData = await multiRes.json();
-      const match = (multiData.results || []).find((r: any) => r.media_type === "movie" || r.media_type === "tv");
-      if (match) {
+      const candidates = (multiData.results || []).filter((r: any) => r.media_type === "movie" || r.media_type === "tv");
+      let match = candidates[0];
+      let matchScore = match ? computeTitleSimilarity(clean, match.title || match.name || "") : 0;
+      for (const c of candidates.slice(1, 6)) {
+        const score = computeTitleSimilarity(clean, c.title || c.name || "");
+        if (score > matchScore) {
+          match = c;
+          matchScore = score;
+        }
+      }
+      if (match && matchScore >= 0.25) {
         const isMatchedTv = match.media_type === "tv";
         const meta: TmdbMetadata = {
           id: match.id,
@@ -190,7 +251,7 @@ export async function getMovieLogo(tmdbId: number, isTv: boolean = false): Promi
 
   const endpoint = isTv ? "tv" : "movie";
   try {
-    const url = `${TMDB_BASE_URL}/${endpoint}/${tmdbId}/images?api_key=${TMDB_API_KEY}`;
+    const url = `${TMDB_BASE_URL}/${endpoint}/${tmdbId}/images?api_key=${TMDB_API_KEY}&include_image_language=en,null`;
     const res = await fetch(url);
     if (res.ok) {
       const data = await res.json();
@@ -212,7 +273,7 @@ export async function getMovieLogo(tmdbId: number, isTv: boolean = false): Promi
   // Fallback: If not found in primary endpoint, try the other
   const altEndpoint = isTv ? "movie" : "tv";
   try {
-    const altUrl = `${TMDB_BASE_URL}/${altEndpoint}/${tmdbId}/images?api_key=${TMDB_API_KEY}`;
+    const altUrl = `${TMDB_BASE_URL}/${altEndpoint}/${tmdbId}/images?api_key=${TMDB_API_KEY}&include_image_language=en,null`;
     const res = await fetch(altUrl);
     if (res.ok) {
       const data = await res.json();

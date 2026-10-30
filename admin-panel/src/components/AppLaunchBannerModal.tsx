@@ -21,7 +21,7 @@ export const AppLaunchBannerModal: React.FC<AppLaunchBannerModalProps> = ({
     if (onJoinTikTok) {
       onJoinTikTok();
     } else {
-      window.open?.("https://www.tiktok.com/@freewatchug", "_blank");
+      window.open?.("https://www.tiktok.com/@freewatchmoviesug?_r=1&_t=ZS-9AV8GRTNGfi", "_blank");
       onClose();
     }
   };
@@ -32,7 +32,7 @@ export const AppLaunchBannerModal: React.FC<AppLaunchBannerModalProps> = ({
       <div className="absolute inset-0" onClick={onClose} />
 
       {/* Main Promo Dialog matching Flutter TiktokPromoModal */}
-      <div className="relative z-10 w-full max-w-[340px] rounded-[24px] overflow-hidden bg-[#0F1117]/95 border border-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.8)] flex flex-col">
+      <div className="relative z-10 w-full max-w-[340px] rounded-[24px] overflow-hidden bg-[#0F1117]/95 shadow-[0_12px_40px_rgba(0,0,0,0.85)] flex flex-col">
         {/* Floating Top-Right Close Button */}
         <button
           type="button"

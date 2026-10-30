@@ -4,9 +4,6 @@ import {
   Bell,
   Play,
   Heart,
-  Home,
-  Download,
-  User as UserIcon,
   Trash2,
 } from "lucide-react";
 import { FreeWatchLogo } from "./HomePage";
@@ -14,6 +11,7 @@ import { CatalogMovie } from "../data/liveCatalog";
 import { AvatarGraphic } from "./AvatarGraphic";
 import { UserProfileData } from "./EditProfileModal";
 import { VjBadge } from "./VjBadge";
+import { FloatingBottomNav } from "./FloatingBottomNav";
 
 interface FavoritesPageProps {
   onNavigateTab: (tab: "home" | "search" | "favorites" | "downloads" | "profile") => void;

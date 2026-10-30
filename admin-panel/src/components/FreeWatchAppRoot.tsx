@@ -138,7 +138,14 @@ export default function FreeWatchAppRoot({ onNavigateToStore }: FreeWatchAppRoot
     } else {
       setSelectedMovie(undefined);
     }
-    if (isSeries) {
+    const shouldBeSeries = Boolean(
+      isSeries ||
+      movie?.isTv ||
+      (movie?.seriesCode && String(movie.seriesCode).trim().length > 0 && String(movie.seriesCode) !== '0') ||
+      (movie?.category && movie.category.toLowerCase().includes('series')) ||
+      (Array.isArray(movie?.episodes) && movie.episodes.length > 0)
+    );
+    if (shouldBeSeries) {
       setCurrentPage("series-details");
     } else {
       setCurrentPage("movie-details");

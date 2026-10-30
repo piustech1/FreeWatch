@@ -83,32 +83,90 @@ export const SearchPage: React.FC<SearchPageProps> = ({
       setApiResults([]);
       return;
     }
-    const timer = setTimeout(() => {
-      fetch(`/api/v1/search?q=${encodeURIComponent(searchQuery)}`)
-        .then((r) => (r.ok ? r.json() : null))
-        .then((json) => {
-          if (json && json.success && Array.isArray(json.data)) {
-            const mapped: CatalogMovie[] = json.data.map((m: any, idx: number) => ({
+    const timer = setTimeout(async () => {
+      try {
+        const queryClean = searchQuery.trim();
+        let resultsData: any[] = [];
+
+        // 1. First try our local serverless endpoint
+        try {
+          const r = await fetch(`/api/v1/search?q=${encodeURIComponent(queryClean)}`);
+          if (r.ok) {
+            const json = await r.json();
+            if (json && json.success && Array.isArray(json.data) && json.data.length > 0) {
+              resultsData = json.data;
+            }
+          }
+        } catch (_) {}
+
+        // 2. If serverless returned 0 results, query live MunoWatch directly
+        if (resultsData.length === 0) {
+          try {
+            const munoRes = await fetch(`https://mumowatch.ai.studio/search?q=${encodeURIComponent(queryClean)}`);
+            if (munoRes.ok) {
+              const mData = await munoRes.json();
+              if (Array.isArray(mData.series)) {
+                mData.series.forEach((s: any) => {
+                  if (Array.isArray(s.episodes) && s.episodes.length > 0) {
+                    const ep = s.episodes[0];
+                    resultsData.push({
+                      ...ep,
+                      title: s.title || ep.title,
+                      series_code: s.series_code || ep.series_code,
+                      isTv: true,
+                      is_series: true,
+                      episodes: s.episodes,
+                    });
+                  }
+                });
+              }
+              if (Array.isArray(mData.movies)) {
+                resultsData.push(...mData.movies);
+              }
+            }
+          } catch (_) {}
+        }
+
+        if (resultsData.length > 0) {
+          const mapped: CatalogMovie[] = resultsData.map((m: any, idx: number) => {
+            const seriesCode = m.series_code || m.seriesCode || '';
+            const isSeriesCat = Number(m.category_id || m.categoryId) === 5 || (m.category && String(m.category).toLowerCase().includes('series'));
+            const isSeriesType = Boolean(m.type && String(m.type).toUpperCase().includes('SERIES'));
+            const hasEpisodes = Array.isArray(m.episodes) && m.episodes.length > 0;
+            const hasExplicitSeasonOrEp = /season|\b(?:s\d{1,2}|ep(?:isode)?\s*\d+|part\s*\d+)\b|eps\s*\d+/i.test(m.title || '');
+            const hasSeriesCode = Boolean(seriesCode && String(seriesCode).trim().length > 0 && String(seriesCode) !== '0');
+            
+            const isTv = Boolean(
+              m.isTv ||
+              m.is_series ||
+              hasExplicitSeasonOrEp ||
+              hasSeriesCode ||
+              isSeriesCat ||
+              isSeriesType ||
+              hasEpisodes
+            );
+
+            return {
               id: String(m.id || `api-${idx}`),
               title: m.title,
               vj: m.vj || 'Luganda Dubbed',
-              category: m.category || 'Action',
-              genres: m.genres || [m.category || 'Action', 'Luganda Dubbed'],
+              category: isTv ? 'Series' : (m.category || 'Action'),
+              genres: isTv ? ['Series', 'Luganda Dubbed'] : (m.genres || [m.category || 'Action', 'Luganda Dubbed']),
               imageUrl: m.poster || m.image || 'https://apposters.b-cdn.net/laba/yo/naki/gNxs2151.jpg',
               backdropUrl: m.backdrop || m.backdrop_path || m.poster || 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1600&auto=format&fit=crop&q=80',
               rating: String(m.rating || '8.5'),
               year: String(m.year || '2025'),
-              duration: m.duration || (m.isTv ? '50m' : '1h 45m'),
-              isTv: Boolean(m.isTv || m.is_series),
-              seriesCode: m.series_code,
+              duration: m.duration || (isTv ? '50m' : '1h 45m'),
+              isTv,
+              seriesCode: seriesCode || undefined,
               overview: m.overview || '',
               streamUrl: m.streamUrl || m.playingurl || '',
-              episodes: m.episodes,
-            }));
-            setApiResults(mapped);
-          }
-        })
-        .catch(() => {});
+              episodes: Array.isArray(m.episodes) ? m.episodes : undefined,
+            };
+          });
+          setApiResults(mapped);
+        }
+      } catch (_) {}
     }, 350);
 
     return () => clearTimeout(timer);
@@ -189,10 +247,10 @@ export const SearchPage: React.FC<SearchPageProps> = ({
       {viewState === "categories" && (
         <div className="px-4 lg:px-8 pt-3 flex-1 max-w-7xl mx-auto w-full">
           {/* Search Pill Input */}
-          <div className="w-full h-12 rounded-full bg-[#18181b] border border-white/10 px-5 flex items-center justify-between hover:border-white/20 transition-all shadow-inner">
+          <div className="w-full h-12 rounded-full bg-[#18181b] px-5 flex items-center justify-between transition-all shadow-inner">
             <input
               type="text"
-              placeholder="Search 7,000+ movies & VJs..."
+              placeholder="Search movies, series or VJs..."
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);

@@ -13,7 +13,8 @@ import {
   User as UserIcon,
   X,
   RefreshCw,
-  AlertCircle
+  AlertCircle,
+  Loader2
 } from "lucide-react";
 import Hls from "hls.js";
 import { FreeWatchLogo } from "./HomePage";
@@ -26,6 +27,7 @@ import {
   getCredits,
   getSeasonEpisodes,
   cleanTitleForTmdb,
+  sanitizeStreamUrl,
   TmdbCastMember
 } from "../services/tmdb";
 import { VjBadge } from "./VjBadge";
@@ -59,6 +61,8 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
   const [isReadMore, setIsReadMore] = useState<boolean>(false);
   const [streamError, setStreamError] = useState<boolean>(false);
   const [tmdbLogo, setTmdbLogo] = useState<string | null>(null);
+  const [tmdbBackdrop, setTmdbBackdrop] = useState<string | null>(null);
+  const [isLoadingEpisodes, setIsLoadingEpisodes] = useState<boolean>(true);
   const [castList, setCastList] = useState<TmdbCastMember[]>([]);
   const [resolvedEpisodes, setResolvedEpisodes] = useState<CatalogMovie["episodes"]>([]);
 
@@ -104,10 +108,14 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
     let cancelled = false;
 
     async function loadMetadataAndEpisodes() {
+      setIsLoadingEpisodes(true);
       try {
         const tmdb = await searchTmdb(activeSeries.title, true);
         let tmdbEps: any[] = [];
         if (tmdb && tmdb.id) {
+          if (tmdb.backdropUrl) {
+            setTmdbBackdrop(tmdb.backdropUrl);
+          }
           getMovieLogo(tmdb.id, tmdb.isTv).then((l) => {
             if (!cancelled) setTmdbLogo(l);
           });
@@ -241,6 +249,10 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
         }
       } catch (err) {
         console.warn("Failed to load series metadata:", err);
+      } finally {
+        if (!cancelled) {
+          setIsLoadingEpisodes(false);
+        }
       }
     }
 
@@ -252,22 +264,34 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
 
   const episodes = useMemo(() => {
     if (resolvedEpisodes && resolvedEpisodes.length > 0) {
-      return resolvedEpisodes;
+      return resolvedEpisodes.map((ep) => ({
+        ...ep,
+        streamUrl: sanitizeStreamUrl(ep.streamUrl),
+      }));
     }
     if (activeSeries.episodes && activeSeries.episodes.length > 0) {
-      return activeSeries.episodes;
+      return activeSeries.episodes.map((ep) => ({
+        ...ep,
+        streamUrl: sanitizeStreamUrl(ep.streamUrl),
+      }));
     }
-    const defaultUrl = activeSeries.streamUrl || "https://munotech3.b-cdn.net/gugwa/gugwa42/07.Mirzapur.SN2.VJ.Ashim.1080.mp4";
+    if (isLoadingEpisodes) {
+      return [];
+    }
+    const defaultUrl = sanitizeStreamUrl(activeSeries.streamUrl || "https://munotech3.b-cdn.net/gugwa/gugwa42/07.Mirzapur.SN2.VJ.Ashim.1080.mp4");
     return [
       { num: 1, title: `${activeSeries.title} Episode 01`, duration: "50m", streamUrl: defaultUrl, stillUrl: activeSeries.backdropUrl },
       { num: 2, title: `${activeSeries.title} Episode 02`, duration: "48m", streamUrl: defaultUrl, stillUrl: activeSeries.backdropUrl },
       { num: 3, title: `${activeSeries.title} Episode 03`, duration: "52m", streamUrl: defaultUrl, stillUrl: activeSeries.backdropUrl },
       { num: 4, title: `${activeSeries.title} Episode 04`, duration: "54m", streamUrl: defaultUrl, stillUrl: activeSeries.backdropUrl },
     ];
-  }, [resolvedEpisodes, activeSeries]);
+  }, [resolvedEpisodes, activeSeries, isLoadingEpisodes]);
 
   const currentEpisode = episodes[activeEpisodeIndex] || episodes[0];
-  const streamUrl = currentEpisode?.streamUrl || activeSeries.streamUrl;
+  const streamUrl = useMemo(
+    () => sanitizeStreamUrl(currentEpisode?.streamUrl || activeSeries.streamUrl),
+    [currentEpisode, activeSeries.streamUrl]
+  );
 
   // Sync bookmarks from localStorage
   useEffect(() => {
@@ -341,7 +365,11 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
   }, [isPlaying, streamUrl]);
 
   const handleNextEpisode = () => {
+    if (episodes.length === 0) return;
     const nextIdx = (activeEpisodeIndex + 1) % episodes.length;
+    if (videoRef.current) {
+      videoRef.current.pause();
+    }
     setActiveEpisodeIndex(nextIdx);
     setIsPlaying(true);
   };
@@ -385,8 +413,12 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
         </div>
       </header>
 
-      {/* 2. HERO BANNER / VIDEO PLAYER (16:9 snug aspect-video to eliminate letterboxing) */}
-      <div className="relative w-full aspect-video overflow-hidden bg-black">
+      {/* 2. HERO BANNER / VIDEO PLAYER (Tall 50vh when stopped, 16:9 snug aspect-video when playing) */}
+      <div
+        className={`relative w-full overflow-hidden bg-black transition-[height,aspect-ratio] duration-300 ${
+          isPlaying ? "aspect-video" : "h-[50vh] min-h-[440px] sm:min-h-[480px]"
+        }`}
+      >
         {isPlaying ? (
           <div className="relative w-full h-full bg-black flex items-center justify-center">
             <video
@@ -419,7 +451,7 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
                         videoRef.current.play().catch(() => {});
                       }
                     }}
-                    className="px-4 py-2 rounded-full bg-[#00E676] text-black font-bold text-xs flex items-center gap-1.5 active:scale-95 transition-all"
+                    className="px-4 py-2 rounded-full bg-[#00E676] text-black font-bold text-xs flex items-center gap-1.5 active:scale-95 transition-all shadow-md"
                   >
                     <RefreshCw className="w-3.5 h-3.5" />
                     <span>Retry Stream</span>
@@ -433,7 +465,7 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
             {/* Backdrop Artwork: Full 4K/HD sharpness */}
             <div className="absolute inset-0 bg-stone-950">
               <img
-                src={activeSeries.backdropUrl || activeSeries.imageUrl}
+                src={tmdbBackdrop || activeSeries.backdropUrl || activeSeries.imageUrl}
                 alt={activeSeries.title}
                 onError={(e) => {
                   (e.target as HTMLImageElement).src =
@@ -452,13 +484,13 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
               <button
                 type="button"
                 onClick={onBack}
-                className="w-10 h-10 rounded-full bg-black/60 backdrop-blur-md border border-white/10 flex items-center justify-center text-white hover:bg-black transition-colors cursor-pointer"
+                className="w-10 h-10 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white hover:bg-black transition-colors cursor-pointer shadow-md"
                 aria-label="Back"
               >
                 <ArrowLeft className="w-5 h-5 stroke-[2.2]" />
               </button>
 
-              <div className="px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-amber-400 text-xs font-black flex items-center gap-1 shadow-md">
+              <div className="px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-md text-amber-400 text-xs font-black flex items-center gap-1 shadow-md">
                 <span>★</span>
                 <span>{activeSeries.rating}</span>
               </div>
@@ -515,24 +547,39 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
         )}
       </div>
 
-      {/* 3. ACTION BUTTONS ROW (Play, Bookmark, Download) */}
+      {/* 3. ACTION BUTTONS ROW (Play/Next Episode, Bookmark, Download) */}
       <div className="px-4 pt-4 flex items-center gap-2.5">
         <button
           type="button"
-          onClick={() => setIsPlaying(true)}
+          onClick={() => {
+            if (isPlaying) {
+              handleNextEpisode();
+            } else {
+              setIsPlaying(true);
+            }
+          }}
           className="flex-1 h-12 rounded-full bg-[#00E676] hover:bg-[#00c853] text-black font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg shadow-[#00E676]/25 active:scale-[0.98] cursor-pointer"
         >
-          <Play className="w-4 h-4 fill-black" />
-          <span>{isPlaying ? `PLAYING ${currentEpisode?.title || "EPISODE"}` : "START WATCHING"}</span>
+          {isPlaying ? (
+            <>
+              <SkipForward className="w-4 h-4 fill-black" />
+              <span>NEXT EPISODE</span>
+            </>
+          ) : (
+            <>
+              <Play className="w-4 h-4 fill-black" />
+              <span>START WATCHING</span>
+            </>
+          )}
         </button>
 
         <button
           type="button"
           onClick={toggleFavorite}
-          className={`w-12 h-12 rounded-2xl flex items-center justify-center border transition-all cursor-pointer ${
+          className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all cursor-pointer shadow-md ${
             isBookmarked
-              ? "bg-[#00E676] border-[#00E676] text-black"
-              : "bg-white/[0.06] border-white/10 text-white hover:bg-white/[0.12] backdrop-blur-md"
+              ? "bg-[#00E676] text-black"
+              : "bg-white/[0.08] text-white hover:bg-white/[0.15] backdrop-blur-md"
           }`}
           title="Bookmark"
         >
@@ -545,10 +592,10 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
             setIsDownloaded(true);
             window.open?.(streamUrl, "_blank");
           }}
-          className={`w-12 h-12 rounded-2xl flex items-center justify-center border transition-all cursor-pointer ${
+          className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all cursor-pointer shadow-md ${
             isDownloaded
-              ? "bg-sky-500 border-sky-500 text-white"
-              : "bg-white/[0.06] border-white/10 text-white hover:bg-white/[0.12] backdrop-blur-md"
+              ? "bg-sky-500 text-white"
+              : "bg-white/[0.08] text-white hover:bg-white/[0.15] backdrop-blur-md"
           }`}
           title="Download Episode"
         >
@@ -573,89 +620,100 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
           </button>
         </div>
 
-        {/* Episode Cards Horizontal Slider (Matching Android App ListView.separated) */}
-        <div className="flex gap-3.5 overflow-x-auto no-scrollbar pb-3 pt-1">
-          {episodes.map((ep, idx) => {
-            const isSelected = activeEpisodeIndex === idx;
-            const episodeThumb = ep.stillUrl || activeSeries.backdropUrl || activeSeries.imageUrl;
-            return (
-              <div
-                key={ep.num}
-                onClick={() => {
-                  setActiveEpisodeIndex(idx);
-                  setIsPlaying(true);
-                }}
-                className="w-[185px] sm:w-[210px] shrink-0 cursor-pointer group active:scale-[0.98] transition-transform select-none"
-              >
+        {/* Circular Loading Spinner while episodes are resolving */}
+        {isLoadingEpisodes ? (
+          <div className="flex flex-col items-center justify-center py-12 w-full">
+            <Loader2 className="w-8 h-8 text-[#00E676] animate-spin mb-2" />
+            <span className="text-xs text-neutral-400 font-medium">Loading episodes...</span>
+          </div>
+        ) : (
+          /* Episode Cards Horizontal Slider (Matching Android App ListView.separated) */
+          <div className="flex gap-3.5 overflow-x-auto no-scrollbar pb-3 pt-1">
+            {episodes.map((ep, idx) => {
+              const isSelected = activeEpisodeIndex === idx;
+              const episodeThumb = ep.stillUrl || activeSeries.backdropUrl || activeSeries.imageUrl;
+              return (
                 <div
-                  className={`relative aspect-video rounded-2xl overflow-hidden bg-neutral-900 border transition-all flex items-center justify-center shadow-md ${
-                    isSelected
-                      ? "border-[#00E676] ring-2 ring-[#00E676]/40 scale-[1.02]"
-                      : "border-white/10 group-hover:border-white/20"
-                  }`}
+                  key={ep.num}
+                  onClick={() => {
+                    if (videoRef.current) {
+                      videoRef.current.pause();
+                    }
+                    setActiveEpisodeIndex(idx);
+                    setIsPlaying(true);
+                  }}
+                  className="w-[185px] sm:w-[210px] shrink-0 cursor-pointer group active:scale-[0.98] transition-transform select-none"
                 >
-                  {episodeThumb && (
-                    <img
-                      src={episodeThumb}
-                      alt=""
-                      className="absolute inset-0 w-full h-full object-cover filter brightness-70 group-hover:scale-105 transition-transform duration-300"
-                    />
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent pointer-events-none" />
-
-                  {/* Top Left: Episode Number Badge */}
-                  <div className="absolute top-2 left-2 z-10">
-                    <span className="px-2 py-0.5 rounded-full bg-black/75 backdrop-blur-md border border-white/10 text-[10px] font-black text-[#00E676]">
-                      EP {ep.num}
-                    </span>
-                  </div>
-
-                  {/* Top Right: Duration */}
-                  <div className="absolute top-2 right-2 z-10">
-                    <span className="px-1.5 py-0.5 rounded bg-black/60 text-[9px] font-bold text-neutral-300">
-                      {ep.duration || "45m"}
-                    </span>
-                  </div>
-
-                  {/* Center Play Indicator */}
-                  <div className="relative z-10">
-                    <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition-transform ${
-                        isSelected
-                          ? "bg-[#00E676] text-black scale-110 shadow-[#00E676]/30"
-                          : "bg-white/25 backdrop-blur-md border border-white/40 text-white group-hover:scale-110"
-                      }`}
-                    >
-                      <Play
-                        className={`w-4 h-4 ml-0.5 ${
-                          isSelected ? "fill-black text-black" : "fill-white text-white"
-                        }`}
+                  <div
+                    className={`relative aspect-video rounded-2xl overflow-hidden bg-neutral-900 transition-all flex items-center justify-center shadow-md ${
+                      isSelected
+                        ? "ring-2 ring-[#00E676] shadow-[0_0_20px_rgba(0,230,118,0.4)] scale-[1.02]"
+                        : "group-hover:opacity-90"
+                    }`}
+                  >
+                    {episodeThumb && (
+                      <img
+                        src={episodeThumb}
+                        alt=""
+                        className="absolute inset-0 w-full h-full object-cover filter brightness-70 group-hover:scale-105 transition-transform duration-300"
                       />
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent pointer-events-none" />
+
+                    {/* Top Left: Episode Number Badge */}
+                    <div className="absolute top-2 left-2 z-10">
+                      <span className="px-2 py-0.5 rounded-full bg-black/75 backdrop-blur-md text-[10px] font-black text-[#00E676]">
+                        EP {ep.num}
+                      </span>
+                    </div>
+
+                    {/* Top Right: Duration */}
+                    <div className="absolute top-2 right-2 z-10">
+                      <span className="px-1.5 py-0.5 rounded bg-black/60 text-[9px] font-bold text-neutral-300">
+                        {ep.duration || "45m"}
+                      </span>
+                    </div>
+
+                    {/* Center Play Indicator */}
+                    <div className="relative z-10">
+                      <div
+                        className={`w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition-transform ${
+                          isSelected
+                            ? "bg-[#00E676] text-black scale-110 shadow-[#00E676]/30"
+                            : "bg-white/25 backdrop-blur-md text-white group-hover:scale-110"
+                        }`}
+                      >
+                        <Play
+                          className={`w-4 h-4 ml-0.5 ${
+                            isSelected ? "fill-black text-black" : "fill-white text-white"
+                          }`}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-2 px-0.5">
+                    <h4 className="text-xs font-bold text-white leading-tight truncate">
+                      {ep.title}
+                    </h4>
+                    <div className="text-[11px] text-neutral-400 mt-0.5 flex items-center gap-1.5">
+                      <span className="text-[#00E676] font-semibold">{isSelected ? "Now Playing" : "Episode " + ep.num}</span>
+                      <span>•</span>
+                      <span>{ep.duration || "45m"}</span>
                     </div>
                   </div>
                 </div>
-
-                <div className="mt-2 px-0.5">
-                  <h4 className="text-xs font-bold text-white leading-tight truncate">
-                    {ep.title}
-                  </h4>
-                  <div className="text-[11px] text-neutral-400 mt-0.5 flex items-center gap-1.5">
-                    <span className="text-[#00E676] font-semibold">{isSelected ? "Now Playing" : "Episode " + ep.num}</span>
-                    <span>•</span>
-                    <span>{ep.duration || "45m"}</span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* 5. SYNOPSIS SECTION */}
       <div className="px-4 mt-7">
         <h3 className="text-base font-extrabold text-white tracking-tight mb-3">Synopsis</h3>
 
-        <div className="rounded-2xl bg-[#141416] border border-white/5 p-4 shadow-md">
+        <div className="rounded-2xl bg-[#141416] p-4 shadow-md">
           <p className={`text-xs text-neutral-300 leading-relaxed font-normal ${isReadMore ? "" : "line-clamp-3"}`}>
             {activeSeries.overview}
           </p>

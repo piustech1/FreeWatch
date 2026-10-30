@@ -402,8 +402,11 @@ export function useLiveCatalog() {
     
     // Explicit series indicators
     const hasExplicitSeasonOrEp = episodeInfo.isEpisode || /season|\b(?:s\d{1,2}|ep(?:isode)?\s*\d+|part\s*\d+)\b|eps\s*\d+/i.test(rawTitle);
-    const hasMultipleEpisodes = Array.isArray(m.episodes) && m.episodes.length > 1;
-    const isTv = Boolean(hasExplicitSeasonOrEp || (hasMultipleEpisodes && seriesCode && String(seriesCode) !== String(m.id || m.vid)));
+    const hasSeriesCode = Boolean(seriesCode && String(seriesCode).trim().length > 0 && String(seriesCode) !== '0');
+    const isSeriesCat = Number(m.category_id || m.categoryId) === 5 || (m.category && String(m.category).toLowerCase().includes('series'));
+    const isSeriesType = Boolean(m.type && String(m.type).toUpperCase().includes('SERIES'));
+    const hasEpisodes = Array.isArray(m.episodes) && m.episodes.length > 0;
+    const isTv = Boolean(m.isTv || m.is_series || hasExplicitSeasonOrEp || hasSeriesCode || isSeriesCat || isSeriesType || hasEpisodes);
 
     // Accurate category mapping
     const category = isTv ? 'Series' : mapMunoCategoryId(m.category_id || m.categoryId, m.category, episodeInfo.baseTitle);
@@ -752,9 +755,37 @@ export function useLiveCatalog() {
       list = list.filter(m => m.vj.toLowerCase().includes(v));
     }
     if (genre && genre !== 'All') {
-      const g = genre.toLowerCase();
+      const g = genre.toLowerCase().trim();
       if (g === 'series' || g === 'tv series') {
         list = list.filter(m => m.isTv);
+      } else if (g === 'love story' || g === 'romance') {
+        list = list.filter(m =>
+          m.category.toLowerCase().includes('romance') ||
+          m.category.toLowerCase().includes('drama') ||
+          m.genres.some(gen => /romance|love|drama/i.test(gen)) ||
+          /love|romance|heart|wedding|passion/i.test(m.title)
+        );
+      } else if (g === 'kungu fu' || g === 'kung fu') {
+        list = list.filter(m =>
+          m.category.toLowerCase().includes('action') ||
+          m.genres.some(gen => /action|martial/i.test(gen)) ||
+          /kung|fu|shaolin|dragon|master|fist/i.test(m.title)
+        );
+      } else if (g === 'sci fi' || g === 'sci-fi') {
+        list = list.filter(m =>
+          m.category.toLowerCase().includes('sci') ||
+          m.genres.some(gen => /sci|fiction|fantasy/i.test(gen))
+        );
+      } else if (g === 'korean' || g === 'chinese' || g === 'filipino' || g === 'indian' || g === 'ugandan') {
+        const regional = list.filter(m =>
+          m.title.toLowerCase().includes(g) ||
+          m.overview.toLowerCase().includes(g) ||
+          m.vj.toLowerCase().includes(g)
+        );
+        list = regional.length > 0 ? regional : list.filter(m => m.category === 'Action' || m.category === 'Drama');
+      } else if (g === 'sport') {
+        const sports = list.filter(m => /sport|football|soccer|box|fight|race/i.test(m.title + ' ' + m.overview));
+        list = sports.length > 0 ? sports : list.filter(m => m.category === 'Action');
       } else {
         list = list.filter(m => 
           m.category.toLowerCase().includes(g) ||

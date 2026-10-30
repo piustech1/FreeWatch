@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { User, Mail, Lock, Eye, EyeOff, Tv, Edit3, Loader2, AlertCircle } from "lucide-react";
 import {
   signInWithEmailAndPassword,
@@ -38,6 +38,38 @@ export const AuthPage: React.FC<AuthPageProps> = ({
   const [showChooseAvatar, setShowChooseAvatar] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Synchronize background video starting at 42 seconds and loop back to 42s
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const handleLoadedMetadata = () => {
+      if (video.duration > 42) {
+        video.currentTime = 42;
+        video.play().catch(() => {});
+      }
+    };
+
+    const handleTimeUpdate = () => {
+      if (video.duration > 45 && (video.currentTime >= video.duration - 1 || video.currentTime < 40)) {
+        video.currentTime = 42;
+      }
+    };
+
+    video.addEventListener("loadedmetadata", handleLoadedMetadata);
+    video.addEventListener("timeupdate", handleTimeUpdate);
+    if (video.readyState >= 1 && video.duration > 42 && video.currentTime < 42) {
+      video.currentTime = 42;
+    }
+
+    return () => {
+      video.removeEventListener("loadedmetadata", handleLoadedMetadata);
+      video.removeEventListener("timeupdate", handleTimeUpdate);
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -116,10 +148,11 @@ export const AuthPage: React.FC<AuthPageProps> = ({
   }
 
   return (
-    <div className="relative w-full h-screen max-h-screen bg-black flex flex-col justify-center items-center overflow-hidden select-none font-sans px-4">
+    <div className="relative w-full h-[100dvh] max-h-[100dvh] bg-black flex flex-col justify-center items-center overflow-hidden select-none font-sans px-4">
       {/* Background Video Layer */}
       <div className="absolute inset-0 z-0 overflow-hidden bg-black pointer-events-none">
         <video
+          ref={videoRef}
           autoPlay
           loop
           muted
@@ -158,8 +191,8 @@ export const AuthPage: React.FC<AuthPageProps> = ({
           </div>
         )}
 
-        {/* Centered Liquid Glassmorphic Auth Card (Screenshots 2 & 3 match) */}
-        <div className="w-full rounded-3xl bg-[#16171b]/90 border border-white/10 p-5 sm:p-6 shadow-[0_12px_40px_rgba(0,0,0,0.7)] backdrop-blur-2xl">
+        {/* Centered Liquid Glassmorphic Auth Card */}
+        <div className="w-full rounded-3xl bg-white/[0.08] p-5 sm:p-6 shadow-[0_20px_60px_rgba(0,0,0,0.6)] backdrop-blur-3xl">
           {/* Sign Up: Choose Your Avatar Row */}
           {screen === "signup" && (
             <div className="flex items-center justify-between mb-4 pb-1">
@@ -198,7 +231,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder="Full Name"
-                  className="w-full h-11 pl-10 pr-3.5 rounded-xl bg-[#23252b] border border-white/5 text-xs sm:text-sm text-white placeholder-white/40 focus:outline-none focus:border-white/20 transition-all"
+                  className="w-full h-11 pl-10 pr-3.5 rounded-xl bg-white/[0.07] border-0 text-xs sm:text-sm text-white placeholder-white/40 focus:outline-none focus:ring-1 focus:ring-white/20 transition-all"
                 />
               </div>
             )}
@@ -212,7 +245,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Email Address"
-                className="w-full h-11 pl-10 pr-3.5 rounded-xl bg-[#23252b] border border-white/5 text-xs sm:text-sm text-white placeholder-white/40 focus:outline-none focus:border-white/20 transition-all"
+                className="w-full h-11 pl-10 pr-3.5 rounded-xl bg-white/[0.07] border-0 text-xs sm:text-sm text-white placeholder-white/40 focus:outline-none focus:ring-1 focus:ring-white/20 transition-all"
               />
             </div>
 
@@ -225,7 +258,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Password"
-                className="w-full h-11 pl-10 pr-10 rounded-xl bg-[#23252b] border border-white/5 text-xs sm:text-sm text-white placeholder-white/40 focus:outline-none focus:border-white/20 transition-all"
+                className="w-full h-11 pl-10 pr-10 rounded-xl bg-white/[0.07] border-0 text-xs sm:text-sm text-white placeholder-white/40 focus:outline-none focus:ring-1 focus:ring-white/20 transition-all"
               />
               <button
                 type="button"
@@ -247,7 +280,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Confirm Password"
-                  className="w-full h-11 pl-10 pr-10 rounded-xl bg-[#23252b] border border-white/5 text-xs sm:text-sm text-white placeholder-white/40 focus:outline-none focus:border-white/20 transition-all"
+                  className="w-full h-11 pl-10 pr-10 rounded-xl bg-white/[0.07] border-0 text-xs sm:text-sm text-white placeholder-white/40 focus:outline-none focus:ring-1 focus:ring-white/20 transition-all"
                 />
                 <button
                   type="button"
@@ -306,7 +339,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
               type="button"
               onClick={handleGuest}
               disabled={loading}
-              className="w-full h-11 rounded-full bg-[#23252b] hover:bg-[#2d3038] active:scale-[0.98] text-white font-medium text-xs sm:text-sm flex items-center justify-center gap-2 transition-all border border-white/10 cursor-pointer disabled:opacity-70"
+              className="w-full h-11 rounded-full bg-white/[0.08] hover:bg-white/[0.14] active:scale-[0.98] text-white font-medium text-xs sm:text-sm flex items-center justify-center gap-2 transition-all border-0 cursor-pointer disabled:opacity-70"
             >
               <Tv className="w-4 h-4 text-white" />
               <span>Continue as Guest</span>

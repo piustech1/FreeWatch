@@ -175,14 +175,30 @@ export function normalizeMovie(raw) {
   
   const category = mapMunoCategoryId(raw.category_id || raw.categoryId, raw.category, cleanTitle);
 
-  // Single movies (even if labeled 'series' in raw category or with epCount<=1) must stay isTv = false!
+  // Authentic Series detection:
+  // 1. Explicit season or episode markers in title
+  // 2. Presence of a valid series_code
+  // 3. Category ID 5 (MunoWatch Series) or type === 'SERIES'
+  // 4. Genuine multi-episode arrays or explicit isTv/is_series flags
   const hasExplicitSeasonOrEp = /season|\b(?:s\d{1,2}|ep(?:isode)?\s*\d+|part\s*\d+)\b|eps\s*\d+/i.test(cleanTitle);
-  const hasMultipleEpisodes = Array.isArray(raw.episodes) && raw.episodes.length > 1;
-  const isSeries = Boolean(hasExplicitSeasonOrEp || (hasMultipleEpisodes && raw.series_code && String(raw.series_code) !== String(id)));
+  const hasSeriesCode = Boolean(raw.series_code && String(raw.series_code).trim().length > 0 && String(raw.series_code) !== '0');
+  const isSeriesCategory = Number(raw.category_id) === 5 || (raw.category && raw.category.toLowerCase().includes('series'));
+  const isSeriesType = raw.type && raw.type.toUpperCase().includes('SERIES');
+  const hasMultipleEpisodes = Array.isArray(raw.episodes) && raw.episodes.length > 0;
+  
+  const isSeries = Boolean(
+    raw.isTv ||
+    raw.is_series ||
+    hasExplicitSeasonOrEp ||
+    hasSeriesCode ||
+    isSeriesCategory ||
+    isSeriesType ||
+    hasMultipleEpisodes
+  );
 
-  const genres = [category, 'Luganda Dubbed'];
-  if (isSeries && !genres.includes('Series')) {
-    genres.unshift('Series');
+  const genres = [isSeries ? 'Series' : category, 'Luganda Dubbed'];
+  if (isSeries && category !== 'Series' && !genres.includes(category)) {
+    genres.push(category);
   }
 
   return {
@@ -601,14 +617,30 @@ export async function searchCatalog(query) {
 
       if (Array.isArray(data.series)) {
         for (const s of data.series) {
-          if (Array.isArray(s.episodes)) {
-            for (const ep of s.episodes) {
-              const norm = normalizeMovie(ep);
-              if (!seenIds.has(norm.id)) {
-                seenIds.add(norm.id);
-                combined.push(norm);
-              }
+          if (Array.isArray(s.episodes) && s.episodes.length > 0) {
+            const ep = s.episodes[0];
+            const norm = normalizeMovie({
+              ...ep,
+              title: s.title || ep.title,
+              series_code: s.series_code || ep.series_code,
+              episodes: s.episodes,
+              isTv: true,
+              is_series: true,
+            });
+            if (!seenIds.has(norm.id)) {
+              seenIds.add(norm.id);
+              combined.push(norm);
             }
+          }
+        }
+      }
+
+      if (Array.isArray(data.movies)) {
+        for (const m of data.movies) {
+          const norm = normalizeMovie(m);
+          if (!seenIds.has(norm.id)) {
+            seenIds.add(norm.id);
+            combined.push(norm);
           }
         }
       }
