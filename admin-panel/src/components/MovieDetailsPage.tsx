@@ -101,10 +101,10 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
 
   // Auto-heal placeholder movie titles or missing streams on mount
   useEffect(() => {
-    if (
-      (/^(?:Movie|Series|Luganda Release)\s*#\d+/i.test(activeMovie.title) || !activeMovie.streamUrl) &&
-      activeMovie.id
-    ) {
+    const isGenericTitle = !activeMovie.title || /^(?:Movie|Series|Luganda Release|Untitled)\s*#?\d*/i.test(activeMovie.title);
+    const isFallbackStream = !activeMovie.streamUrl || activeMovie.streamUrl.includes("sample") || activeMovie.streamUrl.includes("07.Mirzapur");
+
+    if ((isGenericTitle || isFallbackStream) && activeMovie.id && /^\d+$/.test(activeMovie.id)) {
       fetch(`https://mumowatch.ai.studio/movie/${activeMovie.id}`)
         .then((r) => (r.ok ? r.json() : null))
         .then((d) => {
@@ -131,6 +131,7 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
   const displayTitle = healedDetails?.title || activeMovie.title;
   const displayVj = healedDetails?.vj || activeMovie.vj;
   const displayOverview = healedDetails?.overview || activeMovie.overview;
+  const displayPoster = healedDetails?.imageUrl || activeMovie.imageUrl;
 
   // Load TMDB Logo, Backdrop & Cast
   useEffect(() => {
@@ -238,6 +239,7 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
       }
     } else {
       video.src = streamUrl;
+      video.play().catch(() => {});
     }
 
     return () => {
@@ -317,8 +319,6 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
           <div className="relative w-full h-full bg-black flex items-center justify-center">
             <video
               ref={videoRef}
-              referrerPolicy="no-referrer"
-              crossOrigin="anonymous"
               controls
               autoPlay
               playsInline
@@ -488,15 +488,46 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
         <button
           type="button"
           onClick={() => {
+            if (!streamUrl) return;
             setIsDownloaded(true);
-            window.open?.(streamUrl, "_blank");
+            const safeName = `${displayTitle.replace(/[^a-zA-Z0-9_\-\s]/g, "").trim() || "Movie"}.mp4`;
+            
+            // 1. Direct browser download trigger
+            const link = document.createElement("a");
+            link.href = streamUrl;
+            link.download = safeName;
+            link.target = "_blank";
+            link.rel = "noopener noreferrer";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            // 2. Persist to freewatch_downloads for the Downloads page
+            try {
+              const saved = localStorage.getItem("freewatch_downloads");
+              const list = saved ? JSON.parse(saved) : [];
+              if (!list.some((item: any) => item.id === activeMovie.id)) {
+                list.unshift({
+                  id: activeMovie.id,
+                  title: displayTitle,
+                  posterUrl: displayPoster,
+                  posterBg: "#18181b",
+                  progress: 100,
+                  isPaused: false,
+                  fileSize: "720p HD",
+                  speed: "Saved",
+                  isSeries: activeMovie.isTv,
+                });
+                localStorage.setItem("freewatch_downloads", JSON.stringify(list));
+              }
+            } catch {}
           }}
           className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all cursor-pointer shadow-md ${
             isDownloaded
-              ? "bg-sky-500 text-white"
+              ? "bg-[#00E676] text-black shadow-[#00E676]/30"
               : "bg-white/[0.08] text-white hover:bg-white/[0.15] backdrop-blur-md"
           }`}
-          title="Download MP4"
+          title="Download MP4 to Device"
         >
           <Download className="w-5 h-5" />
         </button>

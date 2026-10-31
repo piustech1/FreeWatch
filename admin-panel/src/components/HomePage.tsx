@@ -17,6 +17,7 @@ import {
   Download,
   User as UserIcon,
   ChevronRight,
+  ChevronLeft,
   TrendingUp,
   Clock,
 } from "lucide-react";
@@ -169,7 +170,23 @@ export const HomePage: React.FC<HomePageProps> = ({
               src={movie.imageUrl}
               alt={movie.title}
               onError={(e) => {
-                (e.target as HTMLImageElement).style.display = "none";
+                const img = e.target as HTMLImageElement;
+                if (!img.dataset.retried) {
+                  img.dataset.retried = "true";
+                  searchTmdb(movie.title, movie.isTv)
+                    .then((tmdb) => {
+                      if (tmdb?.posterUrl) {
+                        img.src = tmdb.posterUrl;
+                      } else {
+                        img.style.display = "none";
+                      }
+                    })
+                    .catch(() => {
+                      img.style.display = "none";
+                    });
+                } else {
+                  img.style.display = "none";
+                }
               }}
               className="absolute inset-0 w-full h-full object-cover filter brightness-90 group-hover:scale-105 transition-transform duration-300"
             />
@@ -461,87 +478,137 @@ export const HomePage: React.FC<HomePageProps> = ({
       </section>
 
       {/* 2B. DESKTOP / 10-FOOT CINEMATIC TV BANNER */}
-      {heroMovie && (
-        <div className="hidden lg:block px-6 xl:px-10 pt-4 pb-6 max-w-[1600px] mx-auto w-full">
+      {heroCandidates.length > 0 && (
+        <div
+          onMouseEnter={() => setIsHeroPaused(true)}
+          onMouseLeave={() => setIsHeroPaused(false)}
+          className="hidden lg:block px-6 xl:px-10 pt-4 pb-6 max-w-[1600px] mx-auto w-full select-none"
+        >
           <div className="relative w-full h-[470px] xl:h-[510px] rounded-[32px] overflow-hidden border border-white/10 shadow-2xl bg-[#08080c] group">
-            {/* Background Cinematic Artwork */}
-            <div className="absolute inset-0">
-              <img
-                src={heroMovie.backdropUrl || heroMovie.imageUrl}
-                alt={heroMovie.title}
-                className="w-full h-full object-cover object-[center_30%] filter brightness-90 contrast-110 group-hover:scale-105 transition-transform duration-700"
-              />
-              <div className="absolute inset-0 bg-gradient-to-r from-black via-black/85 via-45% to-transparent" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 via-30% to-transparent" />
-            </div>
-
-            {/* Top Right: Authentic VJ Badge */}
-            <div className="absolute top-6 right-6 z-20">
-              <button
-                type="button"
-                onClick={() => onSelectVj?.(heroMovie.vj)}
-                className="cursor-pointer"
-              >
-                <VjBadge vjName={heroMovie.vj} size="md" />
-              </button>
-            </div>
-
-            {/* Left Content Column */}
-            <div className="relative z-10 h-full flex flex-col justify-end p-8 xl:p-12 max-w-2xl">
-              <div className="space-y-1 mb-3">
-                {heroLogos[heroMovie.id] ? (
+            {/* Background Slides with Smooth Crossfade */}
+            {heroCandidates.map((movie, idx) => {
+              const isActive = idx === (heroIndex % numHeroes);
+              return (
+                <div
+                  key={movie.id}
+                  className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
+                    isActive ? "opacity-100 z-10 pointer-events-auto" : "opacity-0 z-0 pointer-events-none"
+                  }`}
+                >
                   <img
-                    src={heroLogos[heroMovie.id]!}
-                    alt={heroMovie.title}
-                    className="h-16 max-w-[340px] object-contain object-left drop-shadow-xl mb-2"
+                    src={movie.backdropUrl || movie.imageUrl}
+                    alt={movie.title}
+                    className="w-full h-full object-cover object-[center_30%] filter brightness-90 contrast-110 group-hover:scale-105 transition-transform duration-1000"
                   />
-                ) : (
-                  <div className="text-3xl xl:text-5xl font-black tracking-tight text-white drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)] leading-tight uppercase">
-                    {heroMovie.title}
+                  <div className="absolute inset-0 bg-gradient-to-r from-black via-black/85 via-45% to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 via-30% to-transparent" />
+
+                  {/* Top Right: Authentic VJ Badge */}
+                  <div className="absolute top-6 right-6 z-20">
+                    <button
+                      type="button"
+                      onClick={() => onSelectVj?.(movie.vj)}
+                      className="cursor-pointer"
+                    >
+                      <VjBadge vjName={movie.vj} size="md" />
+                    </button>
                   </div>
-                )}
-              </div>
 
-              {/* Tags Row */}
-              <div className="flex items-center gap-2 mb-3">
-                <span className="px-2.5 py-1 rounded-md bg-white/10 backdrop-blur-md border border-white/15 text-xs font-black text-amber-400">
-                  ★ {heroMovie.rating}
-                </span>
-                <span className="px-2.5 py-1 rounded-md bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-neutral-200">
-                  {heroMovie.duration}
-                </span>
-                <span className="px-2.5 py-1 rounded-md bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-neutral-200">
-                  {heroMovie.year}
-                </span>
-                <span className="px-2.5 py-1 rounded-md bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-neutral-200">
-                  {heroMovie.category}
-                </span>
-              </div>
+                  {/* Left Content Column */}
+                  <div className="relative z-10 h-full flex flex-col justify-end p-8 xl:p-12 max-w-2xl">
+                    <div className="space-y-1 mb-3">
+                      {heroLogos[movie.id] ? (
+                        <img
+                          src={heroLogos[movie.id]!}
+                          alt={movie.title}
+                          className="h-16 max-w-[340px] object-contain object-left drop-shadow-xl mb-2"
+                        />
+                      ) : (
+                        <div className="text-3xl xl:text-5xl font-black tracking-tight text-white drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)] leading-tight uppercase">
+                          {movie.title}
+                        </div>
+                      )}
+                    </div>
 
-              {/* Synopsis */}
-              <p className="text-sm text-neutral-300 font-medium leading-relaxed mb-6 max-w-xl line-clamp-3">
-                {heroMovie.overview}
-              </p>
+                    {/* Tags Row */}
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="px-2.5 py-1 rounded-md bg-white/10 backdrop-blur-md border border-white/15 text-xs font-black text-amber-400">
+                        ★ {movie.rating}
+                      </span>
+                      <span className="px-2.5 py-1 rounded-md bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-neutral-200">
+                        {movie.duration}
+                      </span>
+                      <span className="px-2.5 py-1 rounded-md bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-neutral-200">
+                        {movie.year}
+                      </span>
+                      <span className="px-2.5 py-1 rounded-md bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-neutral-200">
+                        {movie.category}
+                      </span>
+                    </div>
 
-              {/* Action Buttons */}
-              <div className="flex items-center gap-4">
-                <button
-                  type="button"
-                  onClick={() => onSelectMovie?.(heroMovie.id, heroMovie.isTv, heroMovie.title, heroMovie)}
-                  className="flex items-center gap-2.5 px-8 py-3.5 rounded-full bg-[#00E676] hover:bg-[#00c853] text-black font-black text-sm tracking-wide shadow-[0_0_25px_rgba(0,230,118,0.5)] hover:scale-105 active:scale-95 transition-all cursor-pointer"
-                >
-                  <Play className="w-4 h-4 fill-black text-black" />
-                  <span>WATCH NOW</span>
-                </button>
+                    {/* Synopsis */}
+                    <p className="text-sm text-neutral-300 font-medium leading-relaxed mb-6 max-w-xl line-clamp-3">
+                      {movie.overview}
+                    </p>
 
-                <button
-                  type="button"
-                  onClick={() => onSelectMovie?.(heroMovie.id, heroMovie.isTv, heroMovie.title, heroMovie)}
-                  className="flex items-center gap-2 px-7 py-3.5 rounded-full bg-black/40 hover:bg-white/15 border border-white/40 text-white font-bold text-sm tracking-wide backdrop-blur-md hover:scale-105 active:scale-95 transition-all cursor-pointer"
-                >
-                  <span>DETAILS</span>
-                </button>
-              </div>
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-4">
+                      <button
+                        type="button"
+                        onClick={() => onSelectMovie?.(movie.id, movie.isTv, movie.title, movie)}
+                        className="flex items-center gap-2.5 px-8 py-3.5 rounded-full bg-[#00E676] hover:bg-[#00c853] text-black font-black text-sm tracking-wide shadow-[0_0_25px_rgba(0,230,118,0.5)] hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                      >
+                        <Play className="w-4 h-4 fill-black text-black" />
+                        <span>WATCH NOW</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => onSelectMovie?.(movie.id, movie.isTv, movie.title, movie)}
+                        className="flex items-center gap-2 px-7 py-3.5 rounded-full bg-black/40 hover:bg-white/15 border border-white/40 text-white font-bold text-sm tracking-wide backdrop-blur-md hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                      >
+                        <span>DETAILS</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Desktop Left / Right Arrow Controls */}
+            <button
+              type="button"
+              onClick={() => setHeroIndex((prev) => (prev - 1 + numHeroes) % numHeroes)}
+              aria-label="Previous Slide"
+              className="absolute left-4 top-1/2 -translate-y-1/2 z-30 w-11 h-11 rounded-full bg-black/50 hover:bg-black/80 border border-white/20 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all cursor-pointer backdrop-blur-md active:scale-95"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setHeroIndex((prev) => (prev + 1) % numHeroes)}
+              aria-label="Next Slide"
+              className="absolute right-4 top-1/2 -translate-y-1/2 z-30 w-11 h-11 rounded-full bg-black/50 hover:bg-black/80 border border-white/20 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all cursor-pointer backdrop-blur-md active:scale-95"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+
+            {/* Desktop Indicator Dots */}
+            <div className="absolute bottom-6 right-8 z-30 flex items-center gap-2">
+              {heroCandidates.map((_, i) => {
+                const isActive = i === (heroIndex % numHeroes);
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setHeroIndex(i)}
+                    aria-label={`Go to slide ${i + 1}`}
+                    className={`h-2 rounded-full transition-all duration-300 cursor-pointer ${
+                      isActive ? "w-8 bg-[#00E676] shadow-[0_0_8px_rgba(0,230,118,0.8)]" : "w-2 bg-white/30 hover:bg-white/60"
+                    }`}
+                  />
+                );
+              })}
             </div>
           </div>
 

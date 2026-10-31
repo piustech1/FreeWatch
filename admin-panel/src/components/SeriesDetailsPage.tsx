@@ -219,7 +219,19 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
               if (sRes.ok) {
                 const sData = await sRes.json();
                 if (Array.isArray(sData.series) && sData.series.length > 0) {
+                  // Inspect all discovered series codes to fetch true full episode seasons
                   for (const ser of sData.series) {
+                    if (ser.series_code && String(ser.series_code) !== "0") {
+                      try {
+                        const epRes = await fetch(`https://mumowatch.ai.studio/series/${ser.series_code}`);
+                        if (epRes.ok) {
+                          const epData = await epRes.json();
+                          if (epData && Array.isArray(epData.episodes) && epData.episodes.length > 0) {
+                            munoEpisodes.push(...epData.episodes);
+                          }
+                        }
+                      } catch {}
+                    }
                     if (Array.isArray(ser.episodes) && ser.episodes.length > 0) {
                       munoEpisodes.push(...ser.episodes);
                     }
@@ -230,7 +242,7 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
           }
         }
 
-        // Deduplicate munoEpisodes by id or title
+        // Deduplicate munoEpisodes by id, title, or stream URL
         if (munoEpisodes.length > 0) {
           const seen = new Set();
           munoEpisodes = munoEpisodes.filter((ep: any) => {
@@ -259,30 +271,17 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
             };
           });
 
-          // If only 1 episode returned by MunoWatch, blend with TMDB or generate multi-episode sequence
-          if (mapped.length === 1) {
-            if (tmdbEps.length > 1) {
-              for (let i = 1; i < tmdbEps.length; i++) {
-                const te = tmdbEps[i];
-                mapped.push({
-                  num: te.episodeNumber || (i + 1),
-                  title: te.name || `${activeSeries.title} Episode ${i + 1}`,
-                  duration: te.runtime ? `${te.runtime}m` : "48m",
-                  streamUrl: activeSeries.streamUrl || mapped[0].streamUrl,
-                  stillUrl: te.stillUrl || activeSeries.backdropUrl || activeSeries.imageUrl,
-                });
-              }
-            } else {
-              const fallbackDurations = ["48m", "52m", "50m", "46m"];
-              for (let i = 2; i <= 4; i++) {
-                mapped.push({
-                  num: i,
-                  title: `Episode ${i}`,
-                  duration: fallbackDurations[i - 2] || "50m",
-                  streamUrl: mapped[0].streamUrl || activeSeries.streamUrl,
-                  stillUrl: activeSeries.backdropUrl || activeSeries.imageUrl,
-                });
-              }
+          // If MunoWatch search returned only 1 episode but TMDB has the full season:
+          if (mapped.length === 1 && tmdbEps.length > 1) {
+            for (let i = 1; i < tmdbEps.length; i++) {
+              const te = tmdbEps[i];
+              mapped.push({
+                num: te.episodeNumber || (i + 1),
+                title: te.name || `${activeSeries.title} Episode ${i + 1}`,
+                duration: te.runtime ? `${te.runtime}m` : "48m",
+                streamUrl: activeSeries.streamUrl || mapped[0].streamUrl,
+                stillUrl: te.stillUrl || activeSeries.backdropUrl || activeSeries.imageUrl,
+              });
             }
           }
 
@@ -420,6 +419,7 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
       }
     } else {
       video.src = streamUrl;
+      video.play().catch(() => {});
     }
 
     return () => {
@@ -489,8 +489,6 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
             <video
               ref={videoRef}
               key={streamUrl}
-              referrerPolicy="no-referrer"
-              crossOrigin="anonymous"
               controls
               autoPlay
               playsInline
@@ -654,15 +652,48 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
         <button
           type="button"
           onClick={() => {
+            if (!streamUrl) return;
             setIsDownloaded(true);
-            window.open?.(streamUrl, "_blank");
+            const epTitle = currentEpisode?.title || `${activeSeries.title} Episode ${activeEpisodeIndex + 1}`;
+            const safeName = `${epTitle.replace(/[^a-zA-Z0-9_\-\s]/g, "").trim() || "Episode"}.mp4`;
+            
+            // 1. Direct browser download trigger
+            const link = document.createElement("a");
+            link.href = streamUrl;
+            link.download = safeName;
+            link.target = "_blank";
+            link.rel = "noopener noreferrer";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            // 2. Persist to freewatch_downloads for the Downloads page
+            try {
+              const saved = localStorage.getItem("freewatch_downloads");
+              const list = saved ? JSON.parse(saved) : [];
+              const epId = `${activeSeries.id}-ep${activeEpisodeIndex + 1}`;
+              if (!list.some((item: any) => item.id === epId)) {
+                list.unshift({
+                  id: epId,
+                  title: epTitle,
+                  posterUrl: currentEpisode?.stillUrl || activeSeries.backdropUrl || activeSeries.imageUrl,
+                  posterBg: "#18181b",
+                  progress: 100,
+                  isPaused: false,
+                  fileSize: "720p HD",
+                  speed: "Saved",
+                  isSeries: true,
+                });
+                localStorage.setItem("freewatch_downloads", JSON.stringify(list));
+              }
+            } catch {}
           }}
           className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all cursor-pointer shadow-md ${
             isDownloaded
-              ? "bg-sky-500 text-white"
+              ? "bg-[#00E676] text-black shadow-[#00E676]/30"
               : "bg-white/[0.08] text-white hover:bg-white/[0.15] backdrop-blur-md"
           }`}
-          title="Download Episode"
+          title="Download Episode to Device"
         >
           <Download className="w-5 h-5" />
         </button>

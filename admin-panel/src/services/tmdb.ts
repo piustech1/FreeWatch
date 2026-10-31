@@ -108,14 +108,20 @@ export function computeTitleSimilarity(s1: string, s2: string): number {
 export function sanitizeStreamUrl(url?: string): string {
   if (!url) return "";
   let clean = url.trim();
-  // Upgrade http to https to avoid mixed content block
+
+  // Map non-CORS and dead munotech/munoserver domains to the fast BunnyCDN mirror
+  if (/https?:\/\/munotech\d*\.com/i.test(clean)) {
+    clean = clean.replace(/https?:\/\/munotech\d*\.com/gi, "https://munotech3.b-cdn.net");
+  }
+  if (/https?:\/\/munoserver\d*\.(?:club|co|com|net)/i.test(clean)) {
+    clean = clean.replace(/https?:\/\/munoserver\d*\.(?:club|co|com|net)/gi, "https://munotech3.b-cdn.net");
+  }
+
+  // Upgrade http to https to avoid mixed content block across all CDNs
   if (clean.startsWith("http://")) {
     clean = clean.replace(/^http:\/\//i, "https://");
   }
-  // Fallback for dead parked domains like munoserver56.club
-  if (clean.includes("munoserver56.club")) {
-    clean = clean.replace(/https?:\/\/munoserver56\.club/i, "https://munotech3.b-cdn.net");
-  }
+
   // Encode unescaped spaces
   return clean.replace(/ /g, "%20");
 }

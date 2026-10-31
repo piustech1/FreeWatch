@@ -50,9 +50,9 @@ export const VjMoviesPage: React.FC<VjMoviesPageProps> = ({
       try {
         let resultsData: any[] = [];
 
-        // 1. First try serverless endpoint
+        // 1. First try serverless movies endpoint by VJ
         try {
-          const r = await fetch(`/api/v1/search?q=${encodeURIComponent(vj.name)}`);
+          const r = await fetch(`/api/v1/movies?vj=${encodeURIComponent(cleanVj)}&limit=50`);
           if (r.ok) {
             const json = await r.json();
             if (json && json.success && Array.isArray(json.data) && json.data.length > 0) {
@@ -61,10 +61,10 @@ export const VjMoviesPage: React.FC<VjMoviesPageProps> = ({
           }
         } catch (_) {}
 
-        // 2. Direct fallback to MunoWatch public API if serverless returned empty
+        // 2. Direct fallback to MunoWatch public API if needed (search with cleanVj to bypass VJ prefix filter)
         if (resultsData.length === 0) {
           try {
-            const munoRes = await fetch(`https://mumowatch.ai.studio/search?q=${encodeURIComponent(vj.name)}`);
+            const munoRes = await fetch(`https://mumowatch.ai.studio/search?q=${encodeURIComponent(cleanVj)}`);
             if (munoRes.ok) {
               const mData = await munoRes.json();
               if (Array.isArray(mData.series)) {

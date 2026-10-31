@@ -302,13 +302,13 @@ export const FALLBACK_MOVIES: CatalogMovie[] = [
   },
   // --- KIDS & FAMILY / ANIMATION BLOCKBUSTERS ---
   {
-    id: "70001",
+    id: "5001",
     title: "Sonic the Hedgehog 3",
     vj: "VJ Junior",
     category: "Family",
     genres: ["Family", "Animation", "Action", "Comedy"],
-    imageUrl: "https://image.tmdb.org/t/p/w500/d8qA89xGz0e5pGz1e70mYc5pX0.jpg",
-    backdropUrl: "https://image.tmdb.org/t/p/w1280/zOpe0eHhmxeMU2vf9Y0i6tD0vU.jpg",
+    imageUrl: "https://image.tmdb.org/t/p/w500/d8Ryb8AunYAuycVKDp5HpdWPKgC.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/w1280/zOpe0eHsq0A2NvNyBbtT6sj53qV.jpg",
     rating: "9.2",
     year: "2024",
     duration: "1h 50m",
@@ -317,13 +317,13 @@ export const FALLBACK_MOVIES: CatalogMovie[] = [
     streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
   },
   {
-    id: "70002",
+    id: "5002",
     title: "Panda Plan",
     vj: "VJ Junior",
     category: "Family",
     genres: ["Family", "Comedy", "Action"],
-    imageUrl: "https://image.tmdb.org/t/p/w500/wWba3TaojhK7NdycRhoQpsG0FaH.jpg",
-    backdropUrl: "https://image.tmdb.org/t/p/w1280/wWba3TaojhK7NdycRhoQpsG0FaH.jpg",
+    imageUrl: "https://image.tmdb.org/t/p/w500/8iMPQl13q89jQhaA5nXb6UiT0t0.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/w1280/8cc4AypHsnqcCQeIIpNoh6Wrc5B.jpg",
     rating: "8.9",
     year: "2024",
     duration: "1h 39m",
@@ -332,13 +332,13 @@ export const FALLBACK_MOVIES: CatalogMovie[] = [
     streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
   },
   {
-    id: "70003",
+    id: "5003",
     title: "Moana 2",
     vj: "VJ Emmy",
     category: "Family",
     genres: ["Family", "Animation", "Adventure"],
-    imageUrl: "https://image.tmdb.org/t/p/w500/4YZpsylmjHbqeWzjKpUEF8gcLUV.jpg",
-    backdropUrl: "https://image.tmdb.org/t/p/w1280/4YZpsylmjHbqeWzjKpUEF8gcLUV.jpg",
+    imageUrl: "https://image.tmdb.org/t/p/w500/aLVkiINlIeCkcZIzb7XHzPYgO6L.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/w1280/vYqt6kb4lcF8wwqsMMaULkP9OEn.jpg",
     rating: "9.0",
     year: "2024",
     duration: "1h 40m",
@@ -347,13 +347,13 @@ export const FALLBACK_MOVIES: CatalogMovie[] = [
     streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4"
   },
   {
-    id: "70004",
+    id: "5004",
     title: "The Wild Robot",
     vj: "VJ Junior",
     category: "Family",
     genres: ["Family", "Animation", "Sci-Fi"],
-    imageUrl: "https://image.tmdb.org/t/p/w500/wTnV3PCVW5O92JMrZTEFswnEvqy.jpg",
-    backdropUrl: "https://image.tmdb.org/t/p/w1280/wTnV3PCVW5O92JMrZTEFswnEvqy.jpg",
+    imageUrl: "https://image.tmdb.org/t/p/w500/wTnV3PCVW5O92JMrFvvrRcV39RU.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/w1280/1pmXyN3sKeYoUhu5VBZiDU4BX21.jpg",
     rating: "9.4",
     year: "2024",
     duration: "1h 42m",
@@ -362,13 +362,13 @@ export const FALLBACK_MOVIES: CatalogMovie[] = [
     streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4"
   },
   {
-    id: "70005",
+    id: "5005",
     title: "Despicable Me 4",
     vj: "VJ Jingo",
     category: "Family",
     genres: ["Family", "Animation", "Comedy"],
     imageUrl: "https://image.tmdb.org/t/p/w500/wWba3TaojhK7NdycRhoQpsG0FaH.jpg",
-    backdropUrl: "https://image.tmdb.org/t/p/w1280/wWba3TaojhK7NdycRhoQpsG0FaH.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/w1280/twsxsfao6ZOVvT8LfudH603MMi6.jpg",
     rating: "8.7",
     year: "2024",
     duration: "1h 35m",
@@ -377,7 +377,7 @@ export const FALLBACK_MOVIES: CatalogMovie[] = [
     streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
   },
   {
-    id: "70006",
+    id: "5006",
     title: "Kung Fu Panda 4",
     vj: "VJ Junior",
     category: "Family",
@@ -392,7 +392,7 @@ export const FALLBACK_MOVIES: CatalogMovie[] = [
     streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
   },
   {
-    id: "70007",
+    id: "5007",
     title: "Inside Out 2",
     vj: "VJ Emmy",
     category: "Family",
@@ -407,13 +407,13 @@ export const FALLBACK_MOVIES: CatalogMovie[] = [
     streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4"
   },
   {
-    id: "70008",
+    id: "5008",
     title: "Mufasa: The Lion King",
     vj: "VJ Junior",
     category: "Family",
     genres: ["Family", "Animation", "Adventure", "Drama"],
-    imageUrl: "https://image.tmdb.org/t/p/w500/b33nnKl1GSFbao4l3fZDDqsMx0F.jpg",
-    backdropUrl: "https://image.tmdb.org/t/p/w1280/b33nnKl1GSFbao4l3fZDDqsMx0F.jpg",
+    imageUrl: "https://image.tmdb.org/t/p/w500/jbOSUAWMGzGL1L4EaUF8K6zYFo7.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/w1280/1w8kutrRucTd3wlYyu5QlUDMiG1.jpg",
     rating: "9.0",
     year: "2024",
     duration: "1h 58m",
@@ -422,13 +422,13 @@ export const FALLBACK_MOVIES: CatalogMovie[] = [
     streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
   },
   {
-    id: "70009",
+    id: "5009",
     title: "Wonka",
     vj: "VJ Junior",
     category: "Family",
     genres: ["Family", "Fantasy", "Comedy"],
-    imageUrl: "https://image.tmdb.org/t/p/w500/q6y0Go1tsGEsmtFryDOJo3dEmqu.jpg",
-    backdropUrl: "https://image.tmdb.org/t/p/w1280/q6y0Go1tsGEsmtFryDOJo3dEmqu.jpg",
+    imageUrl: "https://image.tmdb.org/t/p/w500/qhb1qOilapbapxWQn9jtRCMwXJF.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/w1280/uIk2g2bRkNwNywKZIhC5oIU94Kh.jpg",
     rating: "8.8",
     year: "2024",
     duration: "1h 56m",
@@ -439,13 +439,13 @@ export const FALLBACK_MOVIES: CatalogMovie[] = [
 
   // --- AUTHENTIC INDIAN BLOCKBUSTERS ---
   {
-    id: "71001",
+    id: "5101",
     title: "RRR",
     vj: "VJ Junior",
     category: "Action",
     genres: ["Action", "Drama", "Indian"],
-    imageUrl: "https://image.tmdb.org/t/p/w500/kdPMUMJzyYAc4roD52qavX0nLIC.jpg",
-    backdropUrl: "https://image.tmdb.org/t/p/w1280/kdPMUMJzyYAc4roD52qavX0nLIC.jpg",
+    imageUrl: "https://image.tmdb.org/t/p/w500/wE0I6efAW4cDDmZQWtwZMOW44EJ.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/w1280/i0Y0wP8H6SRgjr6QmuwbtQbS24D.jpg",
     rating: "9.5",
     year: "2024",
     duration: "3h 02m",
@@ -454,13 +454,13 @@ export const FALLBACK_MOVIES: CatalogMovie[] = [
     streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
   },
   {
-    id: "71002",
+    id: "5102",
     title: "K.G.F: Chapter 2",
     vj: "VJ Emmy",
     category: "Action",
     genres: ["Action", "Crime", "Indian"],
-    imageUrl: "https://image.tmdb.org/t/p/w500/khSVSpOqvuhFzLw51eWkQ0pT5o5.jpg",
-    backdropUrl: "https://image.tmdb.org/t/p/w1280/khSVSpOqvuhFzLw51eWkQ0pT5o5.jpg",
+    imageUrl: "https://image.tmdb.org/t/p/w500/khNVygolU0TxLIDWff5tQlAhZ23.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/w1280/nsV5Mfi9FAV4w8eDsdr7uqVswOk.jpg",
     rating: "9.4",
     year: "2024",
     duration: "2h 48m",
@@ -469,13 +469,13 @@ export const FALLBACK_MOVIES: CatalogMovie[] = [
     streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
   },
   {
-    id: "71003",
+    id: "5103",
     title: "Pushpa 2: The Rule",
     vj: "VJ Ice P",
     category: "Action",
     genres: ["Action", "Thriller", "Indian"],
-    imageUrl: "https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg",
-    backdropUrl: "https://image.tmdb.org/t/p/w1280/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg",
+    imageUrl: "https://image.tmdb.org/t/p/w500/1T21FblunT0y8fz7YaW8JMYgUKm.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/w1280/7jGItf7idJsBm9QTNoTNTU3KiGe.jpg",
     rating: "9.3",
     year: "2024",
     duration: "3h 20m",
@@ -484,13 +484,13 @@ export const FALLBACK_MOVIES: CatalogMovie[] = [
     streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
   },
   {
-    id: "71004",
+    id: "5104",
     title: "Jawan",
     vj: "VJ Junior",
     category: "Action",
     genres: ["Action", "Thriller", "Indian"],
-    imageUrl: "https://image.tmdb.org/t/p/w500/5kHvC0Vv83g6R52tCq4jL7sDqC6.jpg",
-    backdropUrl: "https://image.tmdb.org/t/p/w1280/5kHvC0Vv83g6R52tCq4jL7sDqC6.jpg",
+    imageUrl: "https://image.tmdb.org/t/p/w500/jFt1gS4BGHlK8xt76Y81Alp4dbt.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/w1280/5LtSjMNw6j3LkG29Oa4O0iY5U8.jpg",
     rating: "9.1",
     year: "2024",
     duration: "2h 49m",
@@ -499,13 +499,13 @@ export const FALLBACK_MOVIES: CatalogMovie[] = [
     streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
   },
   {
-    id: "71005",
+    id: "5105",
     title: "Kalki 2898 AD",
     vj: "VJ Junior",
     category: "Sci-Fi",
     genres: ["Sci-Fi", "Action", "Indian"],
-    imageUrl: "https://image.tmdb.org/t/p/w500/6MKr3KgOLmzOP6MSuZERO41Lpkt.jpg",
-    backdropUrl: "https://image.tmdb.org/t/p/w1280/6MKr3KgOLmzOP6MSuZERO41Lpkt.jpg",
+    imageUrl: "https://image.tmdb.org/t/p/w500/rstcAnBeCkxNQjNp3YXrF6IP1tW.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/w1280/o8XSR1SONnjcsv84NRu6Mwsl5io.jpg",
     rating: "9.2",
     year: "2024",
     duration: "3h 01m",
@@ -789,6 +789,7 @@ export function enqueueMovieHealing(
 
 export function useLiveCatalog() {
   const [catalog, setCatalog] = useState<CatalogMovie[]>(FALLBACK_MOVIES);
+  const [munoLatestList, setMunoLatestList] = useState<CatalogMovie[]>([]);
   const [totalCount, setTotalCount] = useState<number>(7097);
   const [loading, setLoading] = useState<boolean>(false);
 
@@ -976,16 +977,7 @@ export function useLiveCatalog() {
     const finalizedSeries: CatalogMovie[] = [];
     seriesMap.forEach(({ parent, episodesMap }) => {
       const eps = Array.from(episodesMap.values()).sort((a, b) => a.num - b.num);
-      if (eps.length === 1 && eps[0]) {
-        const e1 = eps[0];
-        parent.episodes = [
-          e1,
-          { num: e1.num + 1, title: `Episode ${e1.num + 1}`, duration: "48m", streamUrl: e1.streamUrl },
-          { num: e1.num + 2, title: `Episode ${e1.num + 2}`, duration: "52m", streamUrl: e1.streamUrl },
-          { num: e1.num + 3, title: `Episode ${e1.num + 3}`, duration: "50m", streamUrl: e1.streamUrl }
-        ];
-        parent.streamUrl = e1.streamUrl;
-      } else if (eps.length > 0) {
+      if (eps.length > 0) {
         parent.episodes = eps;
         parent.streamUrl = eps[0].streamUrl;
       }
@@ -1043,9 +1035,38 @@ export function useLiveCatalog() {
     // 3. Direct Live Fetch from MunoWatch Public Dashboard
     const p3 = fetch('https://mumowatch.ai.studio/dashboard')
       .then(r => r.ok ? r.json() : null)
-      .then(munoData => {
+      .then(async munoData => {
         if (munoData && Array.isArray(munoData.movies)) {
-          gatheredRaw.push(...munoData.movies);
+          // Immediately batch-resolve the 20 newest releases via /movie/:id
+          const topLatestRaw = munoData.movies.slice(0, 20);
+          try {
+            const enrichedLatest = await Promise.all(
+              topLatestRaw.map(async (raw: any, idx: number) => {
+                const movieId = raw.id || raw.vid;
+                if (!movieId) return normalizeRaw(raw, idx);
+                try {
+                  const detRes = await fetch(`https://mumowatch.ai.studio/movie/${movieId}`);
+                  if (detRes.ok) {
+                    const d = await detRes.json();
+                    if (d && d.title) {
+                      return normalizeRaw({ ...raw, ...d, id: movieId }, idx);
+                    }
+                  }
+                } catch (_) {}
+                return normalizeRaw(raw, idx);
+              })
+            );
+            if (isMounted && enrichedLatest.length > 0) {
+              const validEnriched = enrichedLatest.filter(
+                (m) => m && m.title && !/^(?:Movie|Series)\s*#/i.test(m.title)
+              );
+              setMunoLatestList(validEnriched);
+              gatheredRaw.push(...validEnriched);
+            }
+          } catch (_) {
+            gatheredRaw.push(...topLatestRaw);
+          }
+          gatheredRaw.push(...munoData.movies.slice(20));
         }
       })
       .catch(() => {});
@@ -1155,7 +1176,14 @@ export function useLiveCatalog() {
   }, [groupAndDeduplicate]);
 
   // Derived sections with proper single movie vs series distinction
-  const latestMovies = useMemo(() => [...catalog], [catalog]);
+  const latestMovies = useMemo(() => {
+    if (munoLatestList.length > 0) {
+      const seen = new Set(munoLatestList.map((m) => m.id));
+      const rest = catalog.filter((m) => !seen.has(m.id));
+      return [...munoLatestList, ...rest];
+    }
+    return [...catalog];
+  }, [munoLatestList, catalog]);
   const trendingMovies = useMemo(() => [...catalog].sort((a, b) => parseFloat(b.rating) - parseFloat(a.rating)), [catalog]);
   const seriesMovies = useMemo(() => catalog.filter(m => m.isTv), [catalog]);
   const actionMovies = useMemo(() => catalog.filter(m => !m.isTv && (/action/i.test(m.category) || m.genres.some(g => /action/i.test(g)))), [catalog]);

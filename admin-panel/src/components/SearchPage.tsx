@@ -77,6 +77,45 @@ export const SearchPage: React.FC<SearchPageProps> = ({
 
   const { searchCatalog, catalog, totalCount } = useLiveCatalog();
 
+  // Group catalog movies by category so folder cards continuously cycle through real artwork
+  const categoryMoviesMap = useMemo(() => {
+    const map: Record<string, CatalogMovie[]> = {};
+    FOLDER_CATEGORIES.forEach((cat) => {
+      const q = cat.query.toLowerCase();
+      const matched = catalog.filter((m) => {
+        if (q === "series") return m.isTv;
+        if (m.isTv) return false;
+        const inCat = m.category && m.category.toLowerCase().includes(q);
+        const inGenres = m.genres && m.genres.some((g) => g.toLowerCase().includes(q));
+        if (q === "love story" || q === "romance") {
+          return inCat || inGenres || /love|romance|heart|wedding/i.test(m.title);
+        }
+        if (q === "kungu fu") {
+          return inCat || inGenres || /kung\s*fu|karate|shaolin|martial|bruce/i.test(m.title);
+        }
+        if (q === "indian") {
+          return inGenres || /indian|bollywood|rrr|kgf|pushpa|jawan|kalki/i.test(m.title + " " + m.category);
+        }
+        if (q === "animation") {
+          return inCat || inGenres || /animation|anime|cartoon|panda|sonic|moana|robot/i.test(m.title + " " + m.category);
+        }
+        return inCat || inGenres;
+      });
+      map[cat.title] = matched.filter((m) => m.imageUrl && m.imageUrl.startsWith("http"));
+    });
+    return map;
+  }, [catalog]);
+
+  // Automated 3.5s interval to smoothly cycle category artworks
+  const [cycleTick, setCycleTick] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCycleTick((prev) => prev + 1);
+    }, 3500);
+    return () => clearInterval(timer);
+  }, []);
+
   // Trigger live search on MunoWatch backend if query is entered
   useEffect(() => {
     if (!searchQuery.trim()) {
@@ -279,43 +318,51 @@ export const SearchPage: React.FC<SearchPageProps> = ({
 
           {/* 2-Column Physical Folder-Tab Cards (Flutter _FolderCardItem 1:1 match) */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-4 gap-y-6">
-            {FOLDER_CATEGORIES.map((cat) => (
-              <div
-                key={cat.title}
-                onClick={() => handleSelectCategory(cat.query)}
-                className="cursor-pointer group flex flex-col active:scale-[0.98] transition-transform select-none"
-              >
-                {/* Physical Folder Stack */}
-                <div className="relative w-full aspect-[3/4] pt-3.5">
-                  {/* Tier 2 back tab ridge (topmost, narrower, gradient) */}
-                  <div className="absolute top-0 left-[16%] right-[16%] h-3.5 rounded-t-lg bg-gradient-to-b from-[#2B303E] to-[#1B1E28] border-t border-x border-white/10 shadow-sm" />
+            {FOLDER_CATEGORIES.map((cat, catIdx) => {
+              const moviesForCat = categoryMoviesMap[cat.title] || [];
+              const activePoster =
+                moviesForCat.length > 0
+                  ? moviesForCat[(cycleTick + catIdx) % moviesForCat.length].imageUrl
+                  : cat.poster;
 
-                  {/* Tier 1 back tab (main folder ridge) */}
-                  <div className="absolute top-1.5 left-2.5 right-2.5 h-4 rounded-t-xl bg-gradient-to-b from-[#383D4E] to-[#242835] border-t border-x border-white/15 shadow" />
+              return (
+                <div
+                  key={cat.title}
+                  onClick={() => handleSelectCategory(cat.query)}
+                  className="cursor-pointer group flex flex-col active:scale-[0.98] transition-transform select-none"
+                >
+                  {/* Physical Folder Stack */}
+                  <div className="relative w-full aspect-[3/4] pt-3.5">
+                    {/* Tier 2 back tab ridge (topmost, narrower, gradient) */}
+                    <div className="absolute top-0 left-[16%] right-[16%] h-3.5 rounded-t-lg bg-gradient-to-b from-[#2B303E] to-[#1B1E28] border-t border-x border-white/10 shadow-sm" />
 
-                  {/* Front Poster Card */}
-                  <div className="relative w-full h-full rounded-2xl overflow-hidden border border-white/15 shadow-xl bg-[#181B24] group-hover:border-[#00E676]/60 transition-all">
-                    <img
-                      src={cat.poster}
-                      alt={cat.title}
-                      className="w-full h-full object-cover filter brightness-90 group-hover:scale-105 transition-transform duration-300"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src =
-                          "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=800&auto=format&fit=crop&q=80";
-                      }}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
+                    {/* Tier 1 back tab (main folder ridge) */}
+                    <div className="absolute top-1.5 left-2.5 right-2.5 h-4 rounded-t-xl bg-gradient-to-b from-[#383D4E] to-[#242835] border-t border-x border-white/15 shadow" />
 
-                    {/* Bottom Title on Poster */}
-                    <div className="absolute bottom-2.5 left-2.5 right-2.5 z-10 text-left">
-                      <span className="text-sm font-extrabold text-white tracking-tight drop-shadow-md group-hover:text-[#00E676] transition-colors">
-                        {cat.title}
-                      </span>
+                    {/* Front Poster Card */}
+                    <div className="relative w-full h-full rounded-2xl overflow-hidden border border-white/15 shadow-xl bg-[#181B24] group-hover:border-[#00E676]/60 transition-all">
+                      <img
+                        key={activePoster}
+                        src={activePoster}
+                        alt={cat.title}
+                        className="w-full h-full object-cover filter brightness-90 group-hover:scale-105 transition-all duration-700 ease-in-out"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = cat.poster;
+                        }}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
+
+                      {/* Bottom Title on Poster */}
+                      <div className="absolute bottom-2.5 left-2.5 right-2.5 z-10 text-left">
+                        <span className="text-sm font-extrabold text-white tracking-tight drop-shadow-md group-hover:text-[#00E676] transition-colors">
+                          {cat.title}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
