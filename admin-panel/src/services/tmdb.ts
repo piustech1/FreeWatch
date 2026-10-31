@@ -122,6 +122,12 @@ export function sanitizeStreamUrl(url?: string): string {
     clean = clean.replace(/^http:\/\//i, "https://");
   }
 
+  // Fix truncated URLs from MunoWatch API (e.g. "...Ret" or "...MOSC" without .mp4)
+  if (!/\.(?:mp4|m3u8|mkv|webm)(?:\?|$)/i.test(clean)) {
+    // If it ends with something like .m or without extension, complete it with .mp4
+    clean = clean.replace(/\.m$/i, "") + ".mp4";
+  }
+
   // Encode unescaped spaces
   return clean.replace(/ /g, "%20");
 }

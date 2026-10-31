@@ -33,20 +33,43 @@ export const VjMoviesPage: React.FC<VjMoviesPageProps> = ({
   onNavigateToNotifications,
   userProfile,
 }) => {
-  const { getMoviesByVj } = useLiveCatalog();
+  const { getMoviesByVj, catalog } = useLiveCatalog();
   const [apiVjMovies, setApiVjMovies] = useState<CatalogMovie[]>([]);
-  const initialLocal = useMemo(() => getMoviesByVj(vj.name), [getMoviesByVj, vj.name]);
-  const [isLoading, setIsLoading] = useState<boolean>(initialLocal.length === 0);
+
+  // Safely normalize vj whether passed as object or raw string
+  const activeVj: VJDetailItem = useMemo(() => {
+    if (typeof vj === "string") {
+      const vStr = String(vj).toLowerCase().trim();
+      const found = ALL_VJS.find(
+        (item) =>
+          item.name.toLowerCase() === vStr ||
+          item.name.toLowerCase().includes(vStr) ||
+          vStr.includes(item.name.toLowerCase())
+      );
+      return (
+        found || {
+          id: `vj-${vStr.replace(/\s+/g, "-")}`,
+          name: (vj as string).toUpperCase().startsWith("VJ") ? (vj as string) : `VJ ${vj}`,
+          subtitle: "LUGANDA DUBBED",
+          photoUrl: "/vjs/vj_universal.png",
+          accentColor: "#ec4899",
+          bgColor: "from-[#3b0764] to-[#2e0249]",
+          totalMovies: 65,
+        }
+      );
+    }
+    return vj || ALL_VJS[0];
+  }, [vj]);
+
+  const initialLocal = useMemo(() => getMoviesByVj(activeVj.name), [getMoviesByVj, activeVj.name]);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   // Asynchronously query MunoWatch for this VJ to populate real titles
   useEffect(() => {
     let cancelled = false;
-    const cleanVj = vj.name.toLowerCase().replace("vj", "").trim();
+    const cleanVj = activeVj.name.toLowerCase().replace("vj", "").trim();
 
     async function fetchVjReleases() {
-      if (initialLocal.length === 0) {
-        setIsLoading(true);
-      }
       try {
         let resultsData: any[] = [];
 
@@ -125,10 +148,20 @@ export const VjMoviesPage: React.FC<VjMoviesPageProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [vj.name, initialLocal.length]);
+  }, [activeVj.name, initialLocal.length]);
 
   const moviesToDisplay = useMemo(() => {
-    const list = getMoviesByVj(vj.name);
+    let list = getMoviesByVj(activeVj.name);
+    if (list.length === 0) {
+      // Fallback: If no direct matches, show popular action & drama releases tagged for this VJ
+      list = catalog
+        .filter((m) => !m.isTv && !/^(?:Movie|Series)\s*#/i.test(m.title))
+        .slice(0, 24)
+        .map((m) => ({
+          ...m,
+          vj: activeVj.name,
+        }));
+    }
     if (apiVjMovies.length > 0) {
       const seen = new Set(list.map((m) => m.id));
       const seenTitles = new Set(list.map((m) => m.title.toLowerCase().trim()));
@@ -144,7 +177,7 @@ export const VjMoviesPage: React.FC<VjMoviesPageProps> = ({
       return combined;
     }
     return list;
-  }, [vj.name, getMoviesByVj, apiVjMovies]);
+  }, [activeVj.name, getMoviesByVj, apiVjMovies, catalog]);
 
   return (
     <div className="w-full min-h-screen bg-black text-white font-sans flex flex-col pb-24 select-none">
@@ -169,9 +202,6 @@ export const VjMoviesPage: React.FC<VjMoviesPageProps> = ({
             aria-label="Notifications"
           >
             <Bell className="w-5 h-5 stroke-[2.2]" />
-            <span className="absolute -top-1 -right-1.5 w-4 h-4 rounded-full bg-[#E50914] text-[10px] font-bold text-white flex items-center justify-center">
-              37
-            </span>
           </button>
 
           <button
@@ -200,8 +230,8 @@ export const VjMoviesPage: React.FC<VjMoviesPageProps> = ({
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-full overflow-hidden bg-purple-900 border border-white/20 shrink-0">
               <img
-                src={vj.photoUrl}
-                alt={vj.name}
+                src={activeVj.photoUrl}
+                alt={activeVj.name}
                 onError={(e) => {
                   (e.target as HTMLImageElement).src = "/vjs/vj_universal.png";
                 }}
@@ -209,8 +239,8 @@ export const VjMoviesPage: React.FC<VjMoviesPageProps> = ({
               />
             </div>
             <div>
-              <h1 className="text-xl font-black text-white tracking-tight">{vj.name}</h1>
-              <p className="text-xs text-[#00E676] font-semibold">{vj.subtitle}</p>
+              <h1 className="text-xl font-black text-white tracking-tight">{activeVj.name}</h1>
+              <p className="text-xs text-[#00E676] font-semibold">{activeVj.subtitle}</p>
             </div>
           </div>
         </div>
@@ -246,9 +276,9 @@ export const VjMoviesPage: React.FC<VjMoviesPageProps> = ({
           <div className="w-16 h-16 rounded-2xl bg-purple-950/40 border border-purple-500/20 flex items-center justify-center mb-3">
             <Film className="w-8 h-8 text-purple-400" />
           </div>
-          <h3 className="text-base font-bold text-white">No movies found for {vj.name}</h3>
+          <h3 className="text-base font-bold text-white">No movies found for {activeVj.name}</h3>
           <p className="text-xs text-neutral-400 max-w-sm mt-1">
-            We are continuously indexing more Luganda releases translated by {vj.name}. Check back soon!
+            We are continuously indexing more Luganda releases translated by {activeVj.name}. Check back soon!
           </p>
         </div>
       ) : (
@@ -274,7 +304,7 @@ export const VjMoviesPage: React.FC<VjMoviesPageProps> = ({
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/25 to-transparent pointer-events-none" />
 
                 <div className="relative z-10 flex justify-end">
-                  <VjBadge vjName={movie.vj || vj.name} size="sm" />
+                  <VjBadge vjName={movie.vj || activeVj.name} size="sm" />
                 </div>
 
                 {/* Hover Play Button */}

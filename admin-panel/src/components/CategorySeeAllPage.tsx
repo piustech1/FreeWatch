@@ -113,9 +113,6 @@ export const CategorySeeAllPage: React.FC<CategorySeeAllPageProps> = ({
             aria-label="Notifications"
           >
             <Bell className="w-5 h-5 stroke-[2.2]" />
-            <span className="absolute -top-1 -right-1.5 w-4 h-4 rounded-full bg-[#E50914] text-[10px] font-bold text-white flex items-center justify-center">
-              37
-            </span>
           </button>
 
           <button

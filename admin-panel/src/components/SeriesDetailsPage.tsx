@@ -104,6 +104,20 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
     );
   }, [incomingMovie, seriesTitle, seriesMovies]);
 
+  // Reset state when switching to another series
+  useEffect(() => {
+    setActiveEpisodeIndex(0);
+    setIsPlaying(false);
+    setStreamError(false);
+    setResolvedEpisodes([]);
+    setHealedDetails(null);
+    setTmdbBackdrop(null);
+    setTmdbLogo(null);
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [activeSeries.id]);
+
   // Auto-heal placeholder series titles on mount
   useEffect(() => {
     if (/^(?:Movie|Series|Luganda Release)\s*#\d+/i.test(activeSeries.title) && activeSeries.id) {
@@ -271,15 +285,15 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
             };
           });
 
-          // If MunoWatch search returned only 1 episode but TMDB has the full season:
-          if (mapped.length === 1 && tmdbEps.length > 1) {
-            for (let i = 1; i < tmdbEps.length; i++) {
+          // If MunoWatch search returned fewer episodes than TMDB has for the full season:
+          if (tmdbEps.length > mapped.length) {
+            for (let i = mapped.length; i < tmdbEps.length; i++) {
               const te = tmdbEps[i];
               mapped.push({
                 num: te.episodeNumber || (i + 1),
                 title: te.name || `${activeSeries.title} Episode ${i + 1}`,
                 duration: te.runtime ? `${te.runtime}m` : "48m",
-                streamUrl: activeSeries.streamUrl || mapped[0].streamUrl,
+                streamUrl: activeSeries.streamUrl || mapped[0]?.streamUrl,
                 stillUrl: te.stillUrl || activeSeries.backdropUrl || activeSeries.imageUrl,
               });
             }
@@ -405,6 +419,30 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
 
     const video = videoRef.current;
     let hlsInstance: Hls | null = null;
+    let mirrorIndex = 0;
+    const cleanUrl = streamUrl.endsWith(".mp4") ? streamUrl : `${streamUrl}.mp4`;
+    const MIRRORS = [
+      cleanUrl,
+      cleanUrl.replace(/https?:\/\/[^/]+/i, "https://munotech3.b-cdn.net"),
+      cleanUrl.replace(/https?:\/\/[^/]+/i, "https://munotek-vault.b-cdn.net"),
+      cleanUrl.replace(/https?:\/\/[^/]+/i, "https://munotech2.b-cdn.net"),
+    ];
+
+    const handleStreamFailure = () => {
+      mirrorIndex++;
+      if (mirrorIndex < MIRRORS.length) {
+        const nextMirror = MIRRORS[mirrorIndex];
+        if (nextMirror && nextMirror !== video.src) {
+          video.src = nextMirror;
+          video.load();
+          video.play().catch(() => {});
+          return;
+        }
+      }
+      setStreamError(true);
+    };
+
+    video.onerror = handleStreamFailure;
 
     if (streamUrl.includes(".m3u8")) {
       if (video.canPlayType("application/vnd.apple.mpegurl")) {
@@ -413,9 +451,7 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
         hlsInstance = new Hls({ enableWorker: true });
         hlsInstance.loadSource(streamUrl);
         hlsInstance.attachMedia(video);
-        hlsInstance.on(Hls.Events.ERROR, () => {
-          setStreamError(true);
-        });
+        hlsInstance.on(Hls.Events.ERROR, handleStreamFailure);
       }
     } else {
       video.src = streamUrl;
@@ -423,6 +459,7 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
     }
 
     return () => {
+      video.onerror = null;
       if (hlsInstance) {
         hlsInstance.destroy();
       }
@@ -462,9 +499,6 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
             aria-label="Notifications"
           >
             <Bell className="w-5 h-5 stroke-[2.2]" />
-            <span className="absolute -top-1 -right-1.5 w-4 h-4 rounded-full bg-[#E50914] text-[10px] font-bold text-white flex items-center justify-center">
-              35
-            </span>
           </button>
 
           <button
@@ -478,26 +512,27 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
         </div>
       </header>
 
-      {/* 2. HERO BANNER / VIDEO PLAYER (Tall 50vh when stopped, 16:9 snug aspect-video when playing) */}
-      <div
-        className={`relative w-full overflow-hidden bg-black transition-[height,aspect-ratio] duration-300 ${
-          isPlaying ? "aspect-video" : "h-[50vh] min-h-[440px] sm:min-h-[480px]"
-        }`}
-      >
-        {isPlaying ? (
-          <div className="relative w-full h-full bg-black flex items-center justify-center">
-            <video
-              ref={videoRef}
-              key={streamUrl}
-              controls
-              autoPlay
-              playsInline
-              onError={() => setStreamError(true)}
-              className="w-full h-full object-contain"
-            />
+      {/* Main Content Container (Sleek PC Cinema Max-Width + Fluid Mobile) */}
+      <main className="w-full max-w-6xl mx-auto flex flex-col flex-1">
+        {/* 2. HERO BANNER / VIDEO PLAYER (Tall 50vh on mobile, 16:9 landscape on desktop and when playing) */}
+        <div
+          className={`relative w-full overflow-hidden bg-black lg:rounded-3xl lg:mt-4 lg:aspect-video lg:max-h-[580px] lg:border lg:border-white/10 shadow-2xl transition-[height,aspect-ratio] duration-300 ${
+            isPlaying ? "aspect-video" : "h-[50vh] min-h-[440px] sm:min-h-[480px]"
+          }`}
+        >
+          {isPlaying ? (
+            <div className="relative w-full h-full bg-black flex items-center justify-center">
+              <video
+                ref={videoRef}
+                key={streamUrl}
+                controls
+                autoPlay
+                playsInline
+                className="w-full h-full object-contain"
+              />
 
-            {/* Error Overlay */}
-            {streamError && (
+              {/* Error Overlay */}
+              {streamError && (
               <div className="absolute inset-0 bg-black/90 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center z-20">
                 <AlertCircle className="w-12 h-12 text-[#E50914] mb-3" />
                 <h3 className="text-lg font-bold text-white mb-1">Stream Error</h3>
@@ -907,6 +942,7 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
             ))}
         </div>
       </div>
+      </main>
 
       {/* 7. FLOATING CURVED GLASS BOTTOM NAVIGATION BAR (Hidden on desktop) */}
       <FloatingBottomNav activeTab="home" onNavigateTab={onNavigateTab} />

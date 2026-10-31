@@ -180,8 +180,8 @@ export const FALLBACK_MOVIES: CatalogMovie[] = [
     vj: "VJ Emmy",
     category: "Romance",
     genres: ["Romance", "Comedy", "Drama"],
-    imageUrl: "https://image.tmdb.org/t/p/w500/q6y0Go1tsGEsmtFryDOJo3dEmqu.jpg",
-    backdropUrl: "https://image.tmdb.org/t/p/w1280/q6y0Go1tsGEsmtFryDOJo3dEmqu.jpg",
+    imageUrl: "https://image.tmdb.org/t/p/w500/Y5P4Q3q8nrruZ9aD3wXeJS2Plg.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/w1280/sI6uCeF8mUlZx22mFfHSi9W3XQ9.jpg",
     rating: "8.7",
     year: "2024",
     duration: "1h 55m",
@@ -195,13 +195,193 @@ export const FALLBACK_MOVIES: CatalogMovie[] = [
     vj: "VJ Jingo",
     category: "Romance",
     genres: ["Romance", "Drama"],
-    imageUrl: "https://image.tmdb.org/t/p/w500/kDp1vUBnMpe8ak4rjgl3cLELqjU.jpg",
-    backdropUrl: "https://image.tmdb.org/t/p/w1280/kDp1vUBnMpe8ak4rjgl3cLELqjU.jpg",
+    imageUrl: "https://image.tmdb.org/t/p/w500/jmkpZvMVIRrMFevxzOubSBfG0s0.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/w1280/rlxYDekulLYDgU6vUIkI0NW5yFR.jpg",
     rating: "8.5",
     year: "2024",
     duration: "1h 53m",
     isTv: false,
     overview: "Raquel's long-standing crush on her next-door neighbor turns into something more when he starts developing feelings for her, despite his family's objections. Translated by VJ Jingo.",
+    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+  },
+  {
+    id: "68004",
+    title: "Anyone But You",
+    vj: "VJ Junior",
+    category: "Romance",
+    genres: ["Romance", "Comedy"],
+    imageUrl: "https://image.tmdb.org/t/p/w500/5qHoazZiaLe7oFBok7XlUhg96f2.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/w1280/j9eOeLlTGoHoM8BNUJVNyWmIvCi.jpg",
+    rating: "8.7",
+    year: "2024",
+    duration: "1h 43m",
+    isTv: false,
+    overview: "After an amazing first date, Bea and Ben's fiery attraction turns ice-cold until they find themselves unexpectedly reunited at a destination wedding in Australia. Translated by VJ Junior.",
+    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+  },
+  {
+    id: "68005",
+    title: "Past Lives",
+    vj: "VJ Emmy",
+    category: "Romance",
+    genres: ["Romance", "Drama"],
+    imageUrl: "https://image.tmdb.org/t/p/w500/k3waqVXSnvCZWfJYNtdamTgTtTA.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/w1280/7HR38hMBl23lf38MAN63y4pKsHz.jpg",
+    rating: "8.9",
+    year: "2023",
+    duration: "1h 45m",
+    isTv: false,
+    overview: "Nora and Hae Sung, two deeply connected childhood friends, are wrest apart after Nora's family emigrates from South Korea. Decades later, they reunite in New York. Translated by VJ Emmy.",
+    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+  },
+  {
+    id: "68006",
+    title: "It Ends with Us",
+    vj: "VJ Junior",
+    category: "Romance",
+    genres: ["Romance", "Drama"],
+    imageUrl: "https://image.tmdb.org/t/p/w500/AjV6jFJ2YFIluYo4GQf13AA1tqu.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/w1280/8yPSYhooj8nyBbmV3GVdLDwuE7e.jpg",
+    rating: "8.6",
+    year: "2024",
+    duration: "2h 10m",
+    isTv: false,
+    overview: "Lily Bloom overcomes a traumatic childhood to embark on a new life in Boston. A chance meeting with charming neurosurgeon Ryle sparks an intense connection. Luganda dubbed by VJ Junior.",
+    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+  },
+  {
+    id: "68007",
+    title: "Me Before You",
+    vj: "VJ Junior",
+    category: "Romance",
+    genres: ["Romance", "Drama"],
+    imageUrl: "https://image.tmdb.org/t/p/w500/oo2Q3T8juOYFh2G1YJ3oSMAfUyq.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/w1280/3WK7p9EdZmmvB1IbB2Vw9Rf4lXH.jpg",
+    rating: "8.8",
+    year: "2016",
+    duration: "1h 50m",
+    isTv: false,
+    overview: "A cheerful, quirky caregiver forms an unlikely bond with a recently paralyzed wealthy man who has lost his will to live. Emotional blockbuster translated by VJ Junior.",
+    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+  },
+  {
+    id: "68008",
+    title: "Five Feet Apart",
+    vj: "VJ Jingo",
+    category: "Romance",
+    genres: ["Romance", "Drama"],
+    imageUrl: "https://image.tmdb.org/t/p/w500/kreTuJBkUjVWePRfhHZuYfhNE1T.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/w1280/cYdHaKx6Ihj1BIvbxpCxIGXfZ02.jpg",
+    rating: "8.5",
+    year: "2019",
+    duration: "1h 56m",
+    isTv: false,
+    overview: "Two teenagers with life-threatening illnesses meet in a hospital and fall in love, though their condition dictates they must maintain a physical distance. Translated by VJ Jingo.",
+    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+  },
+  {
+    id: "68009",
+    title: "Midnight Sun",
+    vj: "VJ Sammy",
+    category: "Romance",
+    genres: ["Romance", "Drama"],
+    imageUrl: "https://image.tmdb.org/t/p/w500/vPG2zEKPXhovPW9S91SRnwr5JM1.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/w1280/9T8sj5io4SGCBTHsk5H8LGcfKVe.jpg",
+    rating: "8.4",
+    year: "2018",
+    duration: "1h 31m",
+    isTv: false,
+    overview: "Sheltered since childhood due to a rare sensitivity to sunlight, a young singer embarks on a nighttime romance that changes her world forever. Voice-over by VJ Sammy.",
+    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+  },
+  {
+    id: "68010",
+    title: "The Fault in Our Stars",
+    vj: "VJ Junior",
+    category: "Romance",
+    genres: ["Romance", "Drama"],
+    imageUrl: "https://image.tmdb.org/t/p/w500/kcVuktIlrn9SAN1uBmPDnocTQmF.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/w1280/oQaVV7p916HO5MDI820zzs1pin9.jpg",
+    rating: "8.9",
+    year: "2014",
+    duration: "2h 06m",
+    isTv: false,
+    overview: "Two cancer patients meet at a support group and form a life-affirming bond, traveling together to Amsterdam on a journey of love and discovery. Translated by VJ Junior.",
+    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+  },
+  {
+    id: "68011",
+    title: "The Notebook",
+    vj: "VJ Junior",
+    category: "Romance",
+    genres: ["Romance", "Drama"],
+    imageUrl: "https://image.tmdb.org/t/p/w500/rNzQyW4f8B8cQeg7Dgj3n6eT5k9.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/w1280/zdXnJqBaGFVtLoPNuMeKfEYUViZ.jpg",
+    rating: "9.0",
+    year: "2004",
+    duration: "2h 03m",
+    isTv: false,
+    overview: "An epic love story spanning decades between a poor country boy and an affluent heiress, defying social divisions and world war. Luganda translation by VJ Junior.",
+    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+  },
+  {
+    id: "68012",
+    title: "A Star Is Born",
+    vj: "VJ Emmy",
+    category: "Romance",
+    genres: ["Romance", "Drama", "Music"],
+    imageUrl: "https://image.tmdb.org/t/p/w500/wrFpXMNBRj2PBiN4Z5kix51XaIZ.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/w1280/dDYpjrwh1wNVQk0rEpc9P81wQt4.jpg",
+    rating: "8.7",
+    year: "2018",
+    duration: "2h 16m",
+    isTv: false,
+    overview: "Seasoned musician Jackson Maine discovers and falls in love with struggling artist Ally, coaxing her into the spotlight while his own demons threaten to derail everything. Translated by VJ Emmy.",
+    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+  },
+  {
+    id: "68013",
+    title: "La La Land",
+    vj: "VJ Junior",
+    category: "Romance",
+    genres: ["Romance", "Comedy", "Music"],
+    imageUrl: "https://image.tmdb.org/t/p/w500/uDO8zWDhfWwoFdKS4fzkUJt0Rf0.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/w1280/nlPCdZlHtRNcF6C9hzUH4ebmV1w.jpg",
+    rating: "8.9",
+    year: "2016",
+    duration: "2h 08m",
+    isTv: false,
+    overview: "While navigating their careers in Los Angeles, a pianist and an actress fall in love while attempting to reconcile their aspirations for the future. Spiced up by VJ Junior.",
+    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+  },
+  {
+    id: "68014",
+    title: "Twilight",
+    vj: "VJ Junior",
+    category: "Romance",
+    genres: ["Romance", "Fantasy", "Drama"],
+    imageUrl: "https://image.tmdb.org/t/p/w500/3Gkb6jm6962ADUPaCBqzz9CTbn9.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/w1280/weAYfu6FfrNxEDJ3xH1XpgQcqUv.jpg",
+    rating: "8.6",
+    year: "2008",
+    duration: "2h 02m",
+    isTv: false,
+    overview: "When Bella Swan moves to a small town, she falls in love with Edward Cullen, a mysterious classmate who reveals himself to be a 108-year-old vampire. Luganda dubbed by VJ Junior.",
+    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+  },
+  {
+    id: "68015",
+    title: "All the Bright Places",
+    vj: "VJ Ice P",
+    category: "Romance",
+    genres: ["Romance", "Drama"],
+    imageUrl: "https://image.tmdb.org/t/p/w500/4SafxuMKQiw4reBiWKVZJpJn80I.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/w1280/tcrNJfyNEIqaBR8Ogkgnq5xQJnf.jpg",
+    rating: "8.5",
+    year: "2020",
+    duration: "1h 48m",
+    isTv: false,
+    overview: "Two teenagers struggling with emotional scars find solace in each other as they explore the wonders of Indiana together. Translated by VJ Ice P.",
     streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
   },
   {
@@ -1235,7 +1415,20 @@ export function useLiveCatalog() {
   // VJ filter helper
   const getMoviesByVj = useCallback((vjName: string) => {
     const q = vjName.toLowerCase().replace('vj', '').trim();
-    return catalog.filter(m => m.vj.toLowerCase().includes(q));
+    return catalog.filter((m) => {
+      const v = m.vj.toLowerCase();
+      const t = m.title.toLowerCase();
+      const s = (m.streamUrl || '').toLowerCase();
+      return (
+        v.includes(q) ||
+        t.includes(`vj ${q}`) ||
+        t.includes(`vj_${q}`) ||
+        s.includes(`vj%20${q}`) ||
+        s.includes(`vj_${q}`) ||
+        s.includes(`.${q}.`) ||
+        (q === 'junior' && (s.includes('jr') || t.includes('.jr.')))
+      );
+    });
   }, [catalog]);
 
   // VJ count calculation helper
@@ -1274,6 +1467,13 @@ export function useLiveCatalog() {
           m.category.toLowerCase().includes('sci') ||
           m.genres.some(gen => /sci|fiction|fantasy/i.test(gen))
         );
+      } else if (g === 'horror') {
+        const horrors = list.filter(m => 
+          m.category.toLowerCase().includes('horror') ||
+          m.genres.some(gen => gen.toLowerCase().includes('horror')) ||
+          /horror|evil|ghost|haunt|fear|demon|witch|slasher|zombie|dead|dracula|alien/i.test(m.title + ' ' + m.overview)
+        );
+        list = horrors.length > 0 ? horrors : list.filter(m => m.category === 'Action' || m.category === 'Drama');
       } else if (g === 'indian') {
         const indianList = list.filter(
           m =>
@@ -1305,7 +1505,11 @@ export function useLiveCatalog() {
                   !/^(?:Movie|Series)\s*#/i.test(m.title)
               );
       } else if (g === 'sport') {
-        const sports = list.filter(m => /sport|football|soccer|box|fight|race/i.test(m.title + ' ' + m.overview));
+        const sports = list.filter(m => 
+          m.category.toLowerCase().includes('sport') ||
+          m.genres.some(gen => gen.toLowerCase().includes('sport')) ||
+          /sport|football|soccer|box|fight|race|run|ball|athlete|creed/i.test(m.title + ' ' + m.overview)
+        );
         list = sports.length > 0 ? sports : list.filter(m => m.category === 'Action');
       } else {
         list = list.filter(m => 

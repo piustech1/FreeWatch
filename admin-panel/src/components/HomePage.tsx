@@ -266,9 +266,6 @@ export const HomePage: React.FC<HomePageProps> = ({
             aria-label="Notifications"
           >
             <Bell className="w-5 h-5 stroke-[2.2]" />
-            <span className="absolute -top-1 -right-1.5 w-4 h-4 rounded-full bg-[#E50914] text-[10px] font-bold text-white flex items-center justify-center">
-              28
-            </span>
           </button>
 
           <button
@@ -515,7 +512,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                   </div>
 
                   {/* Left Content Column */}
-                  <div className="relative z-10 h-full flex flex-col justify-end p-8 xl:p-12 max-w-2xl">
+                  <div className="relative z-20 h-full flex flex-col justify-end p-8 xl:p-12 max-w-2xl">
                     <div className="space-y-1 mb-3">
                       {heroLogos[movie.id] ? (
                         <img

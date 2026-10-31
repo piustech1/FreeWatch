@@ -39,24 +39,24 @@ interface SearchPageProps {
 
 export const FOLDER_CATEGORIES = [
   { title: "Action", poster: "https://image.tmdb.org/t/p/w500/bjiS5ipwxb9JFy3XRRN4OAilSeX.jpg", query: "Action" },
-  { title: "Horror", poster: "https://image.tmdb.org/t/p/w500/bXi6IQiCuHDv0Xsp7Na5966WDFG.jpg", query: "Horror" },
-  { title: "Series", poster: "https://image.tmdb.org/t/p/w500/dDlG1v7kWqFfg1k5pW6bEa4Xv34.jpg", query: "Series" },
+  { title: "Horror", poster: "https://image.tmdb.org/t/p/w500/wVYREutTvI2tmxr6ujrHT704wGF.jpg", query: "Horror" },
+  { title: "Series", poster: "https://image.tmdb.org/t/p/w500/7O4iVfOMQmdCSxhOg1WnzG1AgYT.jpg", query: "Series" },
   { title: "Adventure", poster: "https://image.tmdb.org/t/p/w500/8b8R8l88Qje9dn9OE8PY05Nxl1X.jpg", query: "Adventure" },
   { title: "Love Story", poster: "https://image.tmdb.org/t/p/w500/q6y0Go1tsGEsmtFryDOJo3dEmqu.jpg", query: "Love Story" },
   { title: "Comedy", poster: "https://image.tmdb.org/t/p/w500/iuFNMS8U5cb6xfzi51Dbkovj7vM.jpg", query: "Comedy" },
-  { title: "Crime", poster: "https://image.tmdb.org/t/p/w500/kKGQzkTyMbAlQUTvBhZ1nFEJ75U.jpg", query: "Crime" },
+  { title: "Crime", poster: "https://image.tmdb.org/t/p/w500/74xTEgt7R36Fpooo50r9T25onhq.jpg", query: "Crime" },
   { title: "Family", poster: "https://image.tmdb.org/t/p/w500/kDp1vUBnMpe8ak4rjgl3cLELqjU.jpg", query: "Family" },
   { title: "Sci FI", poster: "https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg", query: "Sci FI" },
   { title: "Romance", poster: "https://image.tmdb.org/t/p/w500/5qHoazZiaLe7oFBok7XlUhg96f2.jpg", query: "Romance" },
-  { title: "Kungu Fu", poster: "https://image.tmdb.org/t/p/w500/qA5kPY0debq59v9H6eFv8d0yI6I.jpg", query: "Kungu Fu" },
+  { title: "Kungu Fu", poster: "https://image.tmdb.org/t/p/w500/9bUIrDKnesNbBL1nAl1nt7gtocE.jpg", query: "Kungu Fu" },
   { title: "Drama", poster: "https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg", query: "Drama" },
-  { title: "Sport", poster: "https://image.tmdb.org/t/p/w500/H6vke7zGiuL7z75m1N6T5gS4Vp.jpg", query: "Sport" },
+  { title: "Sport", poster: "https://image.tmdb.org/t/p/w500/1BfTsk5VWuw8FCocAhCyqnRbEzq.jpg", query: "Sport" },
   { title: "Thriller", poster: "https://image.tmdb.org/t/p/w500/6MKr3KgOLmzOP6MSuZERO41Lpkt.jpg", query: "Thriller" },
   { title: "Animation", poster: "https://image.tmdb.org/t/p/w500/vpnVM9B6NMmQpWeZvzLvDESb2QY.jpg", query: "Animation" },
   { title: "Korean", poster: "https://image.tmdb.org/t/p/w500/7IiTTgloJzvGI1TAYymCfbfl3vT.jpg", query: "Korean" },
-  { title: "Filipino", poster: "https://image.tmdb.org/t/p/w500/r2J02Z2OpNTctfOSN2Ydgii51I3.jpg", query: "Filipino" },
+  { title: "Filipino", poster: "https://image.tmdb.org/t/p/w500/6MKr3KgOLmzOP6MSuZERO41Lpkt.jpg", query: "Filipino" },
   { title: "Indian", poster: "https://image.tmdb.org/t/p/w500/kdPMUMJzyYAc4roD52qavX0nLIC.jpg", query: "Indian" },
-  { title: "Chinese", poster: "https://image.tmdb.org/t/p/w500/5kHvC0Vv83g6R52tCq4jL7sDqC6.jpg", query: "Chinese" },
+  { title: "Chinese", poster: "https://image.tmdb.org/t/p/w500/628Dep6AxEtDxjZoGP78TsOxYbK.jpg", query: "Chinese" },
   { title: "Ugandan", poster: "https://image.tmdb.org/t/p/w500/628Dep6AxEtDxjZoGP78TsOxYbK.jpg", query: "Ugandan" },
 ];
 
@@ -98,6 +98,12 @@ export const SearchPage: React.FC<SearchPageProps> = ({
         }
         if (q === "animation") {
           return inCat || inGenres || /animation|anime|cartoon|panda|sonic|moana|robot/i.test(m.title + " " + m.category);
+        }
+        if (q === "sport") {
+          return inCat || inGenres || /sport|football|soccer|box|fight|race|run|ball|athlete/i.test(m.title + " " + m.overview) || m.category === "Action";
+        }
+        if (q === "horror") {
+          return inCat || inGenres || /horror|thriller|evil|ghost|haunt|fear|demon|witch|slasher|zombie|dead|dracula/i.test(m.title + " " + m.category + " " + m.overview) || m.category === "Thriller";
         }
         return inCat || inGenres;
       });
@@ -270,9 +276,6 @@ export const SearchPage: React.FC<SearchPageProps> = ({
             aria-label="Notifications"
           >
             <Bell className="w-5 h-5 stroke-[2.2]" />
-            <span className="absolute -top-1 -right-1.5 w-4 h-4 rounded-full bg-[#E50914] text-[10px] font-bold text-white flex items-center justify-center">
-              28
-            </span>
           </button>
 
           <button
@@ -347,7 +350,12 @@ export const SearchPage: React.FC<SearchPageProps> = ({
                         alt={cat.title}
                         className="w-full h-full object-cover filter brightness-90 group-hover:scale-105 transition-all duration-700 ease-in-out"
                         onError={(e) => {
-                          (e.target as HTMLImageElement).src = cat.poster;
+                          const el = e.target as HTMLImageElement;
+                          if (el.src !== cat.poster) {
+                            el.src = cat.poster;
+                          } else {
+                            el.src = "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=800&auto=format&fit=crop&q=80";
+                          }
                         }}
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
