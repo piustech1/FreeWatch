@@ -35,10 +35,9 @@ type ActivePage =
 interface FreeWatchAppRootProps {
   onNavigateToStore?: () => void;
 }
-
 export default function FreeWatchAppRoot({ onNavigateToStore }: FreeWatchAppRootProps) {
   const [currentPage, setCurrentPage] = useState<ActivePage>("home");
-  const [previousPage, setPreviousPage] = useState<ActivePage>("home");
+  const [history, setHistory] = useState<ActivePage[]>([]);
   const [_user, setUser] = useState<string | null>("Admin2");
   const [showAppLaunchBanner, setShowAppLaunchBanner] = useState<boolean>(true);
   const [userProfile, setUserProfile] = useState<UserProfileData>(() => {
@@ -72,6 +71,36 @@ export default function FreeWatchAppRoot({ onNavigateToStore }: FreeWatchAppRoot
     } catch {}
   };
 
+  const pushNavigation = (targetPage: ActivePage) => {
+    if (targetPage === currentPage) return;
+    setHistory((prev) => [...prev, currentPage]);
+    setCurrentPage(targetPage);
+  };
+
+  const handleBack = () => {
+    setHistory((prev) => {
+      if (prev.length === 0) {
+        if (currentPage === "vj-movies") {
+          setCurrentPage("available-vjs");
+        } else if (currentPage !== "home") {
+          setCurrentPage("home");
+        }
+        return [];
+      }
+      const newStack = [...prev];
+      let target = newStack.pop();
+      while (target === currentPage && newStack.length > 0) {
+        target = newStack.pop();
+      }
+      if (target && target !== currentPage) {
+        setCurrentPage(target);
+      } else {
+        setCurrentPage("home");
+      }
+      return newStack;
+    });
+  };
+
   const handleAuthSuccess = (nameOrEmail?: string, avatarId?: string) => {
     const finalName = nameOrEmail || "Admin2";
     setUser(finalName);
@@ -85,32 +114,29 @@ export default function FreeWatchAppRoot({ onNavigateToStore }: FreeWatchAppRoot
     };
     handleUpdateProfile(updatedProfile);
     setShowAppLaunchBanner(true);
+    setHistory([]);
     setCurrentPage("home");
   };
 
   const handleNavigateTab = (tab: ActiveTab) => {
-    setCurrentPage(tab);
+    pushNavigation(tab);
   };
 
   const handleNavigateToNotifications = () => {
-    setPreviousPage(currentPage);
-    setCurrentPage("notifications");
+    pushNavigation("notifications");
   };
 
   const handleNavigateToDeveloperChat = () => {
-    setPreviousPage(currentPage);
-    setCurrentPage("developer-chat");
+    pushNavigation("developer-chat");
   };
 
   const handleNavigateToAvailableVJs = () => {
-    setPreviousPage(currentPage);
-    setCurrentPage("available-vjs");
+    pushNavigation("available-vjs");
   };
 
   const handleSelectVj = (vj: VJDetailItem) => {
     setSelectedVj(vj);
-    setPreviousPage(currentPage);
-    setCurrentPage("vj-movies");
+    pushNavigation("vj-movies");
   };
 
   const handleNavigateToCategorySeeAll = (
@@ -119,8 +145,7 @@ export default function FreeWatchAppRoot({ onNavigateToStore }: FreeWatchAppRoot
     iconType: string = "sparkles"
   ) => {
     setSelectedCategory({ title, count, iconType });
-    setPreviousPage(currentPage);
-    setCurrentPage("category-see-all");
+    pushNavigation("category-see-all");
   };
 
   const handleSelectMovie = (
@@ -129,7 +154,6 @@ export default function FreeWatchAppRoot({ onNavigateToStore }: FreeWatchAppRoot
     title?: string,
     movie?: CatalogMovie
   ) => {
-    setPreviousPage(currentPage);
     if (title) {
       setSelectedMovieTitle(title);
     }
@@ -138,52 +162,41 @@ export default function FreeWatchAppRoot({ onNavigateToStore }: FreeWatchAppRoot
     } else {
       setSelectedMovie(undefined);
     }
-    const shouldBeSeries = Boolean(
-      isSeries ||
-      movie?.isTv ||
-      (movie?.seriesCode && String(movie.seriesCode).trim().length > 0 && String(movie.seriesCode) !== '0') ||
-      (movie?.category && movie.category.toLowerCase().includes('series')) ||
-      (Array.isArray(movie?.episodes) && movie.episodes.length > 0)
-    );
-    if (shouldBeSeries) {
-      setCurrentPage("series-details");
-    } else {
-      setCurrentPage("movie-details");
-    }
-  };
 
-  const handleBack = () => {
-    if (currentPage === "vj-movies") {
-      setCurrentPage("available-vjs");
-      return;
-    }
-    if (
-      previousPage === "series-details" ||
-      previousPage === "movie-details" ||
-      previousPage === "notifications" ||
-      previousPage === "developer-chat" ||
-      previousPage === "available-vjs" ||
-      previousPage === "category-see-all"
-    ) {
-      setCurrentPage("home");
-    } else {
-      setCurrentPage(previousPage);
-    }
+    // Strict validation: A movie is ONLY a series if it genuinely is one!
+    // A single movie (including sequels like Deadpool 2, Bad Boys 4, Dune Part 2) MUST NEVER open series-details!
+    const isRealSeries = Boolean(
+      (movie && (
+        // Has real multiple episodes loaded
+        (Array.isArray(movie.episodes) && movie.episodes.length > 0) ||
+        // Has a confirmed non-zero series code from MunoWatch
+        (movie.seriesCode && String(movie.seriesCode).trim().length > 0 && String(movie.seriesCode) !== '0') ||
+        // Explicitly in Series category AND marked as isTv
+        (movie.isTv && String(movie.category).toLowerCase().trim() === 'series')
+      )) ||
+      (isSeries && movie?.isTv && (
+        (Array.isArray(movie?.episodes) && movie.episodes.length > 0) ||
+        (movie?.seriesCode && String(movie.seriesCode).trim().length > 0 && String(movie.seriesCode) !== '0')
+      ))
+    );
+
+    const targetPage: ActivePage = isRealSeries ? "series-details" : "movie-details";
+    pushNavigation(targetPage);
   };
 
   const isAuthOrSplash =
     currentPage === "splash" || currentPage === "login" || currentPage === "signup";
 
   const handleDesktopNav = (target: DesktopNavTarget) => {
-    if (target === "home") setCurrentPage("home");
-    else if (target === "search") setCurrentPage("search");
-    else if (target === "available-vjs") setCurrentPage("available-vjs");
+    if (target === "home") pushNavigation("home");
+    else if (target === "search") pushNavigation("search");
+    else if (target === "available-vjs") pushNavigation("available-vjs");
     else if (target === "categories")
       handleNavigateToCategorySeeAll("Latest on FreeWatch", 43, "sparkles");
-    else if (target === "favorites") setCurrentPage("favorites");
-    else if (target === "downloads") setCurrentPage("downloads");
-    else if (target === "profile") setCurrentPage("profile");
-    else if (target === "notifications") setCurrentPage("notifications");
+    else if (target === "favorites") pushNavigation("favorites");
+    else if (target === "downloads") pushNavigation("downloads");
+    else if (target === "profile") pushNavigation("profile");
+    else if (target === "notifications") pushNavigation("notifications");
   };
 
   return (
@@ -208,7 +221,7 @@ export default function FreeWatchAppRoot({ onNavigateToStore }: FreeWatchAppRoot
         {currentPage === "available-vjs" && (
           <AvailableVJsPage
             userProfile={userProfile}
-            onBack={() => setCurrentPage("home")}
+            onBack={handleBack}
             onSelectVj={handleSelectVj}
             onNavigateTab={handleNavigateTab}
             onNavigateToNotifications={handleNavigateToNotifications}
@@ -221,7 +234,7 @@ export default function FreeWatchAppRoot({ onNavigateToStore }: FreeWatchAppRoot
           <VjMoviesPage
             vj={selectedVj}
             userProfile={userProfile}
-            onBack={() => setCurrentPage("available-vjs")}
+            onBack={handleBack}
             onSelectMovie={handleSelectMovie}
             onNavigateTab={handleNavigateTab}
             onNavigateToNotifications={handleNavigateToNotifications}
@@ -236,7 +249,7 @@ export default function FreeWatchAppRoot({ onNavigateToStore }: FreeWatchAppRoot
             count={selectedCategory.count}
             iconType={selectedCategory.iconType}
             userProfile={userProfile}
-            onBack={() => setCurrentPage("home")}
+            onBack={handleBack}
             onSelectMovie={handleSelectMovie}
             onNavigateTab={handleNavigateTab}
             onNavigateToNotifications={handleNavigateToNotifications}
@@ -322,7 +335,7 @@ export default function FreeWatchAppRoot({ onNavigateToStore }: FreeWatchAppRoot
         {currentPage === "search" && (
           <SearchPage
             userProfile={userProfile}
-            onBackToHome={() => setCurrentPage("home")}
+            onBackToHome={handleBack}
             onNavigateTab={handleNavigateTab}
             onLogout={() => setCurrentPage("splash")}
             onSelectMovie={handleSelectMovie}

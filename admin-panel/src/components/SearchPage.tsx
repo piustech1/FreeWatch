@@ -175,20 +175,17 @@ export const SearchPage: React.FC<SearchPageProps> = ({
         if (resultsData.length > 0) {
           const mapped: CatalogMovie[] = resultsData.map((m: any, idx: number) => {
             const seriesCode = m.series_code || m.seriesCode || '';
-            const isSeriesCat = Number(m.category_id || m.categoryId) === 5 || (m.category && String(m.category).toLowerCase().includes('series'));
-            const isSeriesType = Boolean(m.type && String(m.type).toUpperCase().includes('SERIES'));
+            const hasValidSeriesCode = Boolean(seriesCode && String(seriesCode).trim().length > 0 && String(seriesCode) !== '0');
+            const isSeriesCat = Number(m.category_id || m.categoryId) === 5 || (typeof m.category === 'string' && m.category.toLowerCase().trim() === 'series');
+            const isSeriesType = Boolean(m.type && String(m.type).toUpperCase() === 'SERIES');
             const hasEpisodes = Array.isArray(m.episodes) && m.episodes.length > 0;
-            const hasExplicitSeasonOrEp = /season|\b(?:s\d{1,2}|ep(?:isode)?\s*\d+|part\s*\d+)\b|eps\s*\d+/i.test(m.title || '');
-            const hasSeriesCode = Boolean(seriesCode && String(seriesCode).trim().length > 0 && String(seriesCode) !== '0');
+            const hasExplicitSeasonOrEp = /\b(?:s\d{1,2}e\d{1,2}|season\s*\d+\s*(?:ep|episode)\s*\d+)\b/i.test(m.title || '');
             
             const isTv = Boolean(
-              m.isTv ||
-              m.is_series ||
-              hasExplicitSeasonOrEp ||
-              hasSeriesCode ||
-              isSeriesCat ||
-              isSeriesType ||
-              hasEpisodes
+              hasValidSeriesCode ||
+              hasEpisodes ||
+              (isSeriesCat && (hasExplicitSeasonOrEp || hasValidSeriesCode || isSeriesType)) ||
+              (m.is_series && (hasValidSeriesCode || hasEpisodes))
             );
 
             const itemId = String(m.id || `api-${idx}`);

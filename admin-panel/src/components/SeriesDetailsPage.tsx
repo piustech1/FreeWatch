@@ -93,13 +93,8 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
         duration: "50m",
         isTv: true,
         overview: `Intense plot twists and tactical power struggles unfold in this acclaimed series, spiced up with exclusive Luganda voice-over translation.`,
-        streamUrl: "https://munotech3.b-cdn.net/gugwa/gugwa42/07.Mirzapur.SN2.VJ.Ashim.1080.mp4",
-        episodes: [
-          { num: 1, title: "Episode 1", duration: "50m", streamUrl: "https://munotech3.b-cdn.net/gugwa/gugwa42/01.Mirzapur.SN1.VJ.Ashim.1080.mp4" },
-          { num: 2, title: "Episode 2", duration: "48m", streamUrl: "https://munotech3.b-cdn.net/gugwa/gugwa42/02.Mirzapur.SN2.VJ.Ashim.1080.mp4" },
-          { num: 3, title: "Episode 3", duration: "52m", streamUrl: "https://munotech3.b-cdn.net/gugwa/gugwa42/03.Mirzapur.SN2.VJ.Ashim.1080.mp4" },
-          { num: 4, title: "Episode 4", duration: "55m", streamUrl: "https://munotech3.b-cdn.net/gugwa/gugwa42/04.Mirzapur.SN2.VJ.Ashim.1080.mp4" },
-        ],
+        streamUrl: "",
+        episodes: [],
       }
     );
   }, [incomingMovie, seriesTitle, seriesMovies]);
@@ -315,15 +310,15 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
           return;
         }
 
-        // If neither source provided multiple episodes, ensure multi-episode navigation exists
-        if (!cancelled && (!activeSeries.episodes || activeSeries.episodes.length <= 1)) {
-          const defaultEps = [
-            { num: 1, title: "Episode 1", duration: "50m", streamUrl: activeSeries.streamUrl, stillUrl: activeSeries.backdropUrl || activeSeries.imageUrl },
-            { num: 2, title: "Episode 2", duration: "48m", streamUrl: activeSeries.streamUrl, stillUrl: activeSeries.backdropUrl || activeSeries.imageUrl },
-            { num: 3, title: "Episode 3", duration: "52m", streamUrl: activeSeries.streamUrl, stillUrl: activeSeries.backdropUrl || activeSeries.imageUrl },
-            { num: 4, title: "Episode 4", duration: "55m", streamUrl: activeSeries.streamUrl, stillUrl: activeSeries.backdropUrl || activeSeries.imageUrl },
-          ];
-          setResolvedEpisodes(defaultEps);
+        // If series already had genuine episodes passed in, use them directly without mockups
+        if (!cancelled && activeSeries.episodes && activeSeries.episodes.length > 0) {
+          setResolvedEpisodes(activeSeries.episodes.map(ep => ({
+            num: ep.num,
+            title: ep.title,
+            duration: ep.duration,
+            streamUrl: ep.streamUrl,
+            stillUrl: activeSeries.backdropUrl || activeSeries.imageUrl,
+          })));
         }
       } catch (err) {
         console.warn("Failed to load series metadata:", err);
@@ -480,7 +475,17 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
     <div className="w-full min-h-screen bg-black text-white font-sans flex flex-col pb-24 select-none">
       {/* 1. TOP HEADER BAR */}
       <header className="sticky top-0 z-40 w-full bg-black/90 backdrop-blur-md px-4 py-3 flex items-center justify-between border-b border-white/5">
-        <FreeWatchLogo />
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={onBack}
+            className="p-1.5 -ml-1 text-white hover:text-[#00E676] active:scale-95 transition-all cursor-pointer rounded-full hover:bg-white/10 flex items-center justify-center"
+            aria-label="Back"
+          >
+            <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.4]" />
+          </button>
+          <FreeWatchLogo />
+        </div>
 
         <div className="flex items-center gap-4">
           <button
@@ -522,6 +527,16 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
         >
           {isPlaying ? (
             <div className="relative w-full h-full bg-black flex items-center justify-center">
+              {/* Overlay Back Button during Playback */}
+              <button
+                type="button"
+                onClick={onBack}
+                className="absolute top-4 left-4 z-30 p-2 rounded-full bg-black/70 hover:bg-black text-white hover:text-[#00E676] backdrop-blur-md transition-all active:scale-95 shadow-lg cursor-pointer"
+                aria-label="Back"
+              >
+                <ArrowLeft className="w-5 h-5 stroke-[2.2]" />
+              </button>
+
               <video
                 ref={videoRef}
                 key={streamUrl}
@@ -578,28 +593,28 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
             <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black via-black/80 to-transparent pointer-events-none" />
 
             {/* Floating Top Controls: Back Button & Rating Badge */}
-            <div className="absolute top-4 left-4 right-4 z-20 flex items-center justify-between">
+            <div className="absolute top-4 left-4 right-4 z-30 flex items-center justify-between pointer-events-none">
               <button
                 type="button"
                 onClick={onBack}
-                className="w-10 h-10 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white hover:bg-black transition-colors cursor-pointer shadow-md"
+                className="w-10 h-10 rounded-full bg-black/60 hover:bg-black/90 backdrop-blur-md flex items-center justify-center text-white hover:text-[#00E676] transition-all cursor-pointer shadow-md pointer-events-auto active:scale-95"
                 aria-label="Back"
               >
                 <ArrowLeft className="w-5 h-5 stroke-[2.2]" />
               </button>
 
-              <div className="px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-md text-amber-400 text-xs font-black flex items-center gap-1 shadow-md">
+              <div className="px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-md text-amber-400 text-xs font-black flex items-center gap-1 shadow-md pointer-events-auto">
                 <span>★</span>
                 <span>{activeSeries.rating}</span>
               </div>
             </div>
 
             {/* Center Big Play Button */}
-            <div className="absolute inset-0 z-20 flex items-center justify-center">
+            <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
               <button
                 type="button"
                 onClick={() => setIsPlaying(true)}
-                className="w-16 h-16 rounded-full bg-[#00E676] hover:bg-[#00c853] text-black flex items-center justify-center shadow-[0_0_30px_rgba(0,230,118,0.6)] hover:scale-110 active:scale-95 transition-transform cursor-pointer"
+                className="w-16 h-16 rounded-full bg-[#00E676] hover:bg-[#00c853] text-black flex items-center justify-center shadow-[0_0_30px_rgba(0,230,118,0.6)] hover:scale-110 active:scale-95 transition-transform cursor-pointer pointer-events-auto"
                 title="Play Series"
               >
                 <Play className="w-7 h-7 fill-black ml-1" />
@@ -756,6 +771,10 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
           <div className="flex flex-col items-center justify-center py-12 w-full">
             <Loader2 className="w-8 h-8 text-[#00E676] animate-spin mb-2" />
             <span className="text-xs text-neutral-400 font-medium">Loading episodes...</span>
+          </div>
+        ) : episodes.length === 0 ? (
+          <div className="py-10 text-center text-xs text-neutral-400 bg-white/[0.02] border border-white/5 rounded-2xl">
+            Episodes are currently being indexed for this series. Check back shortly!
           </div>
         ) : (
           /* Episode Cards Horizontal Slider (Matching Android App ListView.separated) */

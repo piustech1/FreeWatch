@@ -126,8 +126,11 @@ export const VjMoviesPage: React.FC<VjMoviesPageProps> = ({
               backdropUrl: m.backdrop || m.poster || "",
               rating: String(m.rating || "8.5"),
               year: String(m.year || "2025"),
-              duration: m.duration || (m.isTv ? "50m" : "1h 45m"),
-              isTv: Boolean(m.isTv || m.is_series),
+              duration: m.duration || "1h 45m",
+              isTv: Boolean(
+                (m.series_code && String(m.series_code).trim().length > 0 && String(m.series_code) !== '0') ||
+                (Array.isArray(m.episodes) && m.episodes.length > 0)
+              ),
               seriesCode: m.series_code,
               overview: m.overview || "",
               streamUrl: m.streamUrl || m.playingurl || "",

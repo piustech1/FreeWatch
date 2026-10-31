@@ -890,8 +890,8 @@ export function parseSeriesEpisodeInfo(rawTitle: string): {
     };
   }
 
-  // Pattern B: Title Episode 16, Title Ep 16, Title Part 3
-  const epPattern = /^(.*?)[.\s_-]+(?:episode|ep|part)\s*(\d+)(.*)$/i;
+  // Pattern B: Title Episode 16, Title Ep 16 (Strict episode markers only - not Part/Sequels)
+  const epPattern = /^(.*?)[.\s_-]+(?:episode|ep)\s*(\d+)(.*)$/i;
   match = clean.match(epPattern);
   if (match) {
     return {
@@ -901,20 +901,8 @@ export function parseSeriesEpisodeInfo(rawTitle: string): {
     };
   }
 
-  // Pattern C: Title 16, Title 02 (e.g. Mirzapur 16, Mirzapur 15)
-  const numPattern = /^(.*?)\s+(\d{1,3})$/i;
-  match = clean.match(numPattern);
-  if (match) {
-    const num = parseInt(match[2], 10);
-    // Ignore 4-digit years (1980-2030)
-    if (num > 0 && num <= 100) {
-      return {
-        isEpisode: true,
-        baseTitle: match[1].trim(),
-        epNum: num,
-      };
-    }
-  }
+  // NOTE: Pattern C (/^(.*?)\s+(\d{1,3})$/) was intentionally removed because it
+  // mistakenly treated movie sequels (e.g. Deadpool 2, Inside Out 2, John Wick 4) as TV episodes.
 
   return {
     isEpisode: false,
@@ -1015,13 +1003,22 @@ export function useLiveCatalog() {
     const episodeInfo = parseSeriesEpisodeInfo(rawTitle);
     const seriesCode = m.series_code || m.seriesCode || '';
     
-    // Explicit series indicators
-    const hasExplicitSeasonOrEp = episodeInfo.isEpisode || /season|\b(?:s\d{1,2}|ep(?:isode)?\s*\d+|part\s*\d+)\b|eps\s*\d+/i.test(rawTitle);
-    const hasSeriesCode = Boolean(seriesCode && String(seriesCode).trim().length > 0 && String(seriesCode) !== '0');
-    const isSeriesCat = Number(m.category_id || m.categoryId) === 5 || (m.category && String(m.category).toLowerCase().includes('series'));
-    const isSeriesType = Boolean(m.type && String(m.type).toUpperCase().includes('SERIES'));
+    // Explicit series indicators: strictly genuine TV series
+    const hasValidSeriesCode = Boolean(seriesCode && String(seriesCode).trim().length > 0 && String(seriesCode) !== '0');
+    const isSeriesCat = Number(m.category_id || m.categoryId) === 5 || (typeof m.category === 'string' && m.category.toLowerCase().trim() === 'series');
+    const isSeriesType = Boolean(m.type && String(m.type).toUpperCase() === 'SERIES');
     const hasEpisodes = Array.isArray(m.episodes) && m.episodes.length > 0;
-    const isTv = Boolean(m.isTv || m.is_series || hasExplicitSeasonOrEp || hasSeriesCode || isSeriesCat || isSeriesType || hasEpisodes);
+    const hasExplicitSeasonOrEp = episodeInfo.isEpisode || /\b(?:s\d{1,2}e\d{1,2}|season\s*\d+\s*(?:ep|episode)\s*\d+)\b/i.test(rawTitle);
+
+    // Strict TV Series determination:
+    // A title is ONLY a TV series if it has a valid seriesCode, has multiple episodes,
+    // is in the Series category with series code/episodes, or has unambiguous S01E02 numbering.
+    const isTv = Boolean(
+      hasValidSeriesCode ||
+      hasEpisodes ||
+      (isSeriesCat && (hasExplicitSeasonOrEp || hasValidSeriesCode || isSeriesType)) ||
+      (m.is_series && (hasValidSeriesCode || hasEpisodes))
+    );
 
     // Accurate category mapping
     const category = isTv ? 'Series' : mapMunoCategoryId(m.category_id || m.categoryId, m.category, episodeInfo.baseTitle);
