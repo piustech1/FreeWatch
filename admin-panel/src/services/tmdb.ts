@@ -87,6 +87,8 @@ export function cleanTitleForTmdb(rawTitle: string): string {
   return clean;
 }
 
+const STOP_WORDS = new Set(["the", "a", "an", "of", "in", "on", "at", "to", "for", "and", "or", "by", "is", "it"]);
+
 export function computeTitleSimilarity(s1: string, s2: string): number {
   const norm1 = s1.toLowerCase().replace(/[^a-z0-9 ]/g, "").trim();
   const norm2 = s2.toLowerCase().replace(/[^a-z0-9 ]/g, "").trim();
@@ -97,17 +99,28 @@ export function computeTitleSimilarity(s1: string, s2: string): number {
   const words2 = norm2.split(/\s+/).filter((w) => w.length > 0);
   if (words1.length === 0 || words2.length === 0) return 0;
 
-  const set1 = new Set(words1);
-  const set2 = new Set(words2);
-  const intersection = [...set1].filter((w) => set2.has(w));
+  const content1 = words1.filter((w) => !STOP_WORDS.has(w));
+  const content2 = words2.filter((w) => !STOP_WORDS.has(w));
+
+  const cSet1 = new Set(content1.length > 0 ? content1 : words1);
+  const cSet2 = new Set(content2.length > 0 ? content2 : words2);
+
+  const intersection = [...cSet1].filter((w) => cSet2.has(w));
   if (intersection.length === 0) return 0;
 
-  // Dice coefficient on word sets
-  const dice = (2 * intersection.length) / (set1.size + set2.size);
-  // Word count ratio penalty (e.g. 1 word query vs 3 word title = 1/3)
-  const lengthRatio = Math.min(words1.length, words2.length) / Math.max(words1.length, words2.length);
+  // Short title defense: If shorter title has <= 2 content words, heavily penalize extra content words in candidate
+  // E.g. "The Hope" (content: ["hope"]) vs "Chicago Hope" (content: ["chicago", "hope"])
+  const minContentSize = Math.min(cSet1.size, cSet2.size);
+  const maxContentSize = Math.max(cSet1.size, cSet2.size);
+  if (minContentSize <= 2 && maxContentSize > minContentSize) {
+    return (intersection.length / maxContentSize) * 0.45;
+  }
 
-  return dice * 0.7 + lengthRatio * 0.3;
+  // Dice coefficient on content words
+  const dice = (2 * intersection.length) / (cSet1.size + cSet2.size);
+  const lengthRatio = minContentSize / maxContentSize;
+
+  return dice * 0.75 + lengthRatio * 0.25;
 }
 
 /**
@@ -170,7 +183,7 @@ export async function searchTmdb(title: string, isTv: boolean = false): Promise<
             bestScore = score;
           }
         }
-        if (best && bestScore >= 0.65) {
+        if (best && bestScore >= 0.78) {
           const meta: TmdbMetadata = {
             id: best.id,
             title: best.name || clean,
@@ -203,7 +216,7 @@ export async function searchTmdb(title: string, isTv: boolean = false): Promise<
           bestScore = score;
         }
       }
-      if (best && bestScore >= 0.65) {
+      if (best && bestScore >= 0.78) {
         const meta: TmdbMetadata = {
           id: best.id,
           title: best.title || clean,
@@ -235,7 +248,7 @@ export async function searchTmdb(title: string, isTv: boolean = false): Promise<
           matchScore = score;
         }
       }
-      if (match && matchScore >= 0.65) {
+      if (match && matchScore >= 0.78) {
         const isMatchedTv = match.media_type === "tv";
         const meta: TmdbMetadata = {
           id: match.id,
@@ -271,19 +284,23 @@ export async function getMovieLogo(tmdbId: number, isTv: boolean = false): Promi
 
   const endpoint = isTv ? "tv" : "movie";
   try {
-    const url = `${TMDB_BASE_URL}/${endpoint}/${tmdbId}/images?api_key=${TMDB_API_KEY}&include_image_language=en,null`;
+    const url = `${TMDB_BASE_URL}/${endpoint}/${tmdbId}/images?api_key=${TMDB_API_KEY}`;
     const res = await fetch(url);
     if (res.ok) {
       const data = await res.json();
-      const logos = data.logos as any[] | undefined;
-      if (logos && logos.length > 0) {
-        // Prioritize English logos
-        const enLogo = logos.find((l) => l.iso_639_1 === "en") || logos[0];
-        if (enLogo?.file_path) {
-          const logoUrl = `${TMDB_IMAGE_SIZES.logoW500}${enLogo.file_path}`;
-          logoCache.set(cacheKey, logoUrl);
-          return logoUrl;
-        }
+      const logos = (data.logos || []) as any[];
+      // Filter for png transparent logos, prioritizing English
+      const validPngLogos = logos.filter((l) => l.file_path && l.file_path.endsWith(".png"));
+      const bestLogo =
+        validPngLogos.find((l) => l.iso_639_1 === "en") ||
+        validPngLogos[0] ||
+        logos.find((l) => l.iso_639_1 === "en") ||
+        logos[0];
+
+      if (bestLogo?.file_path) {
+        const logoUrl = `${TMDB_IMAGE_SIZES.logoW500}${bestLogo.file_path}`;
+        logoCache.set(cacheKey, logoUrl);
+        return logoUrl;
       }
     }
   } catch (e) {
@@ -293,18 +310,21 @@ export async function getMovieLogo(tmdbId: number, isTv: boolean = false): Promi
   // Fallback: If not found in primary endpoint, try the other
   const altEndpoint = isTv ? "movie" : "tv";
   try {
-    const altUrl = `${TMDB_BASE_URL}/${altEndpoint}/${tmdbId}/images?api_key=${TMDB_API_KEY}&include_image_language=en,null`;
+    const altUrl = `${TMDB_BASE_URL}/${altEndpoint}/${tmdbId}/images?api_key=${TMDB_API_KEY}`;
     const res = await fetch(altUrl);
     if (res.ok) {
       const data = await res.json();
-      const logos = data.logos as any[] | undefined;
-      if (logos && logos.length > 0) {
-        const enLogo = logos.find((l) => l.iso_639_1 === "en") || logos[0];
-        if (enLogo?.file_path) {
-          const logoUrl = `${TMDB_IMAGE_SIZES.logoW500}${enLogo.file_path}`;
-          logoCache.set(cacheKey, logoUrl);
-          return logoUrl;
-        }
+      const logos = (data.logos || []) as any[];
+      const validPngLogos = logos.filter((l) => l.file_path && l.file_path.endsWith(".png"));
+      const bestLogo =
+        validPngLogos.find((l) => l.iso_639_1 === "en") ||
+        validPngLogos[0] ||
+        logos[0];
+
+      if (bestLogo?.file_path) {
+        const logoUrl = `${TMDB_IMAGE_SIZES.logoW500}${bestLogo.file_path}`;
+        logoCache.set(cacheKey, logoUrl);
+        return logoUrl;
       }
     }
   } catch (_) {}

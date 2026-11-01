@@ -96,23 +96,47 @@ export const HomePage: React.FC<HomePageProps> = ({
 
   const numHeroes = heroCandidates.length || 1;
 
-  // TMDB logo caching for hero candidate items
-  const [heroLogos, setHeroLogos] = useState<Record<string, string | null>>({});
+  // TMDB metadata (logo, overview, rating, backdrop) caching for hero candidate items
+  const [heroDetails, setHeroDetails] = useState<Record<string, { logo: string | null; overview?: string; rating?: string; backdrop?: string }>>({});
 
   useEffect(() => {
     if (heroCandidates.length === 0) return;
     heroCandidates.forEach(async (movie) => {
-      if (heroLogos[movie.id] !== undefined) return;
+      if (heroDetails[movie.id] !== undefined) return;
       try {
         const tmdb = await searchTmdb(movie.title, movie.isTv);
         if (tmdb && tmdb.id) {
           const logo = await getMovieLogo(tmdb.id, movie.isTv);
-          setHeroLogos((prev) => ({ ...prev, [movie.id]: logo }));
+          setHeroDetails((prev) => ({
+            ...prev,
+            [movie.id]: {
+              logo,
+              overview: tmdb.overview || movie.overview,
+              rating: tmdb.voteAverage ? tmdb.voteAverage.toFixed(1) : movie.rating,
+              backdrop: tmdb.backdropUrl || movie.backdropUrl,
+            },
+          }));
         } else {
-          setHeroLogos((prev) => ({ ...prev, [movie.id]: null }));
+          setHeroDetails((prev) => ({
+            ...prev,
+            [movie.id]: {
+              logo: null,
+              overview: movie.overview,
+              rating: movie.rating,
+              backdrop: movie.backdropUrl,
+            },
+          }));
         }
       } catch {
-        setHeroLogos((prev) => ({ ...prev, [movie.id]: null }));
+        setHeroDetails((prev) => ({
+          ...prev,
+          [movie.id]: {
+            logo: null,
+            overview: movie.overview,
+            rating: movie.rating,
+            backdrop: movie.backdropUrl,
+          },
+        }));
       }
     });
   }, [heroCandidates]);
@@ -429,9 +453,9 @@ export const HomePage: React.FC<HomePageProps> = ({
               onClick={() => onSelectMovie?.(heroMovie.id, heroMovie.isTv, heroMovie.title, heroMovie)}
               className="cursor-pointer group flex-1 pr-3 flex flex-col justify-center"
             >
-              {heroLogos[heroMovie.id] ? (
+              {heroDetails[heroMovie.id]?.logo ? (
                 <img
-                  src={heroLogos[heroMovie.id]!}
+                  src={heroDetails[heroMovie.id].logo!}
                   alt={heroMovie.title}
                   className="h-7 max-w-[210px] object-contain object-left drop-shadow-md"
                 />
@@ -485,6 +509,7 @@ export const HomePage: React.FC<HomePageProps> = ({
             {/* Background Slides with Smooth Crossfade */}
             {heroCandidates.map((movie, idx) => {
               const isActive = idx === (heroIndex % numHeroes);
+              const meta = heroDetails[movie.id];
               return (
                 <div
                   key={movie.id}
@@ -493,7 +518,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                   }`}
                 >
                   <img
-                    src={movie.backdropUrl || movie.imageUrl}
+                    src={meta?.backdrop || movie.backdropUrl || movie.imageUrl}
                     alt={movie.title}
                     className="w-full h-full object-cover object-[center_30%] filter brightness-90 contrast-110 group-hover:scale-105 transition-transform duration-1000"
                   />
@@ -514,12 +539,18 @@ export const HomePage: React.FC<HomePageProps> = ({
                   {/* Left Content Column */}
                   <div className="relative z-20 h-full flex flex-col justify-end p-8 xl:p-12 max-w-2xl">
                     <div className="space-y-2 mb-3">
-                      {heroLogos[movie.id] && (
+                      {meta?.logo ? (
                         <img
-                          src={heroLogos[movie.id]!}
+                          src={meta.logo}
                           alt={movie.title}
                           className="h-16 max-w-[340px] object-contain object-left drop-shadow-xl"
                         />
+                      ) : (
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="px-3 py-1 rounded-lg bg-[#00E676]/20 border border-[#00E676]/40 text-[#00E676] text-xs font-black tracking-wider uppercase backdrop-blur-md">
+                            EXCLUSIVE LUGANDA PREMIERE
+                          </span>
+                        </div>
                       )}
                       <div className="text-2xl xl:text-4xl font-black tracking-tight text-white drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)] leading-tight uppercase">
                         {movie.title}
@@ -530,7 +561,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                     <div className="flex items-center gap-2 mb-3">
                       <span className="px-3 py-1 rounded-full bg-amber-400 text-black text-xs font-black shadow-md flex items-center gap-1">
                         <span>★</span>
-                        <span>{movie.rating || "8.9"}</span>
+                        <span>{meta?.rating || movie.rating || "8.9"}</span>
                       </span>
                       <span className="px-2.5 py-1 rounded-md bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-neutral-200">
                         {movie.duration || "1h 50m"}
@@ -548,7 +579,7 @@ export const HomePage: React.FC<HomePageProps> = ({
 
                     {/* Synopsis */}
                     <p className="text-sm text-neutral-300 font-medium leading-relaxed mb-6 max-w-xl line-clamp-3 drop-shadow-sm">
-                      {movie.overview || `Experience ${movie.title} in full 1080p HD with premier Luganda voice-over translation by ${movie.vj}. Unlimited streaming on FreeWatch.`}
+                      {meta?.overview || movie.overview || `Experience ${movie.title} in full 1080p HD with premier Luganda voice-over translation by ${movie.vj}. Unlimited streaming on FreeWatch.`}
                     </p>
 
                     {/* Action Buttons */}

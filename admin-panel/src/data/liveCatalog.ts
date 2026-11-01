@@ -90,8 +90,8 @@ export const FALLBACK_MOVIES: CatalogMovie[] = [
     vj: "VJ Muba",
     category: "Action",
     genres: ["Action", "Crime", "Luganda Dubbed"],
-    imageUrl: "https://apposters.b-cdn.net/laba/yo/naki/gNxs2151.jpg",
-    backdropUrl: "https://apposters.b-cdn.net/laba/yo/naki/gNxs2151.jpg",
+    imageUrl: "https://image.tmdb.org/t/p/w500/8gVwE6xMkWZf7y7xQzXf3l4h7qV.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/w1280/8gVwE6xMkWZf7y7xQzXf3l4h7qV.jpg",
     rating: "9.1",
     year: "2025",
     duration: "2h 15m",
@@ -180,8 +180,8 @@ export const FALLBACK_MOVIES: CatalogMovie[] = [
     vj: "VJ Mosco",
     category: "Animation",
     genres: ["Animation", "Family", "Adventure", "Luganda Dubbed"],
-    imageUrl: "https://apposters.b-cdn.net/laba/yo/naki/gNxs2151.jpg",
-    backdropUrl: "https://apposters.b-cdn.net/laba/yo/naki/gNxs2151.jpg",
+    imageUrl: "https://image.tmdb.org/t/p/w500/jhWbYepehTkr7usT5b1Zz8iB84h.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/w1280/jhWbYepehTkr7usT5b1Zz8iB84h.jpg",
     rating: "8.8",
     year: "2025",
     duration: "1h 32m",
@@ -530,8 +530,8 @@ export function parseSeriesEpisodeInfo(
 } {
   const clean = (rawTitle || '').trim();
 
-  // Pattern A: Title S01E16, Title S1 Ep 16
-  const sPattern = /^(.*?)[.\s_-]+(?:s|season)\s*(\d+)[.\s_-]*(?:e|ep|episode)\s*(\d+)(.*)$/i;
+  // Pattern A: Title S01E16, Title Season 2: Episode 2, Title S1 Ep 16
+  const sPattern = /^(.*?)[.\s_:|,-]+(?:s|season)\s*(\d+)[.\s_:|,-]*(?:e|ep|episode)\s*(\d+)(.*)$/i;
   let match = clean.match(sPattern);
   if (match) {
     return {
@@ -542,7 +542,7 @@ export function parseSeriesEpisodeInfo(
   }
 
   // Pattern B: Title Episode 16, Title Ep 16, Part 16, EPS 16
-  const epPattern = /^(.*?)[.\s_-]+(?:episode|ep|eps|part|pt)\s*(\d+)(.*)$/i;
+  const epPattern = /^(.*?)[.\s_:|,-]+(?:episode|ep|eps|part|pt)\s*(\d+)(.*)$/i;
   match = clean.match(epPattern);
   if (match) {
     return {
@@ -552,13 +552,13 @@ export function parseSeriesEpisodeInfo(
     };
   }
 
-  // Pattern C: Trailing number like "Mirzapur 16", "Yemin 402"
-  const trailingNumPattern = /^(.*?)[.\s_-]+(\d{1,4})$/;
+  // Pattern C: Trailing number like "Mirzapur 16", "Yemin 402", "Omuzigo 30"
+  const trailingNumPattern = /^(.*?)[.\s_:|,-]+(\d{1,4})$/;
   match = clean.match(trailingNumPattern);
   if (match) {
     const candidateBase = match[1].trim();
     const num = parseInt(match[2], 10);
-    const isKnownSeries = /^(?:mirzapur|yemin|living\s*for\s*love|squid\s*game|from|reacher|terminal\s*list|loki|vikings|tulsa\s*king|money\s*heist|the\s*boys|wednesday|fallout|witcher|halo|karikaada|the\s*hobbit)/i.test(candidateBase);
+    const isKnownSeries = /^(?:mirzapur|yemin|living\s*for\s*love|squid\s*game|from|reacher|terminal\s*list|loki|vikings|tulsa\s*king|money\s*heist|the\s*boys|wednesday|fallout|witcher|halo|karikaada|the\s*hobbit|mobland|omuzigo|the\s*hope)/i.test(candidateBase);
     if (isSeriesContext || num > 4 || isKnownSeries) {
       return {
         isEpisode: true,
@@ -679,16 +679,16 @@ export function useLiveCatalog() {
     );
 
     const episodeInfo = parseSeriesEpisodeInfo(rawTitle, isExplicitSeries || hasDistinctSeriesCode);
-    const hasEpisodes = Array.isArray(m.episodes) && m.episodes.length > 0;
+    const hasEpisodes = Array.isArray(m.episodes) && m.episodes.length > 1;
     const hasExplicitSeasonOrEp = episodeInfo.isEpisode || /\b(?:s\d{1,2}e\d{1,2}|season\s*\d+\s*(?:ep|episode)\s*\d+)\b/i.test(rawTitle);
 
     // Strict TV Series determination:
-    // A title is ONLY a TV series if it has a distinct seriesCode, has multiple episodes,
+    // A title is ONLY a TV series if it has a distinct seriesCode, has multiple episodes (> 1),
     // is in the Series category (category_id === 5) with episode numbering, or has explicit S01E02 numbering.
     const isTv = Boolean(
-      hasDistinctSeriesCode ||
+      (hasDistinctSeriesCode && hasEpisodes) ||
       hasEpisodes ||
-      (isSeriesCat && (hasExplicitSeasonOrEp || hasDistinctSeriesCode || isSeriesType)) ||
+      (isSeriesCat && (hasExplicitSeasonOrEp || (hasDistinctSeriesCode && hasEpisodes) || isSeriesType)) ||
       (episodeInfo.isEpisode && (isExplicitSeries || hasDistinctSeriesCode))
     );
 
@@ -699,6 +699,9 @@ export function useLiveCatalog() {
 
     const duration = m.duration || (isTv ? '50m' : '1h 45m');
 
+    const resolvedImage = m.imageUrl || m.image || m.thumbnail || m.poster || m.poster_path || '';
+    const resolvedBackdrop = m.backdropUrl || m.backdrop || m.backdrop_path || m.cover || resolvedImage || 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1600&auto=format&fit=crop&q=80';
+
     return {
       id: itemId,
       rawTitle,
@@ -708,8 +711,8 @@ export function useLiveCatalog() {
       vj,
       category,
       genres,
-      imageUrl: m.image || m.thumbnail || m.poster || m.poster_path || 'https://apposters.b-cdn.net/laba/yo/naki/gNxs2151.jpg',
-      backdropUrl: m.backdrop || m.backdrop_path || m.cover || m.image || 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1600&auto=format&fit=crop&q=80',
+      imageUrl: resolvedImage || 'https://apposters.b-cdn.net/laba/yo/naki/01d9.jpg',
+      backdropUrl: resolvedBackdrop,
       rating: String(m.rating || (8.5 + ((idx % 12) / 10)).toFixed(1)),
       year: String(m.year || m.release_year || '2025'),
       duration,
@@ -717,7 +720,7 @@ export function useLiveCatalog() {
       seriesCode,
       overview: m.overview || m.synopsis || m.description || `Enjoy ${episodeInfo.baseTitle} in high definition with exclusive Luganda voice-over translation by ${vj}.`,
       streamUrl,
-      rawEpisodes: Array.isArray(m.episodes) ? m.episodes : [],
+      rawEpisodes: isTv && Array.isArray(m.episodes) ? m.episodes : [],
     };
   }, [handleMovieHealed]);
 
@@ -1106,6 +1109,20 @@ export function useLiveCatalog() {
     return combined;
   }, [catalog]);
 
+  const adventureMovies = useMemo(() => {
+    const matched = catalog.filter(
+      (m) =>
+        !m.isTv &&
+        (m.category.toLowerCase().includes("adventure") ||
+          m.genres.some((g) => g.toLowerCase().includes("adventure")) ||
+          /adventure|journey|quest|safari|expedition|jungle|treasure|island|explore|hunter|survival|wild|tomb|lost|sheriff|wells/i.test(
+            m.title + " " + m.overview
+          ) ||
+          (m.category === "Action" && !/romance|love/i.test(m.title)))
+    );
+    return matched.length > 0 ? matched : catalog.filter((m) => !m.isTv && (m.category === "Action" || m.category === "Sci-Fi"));
+  }, [catalog]);
+
   // VJ filter helper
   const getMoviesByVj = useCallback((vjName: string) => {
     const q = vjName.toLowerCase().replace('vj', '').trim();
@@ -1191,6 +1208,15 @@ export function useLiveCatalog() {
           /sport|football|soccer|box|fight|race|run|ball|athlete|creed/i.test(m.title + ' ' + m.overview)
         );
         list = sports.length > 0 ? sports : list.filter(m => m.category === 'Action');
+      } else if (g === 'adventure') {
+        const advList = list.filter(m =>
+          !m.isTv &&
+          (m.category.toLowerCase().includes('adventure') ||
+           m.genres.some(gen => gen.toLowerCase().includes('adventure')) ||
+           /adventure|journey|quest|safari|expedition|jungle|treasure|island|explore|hunter|survival|wild|tomb|lost|sheriff|wells/i.test(m.title + ' ' + m.overview) ||
+           (m.category === 'Action' && !/romance|love/i.test(m.title)))
+        );
+        list = advList.length > 0 ? advList : list.filter(m => !m.isTv && (m.category === 'Action' || m.category === 'Sci-Fi'));
       } else {
         list = list.filter(m => 
           m.category.toLowerCase().includes(g) ||
@@ -1226,6 +1252,7 @@ export function useLiveCatalog() {
     horrorMovies,
     animationMovies,
     familyMovies,
+    adventureMovies,
     getMoviesByVj,
     getVjMovieCount,
     searchCatalog

@@ -80,14 +80,14 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
         vj: "VJ Junior",
         category: "Action",
         genres: ["Action", "Luganda Dubbed"],
-        imageUrl: "https://apposters.b-cdn.net/laba/yo/naki/gNxs2151.jpg",
+        imageUrl: "https://apposters.b-cdn.net/laba/yo/naki/01d9.jpg",
         backdropUrl: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1600&auto=format&fit=crop&q=80",
         rating: "8.8",
         year: "2025",
         duration: "1h 55m",
         isTv: false,
         overview: `Experience ${movieTitle} in crisp full HD with exclusive, spiced-up Luganda translation. Streaming free on FreeWatch.`,
-        streamUrl: "https://munotech3.b-cdn.net/gugwa/gugwa42/07.Mirzapur.SN2.VJ.Ashim.1080.mp4",
+        streamUrl: "",
       };
     }
     // Enforce isTv = false for all single movies so TMDB and player treat it strictly as a single movie
@@ -124,26 +124,42 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
     const isFallbackStream = !activeMovie.streamUrl || activeMovie.streamUrl.includes("sample") || activeMovie.streamUrl.includes("07.Mirzapur");
 
     if ((isGenericTitle || isFallbackStream) && activeMovie.id && /^\d+$/.test(activeMovie.id)) {
-      fetch(`https://mumowatch.ai.studio/movie/${activeMovie.id}`)
+      const applyData = (raw: any) => {
+        const d = raw?.data || raw;
+        if (d && d.title && !/^(?:Movie|Series)\s*#/i.test(d.title)) {
+          const rawVj = (d.vj || "").trim();
+          const vjClean = rawVj
+            ? rawVj.toUpperCase().startsWith("VJ")
+              ? rawVj
+              : `VJ ${rawVj}`
+            : "VJ Junior";
+          setHealedDetails({
+            title: d.title.trim(),
+            vj: vjClean,
+            streamUrl: d.streamUrl || d.playingurl || undefined,
+            imageUrl: d.imageUrl || d.poster || d.image || undefined,
+            overview: d.overview || d.description || undefined,
+          });
+        }
+      };
+
+      fetch(`/api/v1/movie?id=${activeMovie.id}`)
         .then((r) => (r.ok ? r.json() : null))
-        .then((d) => {
-          if (d && d.title && !/^(?:Movie|Series)\s*#/i.test(d.title)) {
-            const rawVj = (d.vj || "").trim();
-            const vjClean = rawVj
-              ? rawVj.toUpperCase().startsWith("VJ")
-                ? rawVj
-                : `VJ ${rawVj}`
-              : "VJ Junior";
-            setHealedDetails({
-              title: d.title.trim(),
-              vj: vjClean,
-              streamUrl: d.playingurl || undefined,
-              imageUrl: d.image || undefined,
-              overview: d.description || undefined,
-            });
+        .then((json) => {
+          if (json && (json.data?.title || json.title)) {
+            applyData(json);
+          } else {
+            return fetch(`https://mumowatch.ai.studio/movie/${activeMovie.id}`)
+              .then((r) => (r.ok ? r.json() : null))
+              .then(applyData);
           }
         })
-        .catch(() => {});
+        .catch(() => {
+          fetch(`https://mumowatch.ai.studio/movie/${activeMovie.id}`)
+            .then((r) => (r.ok ? r.json() : null))
+            .then(applyData)
+            .catch(() => {});
+        });
     }
   }, [activeMovie.id, activeMovie.title, activeMovie.streamUrl]);
 
@@ -287,11 +303,12 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
     };
   }, [isPlaying, streamUrl]);
 
-  // Recommendations: More Like This (category or genre matched)
+  // Recommendations: More Like This (category or genre matched, strictly single movies)
   const moreLikeThisList = useMemo(() => {
     return catalog
       .filter(
         (m) =>
+          !m.isTv &&
           m.id !== activeMovie.id &&
           (m.category === activeMovie.category ||
             m.genres.some((g) => activeMovie.genres.includes(g)))
@@ -299,11 +316,11 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
       .slice(0, 10);
   }, [catalog, activeMovie]);
 
-  // Related movies from same VJ
+  // Related movies from same VJ (strictly single movies)
   const relatedList = useMemo(() => {
     const v = displayVj.toLowerCase().replace("vj", "").trim();
     return catalog
-      .filter((m) => m.id !== activeMovie.id && m.vj.toLowerCase().includes(v))
+      .filter((m) => !m.isTv && m.id !== activeMovie.id && m.vj.toLowerCase().includes(v))
       .slice(0, 8);
   }, [catalog, activeMovie, displayVj]);
 

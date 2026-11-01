@@ -122,14 +122,14 @@ export const VjMoviesPage: React.FC<VjMoviesPageProps> = ({
               vj: m.vj || vj.name,
               category: m.category || "Action",
               genres: m.genres || [m.category || "Action", "Luganda Dubbed"],
-              imageUrl: m.poster || m.image || "https://apposters.b-cdn.net/laba/yo/naki/gNxs2151.jpg",
+              imageUrl: m.imageUrl || m.poster || m.image || "https://apposters.b-cdn.net/laba/yo/naki/01d9.jpg",
               backdropUrl: m.backdrop || m.poster || "",
               rating: String(m.rating || "8.5"),
               year: String(m.year || "2025"),
               duration: m.duration || "1h 45m",
               isTv: Boolean(
-                (m.series_code && String(m.series_code).trim().length > 0 && String(m.series_code) !== '0') ||
-                (Array.isArray(m.episodes) && m.episodes.length > 0)
+                (m.series_code && String(m.series_code).trim().length > 0 && String(m.series_code) !== '0' && String(m.series_code) !== String(m.id)) ||
+                (Array.isArray(m.episodes) && m.episodes.length > 1)
               ),
               seriesCode: m.series_code,
               overview: m.overview || "",

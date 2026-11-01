@@ -45,36 +45,56 @@ async function fetchEpisodeStream(title: string, epNum: number): Promise<string 
   try {
     const clean = cleanTitleForTmdb(title);
     const q = `${clean} ${epNum}`;
-    const res = await fetch(`https://mumowatch.ai.studio/search?q=${encodeURIComponent(q)}`);
-    if (res.ok) {
-      const data = await res.json();
-      const allItems: any[] = [];
-      if (Array.isArray(data.series)) {
-        data.series.forEach((s: any) => {
-          if (Array.isArray(s.episodes)) allItems.push(...s.episodes);
-        });
-      }
-      if (Array.isArray(data.movies)) {
-        allItems.push(...data.movies);
-      }
-      for (const item of allItems) {
-        const url = item.playingurl || item.playingUrl;
-        if (!url) continue;
-        const info = parseSeriesEpisodeInfo(item.title || "", true);
-        if (info.episodeNumber === epNum) {
-          return url;
+    let allItems: any[] = [];
+
+    // Try local /api/v1/search first
+    try {
+      const localRes = await fetch(`/api/v1/search?q=${encodeURIComponent(q)}`);
+      if (localRes.ok) {
+        const json = await localRes.json();
+        if (json && json.success && Array.isArray(json.data)) {
+          json.data.forEach((item: any) => {
+            if (Array.isArray(item.episodes)) allItems.push(...item.episodes);
+            allItems.push(item);
+          });
         }
       }
-      const regex = new RegExp(`\\b(?:ep(?:isode)?|part)?\\s*0*${epNum}\\b`, "i");
-      for (const item of allItems) {
-        const url = item.playingurl || item.playingUrl;
-        if (url && regex.test(item.title || "")) {
-          return url;
+    } catch (_) {}
+
+    // Fallback to direct search if needed
+    if (allItems.length === 0) {
+      const res = await fetch(`https://mumowatch.ai.studio/search?q=${encodeURIComponent(q)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.series)) {
+          data.series.forEach((s: any) => {
+            if (Array.isArray(s.episodes)) allItems.push(...s.episodes);
+          });
+        }
+        if (Array.isArray(data.movies)) {
+          allItems.push(...data.movies);
         }
       }
-      if (allItems.length > 0 && (allItems[0].playingurl || allItems[0].playingUrl)) {
-        return allItems[0].playingurl || allItems[0].playingUrl;
+    }
+
+    for (const item of allItems) {
+      const url = item.playingurl || item.playingUrl || item.streamUrl;
+      if (!url) continue;
+      const info = parseSeriesEpisodeInfo(item.title || "", true);
+      if (info.epNum === epNum) {
+        return url;
       }
+    }
+    const regex = new RegExp(`\\b(?:ep(?:isode)?|part)?\\s*0*${epNum}\\b`, "i");
+    for (const item of allItems) {
+      const url = item.playingurl || item.playingUrl || item.streamUrl;
+      if (url && regex.test(item.title || "")) {
+        return url;
+      }
+    }
+    if (allItems.length > 0) {
+      const firstUrl = allItems[0].playingurl || allItems[0].playingUrl || allItems[0].streamUrl;
+      if (firstUrl) return firstUrl;
     }
   } catch (err) {
     console.warn("[SeriesDetails] Error resolving episode stream:", err);
@@ -136,7 +156,7 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
         vj: "VJ Ashim",
         category: "Series",
         genres: ["Series", "Drama", "Crime"],
-        imageUrl: "https://apposters.b-cdn.net/laba/yo/naki/gNxs2151.jpg",
+        imageUrl: "https://apposters.b-cdn.net/laba/yo/naki/01d9.jpg",
         backdropUrl: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1600&auto=format&fit=crop&q=80",
         rating: "9.3",
         year: "2025",
@@ -166,21 +186,37 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
   // Auto-heal placeholder series titles on mount
   useEffect(() => {
     if (/^(?:Movie|Series|Luganda Release)\s*#\d+/i.test(activeSeries.title) && activeSeries.id) {
-      fetch(`https://mumowatch.ai.studio/movie/${activeSeries.id}`)
+      const applyData = (raw: any) => {
+        const d = raw?.data || raw;
+        if (d && d.title && !/^(?:Movie|Series)\s*#/i.test(d.title)) {
+          const rawVj = (d.vj || "").trim();
+          const vjClean = rawVj ? (rawVj.toUpperCase().startsWith("VJ") ? rawVj : `VJ ${rawVj}`) : "VJ Junior";
+          setHealedDetails({
+            title: d.title.trim(),
+            vj: vjClean,
+            streamUrl: d.streamUrl || d.playingurl || undefined,
+            imageUrl: d.imageUrl || d.poster || d.image || undefined,
+          });
+        }
+      };
+
+      fetch(`/api/v1/movie?id=${activeSeries.id}`)
         .then((r) => (r.ok ? r.json() : null))
-        .then((d) => {
-          if (d && d.title && !/^(?:Movie|Series)\s*#/i.test(d.title)) {
-            const rawVj = (d.vj || "").trim();
-            const vjClean = rawVj ? (rawVj.toUpperCase().startsWith("VJ") ? rawVj : `VJ ${rawVj}`) : "VJ Junior";
-            setHealedDetails({
-              title: d.title.trim(),
-              vj: vjClean,
-              streamUrl: d.playingurl || undefined,
-              imageUrl: d.image || undefined,
-            });
+        .then((json) => {
+          if (json && (json.data?.title || json.title)) {
+            applyData(json);
+          } else {
+            return fetch(`https://mumowatch.ai.studio/movie/${activeSeries.id}`)
+              .then((r) => (r.ok ? r.json() : null))
+              .then(applyData);
           }
         })
-        .catch(() => {});
+        .catch(() => {
+          fetch(`https://mumowatch.ai.studio/movie/${activeSeries.id}`)
+            .then((r) => (r.ok ? r.json() : null))
+            .then(applyData)
+            .catch(() => {});
+        });
     }
   }, [activeSeries.id, activeSeries.title]);
 
@@ -258,37 +294,75 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
 
           for (const code of codesToTry) {
             try {
-              const controller = new AbortController();
-              const timeoutId = setTimeout(() => controller.abort(), 12000);
-              const res = await fetch(`https://mumowatch.ai.studio/series/${code}`, { signal: controller.signal });
-              clearTimeout(timeoutId);
-              if (res.ok) {
-                const data = await res.json();
-                if (data && Array.isArray(data.episodes) && data.episodes.length > 0) {
-                  munoEpisodes.push(...data.episodes);
+              let loadedEps: any[] = [];
+              try {
+                const localRes = await fetch(`/api/v1/series?code=${code}`);
+                if (localRes.ok) {
+                  const sJson = await localRes.json();
+                  if (sJson && sJson.success && sJson.data && Array.isArray(sJson.data.episodes) && sJson.data.episodes.length > 0) {
+                    loadedEps = sJson.data.episodes;
+                  }
                 }
+              } catch (_) {}
+
+              if (loadedEps.length === 0) {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 12000);
+                const res = await fetch(`https://mumowatch.ai.studio/series/${code}`, { signal: controller.signal });
+                clearTimeout(timeoutId);
+                if (res.ok) {
+                  const data = await res.json();
+                  if (data && Array.isArray(data.episodes) && data.episodes.length > 0) {
+                    loadedEps = data.episodes;
+                  }
+                }
+              }
+
+              if (loadedEps.length > 0) {
+                munoEpisodes.push(...loadedEps);
               }
             } catch {}
           }
 
-          // Always also query MunoWatch search to find all matching franchise/season episodes
+          // Always also query search to find all matching franchise/season episodes
           if (cleanTitle.length > 0) {
             try {
-              const sRes = await fetch(`https://mumowatch.ai.studio/search?q=${encodeURIComponent(cleanTitle)}`);
-              if (sRes.ok) {
-                const sData = await sRes.json();
-                if (Array.isArray(sData.series) && sData.series.length > 0) {
-                  for (const ser of sData.series) {
-                    if (Array.isArray(ser.episodes) && ser.episodes.length > 0) {
-                      munoEpisodes.push(...ser.episodes);
-                    }
+              let sItemsFound = false;
+              try {
+                const sLocal = await fetch(`/api/v1/search?q=${encodeURIComponent(cleanTitle)}`);
+                if (sLocal.ok) {
+                  const sJson = await sLocal.json();
+                  if (sJson && sJson.success && Array.isArray(sJson.data) && sJson.data.length > 0) {
+                    sJson.data.forEach((item: any) => {
+                      if (Array.isArray(item.episodes) && item.episodes.length > 0) {
+                        munoEpisodes.push(...item.episodes);
+                        sItemsFound = true;
+                      } else if (item.streamUrl && /\b(?:s\d{1,2}|ep(?:isode)?\s*\d+|part\s*\d+)\b/i.test(item.title || "")) {
+                        munoEpisodes.push(item);
+                        sItemsFound = true;
+                      }
+                    });
                   }
                 }
-                if (Array.isArray(sData.movies) && sData.movies.length > 0) {
-                  const epMovies = sData.movies.filter((m: any) =>
-                    m.playingurl && /\b(?:s\d{1,2}|ep(?:isode)?\s*\d+|part\s*\d+)\b/i.test(m.title || "")
-                  );
-                  munoEpisodes.push(...epMovies);
+              } catch (_) {}
+
+              if (!sItemsFound) {
+                const sRes = await fetch(`https://mumowatch.ai.studio/search?q=${encodeURIComponent(cleanTitle)}`);
+                if (sRes.ok) {
+                  const sData = await sRes.json();
+                  if (Array.isArray(sData.series) && sData.series.length > 0) {
+                    for (const ser of sData.series) {
+                      if (Array.isArray(ser.episodes) && ser.episodes.length > 0) {
+                        munoEpisodes.push(...ser.episodes);
+                      }
+                    }
+                  }
+                  if (Array.isArray(sData.movies) && sData.movies.length > 0) {
+                    const epMovies = sData.movies.filter((m: any) =>
+                      m.playingurl && /\b(?:s\d{1,2}|ep(?:isode)?\s*\d+|part\s*\d+)\b/i.test(m.title || "")
+                    );
+                    munoEpisodes.push(...epMovies);
+                  }
                 }
               }
             } catch {}

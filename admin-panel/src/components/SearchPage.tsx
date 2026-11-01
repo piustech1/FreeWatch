@@ -41,7 +41,7 @@ export const FOLDER_CATEGORIES = [
   { title: "Action", poster: "https://image.tmdb.org/t/p/w500/bjiS5ipwxb9JFy3XRRN4OAilSeX.jpg", query: "Action" },
   { title: "Horror", poster: "https://image.tmdb.org/t/p/w500/wVYREutTvI2tmxr6ujrHT704wGF.jpg", query: "Horror" },
   { title: "Series", poster: "https://image.tmdb.org/t/p/w500/7O4iVfOMQmdCSxhOg1WnzG1AgYT.jpg", query: "Series" },
-  { title: "Adventure", poster: "https://image.tmdb.org/t/p/w500/8b8R8l88Qje9dn9OE8PY05Nxl1X.jpg", query: "Adventure" },
+  { title: "Adventure", poster: "https://apposters.b-cdn.net/laba/yo/naki/nxiy6310.jpg", query: "Adventure" },
   { title: "Love Story", poster: "https://image.tmdb.org/t/p/w500/q6y0Go1tsGEsmtFryDOJo3dEmqu.jpg", query: "Love Story" },
   { title: "Comedy", poster: "https://image.tmdb.org/t/p/w500/iuFNMS8U5cb6xfzi51Dbkovj7vM.jpg", query: "Comedy" },
   { title: "Crime", poster: "https://image.tmdb.org/t/p/w500/74xTEgt7R36Fpooo50r9T25onhq.jpg", query: "Crime" },
@@ -94,6 +94,9 @@ export const SearchPage: React.FC<SearchPageProps> = ({
         }
         if (q === "animation") {
           return inCat || inGenres || /animation|anime|cartoon|panda|sonic|moana|robot/i.test(m.title + " " + m.category);
+        }
+        if (q === "adventure") {
+          return inCat || inGenres || /adventure|journey|quest|safari|expedition|jungle|treasure|island|explore|hunter|survival|wild|tomb|lost|sheriff|wells/i.test(m.title + " " + m.overview) || (m.category === "Action" && !/romance|love/i.test(m.title));
         }
         if (q === "sport") {
           return inCat || inGenres || /sport|football|soccer|box|fight|race|run|ball|athlete/i.test(m.title + " " + m.overview) || m.category === "Action";
@@ -196,7 +199,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({
               vj: cleaned.vj || 'VJ Junior',
               category: isTv ? 'Series' : (m.category || 'Action'),
               genres: isTv ? ['Series', 'Luganda Dubbed'] : (m.genres || [m.category || 'Action', 'Luganda Dubbed']),
-              imageUrl: m.poster || m.image || 'https://apposters.b-cdn.net/laba/yo/naki/gNxs2151.jpg',
+              imageUrl: m.imageUrl || m.poster || m.image || 'https://apposters.b-cdn.net/laba/yo/naki/01d9.jpg',
               backdropUrl: m.backdrop || m.backdrop_path || m.poster || 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1600&auto=format&fit=crop&q=80',
               rating: String(m.rating || '8.5'),
               year: String(m.year || '2025'),

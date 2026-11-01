@@ -51,9 +51,13 @@ export const CategorySeeAllPage: React.FC<CategorySeeAllPageProps> = ({
     seriesMovies,
     actionMovies,
     dramaMovies,
+    romanceMovies,
+    comedyMovies,
     sciFiMovies,
     horrorMovies,
-    comedyMovies,
+    animationMovies,
+    familyMovies,
+    adventureMovies,
   } = useLiveCatalog();
 
   const moviesToDisplay: CatalogMovie[] = useMemo(() => {
@@ -61,13 +65,19 @@ export const CategorySeeAllPage: React.FC<CategorySeeAllPageProps> = ({
     if (t.includes("latest")) return latestMovies;
     if (t.includes("trend")) return trendingMovies;
     if (t.includes("series") || t.includes("tv")) return seriesMovies.length > 0 ? seriesMovies : catalog.filter((m) => m.isTv);
+    if (t.includes("adventure")) return adventureMovies && adventureMovies.length > 0 ? adventureMovies : actionMovies;
     if (t.includes("action")) return actionMovies.length > 0 ? actionMovies : latestMovies.filter((m) => !m.isTv);
-    if (t.includes("sci-fi") || t.includes("fantasy")) return sciFiMovies.length > 0 ? sciFiMovies : latestMovies.filter((m) => !m.isTv);
-    if (t.includes("romance") || t.includes("drama")) return dramaMovies.length > 0 ? dramaMovies : latestMovies.filter((m) => !m.isTv);
+    if (t.includes("sci-fi") || t.includes("fantasy") || t.includes("sci fi")) return sciFiMovies.length > 0 ? sciFiMovies : latestMovies.filter((m) => !m.isTv);
+    if (t.includes("romance") || t.includes("love")) return romanceMovies && romanceMovies.length > 0 ? romanceMovies : dramaMovies;
+    if (t.includes("drama")) return dramaMovies.length > 0 ? dramaMovies : latestMovies.filter((m) => !m.isTv);
     if (t.includes("horror") || t.includes("thriller")) return horrorMovies.length > 0 ? horrorMovies : latestMovies.filter((m) => !m.isTv);
     if (t.includes("comedy")) return comedyMovies.length > 0 ? comedyMovies : latestMovies.filter((m) => !m.isTv);
-    return catalog;
-  }, [categoryTitle, latestMovies, trendingMovies, seriesMovies, actionMovies, sciFiMovies, dramaMovies, horrorMovies, comedyMovies, catalog]);
+    if (t.includes("animation") || t.includes("anime") || t.includes("cartoon")) return animationMovies && animationMovies.length > 0 ? animationMovies : latestMovies.filter((m) => !m.isTv);
+    if (t.includes("family") || t.includes("kids")) return familyMovies && familyMovies.length > 0 ? familyMovies : latestMovies.filter((m) => !m.isTv);
+
+    const matched = catalog.filter((m) => !m.isTv && (m.category.toLowerCase().includes(t) || m.genres.some((g) => g.toLowerCase().includes(t))));
+    return matched.length > 0 ? matched : catalog.filter((m) => !m.isTv);
+  }, [categoryTitle, latestMovies, trendingMovies, seriesMovies, actionMovies, sciFiMovies, romanceMovies, dramaMovies, horrorMovies, comedyMovies, animationMovies, familyMovies, adventureMovies, catalog]);
 
   const renderIcon = () => {
     switch (iconType) {
