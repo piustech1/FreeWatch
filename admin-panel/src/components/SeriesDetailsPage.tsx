@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import Hls from "hls.js";
 import { FreeWatchLogo } from "./HomePage";
-import { useLiveCatalog, CatalogMovie } from "../data/liveCatalog";
+import { useLiveCatalog, CatalogMovie, parseSeriesEpisodeInfo } from "../data/liveCatalog";
 import { AvatarGraphic } from "./AvatarGraphic";
 import { UserProfileData } from "./EditProfileModal";
 import {
@@ -32,6 +32,55 @@ import {
 } from "../services/tmdb";
 import { VjBadge } from "./VjBadge";
 import { FloatingBottomNav } from "./FloatingBottomNav";
+
+const KNOWN_SERIES_COUNTS: Record<string, number> = {
+  yemin: 427,
+  mirzapur: 16,
+  "living for love": 3,
+  karikaada: 2,
+  kari: 2,
+};
+
+async function fetchEpisodeStream(title: string, epNum: number): Promise<string | null> {
+  try {
+    const clean = cleanTitleForTmdb(title);
+    const q = `${clean} ${epNum}`;
+    const res = await fetch(`https://mumowatch.ai.studio/search?q=${encodeURIComponent(q)}`);
+    if (res.ok) {
+      const data = await res.json();
+      const allItems: any[] = [];
+      if (Array.isArray(data.series)) {
+        data.series.forEach((s: any) => {
+          if (Array.isArray(s.episodes)) allItems.push(...s.episodes);
+        });
+      }
+      if (Array.isArray(data.movies)) {
+        allItems.push(...data.movies);
+      }
+      for (const item of allItems) {
+        const url = item.playingurl || item.playingUrl;
+        if (!url) continue;
+        const info = parseSeriesEpisodeInfo(item.title || "", true);
+        if (info.episodeNumber === epNum) {
+          return url;
+        }
+      }
+      const regex = new RegExp(`\\b(?:ep(?:isode)?|part)?\\s*0*${epNum}\\b`, "i");
+      for (const item of allItems) {
+        const url = item.playingurl || item.playingUrl;
+        if (url && regex.test(item.title || "")) {
+          return url;
+        }
+      }
+      if (allItems.length > 0 && (allItems[0].playingurl || allItems[0].playingUrl)) {
+        return allItems[0].playingurl || allItems[0].playingUrl;
+      }
+    }
+  } catch (err) {
+    console.warn("[SeriesDetails] Error resolving episode stream:", err);
+  }
+  return null;
+}
 
 interface SeriesDetailsPageProps {
   onBack: () => void;
@@ -65,6 +114,7 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
   const [isLoadingEpisodes, setIsLoadingEpisodes] = useState<boolean>(true);
   const [castList, setCastList] = useState<TmdbCastMember[]>([]);
   const [resolvedEpisodes, setResolvedEpisodes] = useState<CatalogMovie["episodes"]>([]);
+  const [isResolvingEpisodeStream, setIsResolvingEpisodeStream] = useState<boolean>(false);
   const [healedDetails, setHealedDetails] = useState<{ title?: string; vj?: string; streamUrl?: string; imageUrl?: string } | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -254,42 +304,82 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
             seen.add(key);
             return true;
           });
+
+          // Sort munoEpisodes by episode number extracted from title
+          munoEpisodes.sort((a: any, b: any) => {
+            const numA = parseSeriesEpisodeInfo(a.title || "", true).episodeNumber || 9999;
+            const numB = parseSeriesEpisodeInfo(b.title || "", true).episodeNumber || 9999;
+            return numA - numB;
+          });
         }
 
-        if (!cancelled && munoEpisodes.length > 0) {
-          const mapped = munoEpisodes.map((ep: any, idx: number) => {
-            const epNum = idx + 1;
+        const knownSeriesEntry = Object.entries(KNOWN_SERIES_COUNTS).find(([k]) => lowerTitle.includes(k));
+        const knownCount = knownSeriesEntry ? knownSeriesEntry[1] : 0;
+
+        // Map discovered MunoWatch episodes by their parsed episode number
+        const mappedByNum = new Map<number, any>();
+        for (const ep of munoEpisodes) {
+          const info = parseSeriesEpisodeInfo(ep.title || "", true);
+          const epNum = info.episodeNumber || (mappedByNum.size + 1);
+          if (!mappedByNum.has(epNum)) {
             const tmdbEp = tmdbEps.find((t) => t.episodeNumber === epNum);
-            return {
+            mappedByNum.set(epNum, {
               num: epNum,
               title: ep.title || tmdbEp?.name || `${activeSeries.title} Episode ${epNum}`,
               duration: tmdbEp?.runtime ? `${tmdbEp.runtime}m` : "45m",
-              streamUrl: ep.playingurl || ep.playingUrl || activeSeries.streamUrl,
+              streamUrl: ep.playingurl || ep.playingUrl || "",
               stillUrl:
                 tmdbEp?.stillUrl ||
                 ep.image ||
                 ep.thumbnail ||
                 activeSeries.backdropUrl ||
                 activeSeries.imageUrl,
-            };
-          });
+            });
+          }
+        }
 
-          // If MunoWatch search returned fewer episodes than TMDB has for the full season:
-          if (tmdbEps.length > mapped.length) {
-            for (let i = mapped.length; i < tmdbEps.length; i++) {
-              const te = tmdbEps[i];
-              mapped.push({
-                num: te.episodeNumber || (i + 1),
-                title: te.name || `${activeSeries.title} Episode ${i + 1}`,
-                duration: te.runtime ? `${te.runtime}m` : "48m",
-                streamUrl: activeSeries.streamUrl || mapped[0]?.streamUrl,
-                stillUrl: te.stillUrl || activeSeries.backdropUrl || activeSeries.imageUrl,
+        // Also incorporate any episodes already passed in activeSeries.episodes
+        if (Array.isArray(activeSeries.episodes)) {
+          for (const ep of activeSeries.episodes) {
+            if (!mappedByNum.has(ep.num)) {
+              mappedByNum.set(ep.num, {
+                num: ep.num,
+                title: ep.title || `${activeSeries.title} Episode ${ep.num}`,
+                duration: ep.duration || "45m",
+                streamUrl: ep.streamUrl || "",
+                stillUrl: activeSeries.backdropUrl || activeSeries.imageUrl,
               });
             }
           }
+        }
 
-          setResolvedEpisodes(mapped);
-          return;
+        const maxDiscoveredNum = mappedByNum.size > 0 ? Math.max(...Array.from(mappedByNum.keys())) : 0;
+        const targetEpisodeCount = Math.max(
+          maxDiscoveredNum,
+          tmdbEps.length,
+          knownCount
+        );
+
+        if (targetEpisodeCount > 0) {
+          const fullEpisodeList = [];
+          for (let i = 1; i <= targetEpisodeCount; i++) {
+            if (mappedByNum.has(i)) {
+              fullEpisodeList.push(mappedByNum.get(i));
+            } else {
+              const tmdbEp = tmdbEps.find((t) => t.episodeNumber === i);
+              fullEpisodeList.push({
+                num: i,
+                title: tmdbEp?.name || `${activeSeries.title} Episode ${i}`,
+                duration: tmdbEp?.runtime ? `${tmdbEp.runtime}m` : "45m",
+                streamUrl: "", // Blank until on-demand resolved to prevent playing Episode 1!
+                stillUrl: tmdbEp?.stillUrl || activeSeries.backdropUrl || activeSeries.imageUrl,
+              });
+            }
+          }
+          if (!cancelled) {
+            setResolvedEpisodes(fullEpisodeList);
+            return;
+          }
         }
 
         if (!cancelled && tmdbEps.length > 0) {
@@ -297,7 +387,7 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
             num: te.episodeNumber,
             title: te.name,
             duration: te.runtime ? `${te.runtime}m` : "45m",
-            streamUrl: activeSeries.streamUrl,
+            streamUrl: "",
             stillUrl: te.stillUrl || activeSeries.backdropUrl,
           }));
           setResolvedEpisodes(mapped);
@@ -361,8 +451,8 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
 
   const currentEpisode = episodes[activeEpisodeIndex] || episodes[0];
   const streamUrl = useMemo(
-    () => sanitizeStreamUrl(currentEpisode?.streamUrl || activeSeries.streamUrl),
-    [currentEpisode, activeSeries.streamUrl]
+    () => sanitizeStreamUrl(currentEpisode?.streamUrl || (episodes.length <= 1 ? activeSeries.streamUrl : "")),
+    [currentEpisode, activeSeries.streamUrl, episodes.length]
   );
 
   // Sync bookmarks from localStorage
@@ -470,14 +560,40 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
     };
   }, [isPlaying, streamUrl]);
 
-  const handleNextEpisode = () => {
-    if (episodes.length === 0) return;
-    const nextIdx = (activeEpisodeIndex + 1) % episodes.length;
+  const handleSelectEpisode = async (idx: number) => {
     if (videoRef.current) {
       videoRef.current.pause();
     }
-    setActiveEpisodeIndex(nextIdx);
+    setActiveEpisodeIndex(idx);
     setIsPlaying(true);
+    setStreamError(false);
+
+    const targetEp = episodes[idx];
+    if (!targetEp) return;
+
+    if (!targetEp.streamUrl) {
+      setIsResolvingEpisodeStream(true);
+      const fetchedUrl = await fetchEpisodeStream(displayTitle, targetEp.num);
+      setIsResolvingEpisodeStream(false);
+      if (fetchedUrl) {
+        setResolvedEpisodes((prev) => {
+          if (!prev || prev.length === 0) return prev;
+          const updated = [...prev];
+          if (updated[idx]) {
+            updated[idx] = { ...updated[idx], streamUrl: fetchedUrl };
+          }
+          return updated;
+        });
+      } else {
+        setStreamError(true);
+      }
+    }
+  };
+
+  const handleNextEpisode = () => {
+    if (episodes.length === 0) return;
+    const nextIdx = (activeEpisodeIndex + 1) % episodes.length;
+    handleSelectEpisode(nextIdx);
   };
 
   return (
@@ -487,7 +603,13 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
         <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={onBack}
+            onClick={() => {
+              if (isPlaying) {
+                setIsPlaying(false);
+              } else {
+                onBack();
+              }
+            }}
             className="p-1.5 -ml-1 text-white hover:text-[#00E676] active:scale-95 transition-all cursor-pointer rounded-full hover:bg-white/10 flex items-center justify-center"
             aria-label="Back"
           >
@@ -539,7 +661,9 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
               {/* Overlay Back Button during Playback */}
               <button
                 type="button"
-                onClick={onBack}
+                onClick={() => {
+                  setIsPlaying(false);
+                }}
                 className="absolute top-4 left-4 z-30 p-2 rounded-full bg-black/70 hover:bg-black text-white hover:text-[#00E676] backdrop-blur-md transition-all active:scale-95 shadow-lg cursor-pointer"
                 aria-label="Back"
               >
@@ -554,6 +678,19 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
                 playsInline
                 className="w-full h-full object-contain"
               />
+
+              {/* Episode stream resolving loader */}
+              {isResolvingEpisodeStream && (
+                <div className="absolute inset-0 bg-black/85 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center z-25 pointer-events-none">
+                  <Loader2 className="w-10 h-10 text-[#00E676] animate-spin mb-3" />
+                  <h3 className="text-base font-bold text-white mb-1">
+                    Loading Episode {currentEpisode?.num}...
+                  </h3>
+                  <p className="text-xs text-neutral-400 max-w-sm">
+                    Connecting to FreeWatch CDN server for episode {currentEpisode?.num}
+                  </p>
+                </div>
+              )}
 
               {/* Error Overlay */}
               {streamError && (
@@ -622,7 +759,7 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
             <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
               <button
                 type="button"
-                onClick={() => setIsPlaying(true)}
+                onClick={() => handleSelectEpisode(activeEpisodeIndex)}
                 className="w-16 h-16 rounded-full bg-[#00E676] hover:bg-[#00c853] text-black flex items-center justify-center shadow-[0_0_30px_rgba(0,230,118,0.6)] hover:scale-110 active:scale-95 transition-transform cursor-pointer pointer-events-auto"
                 title="Play Series"
               >
@@ -677,7 +814,7 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
             if (isPlaying) {
               handleNextEpisode();
             } else {
-              setIsPlaying(true);
+              handleSelectEpisode(activeEpisodeIndex);
             }
           }}
           className="flex-1 h-12 rounded-full bg-[#00E676] hover:bg-[#00c853] text-black font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg shadow-[#00E676]/25 active:scale-[0.98] cursor-pointer"
@@ -812,13 +949,7 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
               return (
                 <div
                   key={ep.num}
-                  onClick={() => {
-                    if (videoRef.current) {
-                      videoRef.current.pause();
-                    }
-                    setActiveEpisodeIndex(idx);
-                    setIsPlaying(true);
-                  }}
+                  onClick={() => handleSelectEpisode(idx)}
                   className="w-[185px] sm:w-[210px] shrink-0 cursor-pointer group active:scale-[0.98] transition-transform select-none"
                 >
                   <div

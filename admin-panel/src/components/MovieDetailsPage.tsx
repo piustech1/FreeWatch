@@ -65,15 +65,16 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
 
   // Resolve active movie from prop or catalog lookup
   const activeMovie: CatalogMovie = useMemo(() => {
-    if (incomingMovie) return incomingMovie;
-    const found = catalog.find(
-      (m) =>
-        m.title.toLowerCase().trim() === movieTitle.toLowerCase().trim() ||
-        m.id === movieTitle
-    );
-    if (found) return found;
-    return (
-      latestMovies[0] || {
+    let resolved = incomingMovie;
+    if (!resolved) {
+      resolved = catalog.find(
+        (m) =>
+          m.title.toLowerCase().trim() === movieTitle.toLowerCase().trim() ||
+          m.id === movieTitle
+      );
+    }
+    if (!resolved) {
+      resolved = latestMovies[0] || {
         id: "default-movie",
         title: movieTitle,
         vj: "VJ Junior",
@@ -87,8 +88,13 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
         isTv: false,
         overview: `Experience ${movieTitle} in crisp full HD with exclusive, spiced-up Luganda translation. Streaming free on FreeWatch.`,
         streamUrl: "https://munotech3.b-cdn.net/gugwa/gugwa42/07.Mirzapur.SN2.VJ.Ashim.1080.mp4",
-      }
-    );
+      };
+    }
+    // Enforce isTv = false for all single movies so TMDB and player treat it strictly as a single movie
+    return {
+      ...resolved,
+      isTv: false,
+    };
   }, [incomingMovie, movieTitle, catalog, latestMovies]);
 
   const [healedDetails, setHealedDetails] = useState<{
@@ -308,7 +314,13 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
         <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={onBack}
+            onClick={() => {
+              if (isPlaying) {
+                setIsPlaying(false);
+              } else {
+                onBack();
+              }
+            }}
             className="p-1.5 -ml-1 text-white hover:text-[#00E676] active:scale-95 transition-all cursor-pointer rounded-full hover:bg-white/10 flex items-center justify-center"
             aria-label="Back"
           >
@@ -360,7 +372,9 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
               {/* Overlay Back Button during Playback */}
               <button
                 type="button"
-                onClick={onBack}
+                onClick={() => {
+                  setIsPlaying(false);
+                }}
                 className="absolute top-4 left-4 z-30 p-2 rounded-full bg-black/70 hover:bg-black text-white hover:text-[#00E676] backdrop-blur-md transition-all active:scale-95 shadow-lg cursor-pointer"
                 aria-label="Back"
               >

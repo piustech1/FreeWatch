@@ -25,36 +25,266 @@ export interface CatalogMovie {
 
 export const FALLBACK_MOVIES: CatalogMovie[] = [
   {
-    id: "67421",
-    title: "Mirzapur",
-    vj: "VJ Ashim",
-    category: "Series",
-    genres: ["Series", "Action", "Crime"],
-    imageUrl: "https://apposters.b-cdn.net/laba/yo/naki/gNxs2151.jpg",
-    backdropUrl: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1600&auto=format&fit=crop&q=80",
-    rating: "9.3",
+    id: "67492",
+    title: "Rise of the Footsoldier: Retribution",
+    vj: "VJ Junior",
+    category: "Action",
+    genres: ["Action", "Crime", "Luganda Dubbed"],
+    imageUrl: "https://apposters.b-cdn.net/laba/yo/naki/NgMI8697.jpg",
+    backdropUrl: "https://apposters.b-cdn.net/laba/yo/naki/NgMI8697.jpg",
+    rating: "9.2",
     year: "2025",
-    duration: "50m",
-    isTv: true,
-    seriesCode: "33624",
-    overview: "A shocking incident at a wedding procession ignites a series of events entangling two families in the lawless city of Mirzapur. Spiced up by VJ Ashim.",
-    streamUrl: "https://munotech3.b-cdn.net/gugwa/gugwa42/07.Mirzapur.SN2.VJ.Ashim.1080.mp4",
-    episodes: [
-      { num: 1, title: "Episode 1", duration: "50m", streamUrl: "https://munotech3.b-cdn.net/gugwa/gugwa42/01.Mirzapur.SN1.VJ.Ashim.1080.mp4" },
-      { num: 2, title: "Episode 2", duration: "48m", streamUrl: "https://munotech3.b-cdn.net/gugwa/gugwa42/02.Mirzapur.SN2.VJ.Ashim.1080.mp4" },
-      { num: 3, title: "Episode 3", duration: "52m", streamUrl: "https://munotech3.b-cdn.net/gugwa/gugwa42/03.Mirzapur.SN2.VJ.Ashim.1080.mp4" },
-      { num: 4, title: "Episode 4", duration: "51m", streamUrl: "https://munotech3.b-cdn.net/gugwa/gugwa42/04.Mirzapur.SN2.VJ.Ashim.1080.mp4" },
-      { num: 5, title: "Episode 5", duration: "49m", streamUrl: "https://munotech3.b-cdn.net/gugwa/gugwa42/05.Mirzapur.SN2.VJ.Ashim.1080.mp4" },
-      { num: 6, title: "Episode 6", duration: "53m", streamUrl: "https://munotech3.b-cdn.net/gugwa/gugwa42/06.Mirzapur.SN2.VJ.Ashim.1080.mp4" },
-      { num: 7, title: "Episode 7", duration: "50m", streamUrl: "https://munotech3.b-cdn.net/gugwa/gugwa42/07.Mirzapur.SN2.VJ.Ashim.1080.mp4" },
-    ]
+    duration: "1h 44m",
+    isTv: false,
+    overview: "Pat Tate travels to Ibiza, Spain to seek revenge and track down criminals who murdered his friend. Luganda translation by VJ Junior.",
+    streamUrl: "http://munotech2.b-cdn.net/subaru/subaru42/Rise of The Footsoldier Retribution.mp4"
+  },
+  {
+    id: "67469",
+    title: "The Sheriffs Of Savage Wells",
+    vj: "VJ Muba",
+    category: "Action",
+    genres: ["Action", "Western", "Luganda Dubbed"],
+    imageUrl: "https://apposters.b-cdn.net/laba/yo/naki/a8Md4897.jpg",
+    backdropUrl: "https://apposters.b-cdn.net/laba/yo/naki/a8Md4897.jpg",
+    rating: "8.9",
+    year: "2025",
+    duration: "1h 38m",
+    isTv: false,
+    overview: "A gripping western standoff between lawmen and ruthless outlaws in Savage Wells. Spiced up by VJ Muba.",
+    streamUrl: "http://munotech3.b-cdn.net/mbaata/mbaata21/The.Sheriffs.Of.Savage.Wells..mp4"
+  },
+  {
+    id: "67468",
+    title: "Ghost in the Cell",
+    vj: "VJ Muba",
+    category: "Horror",
+    genres: ["Horror", "Mystery", "Luganda Dubbed"],
+    imageUrl: "https://apposters.b-cdn.net/laba/yo/naki/bFX49260.jpg",
+    backdropUrl: "https://apposters.b-cdn.net/laba/yo/naki/bFX49260.jpg",
+    rating: "8.8",
+    year: "2026",
+    duration: "1h 40m",
+    isTv: false,
+    overview: "Chilling supernatural entities terrorize inmates trapped in an abandoned high-security penitentiary. Translated by VJ Muba.",
+    streamUrl: "http://munotech3.b-cdn.net/mbaata/mbaata21/Ghost.In.The.Cell.2026.mp4"
+  },
+  {
+    id: "67467",
+    title: "Kill Will",
+    vj: "VJ Muba",
+    category: "Action",
+    genres: ["Action", "Thriller", "Luganda Dubbed"],
+    imageUrl: "https://apposters.b-cdn.net/laba/yo/naki/YaVQ3808.jpg",
+    backdropUrl: "https://apposters.b-cdn.net/laba/yo/naki/YaVQ3808.jpg",
+    rating: "8.7",
+    year: "2026",
+    duration: "1h 45m",
+    isTv: false,
+    overview: "A high-stakes manhunt turns into a deadly game of survival when an operative turns against his syndicate. Spiced up by VJ Muba.",
+    streamUrl: "http://yuti.b-cdn.net/kafulaano/kafulaano42/Kill.Will.2026.mp4"
+  },
+  {
+    id: "67465",
+    title: "Theri",
+    vj: "VJ Muba",
+    category: "Action",
+    genres: ["Action", "Crime", "Luganda Dubbed"],
+    imageUrl: "https://apposters.b-cdn.net/laba/yo/naki/gNxs2151.jpg",
+    backdropUrl: "https://apposters.b-cdn.net/laba/yo/naki/gNxs2151.jpg",
+    rating: "9.1",
+    year: "2025",
+    duration: "2h 15m",
+    isTv: false,
+    overview: "An honest cop goes into hiding to protect his daughter, but his dark past catches up to him. Translated by VJ Muba.",
+    streamUrl: "http://yuti.b-cdn.net/kafulaano/kafulaano42/Theri Part 1-nycetv.mp4"
+  },
+  {
+    id: "67437",
+    title: "Verity",
+    vj: "VJ Junior",
+    category: "Drama",
+    genres: ["Drama", "Thriller", "Luganda Dubbed"],
+    imageUrl: "https://apposters.b-cdn.net/laba/yo/naki/Ta4l2009.jpg",
+    backdropUrl: "https://apposters.b-cdn.net/laba/yo/naki/Ta4l2009.jpg",
+    rating: "9.0",
+    year: "2025",
+    duration: "1h 50m",
+    isTv: false,
+    overview: "A struggling writer uncovers shocking secrets while completing the manuscripts of an injured author. Translated by VJ Junior.",
+    streamUrl: "http://nkuba.b-cdn.net/cleve48/cfr/Verity.mp4"
+  },
+  {
+    id: "67436",
+    title: "Drive - The Pretenders",
+    vj: "VJ Junior",
+    category: "Action",
+    genres: ["Action", "Crime", "Luganda Dubbed"],
+    imageUrl: "https://apposters.b-cdn.net/laba/yo/naki/SbSf9164.jpg",
+    backdropUrl: "https://apposters.b-cdn.net/laba/yo/naki/SbSf9164.jpg",
+    rating: "8.9",
+    year: "2025",
+    duration: "1h 48m",
+    isTv: false,
+    overview: "Adrenaline-fueled underground getaway racing with lethal stakes. Spiced up by VJ Junior.",
+    streamUrl: "http://harvetz.b-cdn.net/hvt43/kai43/Drive The Pretender.mp4"
+  },
+  {
+    id: "67435",
+    title: "The Cycle",
+    vj: "VJ Junior",
+    category: "Action",
+    genres: ["Action", "Thriller", "Luganda Dubbed"],
+    imageUrl: "https://apposters.b-cdn.net/laba/yo/naki/a8Md4897.jpg",
+    backdropUrl: "https://apposters.b-cdn.net/laba/yo/naki/a8Md4897.jpg",
+    rating: "8.8",
+    year: "2025",
+    duration: "1h 42m",
+    isTv: false,
+    overview: "Trapped in an inescapable temporal loop, an investigator must uncover the conspirators before time resets. Translated by VJ Junior.",
+    streamUrl: "http://munotek-vault.b-cdn.net/stw42/fya/The Cycle.mp4"
+  },
+  {
+    id: "67433",
+    title: "Zero",
+    vj: "VJ Soul",
+    category: "Action",
+    genres: ["Action", "Sci-Fi", "Luganda Dubbed"],
+    imageUrl: "https://apposters.b-cdn.net/laba/yo/naki/bFX49260.jpg",
+    backdropUrl: "https://apposters.b-cdn.net/laba/yo/naki/bFX49260.jpg",
+    rating: "8.7",
+    year: "2025",
+    duration: "1h 46m",
+    isTv: false,
+    overview: "A rogue operative with nothing left to lose takes on a global syndicate. Luganda voice-over by VJ Soul.",
+    streamUrl: "http://harvetz.b-cdn.net/hvt43/kai43/ZERO-.SOUL.mp4"
+  },
+  {
+    id: "67432",
+    title: "72 Hours",
+    vj: "VJ Soul",
+    category: "Action",
+    genres: ["Action", "Crime", "Luganda Dubbed"],
+    imageUrl: "https://apposters.b-cdn.net/laba/yo/naki/YaVQ3808.jpg",
+    backdropUrl: "https://apposters.b-cdn.net/laba/yo/naki/YaVQ3808.jpg",
+    rating: "8.6",
+    year: "2025",
+    duration: "1h 39m",
+    isTv: false,
+    overview: "A frantic countdown to deliver the ransom before midnight. Voice-over by VJ Soul.",
+    streamUrl: "http://harvetz.b-cdn.net/hvt43/kai43/72 HOURS-.SOUL.mp4"
+  },
+  {
+    id: "67431",
+    title: "Tad and the Magic Lamp",
+    vj: "VJ Mosco",
+    category: "Animation",
+    genres: ["Animation", "Family", "Adventure", "Luganda Dubbed"],
+    imageUrl: "https://apposters.b-cdn.net/laba/yo/naki/gNxs2151.jpg",
+    backdropUrl: "https://apposters.b-cdn.net/laba/yo/naki/gNxs2151.jpg",
+    rating: "8.8",
+    year: "2025",
+    duration: "1h 32m",
+    isTv: false,
+    overview: "Clumsy explorer Tad unleashes ancient magic that sends him across the world. Translated by VJ Mosco.",
+    streamUrl: "http://lunoluno.b-cdn.net/timo28/tyu/TAD AND THE MAGIC LAMP VJ MOSCO.mp4"
+  },
+  {
+    id: "67430",
+    title: "PAW Patrol: The Dino Movie",
+    vj: "VJ Mosco",
+    category: "Animation",
+    genres: ["Animation", "Family", "Kids", "Luganda Dubbed"],
+    imageUrl: "https://apposters.b-cdn.net/laba/yo/naki/Ta4l2009.jpg",
+    backdropUrl: "https://apposters.b-cdn.net/laba/yo/naki/Ta4l2009.jpg",
+    rating: "8.9",
+    year: "2025",
+    duration: "1h 28m",
+    isTv: false,
+    overview: "Ryder and the pups head to Dino Wilds for an epic rescue mission. Translated by VJ Mosco.",
+    streamUrl: "http://lunoluno.b-cdn.net/timo28/tyu/PAW PATROL THE DINO MOVIE VJ MOSCO.mp4"
+  },
+  {
+    id: "67099",
+    title: "Accused",
+    vj: "VJ Emmy",
+    category: "Action",
+    genres: ["Action", "Thriller", "Luganda Dubbed"],
+    imageUrl: "https://apposters.b-cdn.net/laba/yo/naki/a8Md4897.jpg",
+    backdropUrl: "https://apposters.b-cdn.net/laba/yo/naki/a8Md4897.jpg",
+    rating: "8.9",
+    year: "2024",
+    duration: "1h 45m",
+    isTv: false,
+    overview: "Wrongfully accused of murdering his best friend, church minister Benson is finally released when the truth comes to light. But freedom brings no peace. Translated by VJ Emmy.",
+    streamUrl: "http://munotek-vault.b-cdn.net/ugmvs/ug2/Accused.2026.EMMY.1080.mp4"
+  },
+  {
+    id: "67098",
+    title: "Kifeesi",
+    vj: "VJ Emmy",
+    category: "Action",
+    genres: ["Action", "Crime", "Luganda Dubbed"],
+    imageUrl: "https://apposters.b-cdn.net/laba/yo/naki/SbSf9164.jpg",
+    backdropUrl: "https://apposters.b-cdn.net/laba/yo/naki/SbSf9164.jpg",
+    rating: "8.8",
+    year: "2024",
+    duration: "1h 35m",
+    isTv: false,
+    overview: "A ruthless underworld crime syndicate battles for dominance on the streets of Kampala. Translated by VJ Emmy.",
+    streamUrl: "http://munotek-vault.b-cdn.net/ugmvs/ug2/KIFEESI FINAL MOVIE-720 MP4 BY JAMES.mp4"
+  },
+  {
+    id: "67097",
+    title: "Nyoko: The Terrible Mother",
+    vj: "VJ Junior",
+    category: "Drama",
+    genres: ["Drama", "Luganda Dubbed"],
+    imageUrl: "https://apposters.b-cdn.net/laba/yo/naki/a8Md4897.jpg",
+    backdropUrl: "https://apposters.b-cdn.net/laba/yo/naki/a8Md4897.jpg",
+    rating: "8.6",
+    year: "2024",
+    duration: "1h 38m",
+    isTv: false,
+    overview: "A heartbreaking family conflict tests the limits of love and betrayal. Translated with Luganda narration.",
+    streamUrl: "http://munotek-vault.b-cdn.net/ugmvs/ug2/NYOKO THE TERRIBLE MOM SOUND.mp4"
+  },
+  {
+    id: "67096",
+    title: "Nabinene",
+    vj: "VJ Junior",
+    category: "Drama",
+    genres: ["Drama", "Romance", "Luganda Dubbed"],
+    imageUrl: "https://apposters.b-cdn.net/laba/yo/naki/SbSf9164.jpg",
+    backdropUrl: "https://apposters.b-cdn.net/laba/yo/naki/SbSf9164.jpg",
+    rating: "8.5",
+    year: "2024",
+    duration: "1h 42m",
+    isTv: false,
+    overview: "Dramatic tensions rise in a small village as deep-rooted secrets come to the surface. Luganda dubbed.",
+    streamUrl: "http://munotek-vault.b-cdn.net/ugmvs/ug2/NABINENE.mp4"
+  },
+  {
+    id: "67095",
+    title: "The Visit",
+    vj: "VJ Emmy",
+    category: "Horror",
+    genres: ["Horror", "Mystery", "Thriller", "Luganda Dubbed"],
+    imageUrl: "https://apposters.b-cdn.net/laba/yo/naki/bFX49260.jpg",
+    backdropUrl: "https://apposters.b-cdn.net/laba/yo/naki/bFX49260.jpg",
+    rating: "8.7",
+    year: "2024",
+    duration: "1h 34m",
+    isTv: false,
+    overview: "A sister and brother are sent to their grandparents' remote Pennsylvania farm for a week trip, only to discover disturbing secrets. Voice-over by VJ Emmy.",
+    streamUrl: "http://munotek-vault.b-cdn.net/ugmvs/ug2/THE VISIT VJ EMMY.mp4"
   },
   {
     id: "67364",
     title: "Animals",
     vj: "VJ Junior",
     category: "Action",
-    genres: ["Action", "Crime", "Thriller"],
+    genres: ["Action", "Crime", "Thriller", "Luganda Dubbed"],
     imageUrl: "https://apposters.b-cdn.net/laba/yo/naki/bFX49260.jpg",
     backdropUrl: "https://apposters.b-cdn.net/laba/yo/naki/bFX49260.jpg",
     rating: "9.1",
@@ -65,649 +295,78 @@ export const FALLBACK_MOVIES: CatalogMovie[] = [
     streamUrl: "http://lunoluno.b-cdn.net/timo28/tyu/Animals.mp4"
   },
   {
-    id: "67099",
-    title: "Accused",
-    vj: "VJ Emmy",
-    category: "Action",
-    genres: ["Action", "Thriller"],
-    imageUrl: "https://apposters.b-cdn.net/laba/yo/naki/a8Md4897.jpg",
-    backdropUrl: "https://munowatch.com/media/images/owlcarousel/292722983807.jpg",
-    rating: "8.9",
-    year: "2024",
-    duration: "1h 45m",
+    id: "67463",
+    title: "Just Say It: Alex Muhangi",
+    vj: "VJ Junior",
+    category: "Comedy",
+    genres: ["Comedy", "Drama", "Luganda Dubbed"],
+    imageUrl: "https://apposters.b-cdn.net/laba/yo/naki/gqxM7384.jpg",
+    backdropUrl: "https://apposters.b-cdn.net/laba/yo/naki/gqxM7384.jpg",
+    rating: "8.8",
+    year: "2025",
+    duration: "1h 27m",
     isTv: false,
-    overview: "Wrongfully accused of murdering his best friend, church minister Benson is finally released when the truth comes to light. But freedom brings no peace. Translated by VJ Emmy.",
-    streamUrl: "http://munotek-vault.b-cdn.net/ugmvs/ug2/Accused.2026.EMMY.1080.mp4"
+    overview: "Alex Muhangi opens up about his journey, comedy revolution, and untold stories from Uganda's entertainment industry.",
+    streamUrl: "http://munotek-vault.b-cdn.net/ugmvs/ug2/AlexMuhanji_final.mp4"
   },
   {
-    id: "67342",
-    title: "The Terminal List: Dark Wolf",
-    vj: "VJ Junior",
+    id: "67421",
+    title: "Mirzapur",
+    vj: "VJ Ashim",
     category: "Series",
-    genres: ["Series", "Action", "Thriller"],
-    imageUrl: "https://apposters.b-cdn.net/laba/yo/naki/YaVQ3808.jpg",
-    backdropUrl: "https://munowatch.com/media/images/owlcarousel/228038746205.jpg",
-    rating: "9.2",
-    year: "2024",
-    duration: "55m",
+    genres: ["Series", "Action", "Crime", "Luganda Dubbed"],
+    imageUrl: "https://apposters.b-cdn.net/laba/yo/naki/gNxs2151.jpg",
+    backdropUrl: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1600&auto=format&fit=crop&q=80",
+    rating: "9.3",
+    year: "2025",
+    duration: "50m",
     isTv: true,
-    seriesCode: "26058",
-    overview: "Navy SEAL Ben Edwards abruptly discharged from the military lands him a new job working with a mysterious CIA operative in covert intelligence. Spiced up by VJ Junior.",
-    streamUrl: "https://lunoluno.b-cdn.net/timo28/tyu/Self.Made.Inspired.by.the.Life.of.Madam.C.J.Walker.S01E01.mp4",
+    seriesCode: "33624",
+    overview: "A shocking incident at a wedding procession ignites a series of events entangling two families in the lawless city of Mirzapur. Spiced up by VJ Ashim.",
+    streamUrl: "http://munotech3.b-cdn.net/gugwa/gugwa42/01.Mirzapur.SN1.VJ.Ashim.1080.mp4",
     episodes: [
-      { num: 1, title: "Episode 1: The Call", duration: "55m", streamUrl: "https://lunoluno.b-cdn.net/timo28/tyu/Self.Made.Inspired.by.the.Life.of.Madam.C.J.Walker.S01E01.mp4" },
-      { num: 2, title: "Episode 2: Deep Cover", duration: "51m", streamUrl: "https://lunoluno.b-cdn.net/timo28/tyu/Self.Made.Inspired.by.the.Life.of.Madam.C.J.Walker.S01E01.mp4" }
+      { num: 1, title: "Episode 1", duration: "50m", streamUrl: "http://munotech3.b-cdn.net/gugwa/gugwa42/01.Mirzapur.SN1.VJ.Ashim.1080.mp4" },
+      { num: 2, title: "Episode 2", duration: "48m", streamUrl: "http://munotech3.b-cdn.net/gugwa/gugwa42/02.Mirzapur.SN1.VJ.Ashim.1080.mp4" },
+      { num: 3, title: "Episode 3", duration: "52m", streamUrl: "http://munotech3.b-cdn.net/gugwa/gugwa42/03.Mirzapur.SN1.VJ.Ashim.1080.mp4" },
+      { num: 4, title: "Episode 4", duration: "51m", streamUrl: "http://munotech3.b-cdn.net/gugwa/gugwa42/04.Mirzapur.SN1.VJ.Ashim.1080.mp4" },
+      { num: 5, title: "Episode 5", duration: "49m", streamUrl: "http://munotech3.b-cdn.net/gugwa/gugwa42/05.Mirzapur.SN1.VJ.Ashim.1080.mp4" },
+      { num: 6, title: "Episode 6", duration: "53m", streamUrl: "http://munotech3.b-cdn.net/gugwa/gugwa42/06.Mirzapur.SN1.VJ.Ashim.1080.mp4" },
+      { num: 7, title: "Episode 7", duration: "50m", streamUrl: "http://munotech3.b-cdn.net/gugwa/gugwa42/07.Mirzapur.SN2.VJ.Ashim.1080.mp4" }
     ]
   },
   {
-    id: "67369",
-    title: "Barbarian",
-    vj: "VJ Emmy",
-    category: "Horror",
-    genres: ["Horror", "Mystery", "Thriller"],
-    imageUrl: "https://image.tmdb.org/t/p/w780/b33nnKl1GSFbao4l3fZDDqsMx0F.jpg",
-    backdropUrl: "https://munowatch.com/media/images/owlcarousel/206472177583.jpg",
-    rating: "8.6",
-    year: "2024",
-    duration: "1h 42m",
-    isTv: false,
-    overview: "A young woman staying at an Airbnb rental discovers that the house is not what it seems to be in this terrifying horror thriller translated by VJ Emmy.",
-    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4"
-  },
-  {
-    id: "67378",
-    title: "Awarapan",
-    vj: "VJ Ice P",
-    category: "Action",
-    genres: ["Action", "Crime", "Drama"],
-    imageUrl: "https://image.tmdb.org/t/p/w780/8b8R8l88Qje9dn9OE8PY05Nxl1X.jpg",
-    backdropUrl: "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=1600&auto=format&fit=crop&q=80",
-    rating: "8.9",
-    year: "2024",
-    duration: "2h 10m",
-    isTv: false,
-    overview: "A remorseful hitman finds redemption when he decides to liberate a captive woman from his ruthless boss. Luganda voice-over by Omutaka VJ Ice P.",
-    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-  },
-  {
-    id: "67346",
-    title: "Just Say It: Ava Peace",
-    vj: "VJ Emmy",
-    category: "Drama",
-    genres: ["Drama", "Romance", "Music"],
-    imageUrl: "https://apposters.b-cdn.net/laba/yo/naki/Ta4l2009.jpg",
-    backdropUrl: "https://apposters.b-cdn.net/laba/yo/naki/Ta4l2009.jpg",
-    rating: "8.5",
-    year: "2024",
-    duration: "1h 30m",
-    isTv: false,
-    overview: "Deep personal revelations and intense drama unfold in this touching Ugandan production translated by VJ Emmy.",
-    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-  },
-  {
-    id: "67185",
-    title: "Just Say It: Lillian Mbabazi",
-    vj: "VJ Junior",
-    category: "Drama",
-    genres: ["Drama", "Romance", "Music"],
-    imageUrl: "https://apposters.b-cdn.net/laba/yo/naki/SbSf9164.jpg",
-    backdropUrl: "https://apposters.b-cdn.net/laba/yo/naki/SbSf9164.jpg",
-    rating: "8.6",
-    year: "2024",
-    duration: "1h 35m",
-    isTv: false,
-    overview: "A candid musical drama exploring fame, love, and life challenges. Spiced up by VJ Junior.",
-    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-  },
-  {
-    id: "68001",
-    title: "Purple Hearts",
-    vj: "VJ Junior",
-    category: "Romance",
-    genres: ["Romance", "Drama", "Music"],
-    imageUrl: "https://image.tmdb.org/t/p/w500/5qHoazZiaLe7oFBok7XlUhg96f2.jpg",
-    backdropUrl: "https://image.tmdb.org/t/p/w1280/5qHoazZiaLe7oFBok7XlUhg96f2.jpg",
-    rating: "8.8",
-    year: "2024",
-    duration: "2h 02m",
-    isTv: false,
-    overview: "An aspiring musician and a troubled marine agree to marry solely for military benefits, but tragedy soon turns their fake love into reality. Translated by VJ Junior.",
-    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4"
-  },
-  {
-    id: "68002",
-    title: "The Idea of You",
-    vj: "VJ Emmy",
-    category: "Romance",
-    genres: ["Romance", "Comedy", "Drama"],
-    imageUrl: "https://image.tmdb.org/t/p/w500/Y5P4Q3q8nrruZ9aD3wXeJS2Plg.jpg",
-    backdropUrl: "https://image.tmdb.org/t/p/w1280/sI6uCeF8mUlZx22mFfHSi9W3XQ9.jpg",
-    rating: "8.7",
-    year: "2024",
-    duration: "1h 55m",
-    isTv: false,
-    overview: "A 40-year-old single mother begins an unexpected romance with the 24-year-old lead singer of the hottest boy band on the planet. Voice-over by VJ Emmy.",
-    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4"
-  },
-  {
-    id: "68003",
-    title: "Through My Window",
-    vj: "VJ Jingo",
-    category: "Romance",
-    genres: ["Romance", "Drama"],
-    imageUrl: "https://image.tmdb.org/t/p/w500/jmkpZvMVIRrMFevxzOubSBfG0s0.jpg",
-    backdropUrl: "https://image.tmdb.org/t/p/w1280/rlxYDekulLYDgU6vUIkI0NW5yFR.jpg",
-    rating: "8.5",
-    year: "2024",
-    duration: "1h 53m",
-    isTv: false,
-    overview: "Raquel's long-standing crush on her next-door neighbor turns into something more when he starts developing feelings for her, despite his family's objections. Translated by VJ Jingo.",
-    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-  },
-  {
-    id: "68004",
-    title: "Anyone But You",
-    vj: "VJ Junior",
-    category: "Romance",
-    genres: ["Romance", "Comedy"],
-    imageUrl: "https://image.tmdb.org/t/p/w500/5qHoazZiaLe7oFBok7XlUhg96f2.jpg",
-    backdropUrl: "https://image.tmdb.org/t/p/w1280/j9eOeLlTGoHoM8BNUJVNyWmIvCi.jpg",
-    rating: "8.7",
-    year: "2024",
-    duration: "1h 43m",
-    isTv: false,
-    overview: "After an amazing first date, Bea and Ben's fiery attraction turns ice-cold until they find themselves unexpectedly reunited at a destination wedding in Australia. Translated by VJ Junior.",
-    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-  },
-  {
-    id: "68005",
-    title: "Past Lives",
-    vj: "VJ Emmy",
-    category: "Romance",
-    genres: ["Romance", "Drama"],
-    imageUrl: "https://image.tmdb.org/t/p/w500/k3waqVXSnvCZWfJYNtdamTgTtTA.jpg",
-    backdropUrl: "https://image.tmdb.org/t/p/w1280/7HR38hMBl23lf38MAN63y4pKsHz.jpg",
-    rating: "8.9",
-    year: "2023",
-    duration: "1h 45m",
-    isTv: false,
-    overview: "Nora and Hae Sung, two deeply connected childhood friends, are wrest apart after Nora's family emigrates from South Korea. Decades later, they reunite in New York. Translated by VJ Emmy.",
-    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-  },
-  {
-    id: "68006",
-    title: "It Ends with Us",
-    vj: "VJ Junior",
-    category: "Romance",
-    genres: ["Romance", "Drama"],
-    imageUrl: "https://image.tmdb.org/t/p/w500/AjV6jFJ2YFIluYo4GQf13AA1tqu.jpg",
-    backdropUrl: "https://image.tmdb.org/t/p/w1280/8yPSYhooj8nyBbmV3GVdLDwuE7e.jpg",
-    rating: "8.6",
-    year: "2024",
-    duration: "2h 10m",
-    isTv: false,
-    overview: "Lily Bloom overcomes a traumatic childhood to embark on a new life in Boston. A chance meeting with charming neurosurgeon Ryle sparks an intense connection. Luganda dubbed by VJ Junior.",
-    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-  },
-  {
-    id: "68007",
-    title: "Me Before You",
-    vj: "VJ Junior",
-    category: "Romance",
-    genres: ["Romance", "Drama"],
-    imageUrl: "https://image.tmdb.org/t/p/w500/oo2Q3T8juOYFh2G1YJ3oSMAfUyq.jpg",
-    backdropUrl: "https://image.tmdb.org/t/p/w1280/3WK7p9EdZmmvB1IbB2Vw9Rf4lXH.jpg",
-    rating: "8.8",
-    year: "2016",
-    duration: "1h 50m",
-    isTv: false,
-    overview: "A cheerful, quirky caregiver forms an unlikely bond with a recently paralyzed wealthy man who has lost his will to live. Emotional blockbuster translated by VJ Junior.",
-    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-  },
-  {
-    id: "68008",
-    title: "Five Feet Apart",
-    vj: "VJ Jingo",
-    category: "Romance",
-    genres: ["Romance", "Drama"],
-    imageUrl: "https://image.tmdb.org/t/p/w500/kreTuJBkUjVWePRfhHZuYfhNE1T.jpg",
-    backdropUrl: "https://image.tmdb.org/t/p/w1280/cYdHaKx6Ihj1BIvbxpCxIGXfZ02.jpg",
-    rating: "8.5",
-    year: "2019",
-    duration: "1h 56m",
-    isTv: false,
-    overview: "Two teenagers with life-threatening illnesses meet in a hospital and fall in love, though their condition dictates they must maintain a physical distance. Translated by VJ Jingo.",
-    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-  },
-  {
-    id: "68009",
-    title: "Midnight Sun",
-    vj: "VJ Sammy",
-    category: "Romance",
-    genres: ["Romance", "Drama"],
-    imageUrl: "https://image.tmdb.org/t/p/w500/vPG2zEKPXhovPW9S91SRnwr5JM1.jpg",
-    backdropUrl: "https://image.tmdb.org/t/p/w1280/9T8sj5io4SGCBTHsk5H8LGcfKVe.jpg",
-    rating: "8.4",
-    year: "2018",
-    duration: "1h 31m",
-    isTv: false,
-    overview: "Sheltered since childhood due to a rare sensitivity to sunlight, a young singer embarks on a nighttime romance that changes her world forever. Voice-over by VJ Sammy.",
-    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-  },
-  {
-    id: "68010",
-    title: "The Fault in Our Stars",
-    vj: "VJ Junior",
-    category: "Romance",
-    genres: ["Romance", "Drama"],
-    imageUrl: "https://image.tmdb.org/t/p/w500/kcVuktIlrn9SAN1uBmPDnocTQmF.jpg",
-    backdropUrl: "https://image.tmdb.org/t/p/w1280/oQaVV7p916HO5MDI820zzs1pin9.jpg",
-    rating: "8.9",
-    year: "2014",
-    duration: "2h 06m",
-    isTv: false,
-    overview: "Two cancer patients meet at a support group and form a life-affirming bond, traveling together to Amsterdam on a journey of love and discovery. Translated by VJ Junior.",
-    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-  },
-  {
-    id: "68011",
-    title: "The Notebook",
-    vj: "VJ Junior",
-    category: "Romance",
-    genres: ["Romance", "Drama"],
-    imageUrl: "https://image.tmdb.org/t/p/w500/rNzQyW4f8B8cQeg7Dgj3n6eT5k9.jpg",
-    backdropUrl: "https://image.tmdb.org/t/p/w1280/zdXnJqBaGFVtLoPNuMeKfEYUViZ.jpg",
-    rating: "9.0",
-    year: "2004",
-    duration: "2h 03m",
-    isTv: false,
-    overview: "An epic love story spanning decades between a poor country boy and an affluent heiress, defying social divisions and world war. Luganda translation by VJ Junior.",
-    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-  },
-  {
-    id: "68012",
-    title: "A Star Is Born",
-    vj: "VJ Emmy",
-    category: "Romance",
-    genres: ["Romance", "Drama", "Music"],
-    imageUrl: "https://image.tmdb.org/t/p/w500/wrFpXMNBRj2PBiN4Z5kix51XaIZ.jpg",
-    backdropUrl: "https://image.tmdb.org/t/p/w1280/dDYpjrwh1wNVQk0rEpc9P81wQt4.jpg",
-    rating: "8.7",
-    year: "2018",
-    duration: "2h 16m",
-    isTv: false,
-    overview: "Seasoned musician Jackson Maine discovers and falls in love with struggling artist Ally, coaxing her into the spotlight while his own demons threaten to derail everything. Translated by VJ Emmy.",
-    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-  },
-  {
-    id: "68013",
-    title: "La La Land",
-    vj: "VJ Junior",
-    category: "Romance",
-    genres: ["Romance", "Comedy", "Music"],
-    imageUrl: "https://image.tmdb.org/t/p/w500/uDO8zWDhfWwoFdKS4fzkUJt0Rf0.jpg",
-    backdropUrl: "https://image.tmdb.org/t/p/w1280/nlPCdZlHtRNcF6C9hzUH4ebmV1w.jpg",
-    rating: "8.9",
-    year: "2016",
-    duration: "2h 08m",
-    isTv: false,
-    overview: "While navigating their careers in Los Angeles, a pianist and an actress fall in love while attempting to reconcile their aspirations for the future. Spiced up by VJ Junior.",
-    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-  },
-  {
-    id: "68014",
-    title: "Twilight",
-    vj: "VJ Junior",
-    category: "Romance",
-    genres: ["Romance", "Fantasy", "Drama"],
-    imageUrl: "https://image.tmdb.org/t/p/w500/3Gkb6jm6962ADUPaCBqzz9CTbn9.jpg",
-    backdropUrl: "https://image.tmdb.org/t/p/w1280/weAYfu6FfrNxEDJ3xH1XpgQcqUv.jpg",
-    rating: "8.6",
-    year: "2008",
-    duration: "2h 02m",
-    isTv: false,
-    overview: "When Bella Swan moves to a small town, she falls in love with Edward Cullen, a mysterious classmate who reveals himself to be a 108-year-old vampire. Luganda dubbed by VJ Junior.",
-    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-  },
-  {
-    id: "68015",
-    title: "All the Bright Places",
-    vj: "VJ Ice P",
-    category: "Romance",
-    genres: ["Romance", "Drama"],
-    imageUrl: "https://image.tmdb.org/t/p/w500/4SafxuMKQiw4reBiWKVZJpJn80I.jpg",
-    backdropUrl: "https://image.tmdb.org/t/p/w1280/tcrNJfyNEIqaBR8Ogkgnq5xQJnf.jpg",
-    rating: "8.5",
-    year: "2020",
-    duration: "1h 48m",
-    isTv: false,
-    overview: "Two teenagers struggling with emotional scars find solace in each other as they explore the wonders of Indiana together. Translated by VJ Ice P.",
-    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-  },
-  {
-    id: "67098",
-    title: "Kifeesi",
-    vj: "VJ Emmy",
-    category: "Action",
-    genres: ["Action", "Crime"],
-    imageUrl: "https://apposters.b-cdn.net/laba/yo/naki/R8kE7956.jpg",
-    backdropUrl: "https://apposters.b-cdn.net/laba/yo/naki/R8kE7956.jpg",
-    rating: "9.0",
-    year: "2024",
-    duration: "2h 00m",
-    isTv: false,
-    overview: "Kampala streets turn into a tactical battleground against notorious gangs. Translated by VJ Emmy.",
-    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-  },
-  {
-    id: "67097",
-    title: "Nyoko: The Terrible Mother",
-    vj: "VJ Sammy",
-    category: "Drama",
-    genres: ["Drama", "Romance"],
-    imageUrl: "https://apposters.b-cdn.net/laba/yo/naki/vYmL3744.jpg",
-    backdropUrl: "https://apposters.b-cdn.net/laba/yo/naki/vYmL3744.jpg",
-    rating: "8.4",
-    year: "2024",
-    duration: "1h 40m",
-    isTv: false,
-    overview: "An intense maternal struggle exposes family secrets with high emotional stakes. Translated by VJ Sammy.",
-    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-  },
-  {
-    id: "67095",
-    title: "Alien: Romulus",
-    vj: "VJ Junior",
-    category: "Sci-Fi",
-    genres: ["Sci-Fi", "Horror", "Action"],
-    imageUrl: "https://image.tmdb.org/t/p/w780/b33nnKl1GSFbao4l3fZDDqsMx0F.jpg",
-    backdropUrl: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1600&auto=format&fit=crop&q=80",
-    rating: "8.8",
-    year: "2024",
-    duration: "1h 59m",
-    isTv: false,
-    overview: "While scavenging the deep ends of a derelict space station, a group of young space colonizers come face to face with the most terrifying life form in the universe. Luganda translation by VJ Junior.",
-    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-  },
-  {
-    id: "67096",
-    title: "Deadpool & Wolverine",
-    vj: "VJ Junior",
-    category: "Action",
-    genres: ["Action", "Sci-Fi", "Comedy"],
-    imageUrl: "https://image.tmdb.org/t/p/w780/8b8R8l88Qje9dn9OE8PY05Nxl1X.jpg",
-    backdropUrl: "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=1600&auto=format&fit=crop&q=80",
-    rating: "9.1",
-    year: "2024",
-    duration: "2h 08m",
-    isTv: false,
-    overview: "A listless Wade Wilson toils away in civilian life with his days as the morally flexible mercenary Deadpool behind him. Translated by VJ Junior.",
-    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-  },
-  {
-    id: "67303",
-    title: "Smile 2",
-    vj: "VJ Emmy",
-    category: "Horror",
-    genres: ["Horror", "Mystery"],
-    imageUrl: "https://apposters.b-cdn.net/laba/yo/naki/a8Md4897.jpg",
-    backdropUrl: "https://munowatch.com/media/images/owlcarousel/292722983807.jpg",
-    rating: "8.7",
-    year: "2024",
-    duration: "2h 07m",
-    isTv: false,
-    overview: "About to embark on a world tour, global pop sensation Skye Riley begins experiencing increasingly terrifying and inexplicable events. Translated by VJ Emmy.",
-    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4"
-  },
-  {
-    id: "67309",
-    title: "Living For Love",
-    vj: "VJ Sammy",
+    id: "28629",
+    title: "Yemin",
+    vj: "VJ Mox",
     category: "Series",
-    genres: ["Series", "Romance", "Drama"],
-    imageUrl: "https://apposters.b-cdn.net/laba/yo/naki/vYmL3744.jpg",
-    backdropUrl: "https://apposters.b-cdn.net/laba/yo/naki/vYmL3744.jpg",
-    rating: "8.5",
-    year: "2025",
+    genres: ["Series", "Romance", "Drama", "Luganda Dubbed"],
+    imageUrl: "https://apposters.b-cdn.net/laba/yo/naki/Rf5j3JMy122965.jpg",
+    backdropUrl: "https://apposters.b-cdn.net/laba/yo/naki/Rf5j3JMy122965.jpg",
+    rating: "9.2",
+    year: "2024",
     duration: "45m",
     isTv: true,
-    seriesCode: "28490",
-    overview: "Intrigue, passion, and emotional trials unfold as two lovers navigate societal pressures and family secrets. Translated by VJ Sammy.",
-    streamUrl: "https://lunoluno.b-cdn.net/timo28/tyu/Self.Made.Inspired.by.the.Life.of.Madam.C.J.Walker.S01E01.mp4",
+    seriesCode: "46481",
+    overview: "Reyhan was born in the countryside; is a modest, young and beautiful girl who grew up in traditional style. Reyhan remains an orphan after her mother's death, and her life changes unexpectedly. Voice-over by VJ Mox.",
+    streamUrl: "http://munotek-vault.b-cdn.net/67gh/17b/Yemin - Episode 1.mp4",
     episodes: [
-      { num: 1, title: "Episode 1: The Encounter", duration: "45m", streamUrl: "https://lunoluno.b-cdn.net/timo28/tyu/Self.Made.Inspired.by.the.Life.of.Madam.C.J.Walker.S01E01.mp4" },
-      { num: 2, title: "Episode 2: Forbidden Bond", duration: "47m", streamUrl: "https://lunoluno.b-cdn.net/timo28/tyu/Self.Made.Inspired.by.the.Life.of.Madam.C.J.Walker.S01E01.mp4" },
-      { num: 3, title: "Episode 3: The Crossroad", duration: "44m", streamUrl: "https://lunoluno.b-cdn.net/timo28/tyu/Self.Made.Inspired.by.the.Life.of.Madam.C.J.Walker.S01E01.mp4" },
+      { num: 1, title: "Yemin Episode 1", duration: "45m", streamUrl: "http://munotek-vault.b-cdn.net/67gh/17b/Yemin - Episode 1.mp4" },
+      { num: 2, title: "Yemin Episode 2", duration: "45m", streamUrl: "http://munotek-vault.b-cdn.net/67gh/17b/Yemin - Episode 2.mp4" }
     ]
   },
-  // --- KIDS & FAMILY / ANIMATION BLOCKBUSTERS ---
-  {
-    id: "5001",
-    title: "Sonic the Hedgehog 3",
-    vj: "VJ Junior",
-    category: "Family",
-    genres: ["Family", "Animation", "Action", "Comedy"],
-    imageUrl: "https://image.tmdb.org/t/p/w500/d8Ryb8AunYAuycVKDp5HpdWPKgC.jpg",
-    backdropUrl: "https://image.tmdb.org/t/p/w1280/zOpe0eHsq0A2NvNyBbtT6sj53qV.jpg",
-    rating: "9.2",
-    year: "2024",
-    duration: "1h 50m",
-    isTv: false,
-    overview: "Sonic, Knuckles, and Tails reunite against a powerful new adversary, Shadow, a mysterious villain with powers unlike anything they have faced before. Voice-over by VJ Junior.",
-    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-  },
-  {
-    id: "5002",
-    title: "Panda Plan",
-    vj: "VJ Junior",
-    category: "Family",
-    genres: ["Family", "Comedy", "Action"],
-    imageUrl: "https://image.tmdb.org/t/p/w500/8iMPQl13q89jQhaA5nXb6UiT0t0.jpg",
-    backdropUrl: "https://image.tmdb.org/t/p/w1280/8cc4AypHsnqcCQeIIpNoh6Wrc5B.jpg",
-    rating: "8.9",
-    year: "2024",
-    duration: "1h 39m",
-    isTv: false,
-    overview: "When a rare baby panda is targeted by international mercenaries, a legendary martial arts star steps in for an unforgettable rescue mission. Translated by VJ Junior.",
-    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-  },
-  {
-    id: "5003",
-    title: "Moana 2",
-    vj: "VJ Emmy",
-    category: "Family",
-    genres: ["Family", "Animation", "Adventure"],
-    imageUrl: "https://image.tmdb.org/t/p/w500/aLVkiINlIeCkcZIzb7XHzPYgO6L.jpg",
-    backdropUrl: "https://image.tmdb.org/t/p/w1280/vYqt6kb4lcF8wwqsMMaULkP9OEn.jpg",
-    rating: "9.0",
-    year: "2024",
-    duration: "1h 40m",
-    isTv: false,
-    overview: "After receiving an unexpected call from her wayfinding ancestors, Moana journeys to the far seas of Oceania on a dangerous adventure unlike anything she has ever faced. Translated by VJ Emmy.",
-    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4"
-  },
-  {
-    id: "5004",
-    title: "The Wild Robot",
-    vj: "VJ Junior",
-    category: "Family",
-    genres: ["Family", "Animation", "Sci-Fi"],
-    imageUrl: "https://image.tmdb.org/t/p/w500/wTnV3PCVW5O92JMrFvvrRcV39RU.jpg",
-    backdropUrl: "https://image.tmdb.org/t/p/w1280/1pmXyN3sKeYoUhu5VBZiDU4BX21.jpg",
-    rating: "9.4",
-    year: "2024",
-    duration: "1h 42m",
-    isTv: false,
-    overview: "After a shipwreck, an intelligent robot named Roz is stranded on an uninhabited island and builds bonds with the island's animals. Luganda voice-over by VJ Junior.",
-    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4"
-  },
-  {
-    id: "5005",
-    title: "Despicable Me 4",
-    vj: "VJ Jingo",
-    category: "Family",
-    genres: ["Family", "Animation", "Comedy"],
-    imageUrl: "https://image.tmdb.org/t/p/w500/wWba3TaojhK7NdycRhoQpsG0FaH.jpg",
-    backdropUrl: "https://image.tmdb.org/t/p/w1280/twsxsfao6ZOVvT8LfudH603MMi6.jpg",
-    rating: "8.7",
-    year: "2024",
-    duration: "1h 35m",
-    isTv: false,
-    overview: "Gru and Lucy welcome a new member to the family, Gru Jr., who is intent on tormenting his dad. A hilarious family blockbuster translated by VJ Jingo.",
-    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-  },
-  {
-    id: "5006",
-    title: "Kung Fu Panda 4",
-    vj: "VJ Junior",
-    category: "Family",
-    genres: ["Family", "Animation", "Action", "Comedy"],
-    imageUrl: "https://image.tmdb.org/t/p/w500/kDp1vUBnMpe8ak4rjgl3cLELqjU.jpg",
-    backdropUrl: "https://image.tmdb.org/t/p/w1280/kDp1vUBnMpe8ak4rjgl3cLELqjU.jpg",
-    rating: "8.8",
-    year: "2024",
-    duration: "1h 34m",
-    isTv: false,
-    overview: "Po must train a new Dragon Warrior while battling a shape-shifting sorceress named The Chameleon. Voice-over by VJ Junior.",
-    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-  },
-  {
-    id: "5007",
-    title: "Inside Out 2",
-    vj: "VJ Emmy",
-    category: "Family",
-    genres: ["Family", "Animation", "Comedy", "Drama"],
-    imageUrl: "https://image.tmdb.org/t/p/w500/vpnVM9B6NMmQpWeZvzLvDESb2QY.jpg",
-    backdropUrl: "https://image.tmdb.org/t/p/w1280/vpnVM9B6NMmQpWeZvzLvDESb2QY.jpg",
-    rating: "9.1",
-    year: "2024",
-    duration: "1h 36m",
-    isTv: false,
-    overview: "Joy, Sadness, Anger, Fear, and Disgust must adjust as brand-new teenage emotions arrive at Headquarters. Translated by VJ Emmy.",
-    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4"
-  },
-  {
-    id: "5008",
-    title: "Mufasa: The Lion King",
-    vj: "VJ Junior",
-    category: "Family",
-    genres: ["Family", "Animation", "Adventure", "Drama"],
-    imageUrl: "https://image.tmdb.org/t/p/w500/jbOSUAWMGzGL1L4EaUF8K6zYFo7.jpg",
-    backdropUrl: "https://image.tmdb.org/t/p/w1280/1w8kutrRucTd3wlYyu5QlUDMiG1.jpg",
-    rating: "9.0",
-    year: "2024",
-    duration: "1h 58m",
-    isTv: false,
-    overview: "The legendary origins of the beloved king of the Pride Lands unfold across an epic African wilderness journey. Translated by VJ Junior.",
-    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-  },
-  {
-    id: "5009",
-    title: "Wonka",
-    vj: "VJ Junior",
-    category: "Family",
-    genres: ["Family", "Fantasy", "Comedy"],
-    imageUrl: "https://image.tmdb.org/t/p/w500/qhb1qOilapbapxWQn9jtRCMwXJF.jpg",
-    backdropUrl: "https://image.tmdb.org/t/p/w1280/uIk2g2bRkNwNywKZIhC5oIU94Kh.jpg",
-    rating: "8.8",
-    year: "2024",
-    duration: "1h 56m",
-    isTv: false,
-    overview: "Armed with nothing but a hatful of dreams, young Willy Wonka sets out to change the world one delectable bite at a time. Voice-over by VJ Junior.",
-    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-  },
-
-  // --- AUTHENTIC INDIAN BLOCKBUSTERS ---
-  {
-    id: "5101",
-    title: "RRR",
-    vj: "VJ Junior",
-    category: "Action",
-    genres: ["Action", "Drama", "Indian"],
-    imageUrl: "https://image.tmdb.org/t/p/w500/wE0I6efAW4cDDmZQWtwZMOW44EJ.jpg",
-    backdropUrl: "https://image.tmdb.org/t/p/w1280/i0Y0wP8H6SRgjr6QmuwbtQbS24D.jpg",
-    rating: "9.5",
-    year: "2024",
-    duration: "3h 02m",
-    isTv: false,
-    overview: "A fearless warrior on a perilous mission comes face to face with a steely cop in British India. Unforgettable action translated by VJ Junior.",
-    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-  },
-  {
-    id: "5102",
-    title: "K.G.F: Chapter 2",
-    vj: "VJ Emmy",
-    category: "Action",
-    genres: ["Action", "Crime", "Indian"],
-    imageUrl: "https://image.tmdb.org/t/p/w500/khNVygolU0TxLIDWff5tQlAhZ23.jpg",
-    backdropUrl: "https://image.tmdb.org/t/p/w1280/nsV5Mfi9FAV4w8eDsdr7uqVswOk.jpg",
-    rating: "9.4",
-    year: "2024",
-    duration: "2h 48m",
-    isTv: false,
-    overview: "Rocky, whose name strikes fear in the heart of his foes, defends his kingdom against bloodthirsty enemies. Translated by VJ Emmy.",
-    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-  },
-  {
-    id: "5103",
-    title: "Pushpa 2: The Rule",
-    vj: "VJ Ice P",
-    category: "Action",
-    genres: ["Action", "Thriller", "Indian"],
-    imageUrl: "https://image.tmdb.org/t/p/w500/1T21FblunT0y8fz7YaW8JMYgUKm.jpg",
-    backdropUrl: "https://image.tmdb.org/t/p/w1280/7jGItf7idJsBm9QTNoTNTU3KiGe.jpg",
-    rating: "9.3",
-    year: "2024",
-    duration: "3h 20m",
-    isTv: false,
-    overview: "Pushpa Raj expands his red sandalwood empire while locked in a ferocious standoff with police chief Bhanwar Singh Shekhawat. Translated by VJ Ice P.",
-    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-  },
-  {
-    id: "5104",
-    title: "Jawan",
-    vj: "VJ Junior",
-    category: "Action",
-    genres: ["Action", "Thriller", "Indian"],
-    imageUrl: "https://image.tmdb.org/t/p/w500/jFt1gS4BGHlK8xt76Y81Alp4dbt.jpg",
-    backdropUrl: "https://image.tmdb.org/t/p/w1280/5LtSjMNw6j3LkG29Oa4O0iY5U8.jpg",
-    rating: "9.1",
-    year: "2024",
-    duration: "2h 49m",
-    isTv: false,
-    overview: "A prison warden recruits inmates to commit outrageous acts of social justice across the nation. Voice-over by VJ Junior.",
-    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-  },
-  {
-    id: "5105",
-    title: "Kalki 2898 AD",
-    vj: "VJ Junior",
-    category: "Sci-Fi",
-    genres: ["Sci-Fi", "Action", "Indian"],
-    imageUrl: "https://image.tmdb.org/t/p/w500/rstcAnBeCkxNQjNp3YXrF6IP1tW.jpg",
-    backdropUrl: "https://image.tmdb.org/t/p/w1280/o8XSR1SONnjcsv84NRu6Mwsl5io.jpg",
-    rating: "9.2",
-    year: "2024",
-    duration: "3h 01m",
-    isTv: false,
-    overview: "In a dystopian post-apocalyptic future, a legendary avatar rises to protect humanity from tyrannical rulers. Translated by VJ Junior.",
-    streamUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-  },
-
-  // --- RESOLVED AUTHENTIC TITLES FOR FORMER PLACEHOLDERS ---
   {
     id: "57029",
     title: "The Holiday",
     vj: "VJ Junior",
     category: "Romance",
-    genres: ["Romance", "Comedy"],
+    genres: ["Romance", "Comedy", "Luganda Dubbed"],
     imageUrl: "https://apposters.b-cdn.net/laba/yo/naki/X5n9b72PPD1298.jpg",
     backdropUrl: "https://apposters.b-cdn.net/laba/yo/naki/X5n9b72PPD1298.jpg",
     rating: "8.8",
     year: "2024",
     duration: "2h 15m",
     isTv: false,
-    overview: "Two women troubled with guy-problems swap homes in each other's countries, where they each meet a local guy and fall in love. Spiced up by VJ Junior.",
+    overview: "Two women troubled with guy problems swap homes in countries other than their own, where they each meet a local man and fall in love. Spiced up by VJ Junior.",
     streamUrl: "https://munotech2.b-cdn.net/simo/simo22/THE%20HOLIDAY.JR.mp4"
   },
   {
@@ -715,37 +374,22 @@ export const FALLBACK_MOVIES: CatalogMovie[] = [
     title: "Bonhoeffer: Pastor. Spy. Assassin.",
     vj: "VJ Ulio",
     category: "Drama",
-    genres: ["Drama", "Action", "History"],
+    genres: ["Drama", "History", "Thriller", "Luganda Dubbed"],
     imageUrl: "https://apposters.b-cdn.net/laba/yo/naki/9W0KmHEJfb9949.jpg",
     backdropUrl: "https://apposters.b-cdn.net/laba/yo/naki/9W0KmHEJfb9949.jpg",
-    rating: "8.9",
-    year: "2024",
-    duration: "2h 12m",
+    rating: "9.1",
+    year: "2025",
+    duration: "2h 10m",
     isTv: false,
-    overview: "As the world teeters on the brink of annihilation, Dietrich Bonhoeffer joins a deadly plot to assassinate Hitler. Spiced up by VJ Ulio.",
+    overview: "As the Nazi regime commits atrocities, pastor and theologian Dietrich Bonhoeffer decides to stand up and join the resistance. Translated by VJ Ulio.",
     streamUrl: "https://munotech3.b-cdn.net/klpp43/jgn43/BONHOEFFER%20HD.2025%20VJ.ULIO.mp4"
-  },
-  {
-    id: "39003",
-    title: "Alex & Eve",
-    vj: "VJ Junior",
-    category: "Romance",
-    genres: ["Romance", "Comedy"],
-    imageUrl: "https://image.tmdb.org/t/p/w500/5qHoazZiaLe7oFBok7XlUhg96f2.jpg",
-    backdropUrl: "https://image.tmdb.org/t/p/w1280/5qHoazZiaLe7oFBok7XlUhg96f2.jpg",
-    rating: "8.6",
-    year: "2024",
-    duration: "1h 32m",
-    isTv: false,
-    overview: "A Greek Orthodox schoolteacher falls in love with a Lebanese Muslim lawyer, testing their family traditions. Spiced up by VJ Junior.",
-    streamUrl: "https://nkuba.b-cdn.net/cleve48/cfr/AlexandEve.mp4"
   },
   {
     id: "29447",
     title: "Rogue Agent",
     vj: "VJ Muba",
     category: "Action",
-    genres: ["Action", "Thriller"],
+    genres: ["Action", "Thriller", "Luganda Dubbed"],
     imageUrl: "https://image.tmdb.org/t/p/w500/628Dep6AxEtDxjZoGP78TsOxYbK.jpg",
     backdropUrl: "https://image.tmdb.org/t/p/w1280/628Dep6AxEtDxjZoGP78TsOxYbK.jpg",
     rating: "8.7",
@@ -760,7 +404,7 @@ export const FALLBACK_MOVIES: CatalogMovie[] = [
     title: "Damage",
     vj: "VJ Junior",
     category: "Drama",
-    genres: ["Drama", "Romance"],
+    genres: ["Drama", "Romance", "Luganda Dubbed"],
     imageUrl: "https://apposters.b-cdn.net/laba/yo/naki/a8c3.jpg",
     backdropUrl: "https://apposters.b-cdn.net/laba/yo/naki/a8c3.jpg",
     rating: "8.6",
@@ -772,7 +416,6 @@ export const FALLBACK_MOVIES: CatalogMovie[] = [
   }
 ];
 
-// Helper: decode authentic title and VJ from known mapping or CDN stream filename
 export const KNOWN_ID_MAP: Record<string, { title: string; vj: string; streamUrl?: string; image?: string }> = {
   "57029": { title: "The Holiday", vj: "VJ Junior", streamUrl: "https://munotech2.b-cdn.net/simo/simo22/THE%20HOLIDAY.JR.mp4", image: "https://apposters.b-cdn.net/laba/yo/naki/X5n9b72PPD1298.jpg" },
   "55898": { title: "Bonhoeffer: Pastor. Spy. Assassin.", vj: "VJ Ulio", streamUrl: "https://munotech3.b-cdn.net/klpp43/jgn43/BONHOEFFER%20HD.2025%20VJ.ULIO.mp4", image: "https://apposters.b-cdn.net/laba/yo/naki/9W0KmHEJfb9949.jpg" },
@@ -877,7 +520,10 @@ export function mapMunoCategoryId(rawCatId: any, rawCategory: string = '', title
 }
 
 // Helper: parse series base title and episode number
-export function parseSeriesEpisodeInfo(rawTitle: string): {
+export function parseSeriesEpisodeInfo(
+  rawTitle: string,
+  isSeriesContext: boolean = false
+): {
   isEpisode: boolean;
   baseTitle: string;
   epNum: number;
@@ -895,8 +541,8 @@ export function parseSeriesEpisodeInfo(rawTitle: string): {
     };
   }
 
-  // Pattern B: Title Episode 16, Title Ep 16 (Strict episode markers only - not Part/Sequels)
-  const epPattern = /^(.*?)[.\s_-]+(?:episode|ep)\s*(\d+)(.*)$/i;
+  // Pattern B: Title Episode 16, Title Ep 16, Part 16, EPS 16
+  const epPattern = /^(.*?)[.\s_-]+(?:episode|ep|eps|part|pt)\s*(\d+)(.*)$/i;
   match = clean.match(epPattern);
   if (match) {
     return {
@@ -906,8 +552,21 @@ export function parseSeriesEpisodeInfo(rawTitle: string): {
     };
   }
 
-  // NOTE: Pattern C (/^(.*?)\s+(\d{1,3})$/) was intentionally removed because it
-  // mistakenly treated movie sequels (e.g. Deadpool 2, Inside Out 2, John Wick 4) as TV episodes.
+  // Pattern C: Trailing number like "Mirzapur 16", "Yemin 402"
+  const trailingNumPattern = /^(.*?)[.\s_-]+(\d{1,4})$/;
+  match = clean.match(trailingNumPattern);
+  if (match) {
+    const candidateBase = match[1].trim();
+    const num = parseInt(match[2], 10);
+    const isKnownSeries = /^(?:mirzapur|yemin|living\s*for\s*love|squid\s*game|from|reacher|terminal\s*list|loki|vikings|tulsa\s*king|money\s*heist|the\s*boys|wednesday|fallout|witcher|halo|karikaada|the\s*hobbit)/i.test(candidateBase);
+    if (isSeriesContext || num > 4 || isKnownSeries) {
+      return {
+        isEpisode: true,
+        baseTitle: candidateBase,
+        epNum: num,
+      };
+    }
+  }
 
   return {
     isEpisode: false,
@@ -1005,24 +664,32 @@ export function useLiveCatalog() {
       enqueueMovieHealing(itemId, handleMovieHealed);
     }
     
-    const episodeInfo = parseSeriesEpisodeInfo(rawTitle);
     const seriesCode = m.series_code || m.seriesCode || '';
-    
-    // Explicit series indicators: strictly genuine TV series
-    const hasValidSeriesCode = Boolean(seriesCode && String(seriesCode).trim().length > 0 && String(seriesCode) !== '0');
     const isSeriesCat = Number(m.category_id || m.categoryId) === 5 || (typeof m.category === 'string' && m.category.toLowerCase().trim() === 'series');
     const isSeriesType = Boolean(m.type && String(m.type).toUpperCase() === 'SERIES');
+    const isExplicitSeries = isSeriesCat || isSeriesType || Boolean(m.is_series && String(m.is_series).toLowerCase() !== 'no');
+
+    // In MunoWatch, single movies frequently have series_code equal to their own id,
+    // and dummy is_series: true. A genuine series code MUST be distinct from the movie's own id!
+    const hasDistinctSeriesCode = Boolean(
+      seriesCode &&
+      String(seriesCode).trim().length > 0 &&
+      String(seriesCode) !== '0' &&
+      String(seriesCode) !== String(itemId)
+    );
+
+    const episodeInfo = parseSeriesEpisodeInfo(rawTitle, isExplicitSeries || hasDistinctSeriesCode);
     const hasEpisodes = Array.isArray(m.episodes) && m.episodes.length > 0;
     const hasExplicitSeasonOrEp = episodeInfo.isEpisode || /\b(?:s\d{1,2}e\d{1,2}|season\s*\d+\s*(?:ep|episode)\s*\d+)\b/i.test(rawTitle);
 
     // Strict TV Series determination:
-    // A title is ONLY a TV series if it has a valid seriesCode, has multiple episodes,
-    // is in the Series category with series code/episodes, or has unambiguous S01E02 numbering.
+    // A title is ONLY a TV series if it has a distinct seriesCode, has multiple episodes,
+    // is in the Series category (category_id === 5) with episode numbering, or has explicit S01E02 numbering.
     const isTv = Boolean(
-      hasValidSeriesCode ||
+      hasDistinctSeriesCode ||
       hasEpisodes ||
-      (isSeriesCat && (hasExplicitSeasonOrEp || hasValidSeriesCode || isSeriesType)) ||
-      (m.is_series && (hasValidSeriesCode || hasEpisodes))
+      (isSeriesCat && (hasExplicitSeasonOrEp || hasDistinctSeriesCode || isSeriesType)) ||
+      (episodeInfo.isEpisode && (isExplicitSeries || hasDistinctSeriesCode))
     );
 
     // Accurate category mapping
@@ -1279,11 +946,12 @@ export function useLiveCatalog() {
         setLoading(false);
         // 5. Background seeding queries for comprehensive category & series coverage
         const SEED_QUERIES = [
+          'horror', 'thriller', 'ghost', 'evil', 'zombie', 'demon', 'conjuring', 'insidious', 'saw', 'halloween', 'quiet place', 'terrif',
           'animation', 'anime', 'cartoon', 'pixar', 'dreamworks', 'disney', 'minions', 'shrek',
           'moana', 'frozen', 'lion king', 'zootopia', 'toy story', 'ice age', 'dragon',
           'kung fu panda', 'spider-verse', 'despicable me', 'madagascar', 'cars', 'incredibles',
           'romance', 'love', 'hobbit', 'the hobbit', 'sonic', 'family',
-          'kari', 'karikaada', 'from', 'squid game', 'reacher', 'loki', 'vikings',
+          'mirzapur', 'yemin', 'kari', 'karikaada', 'from', 'squid game', 'reacher', 'loki', 'vikings',
           'tulsa king', 'money heist', 'the boys', 'wednesday', 'fallout', 'witcher', 'halo'
         ];
         
@@ -1367,12 +1035,16 @@ export function useLiveCatalog() {
 
   // Derived sections with proper single movie vs series distinction
   const latestMovies = useMemo(() => {
-    if (munoLatestList.length > 0) {
-      const seen = new Set(munoLatestList.map((m) => m.id));
-      const rest = catalog.filter((m) => !seen.has(m.id));
-      return [...munoLatestList, ...rest];
+    // Only genuine releases with authentic non-sample stream URLs and titles
+    const validMuno = munoLatestList.filter(
+      (m) => m && m.streamUrl && !m.streamUrl.includes('sample') && m.title && !/^(?:Movie|Series)\s*#/i.test(m.title)
+    );
+    if (validMuno.length > 0) {
+      const seen = new Set(validMuno.map((m) => m.id));
+      const rest = catalog.filter((m) => !seen.has(m.id) && m.streamUrl && !m.streamUrl.includes('sample') && m.title && !/^(?:Movie|Series)\s*#/i.test(m.title));
+      return [...validMuno, ...rest];
     }
-    return [...catalog];
+    return catalog.filter((m) => m.streamUrl && !m.streamUrl.includes('sample') && m.title && !/^(?:Movie|Series)\s*#/i.test(m.title));
   }, [munoLatestList, catalog]);
   const trendingMovies = useMemo(() => [...catalog].sort((a, b) => parseFloat(b.rating) - parseFloat(a.rating)), [catalog]);
   const seriesMovies = useMemo(() => catalog.filter(m => m.isTv), [catalog]);
@@ -1381,7 +1053,18 @@ export function useLiveCatalog() {
   const romanceMovies = useMemo(() => catalog.filter(m => !m.isTv && (/romance|love/i.test(m.category) || m.genres.some(g => /romance|love/i.test(g)))), [catalog]);
   const comedyMovies = useMemo(() => catalog.filter(m => !m.isTv && (/comedy/i.test(m.category) || m.genres.some(g => /comedy/i.test(g)))), [catalog]);
   const sciFiMovies = useMemo(() => catalog.filter(m => !m.isTv && (/sci|fantasy|future/i.test(m.category) || m.genres.some(g => /sci|fantasy|future/i.test(g)))), [catalog]);
-  const horrorMovies = useMemo(() => catalog.filter(m => !m.isTv && (/horror|thriller/i.test(m.category) || m.genres.some(g => /horror|thriller/i.test(g)))), [catalog]);
+  const horrorMovies = useMemo(
+    () =>
+      catalog.filter(
+        (m) =>
+          !m.isTv &&
+          (/horror|thriller|scary|ghost|blood|dead|evil|monster|zombie|haunt|demon|devil|slasher|curse|fear/i.test(
+            m.category + " " + m.title
+          ) ||
+            m.genres.some((g) => /horror|thriller/i.test(g)))
+      ),
+    [catalog]
+  );
   const animationMovies = useMemo(
     () =>
       catalog.filter(
@@ -1498,20 +1181,6 @@ export function useLiveCatalog() {
             : list.filter(
                 m =>
                   m.category === 'Action' &&
-                  !/^(?:Movie|Series)\s*#/i.test(m.title)
-              );
-      } else if (g === 'korean' || g === 'chinese' || g === 'filipino' || g === 'ugandan') {
-        const regional = list.filter(m =>
-          m.title.toLowerCase().includes(g) ||
-          m.overview.toLowerCase().includes(g) ||
-          m.vj.toLowerCase().includes(g)
-        );
-        list =
-          regional.length > 0
-            ? regional
-            : list.filter(
-                m =>
-                  (m.category === 'Action' || m.category === 'Drama') &&
                   !/^(?:Movie|Series)\s*#/i.test(m.title)
               );
       } else if (g === 'sport') {

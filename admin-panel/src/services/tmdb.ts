@@ -90,16 +90,24 @@ export function cleanTitleForTmdb(rawTitle: string): string {
 export function computeTitleSimilarity(s1: string, s2: string): number {
   const norm1 = s1.toLowerCase().replace(/[^a-z0-9 ]/g, "").trim();
   const norm2 = s2.toLowerCase().replace(/[^a-z0-9 ]/g, "").trim();
-  if (norm1 === norm2) return 1.0;
   if (!norm1 || !norm2) return 0;
-  if (norm1.includes(norm2) || norm2.includes(norm1)) return 0.85;
+  if (norm1 === norm2) return 1.0;
 
-  const words1 = new Set(norm1.split(/\s+/).filter((w) => w.length > 2));
-  const words2 = new Set(norm2.split(/\s+/).filter((w) => w.length > 2));
-  if (words1.size === 0 || words2.size === 0) return 0.5;
-  const intersection = [...words1].filter((w) => words2.has(w));
+  const words1 = norm1.split(/\s+/).filter((w) => w.length > 0);
+  const words2 = norm2.split(/\s+/).filter((w) => w.length > 0);
+  if (words1.length === 0 || words2.length === 0) return 0;
+
+  const set1 = new Set(words1);
+  const set2 = new Set(words2);
+  const intersection = [...set1].filter((w) => set2.has(w));
   if (intersection.length === 0) return 0;
-  return (intersection.length * 2) / (words1.size + words2.size);
+
+  // Dice coefficient on word sets
+  const dice = (2 * intersection.length) / (set1.size + set2.size);
+  // Word count ratio penalty (e.g. 1 word query vs 3 word title = 1/3)
+  const lengthRatio = Math.min(words1.length, words2.length) / Math.max(words1.length, words2.length);
+
+  return dice * 0.7 + lengthRatio * 0.3;
 }
 
 /**
@@ -162,7 +170,7 @@ export async function searchTmdb(title: string, isTv: boolean = false): Promise<
             bestScore = score;
           }
         }
-        if (best && bestScore >= 0.25) {
+        if (best && bestScore >= 0.65) {
           const meta: TmdbMetadata = {
             id: best.id,
             title: best.name || clean,
@@ -195,7 +203,7 @@ export async function searchTmdb(title: string, isTv: boolean = false): Promise<
           bestScore = score;
         }
       }
-      if (best && bestScore >= 0.25) {
+      if (best && bestScore >= 0.65) {
         const meta: TmdbMetadata = {
           id: best.id,
           title: best.title || clean,
@@ -227,7 +235,7 @@ export async function searchTmdb(title: string, isTv: boolean = false): Promise<
           matchScore = score;
         }
       }
-      if (match && matchScore >= 0.25) {
+      if (match && matchScore >= 0.65) {
         const isMatchedTv = match.media_type === "tv";
         const meta: TmdbMetadata = {
           id: match.id,

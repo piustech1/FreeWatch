@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { SplashScreen } from "./SplashScreen";
 import { AuthPage, AuthScreenType } from "./AuthPage";
 import { HomePage } from "./HomePage";
@@ -75,6 +75,9 @@ export default function FreeWatchAppRoot({ onNavigateToStore }: FreeWatchAppRoot
     if (targetPage === currentPage) return;
     setHistory((prev) => [...prev, currentPage]);
     setCurrentPage(targetPage);
+    try {
+      window.history.pushState({ page: targetPage }, "", "");
+    } catch {}
   };
 
   const handleBack = () => {
@@ -100,6 +103,19 @@ export default function FreeWatchAppRoot({ onNavigateToStore }: FreeWatchAppRoot
       return newStack;
     });
   };
+
+  // Sync browser / mobile system back button with FreeWatch navigation stack
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      if (event.state && event.state.page) {
+        setCurrentPage(event.state.page);
+      } else {
+        handleBack();
+      }
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
 
   const handleAuthSuccess = (nameOrEmail?: string, avatarId?: string) => {
     const finalName = nameOrEmail || "Admin2";
@@ -164,20 +180,21 @@ export default function FreeWatchAppRoot({ onNavigateToStore }: FreeWatchAppRoot
     }
 
     // Strict validation: A movie is ONLY a series if it genuinely is one!
-    // A single movie (including sequels like Deadpool 2, Bad Boys 4, Dune Part 2) MUST NEVER open series-details!
+    // In MunoWatch API, single movies have series_code equal to their item ID.
+    // Genuine series have series_code !== item ID, or multiple episodes, or category 'Series'.
+    const hasMultipleEpisodes = Array.isArray(movie?.episodes) && movie.episodes.length > 1;
+    const hasDistinctSeriesCode = Boolean(
+      movie?.seriesCode &&
+      String(movie.seriesCode).trim() !== "" &&
+      String(movie.seriesCode).trim() !== "0" &&
+      String(movie.seriesCode).trim() !== String(movie?.id).trim()
+    );
+    const isCategorySeries = String(movie?.category).toLowerCase().trim() === "series";
+
     const isRealSeries = Boolean(
-      (movie && (
-        // Has real multiple episodes loaded
-        (Array.isArray(movie.episodes) && movie.episodes.length > 0) ||
-        // Has a confirmed non-zero series code from MunoWatch
-        (movie.seriesCode && String(movie.seriesCode).trim().length > 0 && String(movie.seriesCode) !== '0') ||
-        // Explicitly in Series category AND marked as isTv
-        (movie.isTv && String(movie.category).toLowerCase().trim() === 'series')
-      )) ||
-      (isSeries && movie?.isTv && (
-        (Array.isArray(movie?.episodes) && movie.episodes.length > 0) ||
-        (movie?.seriesCode && String(movie.seriesCode).trim().length > 0 && String(movie.seriesCode) !== '0')
-      ))
+      hasMultipleEpisodes ||
+      (movie?.isTv && (hasDistinctSeriesCode || isCategorySeries)) ||
+      (isSeries && (hasMultipleEpisodes || hasDistinctSeriesCode || isCategorySeries))
     );
 
     const targetPage: ActivePage = isRealSeries ? "series-details" : "movie-details";
