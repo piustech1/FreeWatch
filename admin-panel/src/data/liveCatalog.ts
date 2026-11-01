@@ -914,7 +914,8 @@ export function useLiveCatalog() {
               const validEnriched = enrichedLatest.filter(
                 (m) => m && m.title && !/^(?:Movie|Series)\s*#/i.test(m.title)
               );
-              setMunoLatestList(validEnriched);
+              const groupedLatest = groupAndDeduplicate(validEnriched);
+              setMunoLatestList(groupedLatest);
               gatheredRaw.push(...validEnriched);
             }
           } catch (_) {
@@ -1042,10 +1043,10 @@ export function useLiveCatalog() {
     if (validMuno.length > 0) {
       const seen = new Set(validMuno.map((m) => m.id));
       const rest = catalog.filter((m) => !seen.has(m.id) && m.streamUrl && !m.streamUrl.includes('sample') && m.title && !/^(?:Movie|Series)\s*#/i.test(m.title));
-      return [...validMuno, ...rest];
+      return groupAndDeduplicate([...validMuno, ...rest]);
     }
-    return catalog.filter((m) => m.streamUrl && !m.streamUrl.includes('sample') && m.title && !/^(?:Movie|Series)\s*#/i.test(m.title));
-  }, [munoLatestList, catalog]);
+    return groupAndDeduplicate(catalog.filter((m) => m.streamUrl && !m.streamUrl.includes('sample') && m.title && !/^(?:Movie|Series)\s*#/i.test(m.title)));
+  }, [munoLatestList, catalog, groupAndDeduplicate]);
   const trendingMovies = useMemo(() => [...catalog].sort((a, b) => parseFloat(b.rating) - parseFloat(a.rating)), [catalog]);
   const seriesMovies = useMemo(() => catalog.filter(m => m.isTv), [catalog]);
   const actionMovies = useMemo(() => catalog.filter(m => !m.isTv && (/action/i.test(m.category) || m.genres.some(g => /action/i.test(g)))), [catalog]);

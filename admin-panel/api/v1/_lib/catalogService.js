@@ -177,23 +177,26 @@ export function normalizeMovie(raw) {
 
   // Authentic Series detection:
   // 1. Explicit season or episode markers in title
-  // 2. Presence of a valid series_code
+  // 2. Presence of a distinct series_code (different from item ID)
   // 3. Category ID 5 (MunoWatch Series) or type === 'SERIES'
-  // 4. Genuine multi-episode arrays or explicit isTv/is_series flags
+  // 4. Genuine multi-episode arrays
   const hasExplicitSeasonOrEp = /season|\b(?:s\d{1,2}|ep(?:isode)?\s*\d+|part\s*\d+)\b|eps\s*\d+/i.test(cleanTitle);
-  const hasSeriesCode = Boolean(raw.series_code && String(raw.series_code).trim().length > 0 && String(raw.series_code) !== '0');
+  const hasDistinctSeriesCode = Boolean(
+    raw.series_code &&
+    String(raw.series_code).trim().length > 0 &&
+    String(raw.series_code) !== '0' &&
+    String(raw.series_code) !== String(id)
+  );
   const isSeriesCategory = Number(raw.category_id) === 5 || (raw.category && raw.category.toLowerCase().includes('series'));
   const isSeriesType = raw.type && raw.type.toUpperCase().includes('SERIES');
   const hasMultipleEpisodes = Array.isArray(raw.episodes) && raw.episodes.length > 0;
   
   const isSeries = Boolean(
-    raw.isTv ||
-    raw.is_series ||
+    hasMultipleEpisodes ||
+    hasDistinctSeriesCode ||
     hasExplicitSeasonOrEp ||
-    hasSeriesCode ||
     isSeriesCategory ||
-    isSeriesType ||
-    hasMultipleEpisodes
+    isSeriesType
   );
 
   const genres = [isSeries ? 'Series' : category, 'Luganda Dubbed'];
@@ -321,6 +324,48 @@ async function resolveMovieBatch(ids) {
 }
 
 /**
+ * Cluster series episodes into single parent series cards
+ */
+export function groupSeriesBatch(items) {
+  const seriesMap = new Map();
+  const movies = [];
+  const seenMovieIds = new Set();
+
+  for (const m of items) {
+    if (!m || !m.title) continue;
+    const cleanTitle = m.title.trim();
+    const epMatch = cleanTitle.match(/^(.*?)(?:\s+(?:season\s*\d+|s\d{1,2}|ep(?:isode)?\s*\d+|part\s*\d+|\d+))$/i);
+    const isEpisode = Boolean(epMatch || m.isTv || m.is_series);
+    const baseTitle = epMatch ? epMatch[1].trim() : cleanTitle;
+    const cleanKey = baseTitle.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+    if (isEpisode && cleanKey.length > 2) {
+      if (!seriesMap.has(cleanKey)) {
+        seriesMap.set(cleanKey, {
+          ...m,
+          title: baseTitle,
+          isTv: true,
+          is_series: true,
+          category: 'Series',
+          episodes: [m],
+        });
+      } else {
+        const parent = seriesMap.get(cleanKey);
+        parent.episodes.push(m);
+      }
+    } else {
+      if (!seenMovieIds.has(m.id)) {
+        seenMovieIds.add(m.id);
+        movies.push(m);
+      }
+    }
+  }
+
+  const series = Array.from(seriesMap.values());
+  return [...series, ...movies].sort((a, b) => b.id - a.id);
+}
+
+/**
  * Get paginated movies strictly Newly to Oldy across all 7,000+ movies
  */
 export async function getMoviesPaginated({
@@ -409,7 +454,7 @@ export async function getMoviesPaginated({
   const startIndex = (pageNum - 1) * limitNum;
   const targetIds = KNOWN_IDS.slice(startIndex, startIndex + limitNum);
 
-  const resolved = await resolveMovieBatch(targetIds);
+  const resolved = groupSeriesBatch(await resolveMovieBatch(targetIds));
 
   return {
     total,
@@ -432,8 +477,8 @@ export async function getDashboardData() {
     return cachedDashboard;
   }
 
-  // Fetch top 40 newest releases (IDs 67406 downwards)
-  const newestBatch = await resolveMovieBatch(KNOWN_IDS.slice(0, 40));
+  // Fetch top 50 newest releases (clustered and deduplicated)
+  const newestBatch = groupSeriesBatch(await resolveMovieBatch(KNOWN_IDS.slice(0, 50)));
 
   // 1. Featured Billboard (e.g. blockbuster with backdrop, stream, and overview)
   const candidateHeroes = newestBatch.filter(m => m.backdrop && m.streamUrl && m.overview && m.title.length > 3);
