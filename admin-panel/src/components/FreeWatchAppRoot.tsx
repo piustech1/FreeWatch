@@ -81,27 +81,19 @@ export default function FreeWatchAppRoot({ onNavigateToStore }: FreeWatchAppRoot
   };
 
   const handleBack = () => {
-    setHistory((prev) => {
-      if (prev.length === 0) {
-        if (currentPage === "vj-movies") {
-          setCurrentPage("available-vjs");
-        } else if (currentPage !== "home") {
-          setCurrentPage("home");
-        }
-        return [];
-      }
-      const newStack = [...prev];
+    if (history.length > 0) {
+      const newStack = [...history];
       let target = newStack.pop();
       while (target === currentPage && newStack.length > 0) {
         target = newStack.pop();
       }
-      if (target && target !== currentPage) {
-        setCurrentPage(target);
-      } else {
-        setCurrentPage("home");
-      }
-      return newStack;
-    });
+      setHistory(newStack);
+      const nextPage = target && target !== currentPage ? target : "home";
+      setCurrentPage(nextPage);
+    } else {
+      const fallback = currentPage === "vj-movies" ? "available-vjs" : "home";
+      setCurrentPage(fallback);
+    }
   };
 
   // Sync browser / mobile system back button with FreeWatch navigation stack
@@ -110,7 +102,7 @@ export default function FreeWatchAppRoot({ onNavigateToStore }: FreeWatchAppRoot
       if (event.state && event.state.page) {
         setCurrentPage(event.state.page);
       } else {
-        handleBack();
+        setCurrentPage("home");
       }
     };
     window.addEventListener("popstate", handlePopState);

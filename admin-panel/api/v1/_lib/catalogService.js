@@ -173,13 +173,13 @@ export function normalizeMovie(raw) {
   const backdrop = raw.backdrop_path || raw.backdrop || poster;
   const streamUrl = sanitizeStreamUrl(raw.streamUrl || raw.playingurl || raw.videoUrl || '');
   
-  const category = mapMunoCategoryId(raw.category_id || raw.categoryId, raw.category, cleanTitle);
+  const category = mapMunoCategoryId(raw.category_id || raw.categoryId, raw.category === 'Series' ? '' : raw.category, cleanTitle);
 
   // Authentic Series detection:
   // 1. Explicit season or episode markers in title
   // 2. Presence of a distinct series_code (different from item ID)
-  // 3. Category ID 5 (MunoWatch Series) or type === 'SERIES'
-  // 4. Genuine multi-episode arrays
+  // 3. Category ID 5 (MunoWatch Series) with markers or distinct code
+  // 4. Genuine multi-episode arrays with > 1 episodes
   const hasExplicitSeasonOrEp = /season|\b(?:s\d{1,2}|ep(?:isode)?\s*\d+|part\s*\d+)\b|eps\s*\d+/i.test(cleanTitle);
   const hasDistinctSeriesCode = Boolean(
     raw.series_code &&
@@ -187,15 +187,15 @@ export function normalizeMovie(raw) {
     String(raw.series_code) !== '0' &&
     String(raw.series_code) !== String(id)
   );
-  const isSeriesCategory = Number(raw.category_id) === 5 || (raw.category && raw.category.toLowerCase().includes('series'));
+  const isSeriesCategory = Number(raw.category_id) === 5;
   const isSeriesType = raw.type && raw.type.toUpperCase().includes('SERIES');
-  const hasMultipleEpisodes = Array.isArray(raw.episodes) && raw.episodes.length > 0;
+  const hasMultipleEpisodes = Array.isArray(raw.episodes) && raw.episodes.length > 1;
   
   const isSeries = Boolean(
     hasMultipleEpisodes ||
     hasDistinctSeriesCode ||
     hasExplicitSeasonOrEp ||
-    isSeriesCategory ||
+    (isSeriesCategory && (hasExplicitSeasonOrEp || hasDistinctSeriesCode)) ||
     isSeriesType
   );
 
@@ -334,8 +334,17 @@ export function groupSeriesBatch(items) {
   for (const m of items) {
     if (!m || !m.title) continue;
     const cleanTitle = m.title.trim();
-    const epMatch = cleanTitle.match(/^(.*?)(?:\s+(?:season\s*\d+|s\d{1,2}|ep(?:isode)?\s*\d+|part\s*\d+|\d+))$/i);
-    const isEpisode = Boolean(epMatch || m.isTv || m.is_series);
+    
+    // Check if title has explicit episode notation or known trailing episode number
+    let epMatch = cleanTitle.match(/^(.*?)(?:\s+(?:season\s*\d+|s\d{1,2}|ep(?:isode)?\s*\d+|part\s*\d+))$/i);
+    if (!epMatch) {
+      const trailingNum = cleanTitle.match(/^(.*?)\s+(\d{1,4})$/);
+      if (trailingNum && (parseInt(trailingNum[2], 10) > 4 || /mirzapur|omuzigo|yemin/i.test(trailingNum[1]))) {
+        epMatch = trailingNum;
+      }
+    }
+
+    const isEpisode = Boolean(epMatch || (m.isTv && m.category === 'Series'));
     const baseTitle = epMatch ? epMatch[1].trim() : cleanTitle;
     const cleanKey = baseTitle.toLowerCase().replace(/[^a-z0-9]/g, '');
 
@@ -356,7 +365,11 @@ export function groupSeriesBatch(items) {
     } else {
       if (!seenMovieIds.has(m.id)) {
         seenMovieIds.add(m.id);
-        movies.push(m);
+        movies.push({
+          ...m,
+          isTv: false,
+          is_series: false,
+        });
       }
     }
   }
@@ -520,16 +533,16 @@ export async function getDashboardData() {
       timeRemaining: `${15 + ((idx * 8) % 45)}m left`,
     }));
 
-  // 5. Categorized Rails (each sorted Newly to Oldy)
-  const allLoaded = Array.from(memoryMovieMap.values()).sort((a, b) => b.id - a.id);
+  // 5. Categorized Rails (each sorted Newly to Oldy with Series properly clustered)
+  const allLoadedGrouped = groupSeriesBatch(Array.from(memoryMovieMap.values()).sort((a, b) => b.id - a.id));
   const categories = {};
   const standardCategories = ['Action', 'Sci-Fi', 'Romance', 'Horror', 'Drama', 'Animation', 'Series'];
 
   for (const cat of standardCategories) {
     const isSeriesCat = cat === 'Series';
-    const matches = allLoaded.filter(m => {
+    const matches = allLoadedGrouped.filter(m => {
       if (isSeriesCat) return m.isTv;
-      return m.category && m.category.toLowerCase().includes(cat.toLowerCase());
+      return !m.isTv && m.category && m.category.toLowerCase().includes(cat.toLowerCase());
     });
     categories[cat] = matches.slice(0, 20);
   }

@@ -149,6 +149,12 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
   }
 
   bool _checkIsSeries(Movie movie, MovieDetailsData details) {
+    if (!movie.isTv) {
+      final titleLower = movie.title.toLowerCase();
+      final hasExplicitSeasonOrEp = RegExp(r'\b(?:season\s*\d+|s\d{1,2}|ep(?:isode)?\s*\d+|part\s*\d+)\b', caseSensitive: false).hasMatch(titleLower);
+      if (!hasExplicitSeasonOrEp) return false;
+    }
+
     final titleLower = movie.title.toLowerCase();
     final hasExplicitSeasonOrEp = titleLower.contains('season') ||
         titleLower.contains('episode') ||
@@ -158,7 +164,7 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
     if (hasExplicitSeasonOrEp) return true;
 
     // Must have genuine multi-episode season data to qualify as series
-    if (details.numberOfSeasons > 0 && details.seasons.isNotEmpty) {
+    if (movie.isTv && details.numberOfSeasons > 0 && details.seasons.isNotEmpty) {
       final totalEpisodes = details.seasons.fold<int>(0, (sum, s) => sum + s.episodeCount);
       if (totalEpisodes > 1) return true;
     }

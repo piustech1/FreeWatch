@@ -138,29 +138,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       'query': 'Animation',
     },
     {
-      'title': 'Korean',
-      'poster': 'https://image.tmdb.org/t/p/w500/7IiTTgloJzvGI1TAYymCfbfl3vT.jpg',
-      'query': 'Korean',
-    },
-    {
-      'title': 'Filipino',
-      'poster': 'https://image.tmdb.org/t/p/w500/r2J02Z2OpNTctfOSN2Ydgii51I3.jpg',
-      'query': 'Filipino',
-    },
-    {
       'title': 'Indian',
       'poster': 'https://image.tmdb.org/t/p/w500/kdPMUMJzyYAc4roD52qavX0nLIC.jpg',
       'query': 'Indian',
-    },
-    {
-      'title': 'Chinese',
-      'poster': 'https://image.tmdb.org/t/p/w500/5kHvC0Vv83g6R52tCq4jL7sDqC6.jpg',
-      'query': 'Chinese',
-    },
-    {
-      'title': 'Ugandan',
-      'poster': 'https://image.tmdb.org/t/p/w500/628Dep6AxEtDxjZoGP78TsOxYbK.jpg',
-      'query': 'Ugandan',
     },
   ];
 
@@ -180,11 +160,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     'Sport',
     'Thriller',
     'Animation',
-    'Korean',
-    'Filipino',
     'Indian',
-    'Chinese',
-    'Ugandan',
   ];
 
   void _openCategory(String category) {

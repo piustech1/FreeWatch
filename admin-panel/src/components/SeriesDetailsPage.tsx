@@ -742,7 +742,13 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
             <div className="absolute top-4 left-4 right-4 z-30 flex items-center justify-between pointer-events-none">
               <button
                 type="button"
-                onClick={onBack}
+                onClick={() => {
+                  if (isPlaying) {
+                    setIsPlaying(false);
+                  } else {
+                    onBack();
+                  }
+                }}
                 className="w-10 h-10 rounded-full bg-black/60 hover:bg-black/90 backdrop-blur-md flex items-center justify-center text-white hover:text-[#00E676] transition-all cursor-pointer shadow-md pointer-events-auto active:scale-95"
                 aria-label="Back"
               >
