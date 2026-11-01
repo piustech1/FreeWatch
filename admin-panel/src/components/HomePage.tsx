@@ -513,39 +513,42 @@ export const HomePage: React.FC<HomePageProps> = ({
 
                   {/* Left Content Column */}
                   <div className="relative z-20 h-full flex flex-col justify-end p-8 xl:p-12 max-w-2xl">
-                    <div className="space-y-1 mb-3">
-                      {heroLogos[movie.id] ? (
+                    <div className="space-y-2 mb-3">
+                      {heroLogos[movie.id] && (
                         <img
                           src={heroLogos[movie.id]!}
                           alt={movie.title}
-                          className="h-16 max-w-[340px] object-contain object-left drop-shadow-xl mb-2"
+                          className="h-16 max-w-[340px] object-contain object-left drop-shadow-xl"
                         />
-                      ) : (
-                        <div className="text-3xl xl:text-5xl font-black tracking-tight text-white drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)] leading-tight uppercase">
-                          {movie.title}
-                        </div>
                       )}
+                      <div className="text-2xl xl:text-4xl font-black tracking-tight text-white drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)] leading-tight uppercase">
+                        {movie.title}
+                      </div>
                     </div>
 
                     {/* Tags Row */}
                     <div className="flex items-center gap-2 mb-3">
-                      <span className="px-2.5 py-1 rounded-md bg-white/10 backdrop-blur-md border border-white/15 text-xs font-black text-amber-400">
-                        ★ {movie.rating}
+                      <span className="px-3 py-1 rounded-full bg-amber-400 text-black text-xs font-black shadow-md flex items-center gap-1">
+                        <span>★</span>
+                        <span>{movie.rating || "8.9"}</span>
                       </span>
                       <span className="px-2.5 py-1 rounded-md bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-neutral-200">
-                        {movie.duration}
+                        {movie.duration || "1h 50m"}
                       </span>
                       <span className="px-2.5 py-1 rounded-md bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-neutral-200">
-                        {movie.year}
+                        {movie.year || "2025"}
                       </span>
                       <span className="px-2.5 py-1 rounded-md bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-neutral-200">
-                        {movie.category}
+                        {movie.category || "Action"}
+                      </span>
+                      <span className="px-2.5 py-1 rounded-md bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-[#00E676]">
+                        {movie.vj}
                       </span>
                     </div>
 
                     {/* Synopsis */}
-                    <p className="text-sm text-neutral-300 font-medium leading-relaxed mb-6 max-w-xl line-clamp-3">
-                      {movie.overview}
+                    <p className="text-sm text-neutral-300 font-medium leading-relaxed mb-6 max-w-xl line-clamp-3 drop-shadow-sm">
+                      {movie.overview || `Experience ${movie.title} in full 1080p HD with premier Luganda voice-over translation by ${movie.vj}. Unlimited streaming on FreeWatch.`}
                     </p>
 
                     {/* Action Buttons */}

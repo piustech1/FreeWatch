@@ -4,13 +4,11 @@ import {
   Bell,
   Play,
   Heart,
-  Trash2,
 } from "lucide-react";
 import { FreeWatchLogo } from "./HomePage";
 import { CatalogMovie } from "../data/liveCatalog";
 import { AvatarGraphic } from "./AvatarGraphic";
 import { UserProfileData } from "./EditProfileModal";
-import { VjBadge } from "./VjBadge";
 import { FloatingBottomNav } from "./FloatingBottomNav";
 
 interface FavoritesPageProps {
@@ -38,15 +36,6 @@ export const FavoritesPage: React.FC<FavoritesPageProps> = ({
       }
     } catch {}
   }, []);
-
-  const handleRemoveFavorite = (movieId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    const next = favorites.filter((m) => m.id !== movieId);
-    setFavorites(next);
-    try {
-      localStorage.setItem("freewatch_favorites", JSON.stringify(next));
-    } catch {}
-  };
 
   return (
     <div className="w-full min-h-screen bg-black text-white font-sans flex flex-col pb-24 select-none">
@@ -153,24 +142,6 @@ export const FavoritesPage: React.FC<FavoritesPageProps> = ({
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black via-black/35 to-transparent pointer-events-none" />
 
-                  {/* Top: Remove button, Rating & VjBadge */}
-                  <div className="relative z-10 flex items-center justify-between">
-                    <span className="px-1.5 py-0.5 rounded bg-black/60 backdrop-blur-md text-amber-400 text-[10px] font-bold">
-                      ★ {movie.rating}
-                    </span>
-                    <div className="flex items-center gap-1.5">
-                      <VjBadge vjName={movie.vj} size="sm" />
-                      <button
-                        type="button"
-                        onClick={(e) => handleRemoveFavorite(movie.id, e)}
-                        title="Remove from favorites"
-                        className="w-6 h-6 rounded-full bg-black/60 hover:bg-red-600/80 text-white flex items-center justify-center transition-colors cursor-pointer"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                    </div>
-                  </div>
-
                   {/* Center Play Button on Hover */}
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
                     <div className="w-9 h-9 rounded-full bg-[#00E676] text-black flex items-center justify-center shadow-lg">
@@ -187,7 +158,9 @@ export const FavoritesPage: React.FC<FavoritesPageProps> = ({
                 </div>
 
                 <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-neutral-400 font-medium">
-                  <span className="text-neutral-400">{movie.year}</span>
+                  <span className="text-amber-400 font-bold">★ {movie.rating || "8.5"}</span>
+                  <span>•</span>
+                  <span className="text-neutral-400">{movie.year || "2025"}</span>
                   {movie.isTv && (
                     <>
                       <span>•</span>

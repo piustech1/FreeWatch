@@ -36,7 +36,7 @@ interface FreeWatchAppRootProps {
   onNavigateToStore?: () => void;
 }
 export default function FreeWatchAppRoot({ onNavigateToStore }: FreeWatchAppRootProps) {
-  const [currentPage, setCurrentPage] = useState<ActivePage>("home");
+  const [currentPage, setCurrentPage] = useState<ActivePage>("splash");
   const [history, setHistory] = useState<ActivePage[]>([]);
   const [_user, setUser] = useState<string | null>("Admin2");
   const [showAppLaunchBanner, setShowAppLaunchBanner] = useState<boolean>(true);

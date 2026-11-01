@@ -62,7 +62,7 @@ export const FALLBACK_MOVIES: CatalogMovie[] = [
     duration: "2h 05m",
     isTv: false,
     overview: "Desperate to pay their son's ransom, parents embark on a dangerous and relentless rescue mission. Luganda translation by VJ Junior.",
-    streamUrl: "https://munotech3.b-cdn.net/gugwa/gugwa42/07.Mirzapur.SN2.VJ.Ashim.1080.mp4"
+    streamUrl: "http://lunoluno.b-cdn.net/timo28/tyu/Animals.mp4"
   },
   {
     id: "67099",
@@ -77,7 +77,7 @@ export const FALLBACK_MOVIES: CatalogMovie[] = [
     duration: "1h 45m",
     isTv: false,
     overview: "Wrongfully accused of murdering his best friend, church minister Benson is finally released when the truth comes to light. But freedom brings no peace. Translated by VJ Emmy.",
-    streamUrl: "https://munotech3.b-cdn.net/gugwa/gugwa42/07.Mirzapur.SN2.VJ.Ashim.1080.mp4"
+    streamUrl: "http://munotek-vault.b-cdn.net/ugmvs/ug2/Accused.2026.EMMY.1080.mp4"
   },
   {
     id: "67342",
@@ -807,6 +807,10 @@ export function cleanTitleFromUrlOrId(
   }
 
   if (isPlaceholder && streamUrl) {
+    // If stream URL is a generic fallback, do NOT parse it into the title for unrelated movies
+    if ((streamUrl.includes("07.Mirzapur") || streamUrl.includes("sample")) && id !== "67406") {
+      return { title, vj: cleanVj, streamUrl: finalStream };
+    }
     try {
       const decoded = decodeURIComponent(streamUrl.split("?")[0]);
       const filename = decoded.substring(decoded.lastIndexOf("/") + 1);
@@ -862,6 +866,7 @@ export function mapMunoCategoryId(rawCatId: any, rawCategory: string = '', title
   if (catLower.includes('animation') || catLower.includes('anime')) return 'Animation';
 
   const t = title.toLowerCase();
+  if (/animation|anime|cartoon|panda|sonic|mario|shrek|frozen|minion|moana|inside\s*out|puss|lion\s*king|toy\s*story|dragon|zootopia|madagascar/i.test(t)) return 'Animation';
   if (/alien|space|future|galaxy|cyber|robot|matrix|planet|superhero|marvel|avatar|star\s*wars/i.test(t)) return 'Sci-Fi';
   if (/horror|dead|kill|blood|ghost|evil|monster|zombie|haunt|demon|devil|slasher|curse|fear/i.test(t)) return 'Horror';
   if (/love|heart|romance|kiss|wedding|passion|forever|lover/i.test(t)) return 'Romance';
@@ -983,7 +988,7 @@ export function useLiveCatalog() {
   // Raw normalizer for an individual movie or episode
   const normalizeRaw = useCallback((m: any, idx: number) => {
     const itemId = String(m.id || m.vid || `fw-${idx}`);
-    let streamUrl = m.playingurl || m.playingUrl || m.videoUrl || m.streamUrl || 'https://munotech3.b-cdn.net/gugwa/gugwa42/07.Mirzapur.SN2.VJ.Ashim.1080.mp4';
+    let streamUrl = m.playingurl || m.playingUrl || m.videoUrl || m.streamUrl || '';
     let rawTitle = (m.title || m.video_title || m.name || 'Untitled Movie').trim();
     let rawVj = (m.vj || m.vjname || m.vjName || '').trim();
     let isUniversal = rawVj.toLowerCase().includes('universal') || !rawVj;
@@ -1107,24 +1112,29 @@ export function useLiveCatalog() {
           entry.parent.imageUrl = item.imageUrl;
         }
 
-        // Add episode
-        entry.episodesMap.set(item.epNum, {
-          num: item.epNum,
-          title: `Episode ${item.epNum}`,
-          duration: item.duration,
-          streamUrl: item.streamUrl,
-        });
+        // Add episode: prioritize valid epNum, fallback to next sequential number
+        const resolvedEpNum = item.epNum > 0 ? item.epNum : (entry.episodesMap.size + 1);
+        if (!entry.episodesMap.has(resolvedEpNum) || !entry.episodesMap.get(resolvedEpNum)?.streamUrl) {
+          entry.episodesMap.set(resolvedEpNum, {
+            num: resolvedEpNum,
+            title: `Episode ${resolvedEpNum}`,
+            duration: item.duration,
+            streamUrl: item.streamUrl,
+          });
+        }
 
         // Also incorporate any nested rawEpisodes
         if (item.rawEpisodes && item.rawEpisodes.length > 0) {
-          item.rawEpisodes.forEach((re: any, eIdx: number) => {
-            const eNum = re.episodeNumber || re.num || (eIdx + 1);
-            entry.episodesMap.set(eNum, {
-              num: eNum,
-              title: re.title || `Episode ${eNum}`,
-              duration: re.duration || "48m",
-              streamUrl: re.playingurl || re.videoUrl || item.streamUrl,
-            });
+          item.rawEpisodes.forEach((re: any) => {
+            const eNum = re.episodeNumber || re.num || (entry.episodesMap.size + 1);
+            if (!entry.episodesMap.has(eNum) || !entry.episodesMap.get(eNum)?.streamUrl) {
+              entry.episodesMap.set(eNum, {
+                num: eNum,
+                title: re.title || `Episode ${eNum}`,
+                duration: re.duration || "48m",
+                streamUrl: re.playingurl || re.videoUrl || item.streamUrl,
+              });
+            }
           });
         }
       } else {
@@ -1269,7 +1279,10 @@ export function useLiveCatalog() {
         setLoading(false);
         // 5. Background seeding queries for comprehensive category & series coverage
         const SEED_QUERIES = [
-          'romance', 'love', 'hobbit', 'the hobbit', 'sonic', 'panda', 'disney', 'cartoon', 'family',
+          'animation', 'anime', 'cartoon', 'pixar', 'dreamworks', 'disney', 'minions', 'shrek',
+          'moana', 'frozen', 'lion king', 'zootopia', 'toy story', 'ice age', 'dragon',
+          'kung fu panda', 'spider-verse', 'despicable me', 'madagascar', 'cars', 'incredibles',
+          'romance', 'love', 'hobbit', 'the hobbit', 'sonic', 'family',
           'kari', 'karikaada', 'from', 'squid game', 'reacher', 'loki', 'vikings',
           'tulsa king', 'money heist', 'the boys', 'wednesday', 'fallout', 'witcher', 'halo'
         ];

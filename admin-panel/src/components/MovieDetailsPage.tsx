@@ -225,13 +225,23 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
     const video = videoRef.current;
     let hlsInstance: Hls | null = null;
     let mirrorIndex = 0;
-    const cleanUrl = streamUrl.endsWith(".mp4") ? streamUrl : `${streamUrl}.mp4`;
-    const MIRRORS = [
-      cleanUrl,
-      cleanUrl.replace(/https?:\/\/[^/]+/i, "https://munotech3.b-cdn.net"),
-      cleanUrl.replace(/https?:\/\/[^/]+/i, "https://munotek-vault.b-cdn.net"),
-      cleanUrl.replace(/https?:\/\/[^/]+/i, "https://munotech2.b-cdn.net"),
-    ];
+    const normalizedUrl = streamUrl.startsWith("http://")
+      ? streamUrl.replace(/^http:\/\//i, "https://")
+      : streamUrl;
+    const cleanUrl = normalizedUrl.split("?")[0].endsWith(".mp4") || normalizedUrl.includes(".m3u8")
+      ? normalizedUrl
+      : `${normalizedUrl}.mp4`;
+
+    const MIRRORS = Array.from(
+      new Set([
+        cleanUrl,
+        cleanUrl.replace(/https?:\/\/[^/]+/i, "https://munotech3.b-cdn.net"),
+        cleanUrl.replace(/https?:\/\/[^/]+/i, "https://munotek-vault.b-cdn.net"),
+        cleanUrl.replace(/https?:\/\/[^/]+/i, "https://munotech2.b-cdn.net"),
+        cleanUrl.replace(/https?:\/\/[^/]+/i, "https://lunoluno.b-cdn.net"),
+        cleanUrl.replace(/https?:\/\/[^/]+/i, "https://nkuba.b-cdn.net"),
+      ])
+    );
 
     const handleStreamFailure = () => {
       mirrorIndex++;
@@ -531,15 +541,33 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
             setIsDownloaded(true);
             const safeName = `${displayTitle.replace(/[^a-zA-Z0-9_\-\s]/g, "").trim() || "Movie"}.mp4`;
             
-            // 1. Direct browser download trigger
-            const link = document.createElement("a");
-            link.href = streamUrl;
-            link.download = safeName;
-            link.target = "_blank";
-            link.rel = "noopener noreferrer";
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            // 1. Background download without opening external tab
+            const downloadUrl = streamUrl;
+            fetch(downloadUrl)
+              .then((res) => {
+                if (!res.ok) throw new Error("Stream fetch failed");
+                return res.blob();
+              })
+              .then((blob) => {
+                const blobUrl = URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                link.href = blobUrl;
+                link.download = safeName;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+              })
+              .catch(() => {
+                // If CORS blocks blob reading, download directly via an anchor tag without target="_blank"
+                const link = document.createElement("a");
+                link.href = downloadUrl;
+                link.download = safeName;
+                link.setAttribute("download", safeName);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+              });
 
             // 2. Persist to freewatch_downloads for the Downloads page
             try {

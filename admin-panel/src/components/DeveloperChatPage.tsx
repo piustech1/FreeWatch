@@ -31,52 +31,12 @@ interface DeveloperChatPageProps {
   userProfile?: UserProfileData;
 }
 
-const INITIAL_MESSAGES: ChatMessage[] = [
+const DEFAULT_WELCOME: ChatMessage[] = [
   {
-    id: "m-1",
-    sender: "user",
-    text: "hfjjhv",
-    timestamp: "12:08 AM",
-  },
-  {
-    id: "m-2",
-    sender: "user",
-    text: "hello",
-    timestamp: "12:08 AM",
-  },
-  {
-    id: "m-3",
+    id: "welcome-1",
     sender: "developer",
-    text: "Hello! 👋 How can we help you today?",
-    timestamp: "12:09 AM",
-  },
-  {
-    id: "m-4",
-    sender: "user",
-    text: "both",
-    timestamp: "12:09 AM",
-  },
-  {
-    id: "m-5",
-    sender: "developer",
-    text: "The Luganda translation is being updated right now.",
-    timestamp: "12:09 AM",
-  },
-  {
-    id: "m-6",
-    sender: "user",
-    quote: {
-      author: "FreeWatch Support",
-      text: "The Luganda translation is being updated right now.",
-    },
-    text: "😊 😊 😊",
-    timestamp: "12:09 AM",
-  },
-  {
-    id: "m-7",
-    sender: "developer",
-    text: "Enjoy watching in Full HD on FreeWatch!",
-    timestamp: "12:09 AM",
+    text: "Hello! Welcome to FreeWatch Support. 👋 How can we help you today with your movie playback, audio translations, or suggestions?",
+    timestamp: "Online",
   },
 ];
 
@@ -86,7 +46,16 @@ export const DeveloperChatPage: React.FC<DeveloperChatPageProps> = ({
   onNavigateToNotifications,
   userProfile,
 }) => {
-  const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    try {
+      const saved = localStorage.getItem("freewatch_developer_chat_v1");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return DEFAULT_WELCOME;
+  });
   const [inputText, setInputText] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -100,43 +69,69 @@ export const DeveloperChatPage: React.FC<DeveloperChatPageProps> = ({
 
   const handleSendMessage = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!inputText.trim()) return;
+    const cleanText = inputText.trim();
+    if (!cleanText) return;
 
     const userMsg: ChatMessage = {
       id: `usr-${Date.now()}`,
       sender: "user",
-      text: inputText.trim(),
+      text: cleanText,
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     };
 
-    setMessages((prev) => [...prev, userMsg]);
+    setMessages((prev) => {
+      const updated = [...prev, userMsg];
+      try {
+        localStorage.setItem("freewatch_developer_chat_v1", JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
     setInputText("");
 
-    // Simulated quick response from developer support
+    // Simulated contextual response from FreeWatch support
     setTimeout(() => {
-      const replies = [
-        "We're on it! The FreeWatch team is continuously adding more translated releases.",
-        "Thank you for contacting FreeWatch support! Let us know if you need any other title.",
-        "Enjoy streaming your favorite movies in Luganda audio!",
-      ];
-      const randomReply = replies[Math.floor(Math.random() * replies.length)];
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `dev-${Date.now()}`,
-          sender: "developer",
-          text: randomReply,
-          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        },
-      ]);
-    }, 1000);
+      let replyText = "Thank you for reaching out! The FreeWatch technical team is monitoring servers 24/7 to ensure fast playback and crisp audio.";
+      const lower = cleanText.toLowerCase();
+      if (lower.includes("movie") || lower.includes("series") || lower.includes("vj") || lower.includes("upload")) {
+        replyText = "We're continuously uploading new Luganda dubbed releases from top VJs! Your requested titles are being indexed.";
+      } else if (lower.includes("stream") || lower.includes("error") || lower.includes("play") || lower.includes("loading")) {
+        replyText = "Our multi-CDN video servers have been refreshed. If you encounter any buffering, please tap Retry Stream or check your network.";
+      } else if (lower.includes("hello") || lower.includes("hi") || lower.includes("hey")) {
+        replyText = "Hello! Great to have you on FreeWatch. What would you like to watch today?";
+      }
+
+      const devMsg: ChatMessage = {
+        id: `dev-${Date.now()}`,
+        sender: "developer",
+        text: replyText,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      };
+
+      setMessages((prev) => {
+        const updated = [...prev, devMsg];
+        try {
+          localStorage.setItem("freewatch_developer_chat_v1", JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
+    }, 900);
   };
 
   return (
     <div className="w-full min-h-screen bg-black text-white font-sans flex flex-col justify-between select-none">
       {/* 1. TOP APP HEADER BAR */}
       <header className="sticky top-0 z-40 w-full bg-black/90 backdrop-blur-md px-4 py-3 flex items-center justify-between border-b border-white/5">
-        <FreeWatchLogo />
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={onBack}
+            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors cursor-pointer"
+            aria-label="Back"
+          >
+            <ArrowLeft className="w-4 h-4 stroke-[2.2]" />
+          </button>
+          <FreeWatchLogo />
+        </div>
 
         <div className="flex items-center gap-4">
           <button

@@ -53,11 +53,7 @@ export const FOLDER_CATEGORIES = [
   { title: "Sport", poster: "https://image.tmdb.org/t/p/w500/1BfTsk5VWuw8FCocAhCyqnRbEzq.jpg", query: "Sport" },
   { title: "Thriller", poster: "https://image.tmdb.org/t/p/w500/6MKr3KgOLmzOP6MSuZERO41Lpkt.jpg", query: "Thriller" },
   { title: "Animation", poster: "https://image.tmdb.org/t/p/w500/vpnVM9B6NMmQpWeZvzLvDESb2QY.jpg", query: "Animation" },
-  { title: "Korean", poster: "https://image.tmdb.org/t/p/w500/7IiTTgloJzvGI1TAYymCfbfl3vT.jpg", query: "Korean" },
-  { title: "Filipino", poster: "https://image.tmdb.org/t/p/w500/6MKr3KgOLmzOP6MSuZERO41Lpkt.jpg", query: "Filipino" },
   { title: "Indian", poster: "https://image.tmdb.org/t/p/w500/kdPMUMJzyYAc4roD52qavX0nLIC.jpg", query: "Indian" },
-  { title: "Chinese", poster: "https://image.tmdb.org/t/p/w500/628Dep6AxEtDxjZoGP78TsOxYbK.jpg", query: "Chinese" },
-  { title: "Ugandan", poster: "https://image.tmdb.org/t/p/w500/628Dep6AxEtDxjZoGP78TsOxYbK.jpg", query: "Ugandan" },
 ];
 
 export const SearchPage: React.FC<SearchPageProps> = ({

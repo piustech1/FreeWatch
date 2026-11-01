@@ -209,42 +209,36 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
           for (const code of codesToTry) {
             try {
               const controller = new AbortController();
-              const timeoutId = setTimeout(() => controller.abort(), 3500);
+              const timeoutId = setTimeout(() => controller.abort(), 12000);
               const res = await fetch(`https://mumowatch.ai.studio/series/${code}`, { signal: controller.signal });
               clearTimeout(timeoutId);
               if (res.ok) {
                 const data = await res.json();
                 if (data && Array.isArray(data.episodes) && data.episodes.length > 0) {
-                  munoEpisodes = data.episodes;
-                  break;
+                  munoEpisodes.push(...data.episodes);
                 }
               }
             } catch {}
           }
 
-          if (munoEpisodes.length === 0 && cleanTitle.length > 0) {
+          // Always also query MunoWatch search to find all matching franchise/season episodes
+          if (cleanTitle.length > 0) {
             try {
               const sRes = await fetch(`https://mumowatch.ai.studio/search?q=${encodeURIComponent(cleanTitle)}`);
               if (sRes.ok) {
                 const sData = await sRes.json();
                 if (Array.isArray(sData.series) && sData.series.length > 0) {
-                  // Inspect all discovered series codes to fetch true full episode seasons
                   for (const ser of sData.series) {
-                    if (ser.series_code && String(ser.series_code) !== "0") {
-                      try {
-                        const epRes = await fetch(`https://mumowatch.ai.studio/series/${ser.series_code}`);
-                        if (epRes.ok) {
-                          const epData = await epRes.json();
-                          if (epData && Array.isArray(epData.episodes) && epData.episodes.length > 0) {
-                            munoEpisodes.push(...epData.episodes);
-                          }
-                        }
-                      } catch {}
-                    }
                     if (Array.isArray(ser.episodes) && ser.episodes.length > 0) {
                       munoEpisodes.push(...ser.episodes);
                     }
                   }
+                }
+                if (Array.isArray(sData.movies) && sData.movies.length > 0) {
+                  const epMovies = sData.movies.filter((m: any) =>
+                    m.playingurl && /\b(?:s\d{1,2}|ep(?:isode)?\s*\d+|part\s*\d+)\b/i.test(m.title || "")
+                  );
+                  munoEpisodes.push(...epMovies);
                 }
               }
             } catch {}
@@ -351,13 +345,18 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
     if (isLoadingEpisodes) {
       return [];
     }
-    const defaultUrl = sanitizeStreamUrl(activeSeries.streamUrl || "https://munotech3.b-cdn.net/gugwa/gugwa42/07.Mirzapur.SN2.VJ.Ashim.1080.mp4");
-    return [
-      { num: 1, title: `${activeSeries.title} Episode 01`, duration: "50m", streamUrl: defaultUrl, stillUrl: activeSeries.backdropUrl },
-      { num: 2, title: `${activeSeries.title} Episode 02`, duration: "48m", streamUrl: defaultUrl, stillUrl: activeSeries.backdropUrl },
-      { num: 3, title: `${activeSeries.title} Episode 03`, duration: "52m", streamUrl: defaultUrl, stillUrl: activeSeries.backdropUrl },
-      { num: 4, title: `${activeSeries.title} Episode 04`, duration: "54m", streamUrl: defaultUrl, stillUrl: activeSeries.backdropUrl },
-    ];
+    if (activeSeries.streamUrl) {
+      return [
+        {
+          num: 1,
+          title: `${activeSeries.title} Episode 01`,
+          duration: activeSeries.duration || "45m",
+          streamUrl: sanitizeStreamUrl(activeSeries.streamUrl),
+          stillUrl: activeSeries.backdropUrl || activeSeries.imageUrl,
+        },
+      ];
+    }
+    return [];
   }, [resolvedEpisodes, activeSeries, isLoadingEpisodes]);
 
   const currentEpisode = episodes[activeEpisodeIndex] || episodes[0];
@@ -415,13 +414,23 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
     const video = videoRef.current;
     let hlsInstance: Hls | null = null;
     let mirrorIndex = 0;
-    const cleanUrl = streamUrl.endsWith(".mp4") ? streamUrl : `${streamUrl}.mp4`;
-    const MIRRORS = [
-      cleanUrl,
-      cleanUrl.replace(/https?:\/\/[^/]+/i, "https://munotech3.b-cdn.net"),
-      cleanUrl.replace(/https?:\/\/[^/]+/i, "https://munotek-vault.b-cdn.net"),
-      cleanUrl.replace(/https?:\/\/[^/]+/i, "https://munotech2.b-cdn.net"),
-    ];
+    const normalizedUrl = streamUrl.startsWith("http://")
+      ? streamUrl.replace(/^http:\/\//i, "https://")
+      : streamUrl;
+    const cleanUrl = normalizedUrl.split("?")[0].endsWith(".mp4") || normalizedUrl.includes(".m3u8")
+      ? normalizedUrl
+      : `${normalizedUrl}.mp4`;
+
+    const MIRRORS = Array.from(
+      new Set([
+        cleanUrl,
+        cleanUrl.replace(/https?:\/\/[^/]+/i, "https://munotech3.b-cdn.net"),
+        cleanUrl.replace(/https?:\/\/[^/]+/i, "https://munotek-vault.b-cdn.net"),
+        cleanUrl.replace(/https?:\/\/[^/]+/i, "https://munotech2.b-cdn.net"),
+        cleanUrl.replace(/https?:\/\/[^/]+/i, "https://lunoluno.b-cdn.net"),
+        cleanUrl.replace(/https?:\/\/[^/]+/i, "https://nkuba.b-cdn.net"),
+      ])
+    );
 
     const handleStreamFailure = () => {
       mirrorIndex++;
@@ -707,15 +716,33 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
             const epTitle = currentEpisode?.title || `${activeSeries.title} Episode ${activeEpisodeIndex + 1}`;
             const safeName = `${epTitle.replace(/[^a-zA-Z0-9_\-\s]/g, "").trim() || "Episode"}.mp4`;
             
-            // 1. Direct browser download trigger
-            const link = document.createElement("a");
-            link.href = streamUrl;
-            link.download = safeName;
-            link.target = "_blank";
-            link.rel = "noopener noreferrer";
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            // 1. Background download without opening external tab
+            const downloadUrl = streamUrl;
+            fetch(downloadUrl)
+              .then((res) => {
+                if (!res.ok) throw new Error("Stream fetch failed");
+                return res.blob();
+              })
+              .then((blob) => {
+                const blobUrl = URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                link.href = blobUrl;
+                link.download = safeName;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+              })
+              .catch(() => {
+                // If CORS blocks blob reading, download directly via an anchor tag without target="_blank"
+                const link = document.createElement("a");
+                link.href = downloadUrl;
+                link.download = safeName;
+                link.setAttribute("download", safeName);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+              });
 
             // 2. Persist to freewatch_downloads for the Downloads page
             try {

@@ -101,7 +101,17 @@ export const NotificationsPage: React.FC<NotificationsPageProps> = ({
     <div className="w-full min-h-screen bg-black text-white font-sans flex flex-col pb-24 select-none">
       {/* 1. TOP HEADER BAR */}
       <header className="sticky top-0 z-40 w-full bg-black/90 backdrop-blur-md px-4 py-3 flex items-center justify-between border-b border-white/5">
-        <FreeWatchLogo />
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={onBack}
+            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors cursor-pointer"
+            aria-label="Back"
+          >
+            <ArrowLeft className="w-4 h-4 stroke-[2.2]" />
+          </button>
+          <FreeWatchLogo />
+        </div>
 
         <div className="flex items-center gap-4">
           <button
