@@ -10,7 +10,7 @@ import {
   browserLocalPersistence,
   browserSessionPersistence
 } from "firebase/auth";
-import { ref, set, update } from "firebase/database";
+import { ref, set, update, get } from "firebase/database";
 import { auth, rtdb, analytics, logEvent } from "../firebase";
 import { FWLogo } from "./SplashScreen";
 import { ChooseAvatarPage } from "./ChooseAvatarPage";
@@ -112,17 +112,34 @@ export const AuthPage: React.FC<AuthPageProps> = ({
         // Synchronize user profile into Firebase Realtime Database
         try {
           if (cred.user) {
+            const cleanName = fullName.trim() || email.split("@")[0];
             await set(ref(rtdb, `users/${cred.user.uid}/profile`), {
               uid: cred.user.uid,
-              displayName: fullName || email.split("@")[0],
+              name: cleanName,
+              displayName: cleanName,
               email: cred.user.email || email.trim(),
+              avatar: selectedAvatarId || "mirabel",
               avatarId: selectedAvatarId || "mirabel",
+              role: "Member",
+              status: "Active",
               isAnonymous: false,
-              createdAt: Date.now(),
-              lastLoginAt: Date.now(),
+              platform: "Web App",
+              createdAt: new Date().toISOString(),
+              lastLogin: new Date().toISOString(),
+              bio: "Luganda dubbed movie enthusiast • Streaming on FreeWatch",
+            });
+
+            // Initialize live presence
+            await set(ref(rtdb, `users/${cred.user.uid}/presence`), {
+              isOnline: true,
+              lastSeen: Date.now(),
+              platform: "Web App",
+              currentActivity: "Account Created",
             });
           }
-        } catch (_) {}
+        } catch (rtdbErr) {
+          console.warn("RTDB profile registration notice:", rtdbErr);
+        }
 
         // Log Firebase Analytics Event
         try {
@@ -136,14 +153,45 @@ export const AuthPage: React.FC<AuthPageProps> = ({
         const cred = await signInWithEmailAndPassword(auth, email.trim(), password);
         const name = cred.user.displayName || email.split("@")[0];
 
-        // Update last login timestamp in RTDB
+        // Ensure user profile exists in RTDB and update lastLogin
         try {
           if (cred.user) {
-            await update(ref(rtdb, `users/${cred.user.uid}/profile`), {
-              lastLoginAt: Date.now(),
+            const profileRef = ref(rtdb, `users/${cred.user.uid}/profile`);
+            const snap = await get(profileRef);
+            if (!snap.exists() || !snap.val()) {
+              await set(profileRef, {
+                uid: cred.user.uid,
+                name: name,
+                displayName: name,
+                email: cred.user.email || email.trim(),
+                avatar: selectedAvatarId || "mirabel",
+                avatarId: selectedAvatarId || "mirabel",
+                role: "Member",
+                status: "Active",
+                isAnonymous: false,
+                platform: "Web App",
+                createdAt: new Date().toISOString(),
+                lastLogin: new Date().toISOString(),
+                bio: "Luganda dubbed movie enthusiast • Streaming on FreeWatch",
+              });
+            } else {
+              await update(profileRef, {
+                lastLogin: new Date().toISOString(),
+                platform: "Web App",
+              });
+            }
+
+            // Update live presence
+            await update(ref(rtdb, `users/${cred.user.uid}/presence`), {
+              isOnline: true,
+              lastSeen: Date.now(),
+              platform: "Web App",
+              currentActivity: "Active",
             });
           }
-        } catch (_) {}
+        } catch (rtdbErr) {
+          console.warn("RTDB login sync notice:", rtdbErr);
+        }
 
         // Log Firebase Analytics Event
         try {
@@ -155,7 +203,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
         onSuccess(name, selectedAvatarId);
       }
     } catch (err: any) {
-      console.warn("Auth operation failed, proceeding with local profile:", err);
+      console.warn("Auth operation failed:", err);
       // Clean up Firebase error messages for user display
       let msg = err.message || "Authentication failed.";
       if (msg.includes("auth/invalid-credential") || msg.includes("auth/wrong-password") || msg.includes("auth/user-not-found")) {
@@ -166,10 +214,6 @@ export const AuthPage: React.FC<AuthPageProps> = ({
         msg = "Password is too weak. Please use at least 6 characters.";
       }
       setErrorMessage(msg);
-      // If offline or network block, allow seamless fallback so user is never blocked
-      if (msg.includes("network") || msg.includes("offline")) {
-        onSuccess(fullName || email || "FreeWatch User", selectedAvatarId);
-      }
     } finally {
       setLoading(false);
     }

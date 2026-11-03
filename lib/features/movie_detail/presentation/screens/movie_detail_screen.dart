@@ -25,10 +25,13 @@ import '../../../notifications/presentation/screens/notifications_screen.dart';
 import '../../../profile/presentation/providers/watch_history_provider.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../shared/widgets/app_toast.dart';
 import '../../../../shared/widgets/tiktok_promo_modal.dart';
 import '../../../../core/services/admob_service.dart';
 import '../../../../core/services/device_type_service.dart';
+import '../../../auth/presentation/providers/auth_providers.dart';
 import '../providers/movie_detail_providers.dart';
 
 /// Premium iOS Glassmorphic Movie Details Screen:
@@ -108,6 +111,9 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
 
   @override
   void dispose() {
+    try {
+      ref.read(authRepositoryProvider).recordStreamingStop(widget.movie.title);
+    } catch (_) {}
     _landscapeControlsTimer?.cancel();
     _hudDismissTimer?.cancel();
     if (_isFullscreen) {
@@ -2433,12 +2439,147 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
     );
   }
 
+  Future<void> _showAccountRequiredModal() async {
+    final isWideOrTv = MediaQuery.sizeOf(context).width >= 720 || DeviceTypeService().isTv;
+    await showDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierColor: Colors.black.withOpacity(0.85),
+      builder: (ctx) {
+        return Center(
+          child: Container(
+            width: isWideOrTv ? 520 : MediaQuery.sizeOf(ctx).width * 0.9,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: const Color(0xFF141416),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFF00E676).withOpacity(0.35), width: 1.5),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF00E676).withOpacity(0.18),
+                  blurRadius: 30,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF00E676), Color(0xFF00A344)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF00E676).withOpacity(0.4),
+                          blurRadius: 16,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                    child: const Icon(Icons.lock_person_rounded, color: Colors.black, size: 32),
+                  ),
+                  const SizedBox(height: 18),
+                  const Text(
+                    'Account Required to Stream',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'FreeWatch streaming is 100% free, but requires a verified registered account to prevent unauthorized automated access. Sign in or create your free account now to stream in full HD.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.75),
+                      fontSize: 13,
+                      height: 1.45,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.of(ctx).pop(),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.white.withOpacity(0.8),
+                            side: BorderSide(color: Colors.white.withOpacity(0.2)),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: const Text('Browse Catalog', style: TextStyle(fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.of(ctx).pop();
+                            context.push('/onboarding');
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF00E676),
+                            foregroundColor: Colors.black,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            elevation: 4,
+                          ),
+                          child: const Text('Sign In / Register', style: TextStyle(fontWeight: FontWeight.w900)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _playTrailer({String? streamUrl, bool isEpisodeSwitch = false}) async {
+    // 1. Mandatory account verification gate - No streaming without a valid registered account
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final bool hasRegisteredAccount = currentUser != null && !currentUser.isAnonymous;
+    if (!hasRegisteredAccount) {
+      if (_videoPlayerController != null && _videoPlayerController!.value.isPlaying) {
+        _videoPlayerController!.pause();
+      }
+      if (mounted) {
+        setState(() {
+          _isInitializingVideo = false;
+          _isPlayingVideo = false;
+        });
+        _showAccountRequiredModal();
+      }
+      return;
+    }
+
     if (!isEpisodeSwitch && streamUrl == null && _isPlayingVideo && _videoPlayerController != null) {
       if (_videoPlayerController!.value.isPlaying) {
         _videoPlayerController!.pause();
+        try {
+          ref.read(authRepositoryProvider).recordStreamingStop(widget.movie.title);
+        } catch (_) {}
       } else {
         _videoPlayerController!.play();
+        try {
+          ref.read(authRepositoryProvider).recordStreamingStart(widget.movie.title);
+        } catch (_) {}
       }
       if (mounted) setState(() {});
       return;
@@ -2651,6 +2792,9 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
         }
       }
       controller.play();
+      try {
+        ref.read(authRepositoryProvider).recordStreamingStart(widget.movie.title);
+      } catch (_) {}
     }).catchError((error) async {
       // Self-healing: if stream failed to initialize, attempt refreshExpiredStreamUrl once
       if (!hasLocalFile && !_hasAttemptedHealing) {

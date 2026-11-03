@@ -359,7 +359,7 @@ export default function App() {
 
           return {
             id: uid,
-            name: profile.name || (profile.email ? profile.email.split('@')[0] : 'FreeWatch User'),
+            name: profile.name || profile.displayName || (profile.email ? profile.email.split('@')[0] : 'FreeWatch User'),
             email: profile.email || 'No email registered',
             role: profile.role || (profile.name?.toLowerCase().includes('admin') ? 'Admin' : 'Member'),
             status,
@@ -367,8 +367,9 @@ export default function App() {
             banReason,
             isOnline,
             lastSeenTime,
+            currentActivity: presence.currentActivity || (isOnline ? 'Active' : 'Offline'),
             platform: presence.platform || profile.platform || 'Mobile App',
-            avatar: profile.avatar || 'assets/avatars/avatar_mirabel.png',
+            avatar: profile.avatar || profile.avatarId || 'assets/avatars/avatar_mirabel.png',
             bio: profile.bio || 'Luganda dubbed movie enthusiast • Streaming on FreeWatch',
             createdAt: profile.createdAt || new Date().toISOString(),
             lastLogin: profile.lastLogin || profile.createdAt || new Date().toISOString(),
@@ -2153,12 +2154,18 @@ export default function App() {
                                 </div>
                               </td>
 
-                              {/* Last Watched */}
+                              {/* Last Watched & Live Streaming Activity */}
                               <td className="py-3.5 px-4 max-w-xs truncate text-slate-600">
                                 <div className="flex items-center space-x-1.5">
                                   <Film size={12} className="text-slate-400 shrink-0" />
                                   <span className="truncate">{user.lastWatchedMovie}</span>
                                 </div>
+                                {user.isOnline && user.currentActivity && user.currentActivity !== 'Active' && user.currentActivity !== 'Offline' && (
+                                  <div className="flex items-center space-x-1 text-[10px] text-[#00A344] font-semibold mt-0.5 truncate">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-[#00E676] animate-pulse shrink-0" />
+                                    <span className="truncate">{user.currentActivity}</span>
+                                  </div>
+                                )}
                               </td>
 
                               {/* Actions */}
@@ -3559,7 +3566,11 @@ export default function App() {
               <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 text-center">
                 <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">Presence</span>
                 <span className={`text-xs font-bold ${selectedUserDetail.isOnline ? 'text-[#00A344]' : 'text-slate-600'}`}>
-                  {selectedUserDetail.isOnline ? '🟢 Active Now' : `Offline (${formatLastSeen(selectedUserDetail.lastSeenTime)})`}
+                  {selectedUserDetail.isOnline
+                    ? (selectedUserDetail.currentActivity && selectedUserDetail.currentActivity !== 'Active'
+                        ? `🟢 ${selectedUserDetail.currentActivity}`
+                        : '🟢 Active Now')
+                    : `Offline (${formatLastSeen(selectedUserDetail.lastSeenTime)})`}
                 </span>
               </div>
               <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 text-center">

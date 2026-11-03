@@ -421,6 +421,7 @@ export default function FreeWatchAppRoot({ onNavigateToStore }: FreeWatchAppRoot
             onBack={handleBack}
             onNavigateTab={handleNavigateTab}
             onLogout={handleLogout}
+            onRequireAuth={() => pushNavigation("login")}
             onSelectMovie={handleSelectMovie}
             onNavigateToNotifications={handleNavigateToNotifications}
           />
@@ -435,6 +436,7 @@ export default function FreeWatchAppRoot({ onNavigateToStore }: FreeWatchAppRoot
             onBack={handleBack}
             onNavigateTab={handleNavigateTab}
             onLogout={handleLogout}
+            onRequireAuth={() => pushNavigation("login")}
             onSelectMovie={handleSelectMovie}
             onNavigateToNotifications={handleNavigateToNotifications}
           />

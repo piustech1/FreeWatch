@@ -14,13 +14,16 @@ import {
   X,
   RefreshCw,
   AlertCircle,
-  Loader2
+  Loader2,
+  Lock
 } from "lucide-react";
 import Hls from "hls.js";
 import { FreeWatchLogo } from "./HomePage";
 import { useLiveCatalog, CatalogMovie, parseSeriesEpisodeInfo } from "../data/liveCatalog";
 import { AvatarGraphic } from "./AvatarGraphic";
 import { UserProfileData } from "./EditProfileModal";
+import { auth, rtdb } from "../firebase";
+import { ref, update, get, set } from "firebase/database";
 import {
   searchTmdb,
   getMovieLogo,
@@ -177,6 +180,7 @@ interface SeriesDetailsPageProps {
   onBack: () => void;
   onNavigateTab: (tab: "home" | "search" | "favorites" | "downloads" | "profile") => void;
   onLogout?: () => void;
+  onRequireAuth?: () => void;
   seriesTitle?: string;
   movie?: CatalogMovie;
   userProfile?: UserProfileData;
@@ -188,6 +192,7 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
   onBack,
   onNavigateTab,
   onLogout,
+  onRequireAuth,
   seriesTitle = "Wednesday Season 2",
   movie: incomingMovie,
   userProfile,
@@ -196,6 +201,7 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
 }) => {
   const [activeEpisodeIndex, setActiveEpisodeIndex] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  const [showAuthGateModal, setShowAuthGateModal] = useState<boolean>(false);
   const [isBookmarked, setIsBookmarked] = useState<boolean>(false);
   const [isDownloaded, setIsDownloaded] = useState<boolean>(false);
   const [isReadMore, setIsReadMore] = useState<boolean>(false);
@@ -747,7 +753,70 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
     };
   }, [isPlaying, streamUrl, displayTitle, displayVj, currentEpisode]);
 
+  // Clean up user streaming presence on unmount
+  useEffect(() => {
+    return () => {
+      try {
+        const user = auth.currentUser;
+        if (user && !user.isAnonymous) {
+          update(ref(rtdb, `users/${user.uid}/presence`), {
+            currentActivity: "Browsing FreeWatch",
+            lastSeen: Date.now(),
+          });
+        }
+      } catch (_) {}
+    };
+  }, []);
+
+  const recordSeriesStreaming = async (epNum?: number, epName?: string) => {
+    try {
+      const user = auth.currentUser;
+      if (!user || user.isAnonymous) return;
+
+      const epLabel = epName ? ` - ${epName}` : (epNum ? ` - Ep ${epNum}` : "");
+      const fullTitle = `${displayTitle}${epLabel}`;
+
+      // 1. Update live presence in RTDB
+      await update(ref(rtdb, `users/${user.uid}/presence`), {
+        isOnline: true,
+        lastSeen: Date.now(),
+        platform: "Web App",
+        currentActivity: `Streaming ${fullTitle}`,
+      });
+
+      // 2. Prepend entry to watch history in RTDB
+      const historyRef = ref(rtdb, `users/${user.uid}/watch_history`);
+      const snap = await get(historyRef);
+      const currentList: any[] = snap.exists() && Array.isArray(snap.val()) ? snap.val() : [];
+      const filtered = currentList.filter(
+        (item) => item.id !== activeSeries.id && item.title !== fullTitle
+      );
+      const newEntry = {
+        id: activeSeries.id,
+        title: fullTitle,
+        poster_path: activeSeries.imageUrl || "",
+        vj_name: displayVj || "VJ Ashim",
+        category: "Series",
+        timestamp: new Date().toISOString(),
+      };
+      await set(historyRef, [newEntry, ...filtered].slice(0, 40));
+    } catch (e) {
+      console.warn("RTDB series stream record notice:", e);
+    }
+  };
+
   const handleSelectEpisode = async (idx: number) => {
+    // 1. Mandatory account verification gate
+    const user = auth.currentUser;
+    if (!user || user.isAnonymous) {
+      if (videoRef.current) {
+        videoRef.current.pause();
+      }
+      setIsPlaying(false);
+      setShowAuthGateModal(true);
+      return;
+    }
+
     if (videoRef.current) {
       videoRef.current.pause();
     }
@@ -757,6 +826,8 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
 
     const targetEp = episodes[idx];
     if (!targetEp) return;
+
+    recordSeriesStreaming(targetEp.num, targetEp.name);
 
     let streamToPlay = targetEp.streamUrl;
 
@@ -1323,6 +1394,53 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
         </div>
       </div>
       </main>
+
+      {/* ACCOUNT REQUIRED TO STREAM MODAL */}
+      {showAuthGateModal && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-[#141416] border border-[#00E676]/40 rounded-3xl max-w-md w-full p-6 sm:p-8 text-center shadow-[0_0_50px_rgba(0,230,118,0.2)] relative">
+            <button
+              onClick={() => setShowAuthGateModal(false)}
+              className="absolute top-4 right-4 text-neutral-400 hover:text-white p-2 rounded-full hover:bg-neutral-800 transition"
+              aria-label="Close"
+            >
+              <X size={20} />
+            </button>
+
+            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-[#00E676] to-[#00A344] flex items-center justify-center shadow-lg shadow-[#00E676]/30">
+              <Lock className="w-8 h-8 text-black" />
+            </div>
+
+            <h3 className="text-xl sm:text-2xl font-black text-white mb-2">
+              Account Required to Stream
+            </h3>
+
+            <p className="text-sm text-neutral-300 leading-relaxed mb-6">
+              Streaming series on FreeWatch is 100% free, but requires a registered account to verify access. Sign up in seconds or log in to stream <span className="text-[#00E676] font-bold">"{displayTitle}"</span> in full HD with spiced-up Luganda translation.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                type="button"
+                onClick={() => setShowAuthGateModal(false)}
+                className="flex-1 py-3 px-4 rounded-full border border-neutral-700 hover:bg-neutral-800 text-neutral-300 font-bold text-sm transition"
+              >
+                Browse Catalog
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAuthGateModal(false);
+                  if (onRequireAuth) onRequireAuth();
+                }}
+                className="flex-1 py-3 px-4 rounded-full bg-[#00E676] hover:bg-[#00c853] text-black font-black text-sm shadow-lg shadow-[#00E676]/25 hover:scale-[1.02] active:scale-[0.98] transition cursor-pointer"
+              >
+                Sign In / Register
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 7. FLOATING CURVED GLASS BOTTOM NAVIGATION BAR (Hidden on desktop) */}
       <FloatingBottomNav activeTab="home" onNavigateTab={onNavigateTab} />

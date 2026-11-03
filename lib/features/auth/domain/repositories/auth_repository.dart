@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart';
+import '../../../../core/services/device_type_service.dart';
 
 /// Dedicated Authentication Repository for FreeWatch (`freewatch-a0bc7`)
 class AuthRepository {
@@ -34,27 +35,44 @@ class AuthRepository {
 
     final user = credential.user;
     if (user != null) {
+      final trimmedName = name.trim();
       try {
-        await user.updateDisplayName(name.trim());
+        await user.updateDisplayName(trimmedName);
       } catch (_) {}
 
-      // Save initial profile asynchronously without blocking instant UI navigation
-      final userRef = _database.ref('users/${user.uid}/profile');
-      userRef.set({
-        'uid': user.uid,
-        'email': user.email ?? cleanEmail,
-        'name': name.trim(),
-        'avatar': avatarAsset,
-        'createdAt': DateTime.now().toIso8601String(),
-        'bio': 'Action & Sci-Fi enthusiast • FreeWatch member',
-        'role': 'Member',
-        'status': 'Active',
-      }).timeout(
-        const Duration(seconds: 2),
-        onTimeout: () => debugPrint('RTDB profile set timed out, continuing in background'),
-      ).catchError((e) {
-        debugPrint('Failed to save profile to RTDB: $e');
-      });
+      final isTv = DeviceTypeService().isTv;
+      final platform = isTv ? 'Android TV' : 'Android App';
+
+      // Persist initial profile into FreeWatch RTDB with guaranteed await
+      try {
+        final userRef = _database.ref('users/${user.uid}/profile');
+        await userRef.set({
+          'uid': user.uid,
+          'email': user.email ?? cleanEmail,
+          'name': trimmedName,
+          'displayName': trimmedName,
+          'avatar': avatarAsset,
+          'createdAt': DateTime.now().toIso8601String(),
+          'lastLogin': DateTime.now().toIso8601String(),
+          'bio': 'Action & Sci-Fi enthusiast • FreeWatch member',
+          'role': 'Member',
+          'status': 'Active',
+          'isAnonymous': false,
+          'platform': platform,
+        }).timeout(const Duration(seconds: 10));
+      } catch (e) {
+        debugPrint('RTDB profile initial set note: $e');
+      }
+
+      // Initialize user presence
+      try {
+        await _database.ref('users/${user.uid}/presence').set({
+          'isOnline': true,
+          'lastSeen': ServerValue.timestamp,
+          'platform': platform,
+          'currentActivity': 'Account Created',
+        }).timeout(const Duration(seconds: 5));
+      } catch (_) {}
     }
 
     return credential;
@@ -72,14 +90,18 @@ class AuthRepository {
       password: cleanPassword,
     );
 
-    // Verify account status in Firebase RTDB
+    // Verify account status in Firebase RTDB and ensure profile exists
     final user = credential.user;
     if (user != null) {
+      final isTv = DeviceTypeService().isTv;
+      final platform = isTv ? 'Android TV' : 'Android App';
+
       try {
-        final profileSnap = await _database
-            .ref('users/${user.uid}/profile')
+        final profileRef = _database.ref('users/${user.uid}/profile');
+        final profileSnap = await profileRef
             .get()
-            .timeout(const Duration(seconds: 3));
+            .timeout(const Duration(seconds: 4));
+
         if (profileSnap.exists && profileSnap.value is Map) {
           final data = Map<String, dynamic>.from(profileSnap.value as Map);
           if (data['status'] == 'Banned') {
@@ -89,14 +111,82 @@ class AuthRepository {
               message: 'Your account has been suspended by administration. Please contact support.',
             );
           }
+          await profileRef.update({
+            'lastLogin': DateTime.now().toIso8601String(),
+            'platform': platform,
+          });
+        } else {
+          // Self-heal: If profile was missing from RTDB, create it now
+          final displayName = user.displayName?.isNotEmpty == true
+              ? user.displayName!
+              : cleanEmail.split('@')[0];
+          await profileRef.set({
+            'uid': user.uid,
+            'email': user.email ?? cleanEmail,
+            'name': displayName,
+            'displayName': displayName,
+            'avatar': 'assets/avatars/avatar_mirabel.png',
+            'createdAt': DateTime.now().toIso8601String(),
+            'lastLogin': DateTime.now().toIso8601String(),
+            'bio': 'Action & Sci-Fi enthusiast • FreeWatch member',
+            'role': 'Member',
+            'status': 'Active',
+            'isAnonymous': false,
+            'platform': platform,
+          }).timeout(const Duration(seconds: 6));
         }
-        _database.ref('users/${user.uid}/profile/lastLogin').set(DateTime.now().toIso8601String());
+
+        // Update live presence
+        await _database.ref('users/${user.uid}/presence').update({
+          'isOnline': true,
+          'lastSeen': ServerValue.timestamp,
+          'platform': platform,
+          'currentActivity': 'Active',
+        }).timeout(const Duration(seconds: 4));
       } catch (e) {
         if (e is FirebaseAuthException) rethrow;
+        debugPrint('RTDB sign-in sync notice: $e');
       }
     }
 
     return credential;
+  }
+
+  /// Update current user live presence in RTDB
+  Future<void> updatePresence({
+    required bool isOnline,
+    required String currentActivity,
+  }) async {
+    final user = _firebaseAuth.currentUser;
+    if (user == null) return;
+    try {
+      final isTv = DeviceTypeService().isTv;
+      final platform = isTv ? 'Android TV' : 'Android App';
+      await _database.ref('users/${user.uid}/presence').update({
+        'isOnline': isOnline,
+        'lastSeen': ServerValue.timestamp,
+        'platform': platform,
+        'currentActivity': currentActivity,
+      }).timeout(const Duration(seconds: 4));
+    } catch (e) {
+      debugPrint('Update presence notice: $e');
+    }
+  }
+
+  /// Record streaming activity start
+  Future<void> recordStreamingStart(String movieTitle) async {
+    await updatePresence(
+      isOnline: true,
+      currentActivity: 'Streaming $movieTitle',
+    );
+  }
+
+  /// Record streaming activity stopped / paused
+  Future<void> recordStreamingStop(String movieTitle) async {
+    await updatePresence(
+      isOnline: true,
+      currentActivity: 'Browsing FreeWatch',
+    );
   }
 
   /// Sign in as Guest (Anonymous) for quick 1-click access without password entry
@@ -104,17 +194,22 @@ class AuthRepository {
     final credential = await _firebaseAuth.signInAnonymously();
     final user = credential.user;
     if (user != null) {
+      final isTv = DeviceTypeService().isTv;
+      final platform = isTv ? 'Android TV' : 'Android App';
       final userRef = _database.ref('users/${user.uid}/profile');
-      userRef.set({
+      await userRef.set({
         'uid': user.uid,
         'email': 'guest@freewatch.app',
         'name': 'Guest User',
+        'displayName': 'Guest User',
         'avatar': 'assets/avatars/avatar_mirabel.png',
         'createdAt': DateTime.now().toIso8601String(),
         'lastLogin': DateTime.now().toIso8601String(),
-        'bio': 'Streaming as Guest • FreeWatch',
+        'bio': 'Browsing as Guest • FreeWatch',
         'role': 'Member',
         'status': 'Active',
+        'isAnonymous': true,
+        'platform': platform,
       }).catchError((_) {});
     }
     return credential;
@@ -122,6 +217,16 @@ class AuthRepository {
 
   /// Sign out current user
   Future<void> signOut() async {
+    final user = _firebaseAuth.currentUser;
+    if (user != null) {
+      try {
+        await _database.ref('users/${user.uid}/presence').update({
+          'isOnline': false,
+          'lastSeen': ServerValue.timestamp,
+          'currentActivity': 'Offline',
+        }).timeout(const Duration(seconds: 2));
+      } catch (_) {}
+    }
     await _firebaseAuth.signOut();
   }
 

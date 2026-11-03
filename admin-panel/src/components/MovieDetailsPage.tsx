@@ -13,7 +13,8 @@ import {
   User as UserIcon,
   X,
   RefreshCw,
-  AlertCircle
+  AlertCircle,
+  Lock
 } from "lucide-react";
 import Hls from "hls.js";
 import { FreeWatchLogo } from "./HomePage";
@@ -29,11 +30,14 @@ import {
 } from "../services/tmdb";
 import { VjBadge } from "./VjBadge";
 import { FloatingBottomNav } from "./FloatingBottomNav";
+import { auth, rtdb } from "../firebase";
+import { ref, update, get, set } from "firebase/database";
 
 interface MovieDetailsPageProps {
   onBack: () => void;
   onNavigateTab: (tab: "home" | "search" | "favorites" | "downloads" | "profile") => void;
   onLogout?: () => void;
+  onRequireAuth?: () => void;
   movieTitle?: string;
   movie?: CatalogMovie;
   userProfile?: UserProfileData;
@@ -45,6 +49,7 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
   onBack,
   onNavigateTab,
   onLogout,
+  onRequireAuth,
   movieTitle = "The MOST DANGEROUS GAME",
   movie: incomingMovie,
   userProfile,
@@ -52,6 +57,7 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
   onNavigateToNotifications,
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
+  const [showAuthGateModal, setShowAuthGateModal] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [isDownloaded, setIsDownloaded] = useState(false);
   const [isReadMore, setIsReadMore] = useState(false);
@@ -197,6 +203,90 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
     () => sanitizeStreamUrl(healedDetails?.streamUrl || activeMovie.streamUrl),
     [healedDetails?.streamUrl, activeMovie.streamUrl]
   );
+
+  // Clean up user streaming presence on unmount
+  useEffect(() => {
+    return () => {
+      try {
+        const user = auth.currentUser;
+        if (user && !user.isAnonymous) {
+          update(ref(rtdb, `users/${user.uid}/presence`), {
+            currentActivity: "Browsing FreeWatch",
+            lastSeen: Date.now(),
+          });
+        }
+      } catch (_) {}
+    };
+  }, []);
+
+  const checkAuthAndPlay = () => {
+    const user = auth.currentUser;
+    if (!user || user.isAnonymous) {
+      if (videoRef.current) {
+        videoRef.current.pause();
+      }
+      setIsPlaying(false);
+      setShowAuthGateModal(true);
+      return false;
+    }
+    return true;
+  };
+
+  const recordStreamingStart = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user || user.isAnonymous) return;
+
+      // 1. Update live presence in RTDB
+      await update(ref(rtdb, `users/${user.uid}/presence`), {
+        isOnline: true,
+        lastSeen: Date.now(),
+        platform: "Web App",
+        currentActivity: `Streaming ${displayTitle}`,
+      });
+
+      // 2. Prepend entry to watch history in RTDB
+      const historyRef = ref(rtdb, `users/${user.uid}/watch_history`);
+      const snap = await get(historyRef);
+      const currentList: any[] = snap.exists() && Array.isArray(snap.val()) ? snap.val() : [];
+      const filtered = currentList.filter(
+        (item) => item.id !== activeMovie.id && item.title !== displayTitle
+      );
+      const newEntry = {
+        id: activeMovie.id,
+        title: displayTitle,
+        poster_path: displayPoster || "",
+        vj_name: displayVj || "VJ Junior",
+        category: activeMovie.category || "Action",
+        timestamp: new Date().toISOString(),
+      };
+      await set(historyRef, [newEntry, ...filtered].slice(0, 40));
+    } catch (e) {
+      console.warn("RTDB streaming record notice:", e);
+    }
+  };
+
+  const handlePlayToggle = () => {
+    if (isPlaying) {
+      if (videoRef.current) {
+        videoRef.current.pause();
+      }
+      setIsPlaying(false);
+      try {
+        const user = auth.currentUser;
+        if (user && !user.isAnonymous) {
+          update(ref(rtdb, `users/${user.uid}/presence`), {
+            currentActivity: "Browsing FreeWatch",
+            lastSeen: Date.now(),
+          });
+        }
+      } catch (_) {}
+    } else {
+      if (!checkAuthAndPlay()) return;
+      setIsPlaying(true);
+      recordStreamingStart();
+    }
+  };
 
   // Sync bookmarks from localStorage
   useEffect(() => {
@@ -479,7 +569,7 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
             <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
               <button
                 type="button"
-                onClick={() => setIsPlaying(true)}
+                onClick={handlePlayToggle}
                 className="w-16 h-16 rounded-full bg-[#00E676] hover:bg-[#00c853] text-black flex items-center justify-center shadow-[0_0_30px_rgba(0,230,118,0.6)] hover:scale-110 active:scale-95 transition-transform cursor-pointer pointer-events-auto"
                 title="Play Movie"
               >
@@ -533,16 +623,7 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
       <div className="px-4 pt-4 flex items-center gap-2.5">
         <button
           type="button"
-          onClick={() => {
-            if (isPlaying) {
-              if (videoRef.current) {
-                videoRef.current.pause();
-              }
-              setIsPlaying(false);
-            } else {
-              setIsPlaying(true);
-            }
-          }}
+          onClick={handlePlayToggle}
           className="flex-1 h-12 rounded-full bg-[#00E676] hover:bg-[#00c853] text-black font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg shadow-[#00E676]/25 active:scale-[0.98] cursor-pointer"
         >
           {isPlaying ? (
@@ -794,6 +875,53 @@ export const MovieDetailsPage: React.FC<MovieDetailsPageProps> = ({
         </div>
       )}
       </main>
+
+      {/* ACCOUNT REQUIRED TO STREAM MODAL */}
+      {showAuthGateModal && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-[#141416] border border-[#00E676]/40 rounded-3xl max-w-md w-full p-6 sm:p-8 text-center shadow-[0_0_50px_rgba(0,230,118,0.2)] relative">
+            <button
+              onClick={() => setShowAuthGateModal(false)}
+              className="absolute top-4 right-4 text-neutral-400 hover:text-white p-2 rounded-full hover:bg-neutral-800 transition"
+              aria-label="Close"
+            >
+              <X size={20} />
+            </button>
+
+            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-[#00E676] to-[#00A344] flex items-center justify-center shadow-lg shadow-[#00E676]/30">
+              <Lock className="w-8 h-8 text-black" />
+            </div>
+
+            <h3 className="text-xl sm:text-2xl font-black text-white mb-2">
+              Account Required to Stream
+            </h3>
+
+            <p className="text-sm text-neutral-300 leading-relaxed mb-6">
+              Streaming on FreeWatch is 100% free, but requires a registered account to verify access. Sign up in seconds or log in to stream <span className="text-[#00E676] font-bold">"{displayTitle}"</span> in full HD with spiced-up Luganda translation.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                type="button"
+                onClick={() => setShowAuthGateModal(false)}
+                className="flex-1 py-3 px-4 rounded-full border border-neutral-700 hover:bg-neutral-800 text-neutral-300 font-bold text-sm transition"
+              >
+                Browse Catalog
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAuthGateModal(false);
+                  if (onRequireAuth) onRequireAuth();
+                }}
+                className="flex-1 py-3 px-4 rounded-full bg-[#00E676] hover:bg-[#00c853] text-black font-black text-sm shadow-lg shadow-[#00E676]/25 hover:scale-[1.02] active:scale-[0.98] transition cursor-pointer"
+              >
+                Sign In / Register
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 6. FLOATING CURVED GLASS BOTTOM NAVIGATION BAR (Hidden on desktop) */}
       <FloatingBottomNav activeTab="home" onNavigateTab={onNavigateTab} />
