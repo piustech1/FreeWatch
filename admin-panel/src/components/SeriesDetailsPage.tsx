@@ -41,7 +41,68 @@ const KNOWN_SERIES_COUNTS: Record<string, number> = {
   kari: 2,
 };
 
-async function fetchEpisodeStream(title: string, epNum: number): Promise<string | null> {
+function sanitizeEpisodeStreamUrl(rawUrl: string): string {
+  if (!rawUrl) return "";
+  let clean = rawUrl.trim();
+  if (clean.startsWith("http://")) {
+    clean = "https://" + clean.slice(7);
+  }
+  return clean;
+}
+
+function scoreEpisodeCandidate(
+  item: any,
+  url: string,
+  targetEpNum: number,
+  cleanTitle: string,
+  preferredVj?: string
+): number {
+  let score = 100;
+  const lowerUrl = url.toLowerCase();
+  const lowerItemTitle = (item.title || "").toLowerCase();
+  const lowerVj = (item.vj || "").toLowerCase();
+  const lowerPref = (preferredVj || "").toLowerCase().trim();
+
+  // Severe penalty for broken double-dot files (e.g. nkuba.b-cdn.net/12359/e90/Squid.Game. E09..mp4)
+  if (lowerUrl.includes("..mp4") || lowerUrl.includes("..m3u8") || lowerUrl.endsWith("..")) {
+    score -= 300;
+  }
+  if (lowerUrl.includes("nkuba.b-cdn.net") && lowerUrl.includes("..")) {
+    score -= 400;
+  }
+
+  // Significant boost for preferred VJ match (e.g. VJ Junior or active series VJ)
+  if (lowerPref) {
+    const cleanPref = lowerPref.replace(/^vj\s*/i, "");
+    if (cleanPref && (lowerVj.includes(cleanPref) || lowerItemTitle.includes(cleanPref))) {
+      score += 90;
+    }
+  }
+
+  // Boost for high-reliability high-speed CDNs
+  if (lowerUrl.includes("munotek.b-cdn.net") || lowerUrl.includes("munotech") || lowerUrl.includes("lunoluno.b-cdn.net")) {
+    score += 40;
+  }
+
+  // Exact episode number matching
+  const epInfo = parseSeriesEpisodeInfo(item.title || "", true);
+  if (epInfo.isEpisode && epInfo.epNum === targetEpNum) {
+    score += 60;
+  }
+  const epRegex = new RegExp(`\\b(?:e|ep|episode|s\\d{1,2}e|part)?\\s*0*${targetEpNum}\\b`, "i");
+  if (epRegex.test(lowerItemTitle) || epRegex.test(lowerUrl)) {
+    score += 35;
+  }
+
+  // Series title similarity match
+  const cleanTitleWords = cleanTitle.toLowerCase().split(/\s+/).filter((w) => w.length > 2);
+  const matchCount = cleanTitleWords.filter((w) => lowerItemTitle.includes(w)).length;
+  score += matchCount * 20;
+
+  return score;
+}
+
+async function fetchEpisodeStream(title: string, epNum: number, preferredVj?: string): Promise<string | null> {
   try {
     const clean = cleanTitleForTmdb(title);
     const q = `${clean} ${epNum}`;
@@ -77,24 +138,41 @@ async function fetchEpisodeStream(title: string, epNum: number): Promise<string 
       }
     }
 
-    for (const item of allItems) {
-      const url = item.playingurl || item.playingUrl || item.streamUrl;
-      if (!url) continue;
-      const info = parseSeriesEpisodeInfo(item.title || "", true);
-      if (info.epNum === epNum) {
-        return url;
+    // Also try simple search without episode number if nothing found
+    if (allItems.length === 0 && clean.length > 0) {
+      const res = await fetch(`https://mumowatch.ai.studio/search?q=${encodeURIComponent(clean)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.series)) {
+          data.series.forEach((s: any) => {
+            if (Array.isArray(s.episodes)) allItems.push(...s.episodes);
+          });
+        }
+        if (Array.isArray(data.movies)) {
+          allItems.push(...data.movies);
+        }
       }
     }
-    const regex = new RegExp(`\\b(?:ep(?:isode)?|part)?\\s*0*${epNum}\\b`, "i");
+
+    // Filter and score candidates
+    const scoredCandidates: { url: string; score: number }[] = [];
+    const seenUrls = new Set<string>();
+
     for (const item of allItems) {
-      const url = item.playingurl || item.playingUrl || item.streamUrl;
-      if (url && regex.test(item.title || "")) {
-        return url;
-      }
+      const rawUrl = item.playingurl || item.playingUrl || item.streamUrl;
+      if (!rawUrl) continue;
+      const url = sanitizeEpisodeStreamUrl(rawUrl);
+      if (!url || seenUrls.has(url)) continue;
+      seenUrls.add(url);
+
+      const score = scoreEpisodeCandidate(item, url, epNum, clean, preferredVj);
+      scoredCandidates.push({ url, score });
     }
-    if (allItems.length > 0) {
-      const firstUrl = allItems[0].playingurl || allItems[0].playingUrl || allItems[0].streamUrl;
-      if (firstUrl) return firstUrl;
+
+    scoredCandidates.sort((a, b) => b.score - a.score);
+
+    if (scoredCandidates.length > 0) {
+      return scoredCandidates[0].url;
     }
   } catch (err) {
     console.warn("[SeriesDetails] Error resolving episode stream:", err);
@@ -319,7 +397,15 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
               }
 
               if (loadedEps.length > 0) {
-                munoEpisodes.push(...loadedEps);
+                // Ensure loaded episodes are relevant to this series
+                const filtered = loadedEps.filter((ep: any) => {
+                  const epTitle = (ep.title || "").toLowerCase();
+                  if (!epTitle) return false;
+                  const titleWords = cleanTitle.toLowerCase().split(/\s+/).filter((w) => w.length > 2);
+                  if (titleWords.length === 0) return true;
+                  return titleWords.some((w) => epTitle.includes(w));
+                });
+                munoEpisodes.push(...filtered);
               }
             } catch {}
           }
@@ -381,8 +467,8 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
 
           // Sort munoEpisodes by episode number extracted from title
           munoEpisodes.sort((a: any, b: any) => {
-            const numA = parseSeriesEpisodeInfo(a.title || "", true).episodeNumber || 9999;
-            const numB = parseSeriesEpisodeInfo(b.title || "", true).episodeNumber || 9999;
+            const numA = parseSeriesEpisodeInfo(a.title || "", true).epNum || 9999;
+            const numB = parseSeriesEpisodeInfo(b.title || "", true).epNum || 9999;
             return numA - numB;
           });
         }
@@ -390,25 +476,38 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
         const knownSeriesEntry = Object.entries(KNOWN_SERIES_COUNTS).find(([k]) => lowerTitle.includes(k));
         const knownCount = knownSeriesEntry ? knownSeriesEntry[1] : 0;
 
-        // Map discovered MunoWatch episodes by their parsed episode number
+        // Map discovered MunoWatch episodes by their parsed episode number with candidate ranking
         const mappedByNum = new Map<number, any>();
         for (const ep of munoEpisodes) {
           const info = parseSeriesEpisodeInfo(ep.title || "", true);
-          const epNum = info.episodeNumber || (mappedByNum.size + 1);
+          const epNum = info.isEpisode ? info.epNum : (mappedByNum.size + 1);
+          const rawUrl = ep.playingurl || ep.playingUrl || "";
+          const sanitizedUrl = sanitizeEpisodeStreamUrl(rawUrl);
+          const tmdbEp = tmdbEps.find((t) => t.episodeNumber === epNum);
+
+          const epData = {
+            num: epNum,
+            title: ep.title || tmdbEp?.name || `${activeSeries.title} Episode ${epNum}`,
+            duration: tmdbEp?.runtime ? `${tmdbEp.runtime}m` : "45m",
+            streamUrl: sanitizedUrl,
+            stillUrl:
+              tmdbEp?.stillUrl ||
+              ep.image ||
+              ep.thumbnail ||
+              activeSeries.backdropUrl ||
+              activeSeries.imageUrl,
+          };
+
           if (!mappedByNum.has(epNum)) {
-            const tmdbEp = tmdbEps.find((t) => t.episodeNumber === epNum);
-            mappedByNum.set(epNum, {
-              num: epNum,
-              title: ep.title || tmdbEp?.name || `${activeSeries.title} Episode ${epNum}`,
-              duration: tmdbEp?.runtime ? `${tmdbEp.runtime}m` : "45m",
-              streamUrl: ep.playingurl || ep.playingUrl || "",
-              stillUrl:
-                tmdbEp?.stillUrl ||
-                ep.image ||
-                ep.thumbnail ||
-                activeSeries.backdropUrl ||
-                activeSeries.imageUrl,
-            });
+            mappedByNum.set(epNum, epData);
+          } else {
+            // Keep the superior stream URL candidate
+            const existing = mappedByNum.get(epNum);
+            const existingScore = scoreEpisodeCandidate(existing, existing.streamUrl || "", epNum, cleanTitle, activeSeries.vj);
+            const newScore = scoreEpisodeCandidate(ep, sanitizedUrl, epNum, cleanTitle, activeSeries.vj);
+            if (newScore > existingScore) {
+              mappedByNum.set(epNum, epData);
+            }
           }
         }
 
@@ -594,9 +693,9 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
         cleanUrl.replace(/https?:\/\/[^/]+/i, "https://lunoluno.b-cdn.net"),
         cleanUrl.replace(/https?:\/\/[^/]+/i, "https://nkuba.b-cdn.net"),
       ])
-    );
+    ).filter((m) => !m.includes("..mp4") && !m.includes("..m3u8"));
 
-    const handleStreamFailure = () => {
+    const handleStreamFailure = async () => {
       mirrorIndex++;
       if (mirrorIndex < MIRRORS.length) {
         const nextMirror = MIRRORS[mirrorIndex];
@@ -607,6 +706,20 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
           return;
         }
       }
+
+      // If static CDN domain swapping exhausted, attempt intelligent re-fetch with candidate ranking
+      if (currentEpisode) {
+        try {
+          const freshStream = await fetchEpisodeStream(displayTitle, currentEpisode.num, displayVj);
+          if (freshStream && freshStream !== video.src && !freshStream.includes("..mp4")) {
+            video.src = freshStream;
+            video.load();
+            video.play().catch(() => {});
+            return;
+          }
+        } catch (_) {}
+      }
+
       setStreamError(true);
     };
 
@@ -632,7 +745,7 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
         hlsInstance.destroy();
       }
     };
-  }, [isPlaying, streamUrl]);
+  }, [isPlaying, streamUrl, displayTitle, displayVj, currentEpisode]);
 
   const handleSelectEpisode = async (idx: number) => {
     if (videoRef.current) {
@@ -645,9 +758,9 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
     const targetEp = episodes[idx];
     if (!targetEp) return;
 
-    if (!targetEp.streamUrl) {
+    if (!targetEp.streamUrl || targetEp.streamUrl.includes("..mp4")) {
       setIsResolvingEpisodeStream(true);
-      const fetchedUrl = await fetchEpisodeStream(displayTitle, targetEp.num);
+      const fetchedUrl = await fetchEpisodeStream(displayTitle, targetEp.num, displayVj);
       setIsResolvingEpisodeStream(false);
       if (fetchedUrl) {
         setResolvedEpisodes((prev) => {

@@ -23,28 +23,29 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onGetStarted, onLogI
   const [activeSlide, setActiveSlide] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Synchronize background video starting at 42 seconds and loop back to 42s (Matching Flutter onboarding)
+  // Synchronize background video to loop seamlessly between 50 and 55 seconds without interruption
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
     const handleLoadedMetadata = () => {
-      if (video.duration > 42) {
-        video.currentTime = 42;
+      if (video.duration >= 50) {
+        video.currentTime = 50;
         video.play().catch(() => {});
       }
     };
 
     const handleTimeUpdate = () => {
-      if (video.duration > 45 && (video.currentTime >= video.duration - 1 || video.currentTime < 40)) {
-        video.currentTime = 42;
+      if (video.currentTime >= 55 || video.currentTime < 50) {
+        video.currentTime = 50;
       }
     };
 
     video.addEventListener("loadedmetadata", handleLoadedMetadata);
     video.addEventListener("timeupdate", handleTimeUpdate);
-    if (video.readyState >= 1 && video.duration > 42 && video.currentTime < 42) {
-      video.currentTime = 42;
+    if (video.readyState >= 1 && (video.currentTime < 50 || video.currentTime >= 55)) {
+      video.currentTime = 50;
+      video.play().catch(() => {});
     }
 
     return () => {
@@ -77,10 +78,6 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onGetStarted, onLogI
       <header className="relative z-10 w-full max-w-6xl mx-auto flex items-center justify-between px-6 pt-6 sm:pt-8 shrink-0">
         <div className="flex items-center gap-3">
           <FWLogo size="md" />
-          <div className="hidden lg:flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-bold text-neutral-300">
-            <span className="w-2 h-2 rounded-full bg-[#00E676] animate-pulse" />
-            <span>PC Web &amp; TV Cinema Edition</span>
-          </div>
         </div>
 
         <button
@@ -92,39 +89,20 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onGetStarted, onLogI
       </header>
 
       {/* Main Content Area: Anchored cleanly to bottom without scroll */}
-      <div className="relative z-10 w-full max-w-6xl mx-auto px-6 pb-8 sm:pb-10 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 lg:gap-10">
+      <div className="relative z-10 w-full max-w-6xl mx-auto px-6 pb-8 sm:pb-10 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 lg:gap-12">
         {/* Left Column (Desktop Showcase) */}
-        <div className="hidden lg:flex flex-col space-y-4 max-w-lg mb-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#581c87]/60 border border-purple-400/30 text-purple-200 text-xs font-extrabold tracking-wider uppercase">
-            <span>✨ Uganda&apos;s #1 Dubbed Streaming Hub</span>
-          </div>
-
+        <div className="hidden lg:flex flex-col space-y-4 max-w-xl mb-4">
           <h2 className="text-4xl xl:text-5xl font-black text-white leading-tight tracking-tight">
             Watch the world&apos;s greatest movies in <span className="text-[#00E676]">Luganda</span>.
           </h2>
 
-          <p className="text-neutral-300 text-sm leading-relaxed">
+          <p className="text-neutral-300 text-sm xl:text-base leading-relaxed font-normal">
             Experience premium blockbusters, Hollywood hits, Korean dramas, Indian action, and anime with legendary translations from VJ Junior, VJ Emmy, VJ Jingo, VJ Isma Pro, and more.
           </p>
-
-          <div className="flex items-center gap-4 pt-2">
-            <div className="px-4 py-2.5 rounded-2xl bg-white/5 border border-white/10 text-center">
-              <div className="text-xl font-black text-white">3,200+</div>
-              <div className="text-[11px] text-neutral-400 font-medium">Luganda Movies</div>
-            </div>
-            <div className="px-4 py-2.5 rounded-2xl bg-white/5 border border-white/10 text-center">
-              <div className="text-xl font-black text-[#00E676]">37+</div>
-              <div className="text-[11px] text-neutral-400 font-medium">Famous VJs</div>
-            </div>
-            <div className="px-4 py-2.5 rounded-2xl bg-white/5 border border-white/10 text-center">
-              <div className="text-xl font-black text-[#00E5FF]">1080p</div>
-              <div className="text-[11px] text-neutral-400 font-medium">Ultra Crisp Video</div>
-            </div>
-          </div>
         </div>
 
-        {/* Right / Bottom Card Area: Exact typography, pagination pill, and Get Started CTA */}
-        <div className="w-full max-w-md space-y-4 bg-transparent lg:bg-[#121216]/80 lg:p-8 lg:rounded-3xl lg:backdrop-blur-xl">
+        {/* Right / Bottom Card Area: Sleek PC Widescreen Glassmorphic Card */}
+        <div className="w-full max-w-md lg:max-w-md space-y-4 bg-transparent lg:bg-white/[0.04] lg:p-8 lg:rounded-[28px] lg:border lg:border-white/10 lg:backdrop-blur-2xl shadow-2xl">
           {/* Headlines */}
           <div className="space-y-2">
             <h1 className="text-[28px] sm:text-[32px] font-extrabold text-white leading-[1.18] tracking-tight">

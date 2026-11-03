@@ -266,11 +266,6 @@ export const HomePage: React.FC<HomePageProps> = ({
       <header className="sticky top-0 z-40 w-full bg-black/90 backdrop-blur-md px-4 lg:px-8 py-3 flex items-center justify-between border-b border-white/5">
         <div className="flex items-center gap-3">
           <FreeWatchLogo />
-          {/* Subtle Android TV UI Badge on Desktop */}
-          <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-[11px] font-bold text-neutral-300">
-            <span className="w-2 h-2 rounded-full bg-[#00E676] animate-pulse" />
-            <span>TV UI (10-FOOT)</span>
-          </div>
         </div>
 
         <div className="flex items-center gap-4">
@@ -522,8 +517,8 @@ export const HomePage: React.FC<HomePageProps> = ({
                     alt={movie.title}
                     className="w-full h-full object-cover object-[center_30%] filter brightness-90 contrast-110 group-hover:scale-105 transition-transform duration-1000"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-r from-black via-black/85 via-45% to-transparent" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 via-30% to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/35 via-50% to-transparent pointer-events-none" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 via-35% to-transparent pointer-events-none" />
 
                   {/* Top Right: Authentic VJ Badge */}
                   <div className="absolute top-6 right-6 z-20">

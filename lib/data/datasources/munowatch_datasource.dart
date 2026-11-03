@@ -7,10 +7,12 @@ import '../models/movie.dart';
 /// Fetches real-time Luganda-dubbed movies across 13+ categories with live search
 /// and on-demand stream resolution.
 class MunowatchDatasource {
+  static const String _freeWatchApiBase = 'https://freewatchug.online/api/v1';
   static const String _publicWebBase = 'https://munowatch.ai.studio';
   static const String _baseUrl = 'https://mumowatch.ai.studio';
   static const String _fallbackBaseUrl = 'https://munowatch.ai.studio';
 
+  final Dio _freeWatchDio;
   final Dio _dio;
   final Dio _fallbackDio;
 
@@ -36,8 +38,9 @@ class MunowatchDatasource {
     if (raw == null) return null;
     var trimmed = raw.trim();
     if (trimmed.isEmpty || !trimmed.startsWith('http')) return null;
+    if (trimmed.contains('..mp4') || trimmed.contains('..m3u8')) return null;
     if (trimmed.startsWith('http://') &&
-        (trimmed.contains('b-cdn.net') || trimmed.contains('r2.dev') || trimmed.contains('pearlpix'))) {
+        (trimmed.contains('b-cdn.net') || trimmed.contains('r2.dev') || trimmed.contains('pearlpix') || trimmed.contains('munotech') || trimmed.contains('munotek'))) {
       trimmed = trimmed.replaceFirst('http://', 'https://');
     }
     if (trimmed.contains(' ')) {
@@ -46,8 +49,20 @@ class MunowatchDatasource {
     return trimmed;
   }
 
-  MunowatchDatasource({Dio? dio, Dio? fallbackDio})
-      : _dio = dio ??
+  MunowatchDatasource({Dio? dio, Dio? fallbackDio, Dio? freeWatchDio})
+      : _freeWatchDio = freeWatchDio ??
+            Dio(
+              BaseOptions(
+                baseUrl: _freeWatchApiBase,
+                connectTimeout: const Duration(seconds: 10),
+                receiveTimeout: const Duration(seconds: 12),
+                headers: {
+                  'User-Agent': 'FreeWatch/1.0 (Flutter)',
+                  'Accept': 'application/json, text/plain, */*',
+                },
+              ),
+            ),
+        _dio = dio ??
             Dio(
               BaseOptions(
                 baseUrl: _baseUrl,
@@ -393,7 +408,23 @@ class MunowatchDatasource {
     final Map<int, Movie> resultsMap = {};
 
     for (final q in queryVariations) {
-      // 1. Query primary host (mumowatch.ai.studio/search) first
+      // 0. Query high-speed FreeWatch primary API first
+      try {
+        final fwRes = await _freeWatchDio.get('/search', queryParameters: {'q': q});
+        if (fwRes.data is Map && fwRes.data['data'] is List) {
+          for (final item in fwRes.data['data'] as List) {
+            if (item is Map) {
+              final movie = _mapToMovie(Map<String, dynamic>.from(item), defaultCategory: q);
+              if (!resultsMap.containsKey(movie.id)) {
+                resultsMap[movie.id] = movie;
+                _knownMoviesMap[movie.id] = movie;
+              }
+            }
+          }
+        }
+      } catch (_) {}
+
+      // 1. Query live host (mumowatch.ai.studio/search)
       try {
         Response? response;
         try {

@@ -1,5 +1,5 @@
 import React from "react";
-import { X, Music, Sparkles, Users } from "lucide-react";
+import { X, Music } from "lucide-react";
 
 interface AppLaunchBannerModalProps {
   isOpen: boolean;
@@ -32,7 +32,7 @@ export const AppLaunchBannerModal: React.FC<AppLaunchBannerModalProps> = ({
       <div className="absolute inset-0" onClick={onClose} />
 
       {/* Main Promo Dialog: Responsive Portrait on Mobile, Elegant Landscape on PC */}
-      <div className="relative z-10 w-full max-w-[340px] sm:max-w-[620px] rounded-[26px] overflow-hidden bg-[#0F1117] border border-white/10 shadow-[0_16px_50px_rgba(0,0,0,0.9)] flex flex-col sm:flex-row">
+      <div className="relative z-10 w-full max-w-[340px] sm:max-w-[580px] rounded-[24px] overflow-hidden bg-[#0F1117] border border-white/10 shadow-[0_16px_50px_rgba(0,0,0,0.9)] flex flex-col sm:flex-row">
         {/* Floating Top-Right Close Button */}
         <button
           type="button"
@@ -46,7 +46,7 @@ export const AppLaunchBannerModal: React.FC<AppLaunchBannerModalProps> = ({
         {/* Banner Artwork: 3:4 on Mobile, Full-Height Left Column on PC */}
         <div
           onClick={handleJoin}
-          className="relative w-full sm:w-[260px] aspect-[3/4] sm:aspect-auto cursor-pointer overflow-hidden bg-[#161822] shrink-0"
+          className="relative w-full sm:w-[240px] aspect-[3/4] sm:aspect-auto cursor-pointer overflow-hidden bg-[#161822] shrink-0"
         >
           <img
             src="/tiktok_promo_banner.png"
@@ -64,38 +64,27 @@ export const AppLaunchBannerModal: React.FC<AppLaunchBannerModalProps> = ({
         </div>
 
         {/* Content & Actions: Below artwork on Mobile, Right Column on PC */}
-        <div className="p-5 sm:p-7 flex-1 flex flex-col justify-between">
+        <div className="p-5 sm:p-6 flex-1 flex flex-col justify-between">
           <div>
-            {/* Community Capsule Badge */}
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gradient-to-r from-[#FE2C55]/20 to-[#FF0050]/20 border border-[#FE2C55]/30 text-[#FE2C55] text-[11px] font-extrabold uppercase tracking-wider mb-2.5">
-              <Sparkles className="w-3 h-3" />
-              <span>Official Community</span>
-            </div>
-
             <h3 className="text-xl sm:text-2xl font-black text-white leading-tight tracking-tight mb-2">
-              Join FreeWatch on TikTok!
+              Join FreeWatch on TikTok
             </h3>
 
-            <p className="text-xs sm:text-[13px] text-neutral-300 leading-relaxed font-normal mb-4">
-              Get instant updates on the newest Luganda dubbed blockbusters, exclusive VJ highlights, memes, and daily movie schedules.
+            <p className="text-xs sm:text-[13px] text-neutral-300 leading-relaxed font-normal mb-5">
+              Get instant updates on the newest Luganda dubbed blockbusters &amp; daily movie releases.
             </p>
-
-            <div className="hidden sm:flex items-center gap-2 py-2 px-3 rounded-xl bg-white/[0.04] border border-white/5 mb-5 text-neutral-300 text-xs">
-              <Users className="w-4 h-4 text-[#00E676]" />
-              <span>Over <strong>38,000+</strong> movie fans are streaming with us</span>
-            </div>
           </div>
 
-          {/* CTA Buttons */}
+          {/* CTA Buttons matching clean Flutter layout */}
           <div className="flex flex-col gap-2.5">
             {/* Primary TikTok Community CTA Button */}
             <button
               type="button"
               onClick={handleJoin}
-              className="w-full h-[48px] rounded-[14px] bg-gradient-to-r from-[#FE2C55] via-[#FF0050] to-[#E50914] hover:brightness-110 active:scale-[0.98] font-black text-white text-[14px] tracking-wide flex items-center justify-center gap-2 shadow-lg shadow-[#FE2C55]/30 transition-all cursor-pointer"
+              className="w-full h-[46px] rounded-[14px] bg-gradient-to-r from-[#FE2C55] via-[#FF0050] to-[#E50914] hover:brightness-110 active:scale-[0.98] font-black text-white text-[14px] tracking-wide flex items-center justify-center gap-2 shadow-lg shadow-[#FE2C55]/30 transition-all cursor-pointer"
             >
               <Music className="w-4 h-4 fill-white text-white" />
-              <span>Join on TikTok</span>
+              <span>Join TikTok Community</span>
             </button>
 
             {/* Continue Watching Button */}
