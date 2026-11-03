@@ -271,6 +271,11 @@ class _TvHeroBillboardState extends ConsumerState<TvHeroBillboard> {
                       onFocusChange: (hasNavFocus) {
                         setState(() => _focusedButtonIndex = hasNavFocus ? 0 : -1);
                       },
+                      actions: {
+                        ActivateIntent: CallbackAction<ActivateIntent>(
+                          onInvoke: (_) => widget.onPlay(movie),
+                        ),
+                      },
                       child: InkWell(
                         onTap: () => widget.onPlay(movie),
                         borderRadius: BorderRadius.circular(10),
@@ -334,6 +339,11 @@ class _TvHeroBillboardState extends ConsumerState<TvHeroBillboard> {
                     FocusableActionDetector(
                       onFocusChange: (hasNavFocus) {
                         setState(() => _focusedButtonIndex = hasNavFocus ? 1 : -1);
+                      },
+                      actions: {
+                        ActivateIntent: CallbackAction<ActivateIntent>(
+                          onInvoke: (_) => widget.onDetails(movie),
+                        ),
                       },
                       child: InkWell(
                         onTap: () => widget.onDetails(movie),

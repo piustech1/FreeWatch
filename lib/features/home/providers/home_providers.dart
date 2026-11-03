@@ -10,9 +10,16 @@ import '../../../data/repositories/movie_repository.dart';
 /// Active tab index on HomeScreen (0: Home, 1: Search, 2: Favorites, 3: Downloads, 4: Profile)
 final bottomNavIndexProvider = StateProvider<int>((ref) => 0);
 
+/// Active navigation target on Android TV & Widescreen Desktop ('home', 'search', 'available-vjs', 'categories', 'favorites', 'downloads', 'profile', 'notifications')
+final tvNavTargetProvider = StateProvider<String>((ref) => 'home');
+
 /// Navigates to a root bottom nav tab from any screen depth in a single atomic step
 void navigateToBottomNavTab(BuildContext context, WidgetRef ref, int index) {
   ref.read(bottomNavIndexProvider.notifier).state = index;
+  const tvTargets = ['home', 'search', 'favorites', 'downloads', 'profile'];
+  if (index >= 0 && index < tvTargets.length) {
+    ref.read(tvNavTargetProvider.notifier).state = tvTargets[index];
+  }
   if (Navigator.of(context).canPop()) {
     Navigator.of(context).popUntil((route) => route.isFirst);
   }

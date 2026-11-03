@@ -49,25 +49,32 @@ class VjSection extends StatelessWidget {
                   ),
                 ],
               ),
-              GestureDetector(
-                onTap: onSeeAll,
-                behavior: HitTestBehavior.opaque,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFC084FC).withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: const Color(0xFFC084FC).withOpacity(0.25),
-                      width: 0.8,
-                    ),
+              FocusableActionDetector(
+                actions: {
+                  ActivateIntent: CallbackAction<ActivateIntent>(
+                    onInvoke: (_) => onSeeAll?.call(),
                   ),
-                  child: const Text(
-                    'See all',
-                    style: TextStyle(
-                      color: Color(0xFFC084FC),
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w600,
+                },
+                child: GestureDetector(
+                  onTap: onSeeAll,
+                  behavior: HitTestBehavior.opaque,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFC084FC).withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: const Color(0xFFC084FC).withOpacity(0.25),
+                        width: 0.8,
+                      ),
+                    ),
+                    child: const Text(
+                      'See all',
+                      style: TextStyle(
+                        color: Color(0xFFC084FC),
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),
@@ -83,6 +90,7 @@ class VjSection extends StatelessWidget {
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
             physics: const BouncingScrollPhysics(),
+            cacheExtent: 800,
             itemCount: vjs.length,
             separatorBuilder: (_, __) => const SizedBox(width: 16),
             itemBuilder: (context, index) {

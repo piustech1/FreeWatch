@@ -171,43 +171,72 @@ class VjCard extends StatefulWidget {
 
 class _VjCardState extends State<VjCard> {
   bool _isPressed = false;
+  bool _isFocused = false;
 
   @override
   Widget build(BuildContext context) {
     final theme = VjCardTheme.resolve(widget.vj, widget.index);
 
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _isPressed = true),
-      onTapUp: (_) {
-        setState(() => _isPressed = false);
-        widget.onTap?.call();
+    return FocusableActionDetector(
+      onFocusChange: (focus) {
+        setState(() => _isFocused = focus);
+        if (focus) {
+          Scrollable.ensureVisible(
+            context,
+            alignment: 0.5,
+            duration: const Duration(milliseconds: 260),
+            curve: Curves.easeOutCubic,
+          );
+        }
       },
-      onTapCancel: () => setState(() => _isPressed = false),
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedScale(
-        scale: _isPressed ? 0.96 : 1.0,
-        duration: const Duration(milliseconds: 140),
-        curve: Curves.easeInOut,
-        child: Container(
-          width: widget.width,
-          height: widget.height,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            color: const Color(0xFF111111),
-            boxShadow: [
-              BoxShadow(
-                color: theme.shadowColor,
-                blurRadius: 16,
-                offset: const Offset(0, 6),
-                spreadRadius: -3,
+      actions: {
+        ActivateIntent: CallbackAction<ActivateIntent>(
+          onInvoke: (_) => widget.onTap?.call(),
+        ),
+      },
+      child: GestureDetector(
+        onTapDown: (_) => setState(() => _isPressed = true),
+        onTapUp: (_) {
+          setState(() => _isPressed = false);
+          widget.onTap?.call();
+        },
+        onTapCancel: () => setState(() => _isPressed = false),
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedScale(
+          scale: _isFocused ? 1.05 : (_isPressed ? 0.96 : 1.0),
+          duration: const Duration(milliseconds: 160),
+          curve: Curves.easeOutCubic,
+          child: Container(
+            width: widget.width,
+            height: widget.height,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              color: const Color(0xFF111111),
+              border: Border.all(
+                color: _isFocused ? theme.accentColor : Colors.transparent,
+                width: _isFocused ? 2.5 : 0.0,
               ),
-              BoxShadow(
-                color: Colors.black.withOpacity(0.50),
-                blurRadius: 10,
-                offset: const Offset(0, 3),
-              ),
-            ],
-          ),
+              boxShadow: [
+                if (_isFocused)
+                  BoxShadow(
+                    color: theme.accentColor.withOpacity(0.6),
+                    blurRadius: 18,
+                    spreadRadius: 2,
+                    offset: const Offset(0, 4),
+                  ),
+                BoxShadow(
+                  color: theme.shadowColor,
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                  spreadRadius: -3,
+                ),
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.50),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(18),
             child: Stack(
@@ -319,7 +348,8 @@ class _VjCardState extends State<VjCard> {
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildVjImage() {

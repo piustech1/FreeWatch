@@ -65,25 +65,32 @@ class MovieSection extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              GestureDetector(
-                onTap: onSeeAll,
-                behavior: HitTestBehavior.opaque,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.06),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.10),
-                      width: 0.8,
-                    ),
+              FocusableActionDetector(
+                actions: {
+                  ActivateIntent: CallbackAction<ActivateIntent>(
+                    onInvoke: (_) => onSeeAll?.call(),
                   ),
-                  child: const Text(
-                    'See all',
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w500,
+                },
+                child: GestureDetector(
+                  onTap: onSeeAll,
+                  behavior: HitTestBehavior.opaque,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.06),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.10),
+                        width: 0.8,
+                      ),
+                    ),
+                    child: const Text(
+                      'See all',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
                 ),
@@ -103,7 +110,7 @@ class MovieSection extends StatelessWidget {
                       scrollDirection: Axis.horizontal,
                       padding: const EdgeInsets.symmetric(horizontal: 18),
                       physics: const BouncingScrollPhysics(),
-                      cacheExtent: 280,
+                      cacheExtent: 600,
                       itemCount: movies!.length,
                       separatorBuilder: (_, __) => const SizedBox(width: 14),
                       itemBuilder: (context, index) => MovieCard(

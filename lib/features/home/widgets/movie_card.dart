@@ -48,6 +48,14 @@ class _MovieCardState extends State<MovieCard> {
             setState(() {
               _isFocused = focus;
             });
+            if (focus) {
+              Scrollable.ensureVisible(
+                context,
+                alignment: 0.5,
+                duration: const Duration(milliseconds: 260),
+                curve: Curves.easeOutCubic,
+              );
+            }
           },
           actions: {
             ActivateIntent: CallbackAction<ActivateIntent>(
@@ -58,7 +66,7 @@ class _MovieCardState extends State<MovieCard> {
             onTap: widget.onTap,
             behavior: HitTestBehavior.opaque,
             child: AnimatedScale(
-              scale: _isFocused ? 1.05 : 1.0,
+              scale: _isFocused ? 1.06 : 1.0,
               duration: const Duration(milliseconds: 180),
               curve: Curves.easeOut,
               child: SizedBox(
@@ -75,14 +83,14 @@ class _MovieCardState extends State<MovieCard> {
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: _isFocused ? AppColors.primary : Colors.transparent,
+                          color: _isFocused ? AppColors.accent : Colors.transparent,
                           width: _isFocused ? 2.5 : 0.0,
                         ),
                         boxShadow: _isFocused
                             ? [
                                 BoxShadow(
-                                  color: AppColors.primary.withOpacity(0.55),
-                                  blurRadius: 14,
+                                  color: AppColors.accent.withOpacity(0.55),
+                                  blurRadius: 16,
                                   spreadRadius: 2,
                                   offset: const Offset(0, 4),
                                 ),

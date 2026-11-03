@@ -33,10 +33,18 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
+  final ScrollController _tvScrollController = ScrollController();
+
   @override
   void initState() {
     super.initState();
     TiktokPromoModal.showOncePerSession(context);
+  }
+
+  @override
+  void dispose() {
+    _tvScrollController.dispose();
+    super.dispose();
   }
 
   void _openMovieDetail(Movie movie) {
@@ -55,13 +63,38 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
+  int _resolveTvStackIndex(String target) {
+    switch (target) {
+      case 'search':
+        return 1;
+      case 'available-vjs':
+        return 2;
+      case 'categories':
+        return 3;
+      case 'favorites':
+        return 4;
+      case 'downloads':
+        return 5;
+      case 'profile':
+        return 6;
+      case 'notifications':
+        return 7;
+      case 'home':
+      default:
+        return 0;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final selectedNavIndex = ref.watch(bottomNavIndexProvider);
+    final currentTvNav = ref.watch(tvNavTargetProvider);
     final isWideOrTv = MediaQuery.sizeOf(context).width >= 720 || DeviceTypeService().isTv;
+    final vjsAsync = ref.watch(vjsWithCountsProvider);
+    final currentVjs = vjsAsync.valueOrNull ?? MockData.vjs;
 
     final Widget tabContent = IndexedStack(
-      index: selectedNavIndex,
+      index: isWideOrTv ? _resolveTvStackIndex(currentTvNav) : selectedNavIndex,
       children: [
         // Tab 0: Home Feed
         _buildHomeFeed(context, isWideOrTv: isWideOrTv),
@@ -69,16 +102,36 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         // Tab 1: Dedicated Search Screen
         const SearchScreen(),
 
-        // Tab 2: Dedicated Favorites / Watchlist Screen
-        FavoritesScreen(
-          onExploreTap: () => navigateToBottomNavTab(context, ref, 0),
+        // Tab 2: All Available VJs Screen (Widescreen & TV)
+        AllVjsScreen(vjs: currentVjs),
+
+        // Tab 3: Categories Overview Screen
+        const MovieGridScreen(
+          title: 'Categories',
+          movies: [],
+          icon: Icons.grid_view_rounded,
+          iconColor: Color(0xFF00E676),
         ),
 
-        // Tab 3: Dedicated Downloads Screen
+        // Tab 4: Dedicated Favorites / Watchlist Screen
+        FavoritesScreen(
+          onExploreTap: () {
+            if (isWideOrTv) {
+              ref.read(tvNavTargetProvider.notifier).state = 'home';
+            } else {
+              navigateToBottomNavTab(context, ref, 0);
+            }
+          },
+        ),
+
+        // Tab 5: Dedicated Downloads Screen
         const DownloadsScreen(),
 
-        // Tab 4: Dedicated Profile Screen
+        // Tab 6: Dedicated Profile & Settings Screen
         const ProfileScreen(),
+
+        // Tab 7: Dedicated Notifications Screen
+        const NotificationsScreen(),
       ],
     );
 
@@ -88,8 +141,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         body: Row(
           children: [
             TvNavigationSidebar(
-              onTabSelected: (index) {
-                navigateToBottomNavTab(context, ref, index);
+              currentNav: currentTvNav,
+              onNavigate: (target) {
+                ref.read(tvNavTargetProvider.notifier).state = target;
               },
             ),
             Expanded(
@@ -166,7 +220,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final currentVjs = vjsAsync.valueOrNull ?? MockData.vjs;
 
     return CustomScrollView(
-      physics: const BouncingScrollPhysics(),
+      controller: isWideOrTv ? _tvScrollController : null,
+      physics: isWideOrTv ? const ClampingScrollPhysics() : const BouncingScrollPhysics(),
+      cacheExtent: isWideOrTv ? 1200 : 280,
       slivers: [
         SliverToBoxAdapter(child: SizedBox(height: isWideOrTv ? 0 : 6)),
 
