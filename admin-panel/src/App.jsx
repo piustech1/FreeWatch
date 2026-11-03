@@ -298,7 +298,7 @@ export default function App() {
       const now = Date.now();
       await set(ref(rtdb, 'app_config/update'), {
         ...updateConfig,
-        force_show: updateConfig.show_banner,
+        force_show: false,
         updated_at: now,
       });
 

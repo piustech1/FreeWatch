@@ -72,7 +72,7 @@ async function notifyUpdate() {
         tv_apk_url: tvApkUrl,
         store_url: 'https://freewatchug.online/store',
         show_banner: true,
-        force_show: true,
+        force_show: false,
         release_notes: notes,
         updated_at: timestamp,
       }),

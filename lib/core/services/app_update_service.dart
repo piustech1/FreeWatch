@@ -60,16 +60,29 @@ class AppUpdateService {
     required String localVersion,
     required int localBuild,
   }) {
-    // 1. If remote build number is provided and both are positive, compare build numbers
-    if (remoteBuild > 0 && localBuild > 0) {
-      if (remoteBuild > localBuild) return true;
-      if (remoteBuild < localBuild) return false;
-      // If build numbers are equal, check semantic version below as secondary
+    // Extract build number if embedded with '+' e.g. "1.0.69+70"
+    String cleanRemote = remoteVersion.trim();
+    String cleanLocal = localVersion.trim();
+
+    if (cleanRemote.contains('+')) {
+      final parts = cleanRemote.split('+');
+      cleanRemote = parts[0];
+      if (remoteBuild == 0 && parts.length > 1) {
+        remoteBuild = int.tryParse(parts[1]) ?? remoteBuild;
+      }
     }
 
-    // 2. Semantic version comparison e.g. "1.0.59" > "1.0.58"
-    final cleanRemote = remoteVersion.replaceAll(RegExp(r'[^0-9.]'), '').trim();
-    final cleanLocal = localVersion.replaceAll(RegExp(r'[^0-9.]'), '').trim();
+    if (cleanLocal.contains('+')) {
+      final parts = cleanLocal.split('+');
+      cleanLocal = parts[0];
+      if (localBuild == 0 && parts.length > 1) {
+        localBuild = int.tryParse(parts[1]) ?? localBuild;
+      }
+    }
+
+    // Strip leading 'v' or non-numeric/dot characters
+    cleanRemote = cleanRemote.replaceAll(RegExp(r'[^0-9.]'), '').trim();
+    cleanLocal = cleanLocal.replaceAll(RegExp(r'[^0-9.]'), '').trim();
 
     if (cleanRemote.isEmpty) return false;
     if (cleanLocal.isEmpty) return true;
@@ -77,15 +90,21 @@ class AppUpdateService {
     final rParts = cleanRemote.split('.').map((s) => int.tryParse(s) ?? 0).toList();
     final lParts = cleanLocal.split('.').map((s) => int.tryParse(s) ?? 0).toList();
 
+    // 1. Semantic version comparison (Major.Minor.Patch)
     final maxLen = rParts.length > lParts.length ? rParts.length : lParts.length;
     for (int i = 0; i < maxLen; i++) {
       final r = i < rParts.length ? rParts[i] : 0;
       final l = i < lParts.length ? lParts[i] : 0;
-      if (r > l) return true;
-      if (r < l) return false;
+      if (r > l) return true; // Remote semantic version is strictly higher
+      if (r < l) return false; // Remote semantic version is strictly lower
     }
 
-    // If version numbers are identical, this is the current release
+    // 2. If semantic versions are identical, compare build numbers if both are known and positive
+    if (remoteBuild > 0 && localBuild > 0) {
+      return remoteBuild > localBuild;
+    }
+
+    // Identical versions and no higher build number -> up to date!
     return false;
   }
 
@@ -96,10 +115,12 @@ class AppUpdateService {
 
     try {
       final packageInfo = await PackageInfo.fromPlatform();
-      if (packageInfo.version.isNotEmpty) {
-        versionName = packageInfo.version;
+      if (packageInfo.version.trim().isNotEmpty) {
+        var v = packageInfo.version.trim();
+        if (v.startsWith('v')) v = v.substring(1).trim();
+        if (v.isNotEmpty) versionName = v;
       }
-      final parsedBuild = int.tryParse(packageInfo.buildNumber);
+      final parsedBuild = int.tryParse(packageInfo.buildNumber.trim());
       if (parsedBuild != null && parsedBuild > 0) {
         buildNumber = parsedBuild;
       }
@@ -137,7 +158,7 @@ class AppUpdateService {
 
       if (response.statusCode == 200 && response.data != null) {
         final data = response.data!;
-        final tagName = data['tag_name']?.toString() ?? ''; // e.g. "v1.0.58"
+        final tagName = data['tag_name']?.toString() ?? ''; // e.g. "v1.0.69"
         final body = data['body']?.toString() ?? '';
         final cleanTag = tagName.replaceAll('v', '').trim();
 
@@ -154,10 +175,23 @@ class AppUpdateService {
           String? apkUrl;
           if (data['assets'] is List) {
             final assets = data['assets'] as List;
+            // Prefer FreeWatch-release.apk
             for (final a in assets) {
-              if (a is Map && a['name']?.toString().endsWith('.apk') == true) {
-                apkUrl = a['browser_download_url']?.toString();
-                break;
+              if (a is Map) {
+                final name = a['name']?.toString() ?? '';
+                if (name == 'FreeWatch-release.apk') {
+                  apkUrl = a['browser_download_url']?.toString();
+                  break;
+                }
+              }
+            }
+            // Fallback to any .apk asset
+            if (apkUrl == null) {
+              for (final a in assets) {
+                if (a is Map && a['name']?.toString().endsWith('.apk') == true) {
+                  apkUrl = a['browser_download_url']?.toString();
+                  break;
+                }
               }
             }
           }
@@ -198,7 +232,7 @@ class AppUpdateService {
         final releaseNotes = data['release_notes']?.toString() ??
             'New features, performance enhancements, and stability improvements.';
         final isMandatory = data['is_mandatory'] == true;
-        final forceShow = data['force_show'] == true;
+        final showBanner = data['show_banner'] != false;
 
         final isNewer = isRemoteVersionNewer(
           remoteVersion: latestVersion,
@@ -207,9 +241,9 @@ class AppUpdateService {
           localBuild: localBuild,
         );
 
-        // Strictly check if RTDB update is forced or genuinely newer
-        if (forceShow || isNewer) {
-          debugPrint('[AppUpdateService] Update available (forceShow: $forceShow, isNewer: $isNewer): $latestVersion+$latestBuild');
+        // An update is ONLY returned if remote version is strictly newer than installed app!
+        if (isNewer && (showBanner || isMandatory)) {
+          debugPrint('[AppUpdateService] Newer RTDB update available: $latestVersion+$latestBuild > $localVersion+$localBuild');
           _notifyUserOfUpdate(latestVersion.isNotEmpty ? latestVersion : '1.0.69');
           return AppUpdateInfo(
             hasUpdate: true,
@@ -220,6 +254,8 @@ class AppUpdateService {
             directApkUrl: directApkUrl,
             isMandatory: isMandatory,
           );
+        } else {
+          debugPrint('[AppUpdateService] RTDB release ($latestVersion+$latestBuild) is current or older than installed ($localVersion+$localBuild)');
         }
       }
     } catch (e) {

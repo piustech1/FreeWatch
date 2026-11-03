@@ -62,10 +62,10 @@ class _SplashScreenState extends State<SplashScreen>
     _navigationTimer = Timer(const Duration(milliseconds: 2800), () async {
       if (!mounted) return;
 
-      // 1. Check for application update (blocks navigation if newer version available)
+      // 1. Check for application update (blocks navigation only if update is mandatory)
       try {
         final updateInfo = await AppUpdateService().checkForUpdate();
-        if (updateInfo.hasUpdate && mounted) {
+        if (updateInfo.hasUpdate && updateInfo.isMandatory && mounted) {
           context.go('/update', extra: updateInfo);
           return;
         }
