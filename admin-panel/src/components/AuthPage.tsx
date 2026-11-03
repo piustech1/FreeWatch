@@ -4,9 +4,14 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInAnonymously,
-  updateProfile
+  updateProfile,
+  sendPasswordResetEmail,
+  setPersistence,
+  browserLocalPersistence,
+  browserSessionPersistence
 } from "firebase/auth";
-import { auth } from "../firebase";
+import { ref, set, update } from "firebase/database";
+import { auth, rtdb, analytics, logEvent } from "../firebase";
 import { FWLogo } from "./SplashScreen";
 import { ChooseAvatarPage } from "./ChooseAvatarPage";
 import { AvatarGraphic } from "./AvatarGraphic";
@@ -77,6 +82,16 @@ export const AuthPage: React.FC<AuthPageProps> = ({
     setLoading(true);
 
     try {
+      // Configure session persistence based on user preference
+      try {
+        await setPersistence(
+          auth,
+          rememberMe ? browserLocalPersistence : browserSessionPersistence
+        );
+      } catch (pErr) {
+        console.warn("Persistence setup notice:", pErr);
+      }
+
       if (screen === "signup") {
         if (password !== confirmPassword) {
           setErrorMessage("Passwords do not match.");
@@ -93,10 +108,50 @@ export const AuthPage: React.FC<AuthPageProps> = ({
         if (cred.user && fullName) {
           await updateProfile(cred.user, { displayName: fullName });
         }
+
+        // Synchronize user profile into Firebase Realtime Database
+        try {
+          if (cred.user) {
+            await set(ref(rtdb, `users/${cred.user.uid}/profile`), {
+              uid: cred.user.uid,
+              displayName: fullName || email.split("@")[0],
+              email: cred.user.email || email.trim(),
+              avatarId: selectedAvatarId || "mirabel",
+              isAnonymous: false,
+              createdAt: Date.now(),
+              lastLoginAt: Date.now(),
+            });
+          }
+        } catch (_) {}
+
+        // Log Firebase Analytics Event
+        try {
+          if (analytics) {
+            logEvent(analytics, "sign_up", { method: "email" });
+          }
+        } catch (_) {}
+
         onSuccess(fullName || email, selectedAvatarId);
       } else {
         const cred = await signInWithEmailAndPassword(auth, email.trim(), password);
         const name = cred.user.displayName || email.split("@")[0];
+
+        // Update last login timestamp in RTDB
+        try {
+          if (cred.user) {
+            await update(ref(rtdb, `users/${cred.user.uid}/profile`), {
+              lastLoginAt: Date.now(),
+            });
+          }
+        } catch (_) {}
+
+        // Log Firebase Analytics Event
+        try {
+          if (analytics) {
+            logEvent(analytics, "login", { method: "email" });
+          }
+        } catch (_) {}
+
         onSuccess(name, selectedAvatarId);
       }
     } catch (err: any) {
@@ -124,11 +179,53 @@ export const AuthPage: React.FC<AuthPageProps> = ({
     setLoading(true);
     setErrorMessage("");
     try {
-      await signInAnonymously(auth);
+      try {
+        await setPersistence(auth, browserLocalPersistence);
+      } catch (_) {}
+
+      const cred = await signInAnonymously(auth);
+
+      // Record anonymous guest in RTDB
+      try {
+        if (cred.user) {
+          await set(ref(rtdb, `users/${cred.user.uid}/profile`), {
+            uid: cred.user.uid,
+            displayName: "Guest User",
+            isAnonymous: true,
+            avatarId: selectedAvatarId || "mirabel",
+            createdAt: Date.now(),
+            lastLoginAt: Date.now(),
+          });
+        }
+      } catch (_) {}
+
+      // Log Analytics Event
+      try {
+        if (analytics) {
+          logEvent(analytics, "login", { method: "anonymous" });
+        }
+      } catch (_) {}
+
       onSuccess("Guest User", selectedAvatarId || "mirabel");
     } catch (err) {
       console.warn("Anonymous signin fallback:", err);
       onSuccess("Guest User", selectedAvatarId || "mirabel");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email.trim()) {
+      setErrorMessage("Please enter your email above to receive a password reset link.");
+      return;
+    }
+    setLoading(true);
+    try {
+      await sendPasswordResetEmail(auth, email.trim());
+      setErrorMessage("✅ Password reset link sent! Check your inbox.");
+    } catch (err: any) {
+      setErrorMessage(err.message || "Unable to send reset email.");
     } finally {
       setLoading(false);
     }
@@ -314,7 +411,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
 
                 <button
                   type="button"
-                  onClick={() => setErrorMessage("Password reset link will be sent to your email.")}
+                  onClick={handleForgotPassword}
                   className="text-[#E50914] font-medium hover:underline cursor-pointer"
                 >
                   Forgot Password?

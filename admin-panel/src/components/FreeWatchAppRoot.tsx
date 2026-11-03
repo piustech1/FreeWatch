@@ -17,6 +17,9 @@ import { AppLaunchBannerModal } from "./AppLaunchBannerModal";
 import { UserProfileData } from "./EditProfileModal";
 import { DesktopNavRail, DesktopNavTarget } from "./DesktopNavRail";
 import { CatalogMovie } from "../data/liveCatalog";
+import { auth, rtdb, analytics, logEvent } from "../firebase";
+import { onAuthStateChanged, signOut, updateProfile } from "firebase/auth";
+import { ref, get, update } from "firebase/database";
 
 type ActiveTab = "home" | "search" | "favorites" | "downloads" | "profile";
 type ActivePage =
@@ -64,12 +67,121 @@ export default function FreeWatchAppRoot({ onNavigateToStore }: FreeWatchAppRoot
     iconType: "sparkles",
   });
 
-  const handleUpdateProfile = (newProfile: UserProfileData) => {
+  const handleUpdateProfile = async (newProfile: UserProfileData) => {
     setUserProfile(newProfile);
     try {
       localStorage.setItem("freewatch_user_profile", JSON.stringify(newProfile));
     } catch {}
+
+    // Synchronize to Firebase Auth & Realtime Database
+    try {
+      const currentUser = auth.currentUser;
+      if (currentUser) {
+        if (newProfile.displayName && newProfile.displayName !== currentUser.displayName) {
+          await updateProfile(currentUser, { displayName: newProfile.displayName });
+        }
+        await update(ref(rtdb, `users/${currentUser.uid}/profile`), {
+          displayName: newProfile.displayName,
+          bio: newProfile.bio || "",
+          avatarId: newProfile.avatarId || "mirabel",
+          updatedAt: Date.now(),
+        });
+      }
+    } catch (err) {
+      console.warn("RTDB profile sync notice:", err);
+    }
   };
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch (err) {
+      console.warn("Sign out notice:", err);
+    }
+    setUser(null);
+    try {
+      localStorage.removeItem("freewatch_user_profile");
+    } catch {}
+    setUserProfile({
+      displayName: "Guest User",
+      bio: "Luganda dubbed movie lover • Streaming on FreeWatch",
+      avatarId: "mirabel",
+    });
+    setHistory([]);
+    setCurrentPage("splash");
+  };
+
+  // Synchronize Firebase Auth state and enable persistent session
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        const name =
+          firebaseUser.displayName ||
+          (firebaseUser.email ? firebaseUser.email.split("@")[0] : "") ||
+          (firebaseUser.isAnonymous ? "Guest User" : "FreeWatch User");
+        setUser(name);
+
+        // Fetch user profile from RTDB or fallback to local
+        try {
+          const snap = await get(ref(rtdb, `users/${firebaseUser.uid}/profile`));
+          if (snap.exists() && snap.val()) {
+            const data = snap.val();
+            const syncedProfile: UserProfileData = {
+              displayName: data.displayName || name,
+              bio: data.bio || "Luganda dubbed movie lover • Streaming on FreeWatch",
+              avatarId: data.avatarId || "mirabel",
+            };
+            setUserProfile(syncedProfile);
+            try {
+              localStorage.setItem("freewatch_user_profile", JSON.stringify(syncedProfile));
+            } catch {}
+          } else {
+            setUserProfile((prev) => {
+              const updated: UserProfileData = {
+                ...prev,
+                displayName: name,
+              };
+              try {
+                localStorage.setItem("freewatch_user_profile", JSON.stringify(updated));
+              } catch {}
+              return updated;
+            });
+          }
+        } catch (_) {}
+
+        // If on splash, login, or signup screen, automatically redirect authenticated user to home
+        setCurrentPage((prev) => {
+          if (prev === "splash" || prev === "login" || prev === "signup") {
+            return "home";
+          }
+          return prev;
+        });
+
+        // Log session start in Analytics
+        try {
+          if (analytics) {
+            logEvent(analytics, "session_start");
+          }
+        } catch (_) {}
+      } else {
+        setUser(null);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Track page views in Firebase Analytics
+  useEffect(() => {
+    try {
+      if (analytics) {
+        logEvent(analytics, "page_view", {
+          page_title: currentPage,
+          page_path: `/${currentPage}`,
+        });
+      }
+    } catch (_) {}
+  }, [currentPage]);
 
   const pushNavigation = (targetPage: ActivePage) => {
     if (targetPage === currentPage) return;
@@ -190,6 +302,18 @@ export default function FreeWatchAppRoot({ onNavigateToStore }: FreeWatchAppRoot
     );
 
     const targetPage: ActivePage = isRealSeries ? "series-details" : "movie-details";
+
+    // Log content selection in Analytics
+    try {
+      if (analytics) {
+        logEvent(analytics, "select_content", {
+          content_type: isRealSeries ? "series" : "movie",
+          item_id: movieId || String(movie?.id || ""),
+          item_name: title || movie?.title || "",
+        });
+      }
+    } catch (_) {}
+
     pushNavigation(targetPage);
   };
 
@@ -234,7 +358,7 @@ export default function FreeWatchAppRoot({ onNavigateToStore }: FreeWatchAppRoot
             onSelectVj={handleSelectVj}
             onNavigateTab={handleNavigateTab}
             onNavigateToNotifications={handleNavigateToNotifications}
-            onLogout={() => setCurrentPage("splash")}
+            onLogout={handleLogout}
           />
         )}
 
@@ -247,7 +371,7 @@ export default function FreeWatchAppRoot({ onNavigateToStore }: FreeWatchAppRoot
             onSelectMovie={handleSelectMovie}
             onNavigateTab={handleNavigateTab}
             onNavigateToNotifications={handleNavigateToNotifications}
-            onLogout={() => setCurrentPage("splash")}
+            onLogout={handleLogout}
           />
         )}
 
@@ -262,7 +386,7 @@ export default function FreeWatchAppRoot({ onNavigateToStore }: FreeWatchAppRoot
             onSelectMovie={handleSelectMovie}
             onNavigateTab={handleNavigateTab}
             onNavigateToNotifications={handleNavigateToNotifications}
-            onLogout={() => setCurrentPage("splash")}
+            onLogout={handleLogout}
           />
         )}
 
@@ -273,7 +397,7 @@ export default function FreeWatchAppRoot({ onNavigateToStore }: FreeWatchAppRoot
             onBack={handleBack}
             onNavigateTab={handleNavigateTab}
             onSelectMovie={handleSelectMovie}
-            onLogout={() => setCurrentPage("splash")}
+            onLogout={handleLogout}
           />
         )}
 
@@ -284,7 +408,7 @@ export default function FreeWatchAppRoot({ onNavigateToStore }: FreeWatchAppRoot
             onBack={handleBack}
             onNavigateTab={handleNavigateTab}
             onNavigateToNotifications={handleNavigateToNotifications}
-            onLogout={() => setCurrentPage("splash")}
+            onLogout={handleLogout}
           />
         )}
 
@@ -296,7 +420,7 @@ export default function FreeWatchAppRoot({ onNavigateToStore }: FreeWatchAppRoot
             userProfile={userProfile}
             onBack={handleBack}
             onNavigateTab={handleNavigateTab}
-            onLogout={() => setCurrentPage("splash")}
+            onLogout={handleLogout}
             onSelectMovie={handleSelectMovie}
             onNavigateToNotifications={handleNavigateToNotifications}
           />
@@ -310,7 +434,7 @@ export default function FreeWatchAppRoot({ onNavigateToStore }: FreeWatchAppRoot
             userProfile={userProfile}
             onBack={handleBack}
             onNavigateTab={handleNavigateTab}
-            onLogout={() => setCurrentPage("splash")}
+            onLogout={handleLogout}
             onSelectMovie={handleSelectMovie}
             onNavigateToNotifications={handleNavigateToNotifications}
           />
@@ -321,7 +445,7 @@ export default function FreeWatchAppRoot({ onNavigateToStore }: FreeWatchAppRoot
           <FavoritesPage
             userProfile={userProfile}
             onNavigateTab={handleNavigateTab}
-            onLogout={() => setCurrentPage("splash")}
+            onLogout={handleLogout}
             onSelectMovie={handleSelectMovie}
             onNavigateToNotifications={handleNavigateToNotifications}
           />
@@ -331,7 +455,7 @@ export default function FreeWatchAppRoot({ onNavigateToStore }: FreeWatchAppRoot
         {currentPage === "profile" && (
           <ProfilePage
             onNavigateTab={handleNavigateTab}
-            onLogout={() => setCurrentPage("splash")}
+            onLogout={handleLogout}
             onNavigateToDeveloperChat={handleNavigateToDeveloperChat}
             onNavigateToNotifications={handleNavigateToNotifications}
             onSelectMovie={handleSelectMovie}
@@ -346,7 +470,7 @@ export default function FreeWatchAppRoot({ onNavigateToStore }: FreeWatchAppRoot
             userProfile={userProfile}
             onBackToHome={handleBack}
             onNavigateTab={handleNavigateTab}
-            onLogout={() => setCurrentPage("splash")}
+            onLogout={handleLogout}
             onSelectMovie={handleSelectMovie}
             onNavigateToNotifications={handleNavigateToNotifications}
           />
@@ -356,7 +480,7 @@ export default function FreeWatchAppRoot({ onNavigateToStore }: FreeWatchAppRoot
         {currentPage === "home" && (
           <HomePage
             userProfile={userProfile}
-            onLogout={() => setCurrentPage("splash")}
+            onLogout={handleLogout}
             onNavigateTab={handleNavigateTab}
             onNavigateToSearch={() => setCurrentPage("search")}
             onSelectMovie={handleSelectMovie}
@@ -381,7 +505,7 @@ export default function FreeWatchAppRoot({ onNavigateToStore }: FreeWatchAppRoot
           <DownloadsPage
             userProfile={userProfile}
             onNavigateTab={handleNavigateTab}
-            onLogout={() => setCurrentPage("splash")}
+            onLogout={handleLogout}
             onSelectMovie={handleSelectMovie}
             onNavigateToNotifications={handleNavigateToNotifications}
           />
