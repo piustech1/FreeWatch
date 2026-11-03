@@ -105,53 +105,41 @@ function scoreEpisodeCandidate(
 async function fetchEpisodeStream(title: string, epNum: number, preferredVj?: string): Promise<string | null> {
   try {
     const clean = cleanTitleForTmdb(title);
-    const q = `${clean} ${epNum}`;
     let allItems: any[] = [];
 
-    // Try local /api/v1/search first
-    try {
-      const localRes = await fetch(`/api/v1/search?q=${encodeURIComponent(q)}`);
-      if (localRes.ok) {
-        const json = await localRes.json();
-        if (json && json.success && Array.isArray(json.data)) {
-          json.data.forEach((item: any) => {
-            if (Array.isArray(item.episodes)) allItems.push(...item.episodes);
-            allItems.push(item);
-          });
+    // 1. First try query with clean title alone (returns all series editions and episodes from MunoWatch)
+    if (clean.length > 0) {
+      try {
+        const res = await fetch(`https://mumowatch.ai.studio/search?q=${encodeURIComponent(clean)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.series)) {
+            data.series.forEach((s: any) => {
+              if (Array.isArray(s.episodes)) allItems.push(...s.episodes);
+            });
+          }
+          if (Array.isArray(data.movies)) {
+            allItems.push(...data.movies);
+          }
         }
-      }
-    } catch (_) {}
-
-    // Fallback to direct search if needed
-    if (allItems.length === 0) {
-      const res = await fetch(`https://mumowatch.ai.studio/search?q=${encodeURIComponent(q)}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (Array.isArray(data.series)) {
-          data.series.forEach((s: any) => {
-            if (Array.isArray(s.episodes)) allItems.push(...s.episodes);
-          });
-        }
-        if (Array.isArray(data.movies)) {
-          allItems.push(...data.movies);
-        }
-      }
+      } catch (_) {}
     }
 
-    // Also try simple search without episode number if nothing found
-    if (allItems.length === 0 && clean.length > 0) {
-      const res = await fetch(`https://mumowatch.ai.studio/search?q=${encodeURIComponent(clean)}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (Array.isArray(data.series)) {
-          data.series.forEach((s: any) => {
-            if (Array.isArray(s.episodes)) allItems.push(...s.episodes);
-          });
+    // 2. Also try query with episode number if needed
+    if (allItems.length === 0) {
+      const q = `${clean} ${epNum}`;
+      try {
+        const localRes = await fetch(`/api/v1/search?q=${encodeURIComponent(q)}`);
+        if (localRes.ok) {
+          const json = await localRes.json();
+          if (json && json.success && Array.isArray(json.data)) {
+            json.data.forEach((item: any) => {
+              if (Array.isArray(item.episodes)) allItems.push(...item.episodes);
+              allItems.push(item);
+            });
+          }
         }
-        if (Array.isArray(data.movies)) {
-          allItems.push(...data.movies);
-        }
-      }
+      } catch (_) {}
     }
 
     // Filter and score candidates
@@ -171,8 +159,13 @@ async function fetchEpisodeStream(title: string, epNum: number, preferredVj?: st
 
     scoredCandidates.sort((a, b) => b.score - a.score);
 
-    if (scoredCandidates.length > 0) {
-      return scoredCandidates[0].url;
+    // Filter out candidates with broken double-dot syntax (.mp4 or ..m3u8)
+    const healthyCandidate = scoredCandidates.find(
+      (c) => !c.url.includes("..mp4") && !c.url.includes("..m3u8") && !c.url.endsWith("..")
+    ) || scoredCandidates[0];
+
+    if (healthyCandidate) {
+      return healthyCandidate.url;
     }
   } catch (err) {
     console.warn("[SeriesDetails] Error resolving episode stream:", err);
@@ -684,16 +677,21 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
       ? normalizedUrl
       : `${normalizedUrl}.mp4`;
 
+    const encodedCleanUrl = cleanUrl.replace(/ /g, "%20");
     const MIRRORS = Array.from(
       new Set([
-        cleanUrl,
-        cleanUrl.replace(/https?:\/\/[^/]+/i, "https://munotech3.b-cdn.net"),
-        cleanUrl.replace(/https?:\/\/[^/]+/i, "https://munotek-vault.b-cdn.net"),
-        cleanUrl.replace(/https?:\/\/[^/]+/i, "https://munotech2.b-cdn.net"),
-        cleanUrl.replace(/https?:\/\/[^/]+/i, "https://lunoluno.b-cdn.net"),
-        cleanUrl.replace(/https?:\/\/[^/]+/i, "https://nkuba.b-cdn.net"),
+        encodedCleanUrl,
+        encodedCleanUrl.replace(/https?:\/\/[^/]+/i, "https://munotech3.b-cdn.net"),
+        encodedCleanUrl.replace(/https?:\/\/[^/]+/i, "https://munotek-vault.b-cdn.net"),
+        encodedCleanUrl.replace(/https?:\/\/[^/]+/i, "https://munotech2.b-cdn.net"),
+        encodedCleanUrl.replace(/https?:\/\/[^/]+/i, "https://lunoluno.b-cdn.net"),
+        encodedCleanUrl.replace(/https?:\/\/[^/]+/i, "https://nkuba.b-cdn.net"),
+        // Mirror fallback with double dots replaced by single dot
+        encodedCleanUrl.replace(/\.\.mp4/gi, ".mp4"),
+        encodedCleanUrl.replace(/https?:\/\/[^/]+/i, "https://munotech3.b-cdn.net").replace(/\.\.mp4/gi, ".mp4"),
+        encodedCleanUrl.replace(/https?:\/\/[^/]+/i, "https://munotek-vault.b-cdn.net").replace(/\.\.mp4/gi, ".mp4"),
       ])
-    ).filter((m) => !m.includes("..mp4") && !m.includes("..m3u8"));
+    ).filter((m) => m && m.startsWith("http"));
 
     const handleStreamFailure = async () => {
       mirrorIndex++;
@@ -712,7 +710,8 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
         try {
           const freshStream = await fetchEpisodeStream(displayTitle, currentEpisode.num, displayVj);
           if (freshStream && freshStream !== video.src && !freshStream.includes("..mp4")) {
-            video.src = freshStream;
+            const safeFresh = freshStream.replace(/ /g, "%20");
+            video.src = safeFresh;
             video.load();
             video.play().catch(() => {});
             return;
@@ -725,17 +724,18 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
 
     video.onerror = handleStreamFailure;
 
-    if (streamUrl.includes(".m3u8")) {
+    const safeStreamUrl = streamUrl.replace(/ /g, "%20");
+    if (safeStreamUrl.includes(".m3u8")) {
       if (video.canPlayType("application/vnd.apple.mpegurl")) {
-        video.src = streamUrl;
+        video.src = safeStreamUrl;
       } else if (Hls.isSupported()) {
         hlsInstance = new Hls({ enableWorker: true });
-        hlsInstance.loadSource(streamUrl);
+        hlsInstance.loadSource(safeStreamUrl);
         hlsInstance.attachMedia(video);
         hlsInstance.on(Hls.Events.ERROR, handleStreamFailure);
       }
     } else {
-      video.src = streamUrl;
+      video.src = safeStreamUrl;
       video.play().catch(() => {});
     }
 
@@ -758,22 +758,32 @@ export const SeriesDetailsPage: React.FC<SeriesDetailsPageProps> = ({
     const targetEp = episodes[idx];
     if (!targetEp) return;
 
-    if (!targetEp.streamUrl || targetEp.streamUrl.includes("..mp4")) {
+    let streamToPlay = targetEp.streamUrl;
+
+    if (!streamToPlay || streamToPlay.includes("..mp4") || streamToPlay.trim() === "") {
       setIsResolvingEpisodeStream(true);
       const fetchedUrl = await fetchEpisodeStream(displayTitle, targetEp.num, displayVj);
       setIsResolvingEpisodeStream(false);
       if (fetchedUrl) {
+        streamToPlay = fetchedUrl;
         setResolvedEpisodes((prev) => {
-          if (!prev || prev.length === 0) return prev;
-          const updated = [...prev];
-          if (updated[idx]) {
-            updated[idx] = { ...updated[idx], streamUrl: fetchedUrl };
+          const base = prev && prev.length > 0 ? [...prev] : [...episodes];
+          if (base[idx]) {
+            base[idx] = { ...base[idx], streamUrl: fetchedUrl };
           }
-          return updated;
+          return base;
         });
       } else {
         setStreamError(true);
+        return;
       }
+    }
+
+    if (streamToPlay && videoRef.current) {
+      const safeUrl = streamToPlay.replace(/ /g, "%20");
+      videoRef.current.src = safeUrl;
+      videoRef.current.load();
+      videoRef.current.play().catch(() => {});
     }
   };
 

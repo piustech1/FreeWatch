@@ -22,6 +22,8 @@ import '../providers/user_profile_provider.dart';
 import '../providers/watch_history_provider.dart';
 import '../../../chat/presentation/screens/developer_chat_screen.dart';
 import '../../../../shared/widgets/tiktok_promo_modal.dart';
+import '../../../../core/services/app_update_service.dart';
+import '../../../../shared/widgets/full_screen_update_dialog.dart';
 
 /// Pure iOS Glassmorphic Profile Screen:
 /// - Pitch black background (AppColors.background)
@@ -45,6 +47,49 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   // Collapsible section toggles
   bool _isWatchHistoryExpanded = true;
   bool _isSavedMoviesExpanded = false;
+
+  String _appVersionString = 'FreeWatch v1.0.69 (Build 70)';
+  bool _isCheckingUpdate = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAppVersion();
+  }
+
+  Future<void> _loadAppVersion() async {
+    try {
+      final info = await AppUpdateService().getInstalledAppInfo();
+      final v = info['version'] ?? '1.0.69';
+      final b = info['build'] ?? 70;
+      if (mounted) {
+        setState(() {
+          _appVersionString = 'FreeWatch v$v (Build $b)';
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _handleCheckForUpdates() async {
+    if (_isCheckingUpdate) return;
+    setState(() => _isCheckingUpdate = true);
+    AppToast.show(context, 'Checking for updates...', isSuccess: true);
+    try {
+      final updateInfo = await AppUpdateService().checkForUpdate();
+      if (!mounted) return;
+      setState(() => _isCheckingUpdate = false);
+      if (updateInfo.hasUpdate) {
+        FullScreenUpdateDialog.show(context, updateInfo);
+      } else {
+        AppToast.show(context, 'You are on the latest version of FreeWatch!', isSuccess: true);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isCheckingUpdate = false);
+        AppToast.show(context, 'Unable to check for updates right now', isSuccess: false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -253,9 +298,30 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       icon: Icons.info_rounded,
                       iconColor: const Color(0xFF38BDF8),
                       title: 'App Version',
-                      subtitle: 'FreeWatch v1.0.55 (Build 56)',
-                      trailing: null,
-                      onTap: null,
+                      subtitle: _appVersionString,
+                      trailing: _isCheckingUpdate
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.accent),
+                            )
+                          : Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF0071E3).withOpacity(0.18),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: const Color(0xFF0071E3).withOpacity(0.35)),
+                              ),
+                              child: const Text(
+                                'Check',
+                                style: TextStyle(
+                                  color: Color(0xFF38BDF8),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                      onTap: _handleCheckForUpdates,
                     ),
                   ]),
 

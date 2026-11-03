@@ -74,6 +74,7 @@ function sanitizeFeatureNotes(rawNotes) {
 export default function AppStoreLanding() {
   // Default theme is 'light' as requested
   const [theme, setTheme] = useState('light'); // 'light' | 'dark'
+  const [previewFormat, setPreviewFormat] = useState('landscape'); // 'landscape' | 'portrait'
   const [downloadState, setDownloadState] = useState({
     isDownloading: false,
     target: null, // 'phone' | 'tv'
@@ -404,8 +405,8 @@ export default function AppStoreLanding() {
         </div>
       )}
 
-      {/* Main Container - Mobile Centered Frame */}
-      <div className={`max-w-md mx-auto min-h-screen relative flex flex-col shadow-2xl overflow-hidden transition-colors duration-300 ${
+      {/* Main Container - Responsive for Mobile and PC/TV Landscape */}
+      <div className={`w-full max-w-md lg:max-w-6xl xl:max-w-7xl mx-auto min-h-screen relative flex flex-col shadow-2xl transition-colors duration-300 ${
         isDark ? 'bg-black border-x border-neutral-800/60' : 'bg-white border-x border-neutral-200/80 shadow-slate-200/50'
       }`}>
 
@@ -527,6 +528,15 @@ export default function AppStoreLanding() {
               )}
             </button>
           </div>
+
+          {/* Button 3: Instant PC / Web Player */}
+          <a
+            href="https://freewatchug.online"
+            className="mt-2.5 w-full py-2.5 px-4 rounded-xl border border-white/10 hover:border-[#00E676]/40 bg-neutral-900/60 hover:bg-neutral-800/80 text-white font-bold text-xs shadow-sm transition-all flex items-center justify-center space-x-2 active:scale-95 text-center"
+          >
+            <Play className="w-3.5 h-3.5 text-[#00E676] fill-[#00E676]" />
+            <span>Watch Online in Browser (PC &amp; Web)</span>
+          </a>
         </div>
 
         {/* ── 3. Stat Row Badges (1.2K RATINGS, AGE 12+, CHART #1) ── */}
@@ -616,55 +626,121 @@ export default function AppStoreLanding() {
           </div>
         </div>
 
-        {/* ── 5. Preview Section (App Video & Real Screenshots in Correct Flow) ── */}
-        <div className="py-3">
-          <div className="px-5 pb-2.5 flex items-center justify-between">
-            <h2 className="text-lg font-bold tracking-tight">Preview</h2>
-            <span className={`text-[11px] font-medium ${isDark ? 'text-neutral-500' : 'text-neutral-400'}`}>
-              Swipe for more
-            </span>
-          </div>
-
-          <div className="flex space-x-3.5 overflow-x-auto px-5 pb-3 scrollbar-none snap-x snap-mandatory">
-            {/* App Preview Video Card */}
-            <div className={`snap-center flex-shrink-0 w-64 h-[440px] rounded-2xl overflow-hidden border shadow-lg relative flex flex-col ${
-              isDark ? 'bg-black border-neutral-800' : 'bg-neutral-950 border-neutral-200'
-            }`}>
-              <div className="absolute top-3 left-3 z-20 flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-white text-[10px] font-bold">
-                <Film className="w-3 h-3 text-red-500" />
-                <span>App Video Preview</span>
-              </div>
-              <video
-                src="/media/video_2026-10-14_00-44-53.mp4"
-                controls
-                playsInline
-                preload="metadata"
-                poster="/screenshots/photo_2026-10-14_02-15-30.jpg"
-                className="w-full h-full object-cover"
-              />
+        {/* ── 5. Preview Section (App Video & Real Screenshots in Responsive Orientation) ── */}
+        <div className="py-3 px-5">
+          <div className="pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <div>
+              <h2 className="text-lg font-bold tracking-tight">Preview</h2>
+              <p className={`text-xs ${isDark ? 'text-neutral-400' : 'text-neutral-500'}`}>
+                Optimized for PC Widescreen, Android TV &amp; Mobile
+              </p>
             </div>
 
-            {/* Real App Screenshots Ordered by Priority */}
-            {screenshots.map((s, idx) => (
-              <div 
-                key={idx}
-                onClick={() => setActiveLightboxImage(s)}
-                className={`snap-center flex-shrink-0 w-60 h-[440px] rounded-2xl overflow-hidden border shadow-md relative group cursor-pointer transition-transform duration-200 hover:scale-[1.01] ${
-                  isDark ? 'bg-neutral-900 border-neutral-800' : 'bg-white border-neutral-200'
+            {/* Landscape vs Portrait Toggle */}
+            <div className="inline-flex p-1 rounded-xl bg-neutral-900/40 border border-white/10 self-start sm:self-auto">
+              <button
+                type="button"
+                onClick={() => setPreviewFormat('landscape')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center space-x-1.5 cursor-pointer ${
+                  previewFormat === 'landscape'
+                    ? 'bg-[#0071E3] text-white shadow-md'
+                    : 'text-neutral-400 hover:text-white'
                 }`}
               >
-                <img 
-                  src={s.url}
-                  alt={s.title}
-                  loading="lazy"
-                  className="w-full h-full object-cover object-top"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-3.5 flex flex-col justify-end text-white">
-                  <p className="text-xs font-bold leading-snug">{s.title}</p>
-                  <p className="text-[10px] text-neutral-300 mt-0.5 line-clamp-2">{s.caption}</p>
+                <Tv className="w-3.5 h-3.5" />
+                <span>PC &amp; TV (16:9)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setPreviewFormat('portrait')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center space-x-1.5 cursor-pointer ${
+                  previewFormat === 'portrait'
+                    ? 'bg-[#0071E3] text-white shadow-md'
+                    : 'text-neutral-400 hover:text-white'
+                }`}
+              >
+                <Smartphone className="w-3.5 h-3.5" />
+                <span>Phone (9:16)</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Featured Video Preview Card */}
+          <div className="mb-4">
+            {previewFormat === 'landscape' ? (
+              <div className={`w-full aspect-video max-w-4xl rounded-3xl overflow-hidden border shadow-2xl relative flex flex-col group mx-auto ${
+                isDark ? 'bg-black border-neutral-800' : 'bg-neutral-950 border-neutral-200'
+              }`}>
+                <div className="absolute top-4 left-4 z-20 flex items-center space-x-2 px-3 py-1.5 rounded-full bg-black/70 backdrop-blur-md border border-white/15 text-white text-[11px] font-bold">
+                  <Tv className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>PC &amp; Android TV 16:9 Preview</span>
                 </div>
+                <video
+                  src="/media/video_2026-10-14_00-44-53.mp4"
+                  controls
+                  playsInline
+                  preload="metadata"
+                  poster="/screenshots/photo_2026-10-14_02-15-30.jpg"
+                  className="w-full h-full object-cover"
+                />
               </div>
-            ))}
+            ) : (
+              <div className={`w-64 h-[440px] rounded-3xl overflow-hidden border shadow-lg relative flex flex-col mx-auto ${
+                isDark ? 'bg-black border-neutral-800' : 'bg-neutral-950 border-neutral-200'
+              }`}>
+                <div className="absolute top-3 left-3 z-20 flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-white text-[10px] font-bold">
+                  <Film className="w-3 h-3 text-red-500" />
+                  <span>Mobile Video Preview</span>
+                </div>
+                <video
+                  src="/media/video_2026-10-14_00-44-53.mp4"
+                  controls
+                  playsInline
+                  preload="metadata"
+                  poster="/screenshots/photo_2026-10-14_02-15-30.jpg"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Screenshots Ordered by Priority */}
+          <div>
+            <div className="pb-2 flex items-center justify-between">
+              <span className="text-xs font-bold text-neutral-400">
+                {previewFormat === 'landscape' ? 'Screenshots (16:9 Landscape)' : 'Screenshots (Portrait)'}
+              </span>
+              <span className={`text-[11px] font-medium ${isDark ? 'text-neutral-500' : 'text-neutral-400'}`}>
+                Scroll for more
+              </span>
+            </div>
+
+            <div className="flex space-x-3.5 overflow-x-auto pb-3 scrollbar-none snap-x snap-mandatory">
+              {screenshots.map((s, idx) => (
+                <div 
+                  key={idx}
+                  onClick={() => setActiveLightboxImage(s)}
+                  className={`snap-center flex-shrink-0 rounded-2xl overflow-hidden border shadow-md relative group cursor-pointer transition-transform duration-200 hover:scale-[1.01] ${
+                    previewFormat === 'landscape'
+                      ? 'w-72 sm:w-80 aspect-video'
+                      : 'w-60 h-[440px]'
+                  } ${
+                    isDark ? 'bg-neutral-900 border-neutral-800' : 'bg-white border-neutral-200'
+                  }`}
+                >
+                  <img 
+                    src={s.url}
+                    alt={s.title}
+                    loading="lazy"
+                    className="w-full h-full object-cover object-top"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-3.5 flex flex-col justify-end text-white">
+                    <p className="text-xs font-bold leading-snug">{s.title}</p>
+                    <p className="text-[10px] text-neutral-300 mt-0.5 line-clamp-2">{s.caption}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 

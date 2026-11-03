@@ -2444,8 +2444,16 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
       return;
     }
 
-    // Pre-roll TikTok promo modal prior to video playback
-    if (!_hasShownPreRollPromo && mounted) {
+    // Check if offline local download file exists (PRIOR TO online checks or promos)
+    final downloaded = ref.read(downloadsProvider.notifier).getDownloadedMovie(widget.movie.id);
+    final String? localFilePath = downloaded?.localFilePath ??
+        (widget.movie.videoUrl != null && !widget.movie.videoUrl!.startsWith('http') && File(widget.movie.videoUrl!).existsSync()
+            ? widget.movie.videoUrl
+            : null);
+    final bool hasLocalFile = (!isEpisodeSwitch && streamUrl == null) && localFilePath != null && File(localFilePath).existsSync();
+
+    // Pre-roll TikTok promo modal prior to video playback (ONLY for online streaming)
+    if (!hasLocalFile && !_hasShownPreRollPromo && mounted) {
       _hasShownPreRollPromo = true;
       await TiktokPromoModal.show(context);
       if (!mounted) return;
@@ -2470,17 +2478,14 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
             initialMovie: widget.movie)))
         .valueOrNull;
 
-    // Check if offline local download file exists (ONLY when NOT playing a specific remote episode URL or switching episodes)
-    final downloaded = ref.read(downloadsProvider.notifier).getDownloadedMovie(widget.movie.id);
-    final String? localFilePath = downloaded?.localFilePath;
-    final bool hasLocalFile = (!isEpisodeSwitch && streamUrl == null) && localFilePath != null && File(localFilePath).existsSync();
-
     String? resolvedUrl = (streamUrl != null && streamUrl.isNotEmpty)
         ? streamUrl
         : (isEpisodeSwitch
             ? null
-            : ((details?.videoUrl?.isNotEmpty == true ? details!.videoUrl! : null) ??
-               (widget.movie.videoUrl?.isNotEmpty == true ? widget.movie.videoUrl! : null)));
+            : (hasLocalFile
+                ? localFilePath
+                : ((details?.videoUrl?.isNotEmpty == true ? details!.videoUrl! : null) ??
+                   (widget.movie.videoUrl?.isNotEmpty == true ? widget.movie.videoUrl! : null))));
 
     // If stream URL is not yet resolved, await details and deep stream endpoint
     if (!hasLocalFile && (resolvedUrl == null || resolvedUrl.isEmpty)) {
@@ -2519,7 +2524,16 @@ class _MovieDetailScreenState extends ConsumerState<MovieDetailScreen> {
       return;
     }
 
-    final String streamToPlay = resolvedUrl!;
+    final String streamToPlay = (hasLocalFile ? localFilePath : resolvedUrl) ?? '';
+    if (streamToPlay.isEmpty) {
+      if (mounted) {
+        setState(() {
+          _isInitializingVideo = false;
+          _isPlayingVideo = false;
+        });
+      }
+      return;
+    }
 
     final rawVjName = widget.movie.vjName ?? details?.vjName;
     final Vj assignedVj = _resolveAssignedVj(rawVjName);

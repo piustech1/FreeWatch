@@ -515,10 +515,10 @@ export const HomePage: React.FC<HomePageProps> = ({
                   <img
                     src={meta?.backdrop || movie.backdropUrl || movie.imageUrl}
                     alt={movie.title}
-                    className="w-full h-full object-cover object-[center_30%] filter brightness-90 contrast-110 group-hover:scale-105 transition-transform duration-1000"
+                    className="absolute inset-0 w-full h-full object-cover object-[center_30%] filter brightness-90 contrast-110 group-hover:scale-105 transition-transform duration-1000"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/35 via-50% to-transparent pointer-events-none" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 via-35% to-transparent pointer-events-none" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/40 via-50% to-transparent pointer-events-none" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 via-40% to-transparent pointer-events-none" />
 
                   {/* Top Right: Authentic VJ Badge */}
                   <div className="absolute top-6 right-6 z-20">
@@ -532,7 +532,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                   </div>
 
                   {/* Left Content Column */}
-                  <div className="relative z-20 h-full flex flex-col justify-end p-8 xl:p-12 max-w-2xl">
+                  <div className="absolute inset-0 z-20 flex flex-col justify-end p-8 xl:p-12 max-w-2xl pointer-events-auto">
                     <div className="space-y-2 mb-3">
                       {meta?.logo ? (
                         <img

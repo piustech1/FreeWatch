@@ -294,7 +294,7 @@ class MovieRepository {
       } else if (genreId == 28) {
         targetQueries.addAll(['action', 'war', 'fighter', 'battle', 'gun', 'agent', 'dead']);
       } else if (genreId == 12) {
-        targetQueries.addAll(['adventure', 'quest', 'island', 'journey', 'treasure', 'lost']);
+        targetQueries.addAll(['adventure', 'quest', 'island', 'journey', 'treasure', 'lost', 'jungle', 'safari', 'expedition', 'survival', 'hunter', 'wild', 'tomb', 'gold', 'pirate', 'sea', 'ocean', 'dino', 'jurassic', 'kong']);
       } else if (genreId == 35) {
         targetQueries.addAll(['comedy', 'funny', 'laugh', 'crazy', 'holiday', 'party']);
       } else if (genreId == 27) {
@@ -948,7 +948,7 @@ class MovieRepository {
       queries.addAll(['horror', 'evil', 'ghost', 'dead', 'blood', 'fear', 'witch']);
       tmdbId = 27;
     } else if (clean.contains('adventure')) {
-      queries.addAll(['adventure', 'quest', 'island', 'journey', 'treasure', 'lost']);
+      queries.addAll(['adventure', 'quest', 'island', 'journey', 'treasure', 'lost', 'jungle', 'safari', 'expedition', 'survival', 'hunter', 'wild', 'tomb', 'gold', 'pirate', 'sea', 'ocean', 'dino', 'jurassic', 'kong']);
       tmdbId = 12;
     } else if (clean.contains('comedy')) {
       queries.addAll(['comedy', 'funny', 'laugh', 'crazy', 'holiday', 'party']);
@@ -1031,6 +1031,13 @@ class MovieRepository {
 
     if (matched.isNotEmpty) {
       return _paginate(matched, page, pageSize: pageSize);
+    }
+
+    if (tmdbId == 12 || clean.contains('adventure')) {
+      try {
+        final fallbackAction = await getMoviesByGenre(28, page: page, pageSize: pageSize);
+        if (fallbackAction.isNotEmpty) return fallbackAction;
+      } catch (_) {}
     }
 
     return getAllUploads();

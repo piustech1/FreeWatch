@@ -41,7 +41,7 @@ export const FOLDER_CATEGORIES = [
   { title: "Action", poster: "https://image.tmdb.org/t/p/w500/bjiS5ipwxb9JFy3XRRN4OAilSeX.jpg", query: "Action" },
   { title: "Horror", poster: "https://image.tmdb.org/t/p/w500/wVYREutTvI2tmxr6ujrHT704wGF.jpg", query: "Horror" },
   { title: "Series", poster: "https://image.tmdb.org/t/p/w500/7O4iVfOMQmdCSxhOg1WnzG1AgYT.jpg", query: "Series" },
-  { title: "Adventure", poster: "https://apposters.b-cdn.net/laba/yo/naki/nxiy6310.jpg", query: "Adventure" },
+  { title: "Adventure", poster: "https://image.tmdb.org/t/p/w500/8b8R8l88Qje9dn9OE8PY05Nxl1X.jpg", query: "Adventure" },
   { title: "Love Story", poster: "https://image.tmdb.org/t/p/w500/q6y0Go1tsGEsmtFryDOJo3dEmqu.jpg", query: "Love Story" },
   { title: "Comedy", poster: "https://image.tmdb.org/t/p/w500/iuFNMS8U5cb6xfzi51Dbkovj7vM.jpg", query: "Comedy" },
   { title: "Crime", poster: "https://image.tmdb.org/t/p/w500/74xTEgt7R36Fpooo50r9T25onhq.jpg", query: "Crime" },
@@ -223,13 +223,24 @@ export const SearchPage: React.FC<SearchPageProps> = ({
     let local = searchCatalog(searchQuery, selectedGenre, selectedVj);
     if (searchQuery.trim() && apiResults.length > 0) {
       const seenIds = new Set(local.map((m) => m.id));
-      const seenTitles = new Set(local.map((m) => m.title.toLowerCase().trim()));
+      const seenKeys = new Set(local.map((m) => `${m.title.toLowerCase().trim()}_${m.vj.toLowerCase().trim()}`));
       const merged = [...local];
-      apiResults.forEach((ar) => {
-        const normTitle = ar.title.toLowerCase().trim();
-        if (!seenIds.has(ar.id) && !seenTitles.has(normTitle)) {
+
+      // Prioritize healthy CDN candidates without double dots and with preferred VJs
+      const sortedApi = [...apiResults].sort((a, b) => {
+        const aBroken = a.streamUrl?.includes("..mp4") ? 1 : 0;
+        const bBroken = b.streamUrl?.includes("..mp4") ? 1 : 0;
+        if (aBroken !== bBroken) return aBroken - bBroken;
+        const aVj = /junior/i.test(a.vj) ? 1 : 0;
+        const bVj = /junior/i.test(b.vj) ? 1 : 0;
+        return bVj - aVj;
+      });
+
+      sortedApi.forEach((ar) => {
+        const normKey = `${ar.title.toLowerCase().trim()}_${ar.vj.toLowerCase().trim()}`;
+        if (!seenIds.has(ar.id) && !seenKeys.has(normKey)) {
           seenIds.add(ar.id);
-          seenTitles.add(normTitle);
+          seenKeys.add(normKey);
           merged.push(ar);
         }
       });

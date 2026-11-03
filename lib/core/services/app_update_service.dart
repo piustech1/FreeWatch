@@ -198,6 +198,7 @@ class AppUpdateService {
         final releaseNotes = data['release_notes']?.toString() ??
             'New features, performance enhancements, and stability improvements.';
         final isMandatory = data['is_mandatory'] == true;
+        final forceShow = data['force_show'] == true;
 
         final isNewer = isRemoteVersionNewer(
           remoteVersion: latestVersion,
@@ -206,13 +207,13 @@ class AppUpdateService {
           localBuild: localBuild,
         );
 
-        // Strictly require that the RTDB release is genuinely newer than local installed app
-        if (isNewer) {
-          debugPrint('[AppUpdateService] Newer RTDB version found: $latestVersion+$latestBuild');
-          _notifyUserOfUpdate(latestVersion.isNotEmpty ? latestVersion : '1.0.66');
+        // Strictly check if RTDB update is forced or genuinely newer
+        if (forceShow || isNewer) {
+          debugPrint('[AppUpdateService] Update available (forceShow: $forceShow, isNewer: $isNewer): $latestVersion+$latestBuild');
+          _notifyUserOfUpdate(latestVersion.isNotEmpty ? latestVersion : '1.0.69');
           return AppUpdateInfo(
             hasUpdate: true,
-            version: latestVersion.isNotEmpty ? latestVersion : '1.0.66',
+            version: latestVersion.isNotEmpty ? latestVersion : '1.0.69',
             buildNumber: latestBuild > 0 ? latestBuild : localBuild + 1,
             releaseNotes: releaseNotes,
             storeUrl: storeUrl.isNotEmpty ? storeUrl : defaultStoreListingUrl,
